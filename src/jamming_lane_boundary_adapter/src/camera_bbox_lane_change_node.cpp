@@ -264,7 +264,14 @@ const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* g
 bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample);
 bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0, double change_length = 0.0, bool full_shift = false, double supported_end = -1.0);
 bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d>& path);
-bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<LaneChain>* geometry = nullptr);
+// Optional native probe evidence. The live decision and arithmetic are identical
+// with a null report; offline analysis need not reproduce the road check.
+struct RoadCheckFailure {
+    std::string reason;
+    double x=0., y=0., left=0., right=0., curvature_limit=0.;
+};
+bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<LaneChain>* geometry = nullptr,
+                    RoadCheckFailure* failure = nullptr);
 void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>& path);
 void validateLaneChangeParameters();
 void modeCallback(const std_msgs::UInt8::ConstPtr& message);
@@ -1511,7 +1518,9 @@ bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d
     return false;
 }
 
-bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<LaneChain>* geometry) {
+bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<LaneChain>* geometry,
+                    RoadCheckFailure* failure) {
+    if(failure)*failure=RoadCheckFailure{};
     change_state.maximum_path_curvature = 0.0;
     for (std::size_t index = 0; index < path.size(); ++index) {
         const auto& point = path[index];
@@ -1534,7 +1543,11 @@ bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<La
                     road_left = std::max(road_left, sample.left.y);
                     road_right = std::min(road_right, sample.right.y);
                 }
-                if (y > road_left || y < road_right) return false;
+                if (y > road_left || y < road_right) {
+                    if(failure){failure->reason="inflated_corner_outside_road";failure->x=x;failure->y=y;
+                        failure->left=road_left;failure->right=road_right;}
+                    return false;
+                }
             }
         }
         if (index > 0 && index + 1 < path.size()) {
@@ -1551,6 +1564,9 @@ bool pathInsideRoad(const std::vector<FamilyPoint2d>& path, const std::vector<La
     }
     const double steering_curvature_limit = params.steering_curvature_gain *
         std::tan(params.max_steering_deg * PI / 180.0) / params.wheelbase;
+    if(failure && change_state.maximum_path_curvature>steering_curvature_limit){
+        failure->reason="steering_curvature_limit";failure->curvature_limit=steering_curvature_limit;
+    }
     return change_state.maximum_path_curvature <= steering_curvature_limit;
 }
 
