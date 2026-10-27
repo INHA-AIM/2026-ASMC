@@ -90,6 +90,35 @@ inline bool contactOccupancy(const std::vector<Bounds>& contacts,const std::vect
   }
   return true;
 }
+// Image contact uncertainty is a projected convex quadrilateral. Its AABB
+// mixes a far corner's lateral extent with the near edge (r36), needlessly
+// blocking the adjacent lane. Preserve all four measured rays. Unseen depth
+// AFTER the farthest corner remains the same conservative downstream band.
+inline bool projectedContactOccupancy(const std::vector<Polygon>& contacts,const std::vector<Point>& reference,
+                                     double horizon,std::vector<Polygon>& occupied) {
+  occupied.clear();
+  if(!std::isfinite(horizon)||horizon<=0.)return false;
+  for(const auto& polygon:contacts){
+    Bounds b{1e100,-1e100,1e100,-1e100};double orientation=0.;
+    for(unsigned i=0;i<4;++i){
+      const auto& p=polygon[i];const auto& q=polygon[(i+1)%4];const auto& r=polygon[(i+2)%4];
+      if(!finite(p)||!finite(q)||!finite(r))return false;
+      const double turn=(q.x-p.x)*(r.y-q.y)-(q.y-p.y)*(r.x-q.x);
+      if(std::abs(turn)<1e-9 || (orientation!=0. && turn*orientation<0.))return false;
+      orientation=turn;
+      b.xmin=std::min(b.xmin,p.x);b.xmax=std::max(b.xmax,p.x);
+      b.ymin=std::min(b.ymin,p.y);b.ymax=std::max(b.ymax,p.y);
+    }
+    if(b.xmin>horizon)continue;
+    // Keeping the full polygon does not extend vehicle support: the swept
+    // vehicle test independently rejects any corner beyond the real horizon.
+    occupied.push_back(polygon);
+    std::vector<Polygon> conservative;
+    if(!contactOccupancy({b},reference,horizon,conservative))return false;
+    occupied.insert(occupied.end(),conservative.begin()+1,conservative.end());
+  }
+  return true;
+}
 inline bool pathClearOfPolygons(const std::vector<Point>& path,const std::vector<Polygon>& occupied,
                       const Vehicle& v,double supported_horizon,double sample_padding=.25) {
   if(path.size()<2||!std::isfinite(supported_horizon)||supported_horizon<=0)return false;
