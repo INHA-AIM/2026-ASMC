@@ -1656,6 +1656,9 @@ std::string updateContactPathPlan() {
     const bool adjacent_clear=!change_state.changing && !clear &&
         find(1-follower_state.locked_lane,adjacent);
     if(!change_state.changing && (!clear || adjacent_clear)){
+        if(change_state.has_completed && params.one_lane_change_only)return fail("lane_change_already_completed");
+        if(change_state.has_completed && (ros::SteadyTime::now()-change_state.completed_at).toSec()<params.lane_change_cooldown)
+            return fail("lane_change_cooldown");
         target=1-follower_state.locked_lane;
         clear=adjacent_clear;
         if(clear)candidate=std::move(adjacent);
@@ -1670,7 +1673,7 @@ std::string updateContactPathPlan() {
     }
     if(!clear)return fail("contact_target_path_blocked");
     if(!change_state.changing){
-        if(contacts.empty() && params.return_to_entry_lane && change_state.has_completed &&
+        if(contacts.empty() && params.return_to_entry_lane && !params.one_lane_change_only && change_state.has_completed &&
            target!=change_state.entry_lane && (ros::SteadyTime::now()-change_state.completed_at).toSec()>params.lane_change_cooldown){
             if(fresh)++change_state.clear_hits;
             Candidate returning;

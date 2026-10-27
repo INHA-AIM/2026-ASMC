@@ -67,6 +67,14 @@ class ContactTest(unittest.TestCase):
         self.speed_timer.shutdown();self.feed(duration=.5)
         self.stopped('contact_actual_speed_unavailable')
 
+    def test_single_change_budget_is_not_bypassed_by_clearance(self):
+        self.feed();self.feed([0],box_x=12.,duration=.8)
+        self.assertEqual(self.status()[1]['locked_lane'],'0')
+        self.feed([],shift=-3.5,duration=.7)
+        self.assertEqual(self.status()[1]['change_completed'],'true')
+        self.feed([3.5],shift=-3.5,box_x=12.,duration=.5)
+        self.stopped('lane_change_already_completed')
+
     def test_contact_invalid_and_input_loss_remain_stops(self):
         self.feed()
         self.feed(bbox=False,duration=.8)
