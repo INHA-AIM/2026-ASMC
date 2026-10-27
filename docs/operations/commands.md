@@ -33,6 +33,11 @@ source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
 ```
 
+위 환경은 main 배포 기준입니다. PR #122의 work 3뷰 LiDAR를 시험하는 처리·LiDAR 웹
+터미널은 [M1 빌드·실행파일 확인](../../src/asmc_lidar/docs/three-view-fusion.md#빌드와-실제-실행파일-확인)에
+따라 준비된 overlay 환경을 마지막에 적용합니다. `pipeline_config`로 work YAML만 선택해도
+main 실행파일이 3뷰 코드로 바뀌지는 않습니다. 기존 프로세스는 자동 교체하지 않습니다.
+
 ### 터미널별 실행
 
 각 행은 별도 터미널에서 foreground로 실행합니다. 기본 실행 명령은 인자 없이 사용하고,

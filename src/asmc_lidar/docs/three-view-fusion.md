@@ -26,6 +26,31 @@
 전방 복구는 정본 YAML을 별도 파일로 복사해 `fusion.views`만 `front`로 바꾸고
 `pipeline_config:=<복구 YAML>`로 실행한다. 다른 임계값·보정은 유지하며 새 config ID로 시작한다. launch 인자에 모델/운동 정책 선택지를 추가하지 않는다.
 
+### 빌드와 실제 실행파일 확인
+
+PR #119의 GPS 무효 시 터널 분기와 이번 3뷰 코드는 같은 실행파일에 포함돼야 한다.
+`pipeline_config`는 YAML만 선택한다. 다른 checkout의 YAML을 지정해도 이미 빌드된
+실행파일이 바뀌지 않으며, `debug:=true`도 빌드 선택과 관계없다.
+
+현재 개인 컨테이너에 준비한 M1 overlay를 사용하는 LiDAR·웹 터미널에서는 다음을 확인한다.
+일반 팀 배포는 해당 checkout에서 빌드한 workspace의 `devel/setup.bash`를 사용한다.
+
+```bash
+source /opt/ros/noetic/setup.bash
+source /root/asmc-m1/devel/setup.bash
+rospack find asmc_lidar
+rosrun --prefix echo asmc_lidar lidar_pipeline_node
+```
+
+이 개인 배포의 예상 경로는 `/root/asmc-m1/src/asmc_lidar`와
+`/root/asmc-m1/devel/lib/asmc_lidar/lidar_pipeline_node`다. 마지막 명령은 실행파일 경로만
+출력하며 노드를 시작하지 않는다. 이후 `/root/ws/devel/setup.bash`를 다시 source하면
+underlay 실행파일이 선택되므로 M1 환경을 마지막에 적용한다.
+웹도 같은 overlay에서 실행해야 정적 화면과 C++ 생산자 버전이 맞는다.
+기존 프로세스는 새 빌드나 source 적용만으로 교체되지 않는다. 같은 namespace의 기존
+처리 노드를 사용자가 종료한 뒤 원래 launch 명령으로 재실행하며, 두 생산자를 동시에 띄우지 않는다.
+이 overlay는 개인 시험 배포이고, 병합 후에는 main의 최신 빌드로 통일한다.
+
 ## 관측 선택과 확인 단위
 
 `MultiCameraFusion`은 각 scan의 공용 Context를 사용해 카메라별 투영 사각형을 한 번 계산한다.
