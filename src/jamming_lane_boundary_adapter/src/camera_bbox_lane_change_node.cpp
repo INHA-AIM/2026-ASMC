@@ -1111,7 +1111,7 @@ void initializeRosInterface(ros::NodeHandle& nh) {
     ros_interface.target_pub = nh.advertise<geometry_msgs::PointStamped>(params.target_topic, 1);
     ros_interface.marker_pub = nh.advertise<visualization_msgs::MarkerArray>(params.markers_topic, 1);
     ros_interface.diagnostic_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(params.diagnostics_topic, 1);
-    ros_interface.lane_sub = nh.subscribe(params.input_topic, 1, laneBoundaryCallback);
+    ros_interface.lane_sub = nh.subscribe(params.input_topic, params.contact_clearance_enabled?8:1, laneBoundaryCallback);
     ros_interface.stop_sub = nh.subscribe(params.emergency_stop_topic, 1, emergencyStopCallback);
     mode_subscriber = nh.subscribe("/planning/mode", 1, modeCallback);
     follower_state.last_control_time = ros::SteadyTime::now();
@@ -1506,7 +1506,7 @@ std::string updateContactPathPlan() {
     contact_candidates=contact_road_rejected=contact_collision_rejected=0; contact_geometry_ready=false;
     auto fail=[](const std::string& reason){contact_decision=reason;return reason;};
     if(!contact_result || !contact_result->contact_projection_valid) return fail("contact_projection_unavailable");
-    if(std::abs((follower_state.source_stamp-contact_result->header.stamp).toSec())>params.contact_max_skew)
+    if(std::abs((contact_result->lane_stamp-contact_result->header.stamp).toSec())>params.contact_max_skew)
         return fail("contact_lane_timestamp_skew");
     const std::vector<LaneChain>* geometry=nullptr;
     for(const auto& frame:contact_lane_history)
