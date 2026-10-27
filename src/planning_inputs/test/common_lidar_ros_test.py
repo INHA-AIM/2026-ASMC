@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Isolated real pipeline -> common tracking -> planning input contract test.
+"""Isolated real pipeline -> common planning observation -> input contract test.
 
 Owns a fresh ROS master and only its own subprocess groups. No simulator,
 vehicle-control launch, production master, data collection or model inference.
@@ -174,8 +174,8 @@ def main():
             assert not any(topic.startswith(ns+'/debug/') for topic,nodes in publications)
             assert not any(topic in (ns+'/trace',ns+'/objects_local',ns+'/objects_map')
                            for topic,nodes in subscriptions)
-            # The planner must remain sufficient demand for tracks_map: remove
-            # the fixture's tracking subscriptions, leaving only planning_inputs.
+            # The planner alone must demand planning_observations_map: remove
+            # the fixture's subscriptions, leaving only planning_inputs.
             subscribers[0].unregister();subscribers[1].unregister()
             before=len(output)
             require(lambda: len(output)>=before+10, 'planner-only demand supplies new objects without web/trace/RViz')

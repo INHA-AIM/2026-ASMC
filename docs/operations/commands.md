@@ -131,6 +131,10 @@ LiDAR `view.launch`는 모니터만 시작합니다. 기본 `debug:=false`에서
 `debug` 옵션을 켭니다. 판제 주행에는 이 옵션이 필요하지 않습니다.
 기존 `lidar.launch`가 있다면 두 번째 처리 노드를 시작하지 않습니다.
 판제는 C의 `planning_observations_map`을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
+`asmc_lidar`를 고르는 별도 source 옵션은 없습니다. 기본 연결은
+`/perception/lidar/planning_observations_map` (`asmc_msgs/LidarPlanningObservation`)
+→ `planning_objects_adapter` → `/planning/objects`입니다. `tracks_map`은 다른 타입의
+분석용 출력이므로 판제 입력으로 대신 지정하지 않습니다. 수집용 planner도 같은 기본 입력을 상속합니다.
 
 판제 웹은 `http://127.0.0.1:8088/web/index_v2.html`, LiDAR 웹은 `http://127.0.0.1:8091/`입니다.
 기본 포트·ROS 노드 이름이 서로 다르고 두 웹 모두 관측만 합니다. 하나씩 사용하려면 해당 웹 launch
