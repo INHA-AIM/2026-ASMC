@@ -1522,7 +1522,7 @@ std::string updateContactPathPlan() {
         const auto* original=getPlanningLane(index);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
             params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
-        for(double offset:{0.,-.25,.25,-.50,.50}) for(double length:{10.,8.,6.}) {
+        for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{12.,10.,8.,6.}) {
             LaneChain lane=*original;
             // Offset only the target center, never the observed road boundaries.
             for(auto& p:lane.centerline)p.y+=offset;
