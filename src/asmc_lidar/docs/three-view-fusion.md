@@ -1,5 +1,9 @@
 # M1 3뷰 fusion·전달 표시·정적 클래스 보조
 
+정본 `/perception/lidar` launch는 활성 fusion의 all·활성 터널의 original_pipeline을 검사한다.
+아래 전방/옛 터널 대조는 `namespace:=/migration/lidar`에서만 실행한다.
+현재 음영 판제 후속은 [local 통로·소비 경계](../../../docs/architecture/shadow-planning-refactoring.md)를 따른다.
+
 기준선은 PR #119·#121 병합본 `52017fe2`다. 구현은 `feat/lidar-three-view-fusion`에서
 진행한다. 2026-10-28 사용자 승인에 따라 **최적화한 3뷰 fusion을 기본으로 승격**했다.
 정본 YAML과 코드 기본값은 `fusion.views: all`이다. `motion.semantic_static_enabled: false`는 유지한다.
@@ -24,7 +28,7 @@
 `view.launch namespace:=/migration/lidar dashboard_port:=8093 pipeline_config:=<같은 YAML>`로 실행한다.
 이미 같은 입력의 운영 생산자가 있으면 처리 부하를 먼저 확인하며, 동일 정식 출력의 생산자를 추가하지 않는다.
 전방 복구는 정본 YAML을 별도 파일로 복사해 `fusion.views`만 `front`로 바꾸고
-`pipeline_config:=<복구 YAML>`로 실행한다. 다른 임계값·보정은 유지하며 새 config ID로 시작한다. launch 인자에 모델/운동 정책 선택지를 추가하지 않는다.
+`namespace:=/migration/lidar pipeline_config:=<복구 YAML>`로 비교 실행한다. 다른 임계값·보정은 유지하며 새 config ID로 시작한다. launch 인자에 모델/운동 정책 선택지를 추가하지 않는다.
 
 ### 빌드와 실제 실행파일 확인
 

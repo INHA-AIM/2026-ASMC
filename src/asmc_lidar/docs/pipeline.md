@@ -2,7 +2,7 @@
 
 현재 구조·이름·식별 계약은 [첫 단위 정리](structure-contract-refactor.md)와 [이전표](name-mapping.md)가 정본이다. 아래 PR #103 수치·실패와 비교 기준선은 당시 근거를 보존한다.
 
-**B4 현행:** `asmc_lidar`가 정본이며 판제 기본은 공용 `tracks_map` 직접 입력이다.
+**B4 현행:** `asmc_lidar`가 정본이며 판제 기본은 공용 `planning_observations_map` 직접 입력이다.
 수집·시나리오도 같은 런타임을 쓰고 구 Main/Msg는 폐기했다. 기본 namespace는 `/perception/lidar`,
 병행 비교는 `/migration/lidar`다. [현재 실행·메시지·제한](planning-runtime.md)을 먼저 읽는다.
 
@@ -22,7 +22,7 @@
 
 ## 현재 상태와 제한
 
-- 구현 완료: 독립 LiDAR pipeline(아래 처리 흐름)과 전방(`camera_front`) class fusion.
+- 구현 완료: 독립 LiDAR pipeline과 PR #122의3뷰 class fusion. 아래 Main 이식 비교는 당시 전방 기준이다.
 - 검증 완료: roll·pitch 수평화와 local/map 출력. 일반·터널 bag replay가 Main `8f93c22e` 기준선과 bit 단위로
   같았고, GPS 무효·중단·복구와 IMU stale·무효를 실제 노드 rostest로 시험했다.
 - B4에서 판제·수집·시나리오의 구 입력 분기와 중복 필터를 제거했다.
@@ -31,8 +31,8 @@
 - PR #108은 v7 HD맵·높이 ROI·상부 전달 필터를 추가했다. 구 known-static·structure catalog·relevance와 OBB clipping을 그대로 이식한 것은 아니다([편입 경계](filter-migration.md)).
 - 웹 화면은 별도 `view.launch`, 단계 샘플은 `lidar.launch debug:=true`로 요청한다. [웹 모니터](web-monitor.md)를 따른다.
 - 상대속도 validity는 false이며 절대 적용 추정값·운동 validity는 유효 map/계산 근거에 따른다. UNKNOWN의 수치0은 정지 확인이 아니다.
-- 실제 카메라 bag에서의 fusion 성능과 실시간 처리 성능은 수락하지 않았다.
-- TunnelFilter는 기본 OFF이며 ON 성능은 수락하지 않았다.
+- F1·M1 bag/실시간 비교와 기본 승격은 [3뷰 계약](three-view-fusion.md)에 기록했다. 전 미션·최대 공백의 미수락 항목은 별도로 남긴다.
+- 현재 터널 최적화 original_pipeline은 기본 ON이다. 전처리·구간 조건과 객체 보존 한계는 [현재 설정](../config/lidar_pipeline.yaml)을 따른다.
 
 ## 기준선과 저장소 Main과의 의도적 차이
 
@@ -58,8 +58,8 @@ Main 공통의 의도적 차이는 따로 있다. 운영 출력은 제외했고(
 /velodyne_points ─┐                     /imu, /Ego_topic(CAN) → scan 시각 local 입력(≤120ms, 최대 50ms 대기)
                   ▼                     /gps → sanity·HD맵 원점 검사 → bounded map pose(300ms, 3회 복구)
  ROI·자차 제거 → Voxel 0.1m → roll·pitch 수평화(행렬을 scan Context에 저장)
- → IMU 수평 지면 기준 높이 ROI(2.5m) → RANSAC 지면 제거 → [실험 TunnelFilter, 기본 OFF] → 적응 군집 → centroid·L-shape OBB
- → CA Kalman/Hungarian 추적(local) → 전방 카메라 class fusion → typed local/map 구성
+ → IMU 수평 지면 기준 높이 ROI(2.5m) → RANSAC 지면 제거 → [최적화 터널 처리, 구간 조건부] → 적응 군집 → centroid·L-shape OBB
+ → CA Kalman/Hungarian 추적(local) → 3뷰 카메라 class fusion → typed local/map 구성
  → HD맵·상부 전달 필터(원본 track 보존) → 배열·관측 발행
 ```
 

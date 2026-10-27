@@ -1,7 +1,7 @@
 # 전방 fusion 연결 검증
 
-F1은 native 전방 matching의 실제 선택을 추적한다. 좌우는 수신·보정·원본 픽셀 투영까지만
-구현돼 있다. 공개 객체/관측/추적 메시지와 mode 서비스는 변경하지 않는다.
+F1 당시에는 native 전방 matching과 좌우 수신·보정·원본 픽셀 투영을 검증했다.
+현재는 [PR #122의3뷰 matching](three-view-fusion.md)이 기본이다. 공개 객체/관측/추적 메시지와 mode 서비스는 변경하지 않는다.
 [실측·수정 전 실패와 남은 제한](../../../docs/records/lidar/2026-10-27-front-fusion-verification.md)을 먼저 확인한다.
 
 ## 무엇을 확인하는가
@@ -31,7 +31,7 @@ roslaunch asmc_lidar lidar.launch
 roslaunch asmc_lidar view.launch
 ```
 
-웹 기본 상태에 전방 matching과 좌우 수신이 구분돼 나온다. 객체별 association과 원본 단계
+웹 기본 상태에 뷰별 matching·수신 상태가 나온다. F1 기록의 측방 미구현 표시는 당시 결과다. 객체별 association과 원본 단계
 상세가 필요하면 LiDAR를 실행할 때만 `debug:=true`를 추가한다. 웹 snapshot은 기존 주기로
 표본화되므로 선택 객체의 연결이 해당 snapshot에 없으면 그대로 표시한다. 모든 사건은 trace로 본다.
 판제 실행은 debug를 요구하지 않는다. 병행 시험은 LiDAR와 view 모두 `namespace:=/migration/lidar`로

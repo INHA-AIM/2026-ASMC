@@ -30,7 +30,7 @@ global Frenet 입력에 이름만 remap하지 않는다. 터널 local/family 소
 ## 식별·시간·상태
 
 `observation.objects.header`가 source stamp·좌표계의 정본이다. session/generation/scan_sequence와
-config/calibration ID를 함께 검사하고 local/map을 두 번의 독립 관측으로 세지 않는다. generation은
+config/calibration ID를 함께 검사하고 private 배열에도 복사한다. local/map을 두 번의 독립 관측으로 세지 않는다. generation은
 명시적 처리 reset에서 바뀌며 scan마다 증가하는 sequence와 구분한다.
 
 판제는 queue1·source age300ms·미래 허용50ms, 종료 session·이전 generation·중복/역행 stamp/sequence·
@@ -40,7 +40,7 @@ config/calibration ID를 함께 검사하고 local/map을 두 번의 독립 관�
 ## 분류와 전달 필터
 
 원본 이름·vehicle/dynamic_obstacle/static_obstacle은 같은 공용 판제 관측의 객체에 유지한다.
-현재 private 어댑터는 vehicle/person/unknown만 생산한다. 판제 내부 STATIC_OBSTACLE=3 정의도
+private 어댑터는 classification/camera_class를 보존하며 숫자 type은 vehicle/person/unknown을 유지한다. 판제 내부 STATIC_OBSTACLE=3 정의도
 있지만 아직 이 그룹에서 매핑하지 않는다. dog/deer/bicycle/stroller와 정적8종은 UNKNOWN이 되어
 숫자만으로 원본 종류·그룹을 복원할 수 없으며, 충돌 기하·적용 속도·운동 상태는 유지한다.
 vehicle/dynamic_obstacle도 정지해 있을 수 있다. static_obstacle도 실제 정지의 보증이 아니며
@@ -54,7 +54,9 @@ HD맵 v7·안쪽10cm·점군3점/10% AND OBB10%·높이/상부·관측 확인3/5
 
 ## 변경과 미수락 항목
 
-공용 메시지 필드·MD5와 판제 private 필드는 유지한다. 이 문서는 생산자·소비 경로의 정본화다.
+공용 메시지 필드·MD5는 유지한다. 2026-10-28 후속에서 private DetectedObject에 두 문자열,
+DetectedObjectArray에 session/generation/scan_sequence/config/calibration ID를 추가했다.
+private MD5는 변경되므로 전체 소비자 재빌드·재시작이 필요하다. 숫자 type·운동 정책은 유지한다.
 전 미션·속도 정확도·터널 벽/천장·IMU 초기 무효 경계·3뷰 fusion 수락은 [공동 작업표](../../src/asmc_lidar/docs/migration-tasks.md)에 남긴다.
 과거 wire/필터와 검증 근거는 [PR #111까지의 대조](../records/lidar/planning-consumer-through-pr111.md)와
 [소스 보존 manifest](../../config/baselines/lidar_canonicalization_v1.json)에 보존한다.

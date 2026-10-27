@@ -1,6 +1,13 @@
 # 인지·판제 좌표계와 IMU 공통화 검토
+
+**2026-10-28 후속:** planning 입력도 `asmc_geometry::WithinStampWindow`의 정수 ns 검사로
+source-age300ms·미래50ms를 검사한다. private 객체 배열까지 원본 header와
+session/generation/scan/config/calibration ID를 보존한다. 웹은 source/receipt clock을 분리하고
+local 객체를 stale map pose에 올리지 않는다. 아래 pose 통합·SLERP 공통화 전체를 완료했다는 뜻은 아니다.
+[이번 구현과 다음 음영 개선 경계](shadow-planning-refactoring.md)를 따른다.
 F1은 [전방 fusion 실제 선택·관측 수명 경계 검증](../records/lidar/2026-10-27-front-fusion-verification.md)을 추가했다.
-좌우 수신/투영과 실제 matching을 구분하며, 원본 source clock 매핑은 여전히 미확보다.
+F1 당시에는 좌우 수신/투영까지만 검증했다. 이후 PR #122에서 3뷰 실제 matching과 터널 최적화를
+병합·기본 적용했다. 원본 source clock 매핑은 여전히 미확보다.
 
 
 **2026-10-26 현재 기준:** PR #112 `0dab4adf`에서 B4 정본화를 완료했다.
@@ -43,7 +50,7 @@ ROS [REP 105](https://github.com/ros-infrastructure/rep/blob/master/rep-0105.rst
 | TwinLite | model-grid class/confidence → 카메라별 지면 근거 → shared family | 렌더링한 BEV raster를 다시 피팅 입력으로 사용하지 않음 |
 | family | 원본 시각 IMU를 선택해 실제 base_link의 지면과 xyz 계산 | nominal 높이0.36m, M1/M0·유효성·observed/inferred 유지 |
 | 비교 BEV·영상 BBox 어댑터 | family가 선택한 CameraGroundProjection 재사용 | 같은 원 JPEG·epoch·보정 ID 대응, 재조회·이중 보정 금지 |
-| 새 LiDAR | ROI/voxel → 수평화 → 높이/지면 → 군집/OBB/추적 → 전방 fusion | 내부 수평화 좌표를 base_link로 잘못 표기하지 않음 |
+| 새 LiDAR | ROI/voxel → 수평화 → 높이/지면 → 군집/OBB/추적 → 3뷰 fusion | 내부 수평화 좌표를 base_link로 잘못 표기하지 않음 |
 | 새 LiDAR 출력 | local/base_link와 pose 조건부 map의 공용 배열·관측 | local/map은 같은 session/generation/scan_sequence의 두 표현 |
 | HD맵·상부 전달 필터 | map OBB footprint·전체 cluster support 조회, local 하부 높이 확인 | 기본 filter·10cm·점군3점/10% AND OBB10%. 발행 배열만 제외, tracker 보존. 화면 샘플로 판정하지 않음 |
 | 일반 판제 | planning_inputs → map 객체·차량 상태 → Behavior/Frenet → map 궤적 | 현재 base_link 입력을 거부하므로 단순 remap 전환 불가 |

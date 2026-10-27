@@ -68,9 +68,9 @@ PR #103의 bit 동등성은 후자 기준이다. matched/predicted OBB 수정의
 
 원본 동작 기준은 main `19bc76978a499bddacf13f5aaf0bb6d713785657`, L0 문서는 `4a16bfda`다.
 2026-10-22 원격 main은 같은 SHA였고 이 구간의 runtime diff는 없다. source tree·설정·메시지·
-지도·보정 SHA는 manifest로 고정한다. 이 단락은2026-10-22 기준선 기록이다. 현재 main은281349da이고 새 runtime 재수락은 아직 하지 않았다.
+지도·보정 SHA는 manifest로 고정한다. 이 단락은2026-10-22 기준선 기록이다. 281349da에서의 재수락 대기 역시 당시 상태다. 현재는 [정본 실행](planning-runtime.md)과 [3뷰 구현](three-view-fusion.md)을 따른다.
 
-현재 실행 순서는 다음과 같다.
+L1 당시 구 Main 실행 순서는 다음과 같다. 현재 이 경로는 B4에서 폐기했으며 복구 명령이 아니다.
 
 ```text
 센서 ROS 수신 → latest scan snapshot

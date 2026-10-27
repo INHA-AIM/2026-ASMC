@@ -22,7 +22,7 @@ debug에 남으므로 원본 계층의 박스와 전달 배열을 구분한다. 
 통합 판제 기본은 `/perception/lidar/planning_observations_map`의
 `asmc_msgs/LidarPlanningObservation`이다. `tracks_map`의 분석용 속도와 구분한다.
 이 launch는 Main·planner·카메라 추론·UDP bridge·Velodyne
-driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. TunnelFilter는 기본 OFF다.
+driver를 시작하지 않으며, 기존 운영 토픽을 바꾸지 않는다. 터널 처리는 현재 기본 활성화된 최적화 original_pipeline 경로이며 실제 구간 조건을 따른다.
 
 ## 가장 짧은 실행
 

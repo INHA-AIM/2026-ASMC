@@ -6,7 +6,7 @@
 | 경계 | 현재 문서 | 남은 책임 |
 |---|---|---|
 | 인지→판제 구간 소비 | [상시 발행·소비 범위](perception-to-planning.md) | 판제: 상시 입력에서 미션별 사용·예외 결정, A153 끝·A126 진입 전 준비 |
-| 카메라→Main/LiDAR | [전방 연결·3뷰 관측](camera-to-lidar.md) | 손재호: 카메라별 버퍼/보정/3뷰 fusion·전체 asmc_lidar 이전 |
+| 카메라→LiDAR | [3뷰 관측·matching](camera-to-lidar.md) | 승현: 연결 지원, 재호: 추적·속도·터널/융합 품질 보완 |
 | LiDAR 전체 이전 | [이전 계획](lidar-migration.md) | 기존 Main 동작 보존·구조물/추적/유효성·판제 소비 검증 |
 | 카메라 family→판제 | [음영 인계](camera-to-planning.md) | 판제: ODD·모드·차로/corridor·fallback·실제 제어 수락 |
 | HD Map→판제 | [지도 인계](hd-map-to-planning.md) | map copy/parity·좌표·route·GPS 무효/복구 소비 |

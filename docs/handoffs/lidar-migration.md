@@ -1,5 +1,9 @@
 # LiDAR 공동 개발 인계
 
+**현재 후속:** 3뷰 matching은 PR #122에서 기본 적용됐다. 이제 구 패키지 이관을 다시 하지 않는다.
+[클래스·시각 전달/음영 콘솔과 다음 작업](../architecture/shadow-planning-refactoring.md)을 따른다.
+음영 local 객체는 제공하지만 현재 bbox 회피 제어기가 이를 소비한 상태는 아니다.
+
 `asmc_lidar`가 판제·수집·시나리오의 LiDAR 정본이다. 브릿지와 카메라는 각각 실행하고,
 판제는 `/perception/lidar/planning_observations_map`의 공용 추적 관측을 직접 소비한다. 구 Main/Msg/nested workspace는
 B4에서 폐기했다. 사용자와 판제의 새 경로 주행 확인을 기반으로 정본화했으며, 전체 미션·속도 정확도 수락은 별도다.

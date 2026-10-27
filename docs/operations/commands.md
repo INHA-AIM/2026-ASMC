@@ -133,6 +133,12 @@ rostopic echo -n 1 /morai_sensor_bridge/diagnostics
 ```
 
 웹 화면은 아래 기본 명령 중 필요한 것을 별도 터미널에서 실행하고 주소를 직접 엽니다.
+판제 웹은 모드에 따라 map/local을 자동 선택하며 수동 선택도 가능합니다. 음영 패널에 실제 선택 제어기,
+정지 사유, bbox 판정, family·실제 선택 경로·local LiDAR 참조 객체를 표시합니다.
+GPS 무효 때 마지막 map 위치로 올리지 않으며 debug OFF에서도 typed 기하를 볼 수 있습니다.
+local 객체를 현재 음영 제어기가 회피에 사용한다는 의미는 아닙니다.
+private 메시지 갱신 후에는 위 전체 빌드를 수행하고 adapter·판제·웹을 함께 재시작합니다.
+[표시·시간 계약과 후속 계획](../architecture/shadow-planning-refactoring.md)을 참고하세요.
 
 | 화면 | 기본 실행 | 주소 |
 |---|---|---|

@@ -6,7 +6,7 @@
 
 ```text
 MORAI 허용 센서 → asmc_bridge
-  RGB 3뷰 → asmc_camera YOLO → asmc_lidar 전방 fusion (좌우는 수신·투영)
+  RGB 3뷰 → asmc_camera YOLO → asmc_lidar 3뷰 fusion (PR #122 기본)
   LiDAR + GPS/IMU/속도 → asmc_lidar 검출·추적·전달 필터
   GPS/IMU → planning_inputs → /planning/vehicle/state
   camera4 → asmc_camera ResNet → 신호등 typed 관측
@@ -25,7 +25,7 @@ MORAI 허용 센서 → asmc_bridge
 |---|---|---|
 | 카메라 객체 | E8 기본·사전학습 선택, TensorRT, 원본16종/소비3그룹, 3뷰 관측 | 장원태 detect 추가학습; 승현 3뷰 fusion. 3뷰 관측이 곧 3뷰 fusion은 아님 |
 | 차선 | TwinLite TensorRT·전방544×960/측방480×640, model-grid→shared family | 음영 ODD에서 판제 소비·fallback 공동 확인; 순간 공급 공백 제한 추적 |
-| LiDAR | `asmc_lidar` 검출·OBB·추적·전방 fusion·HD맵/상부 전달 필터, typed 판제 입력. 구 Main/Msg 폐기 | 승현 3뷰 fusion, 재호 터널 통합·OBB/관측 위치·추적/속도. [M0–M5](../../src/asmc_lidar/docs/improvement-milestones.md) |
+| LiDAR | `asmc_lidar` 검출·OBB·추적·3뷰 fusion·HD맵/상부 전달 필터, typed 판제 입력. 구 Main/Msg 폐기 | 승현 3뷰 연결 유지·음영 판제 기반, 재호 터널 통합·OBB/관측 위치·추적/속도. [M0–M5](../../src/asmc_lidar/docs/improvement-milestones.md) |
 | 판제 | `asmc_planner` 단일 패키지, LiDAR 입력 통합 실행, MPC·재밍 선택기 | 전 구간·조건별 반복 수락, 카메라 그룹/음영 소비 정책은 판제 담당 |
 | HD Map | `asmc_hd_map` global/local·mission metadata 제공 | 판제 local map copy와 출처·route parity 확인; 자동 `/hd_map/*` 전환은 아님 |
 | 상태·좌표 | bridge `/vehicle/state`와 판제 전용 `/planning/vehicle/state` 분리 | 두 토픽을 같은 추정기로 오인하지 않음; 공용 geodesy/IMU 선택 코어와 패키지별 추정 정책을 구분 |

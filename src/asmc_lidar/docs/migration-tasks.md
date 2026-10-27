@@ -1,5 +1,8 @@
 # LiDAR 공동 작업표
 
+**현재 다음 작업:** 3뷰 구현·기본 적용 이후 [음영 판제 기반/후속 계획](../../../docs/architecture/shadow-planning-refactoring.md)을 진행한다.
+객체 전달 문자열과 식별자·콘솔을 우선 정리하며 터널 local 회피 및 패키지 흡수는 다음 단위다.
+
 `asmc_lidar`는 LiDAR 정본이다. 현재 실행·공용 메시지는 [실행 기준선](planning-runtime.md),
 과거 L0–L8/A1 작업과 증거는 [PR #111까지의 작업 기록](../../../docs/records/lidar/migration-tasks-through-pr111.md)에 있다.
 

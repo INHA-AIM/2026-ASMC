@@ -37,7 +37,7 @@ TwinLite Large E8 TensorRT도 같은 B1/B2 크기·목표15Hz, 신호등은10Hz�
 HD맵 도로 밖에서도 보호한다. 오래된 분류나 LiDAR 추정 속도만으로 이 예외를 적용하지 않는다.
 판제 numeric enum은 모든 원본 클래스를 표현하지 못하며 unknown도 충돌 기하를 유지한다.
 
-## F1 연결 검증
+## F1 당시 연결 검증과 현재3뷰
 
 전방 실제 matching과 좌우 수신·native 재투영은 [F1 결과](../records/lidar/2026-10-27-front-fusion-verification.md)에 있다.
 투영 실패를 미검출로 처리하던 경계와 투영 중 카메라 세대 변경을 수정했다.
@@ -52,7 +52,7 @@ roslaunch asmc_lidar lidar.launch
 ```
 
 각 명령은 별도 터미널이다. 모델을 중복 시작하지 않는다. 카메라 없는 비교는 LiDAR의 `fusion:=false`를 사용한다.
-3뷰 확대는 뷰별 원본 보정·시각·관측 ID를 사용하며 느린 뷰를 기다리거나 같은 근거를 중복 확인 횟수로 세지 않는다.
+현재3뷰 matching은 뷰별 원본 보정·시각·관측 ID를 사용하며 느린 뷰를 기다리거나 같은 근거를 중복 확인 횟수로 세지 않는다.
 안승현은 **3뷰 matching/fusion과 카메라 API·보정·시간·라벨 연결**, 손재호는 **터널·OBB·추적/속도/운동 상태**를 담당한다.
 공동 수정 지점과 완료 기준은 [개선 계획](../../src/asmc_lidar/docs/improvement-milestones.md)을 따른다.
 
