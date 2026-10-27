@@ -194,7 +194,10 @@ int main(int argc, char** argv) {
         ros::Subscriber local_sub;
         if(params.local_contact_support_enabled)
             local_sub=nh.subscribe<asmc_msgs::LidarTrackingObservation>("/perception/lidar/tracks_local",8,
-                +[](const asmc_msgs::LidarTrackingObservation::ConstPtr& m){local_obstacles.accept(m,ros::Time::now(),ros::SteadyTime::now());});
+                +[](const asmc_msgs::LidarTrackingObservation::ConstPtr& m){
+                    local_obstacles.accept(m,ros::Time::now(),ros::SteadyTime::now());
+                    drainPending(); // wake exact-image work; never wait inside a ROS callback.
+                });
         ros::Subscriber projection_sub, lane_status_sub;
         if(params.projection_context_required) {
             projection_sub=nh.subscribe<asmc_msgs::CameraGroundProjection>(params.projection_topic,8,
@@ -632,6 +635,14 @@ void drainPending() {
                 params.camera_view,now,steady);
             reason=match.reason;
             if(!match.valid)continue;
+            // A12Hz LiDAR scan can arrive after this15Hz image even though its
+            // source stamp is within50ms. Reuse the existing bounded pending
+            // queue/250ms deadline instead of publishing a transient missing
+            // local result. No wider skew, stale reuse or synthetic empty input.
+            if(params.local_contact_support_enabled &&
+               !local_obstacles.select(input->message->header.stamp,now,steady)){
+                reason="waiting_for_local_contact_observation";continue;
+            }
             const auto ready=input->message;
             const LaneFrame* exact=&*lane;
             while(!pending_frames.empty() && pending_frames.front().message->header.stamp<=ready->header.stamp) {
