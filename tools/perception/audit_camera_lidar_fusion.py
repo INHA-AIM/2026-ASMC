@@ -183,7 +183,7 @@ def main(args):
                             if (obs['session'],obs['generation'],obs['calibration_id'])!=(v['session'],v['generation'],v['calibration_id']):continue
                             points=[p for o in scan.get('typed',{}).get('local',{}).get('objects',[]) for p in o['corners']]
                             side_cards.append(dict(view=v,scan=scan['seq'],observation=obs,
-                                request=dict(camera_id=v['camera_id'],scan_stamp_ns=scan['stamp_ns'],image_stamp_ns=v['stamp_ns'],points=points)))
+                                request=dict(camera_id=v['camera_id'],scan_stamp_ns=scan['stamp_ns'],scan_arrival_ns=scan['arrival_ns'],image_stamp_ns=v['stamp_ns'],points=points)))
                 match_index+=1
     side_projection=Counter()
     if side_cards:
@@ -258,6 +258,8 @@ def main(args):
     (args.output/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
     (args.output/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>F1 fusion</title><style>body{background:#151b22;color:#eee;font:16px sans-serif;margin:2em}img{max-width:100%}pre{white-space:pre-wrap}</style><h1>F1 native front fusion</h1><p>Green: native cluster projection. Orange: detector boxes. Side matching is not implemented. Source clock comparison is separate from receive-header matching.</p><pre>'+html.escape(json.dumps(summary,indent=2))+'</pre>'+''.join(panels))
     db.close();print(json.dumps(summary,indent=2))
+    if errors or missing_fusion or omitted or (args.replay and not summary['replay_comparison']['passed']):
+        raise SystemExit(1)
 
 
 if __name__=='__main__':

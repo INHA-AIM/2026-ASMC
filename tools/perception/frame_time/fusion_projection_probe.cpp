@@ -10,7 +10,10 @@ int main(int argc,char** argv) { try {
   std::string line; std::cout<<std::setprecision(17);
   while(std::getline(std::cin,line)) {
     auto n=YAML::Load(line);const auto& cal=cameras.at(n["camera_id"].as<std::string>());
-    Context c;c.frame=Frame::Base;c.time.stamp_ns=n["scan_stamp_ns"].as<Ns>();
+    Context c;c.frame=Frame::Base;
+    const Ns stamp=n["scan_stamp_ns"].as<Ns>(),arrival=n["scan_arrival_ns"].as<Ns>();
+    // Geometry-only query at recorded ROS receipt; no scheduler timing claim.
+    c.time={stamp,arrival,arrival,"ros","bridge_receive_ns","ros"};
     c.calibration_source="F1 same-scan base_link corners";
     std::cout<<"{\"calibration_id\":\""<<cal.id<<"\",\"width\":"<<cal.width
              <<",\"height\":"<<cal.height<<",\"points\":[";

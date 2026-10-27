@@ -5,6 +5,7 @@ gRPC pose is evaluation control/ground-truth only, never a production input.
 Requires an already running isolated /migration/lidar plus camera and bridge.
 """
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -77,6 +78,11 @@ def main(args):
     report=dict(run_id=args.run_id,scenario=args.scenario,link=link,ego_before=MessageToDict(original),mode_before=mode,
         weather_before=MessageToDict(old_weather),time_before=MessageToDict(old_time),
         publishers=publishers,actors_before=MessageToDict(inventory),owned=[],failures=[],restored=False)
+    patch=subprocess.check_output(['git','-C',str(ROOT),'diff','HEAD','--binary'])
+    (args.output/'source.patch').write_bytes(patch)
+    report['source_revision']=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
+    report['source_patch_sha256']=hashlib.sha256(patch).hexdigest()
+    report['trial_tool_sha256']=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     def save():(args.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     def mutate(method,request):
         result=method(request,timeout=3)
