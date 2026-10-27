@@ -25,6 +25,7 @@ SHADOW_TOPICS = (
     '/planning/camera_bbox_lane_change/diagnostics', '/planning/camera_bbox_lane_change/markers',
     '/planning/camera_bbox_lane_change/reference_lane', '/planning/objects', '/planning/vehicle/state',
     '/planning/mode', '/planning/control_selector/diagnostics', '/diagnostics',
+    '/behavior/context', '/behavior/command_v2', '/planning/trajectory', '/planning/frenet_feedback_v2',
     '/ctrl_cmd/normal', '/ctrl_cmd/jamming', '/ctrl_cmd', '/rosout_agg',
 )
 REQUIRED_TOPICS = (
