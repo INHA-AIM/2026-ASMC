@@ -7,6 +7,7 @@ Run under the ROS Python environment: python3 -m scen_runner.records.analyze_sha
 import argparse
 from collections import Counter, OrderedDict
 import html
+import math
 import json
 from pathlib import Path
 
@@ -52,6 +53,10 @@ def analyze(directory, output_name='analysis'):
     stats, reasons, box_reasons, selectors = {}, Counter(), Counter(), Counter()
     images, pending, cases = OrderedDict(), OrderedDict(), []
     case_counts = Counter()
+    collision_samples, collision_ids = 0, Counter()
+    contact_decisions = Counter()
+    modes = []
+    latest_ego = None
     last_selector = None
     latest_selector = {}
     logs = output/'decisions.jsonl'
@@ -90,7 +95,20 @@ def analyze(directory, output_name='analysis'):
                     t = receipt.to_sec()
                     stamp = msg.header.stamp if hasattr(msg, 'header') else None
                     stats.setdefault(topic, TopicStats()).observe(t, stamp.to_sec() if stamp else None)
-                    if topic == '/planning/control_selector/diagnostics':
+                    if topic == '/Ego_topic':
+                        latest_ego = dict(receipt=t, x=msg.position.x, y=msg.position.y,
+                            heading_deg=msg.heading, velocity_xyz_mps=[msg.velocity.x,msg.velocity.y,msg.velocity.z])
+                    elif topic == '/CollisionData':
+                        # UDP repeats contact state: count samples and IDs, not unique collisions.
+                        hits = list(msg.collision_object) + list(msg.collision_objecta)
+                        if hits:
+                            collision_samples += 1
+                            collision_ids.update(str(o.unique_id) for o in hits)
+                            emit(stream,dict(receipt=t,topic=topic,ids=[o.unique_id for o in hits]))
+                    elif topic == '/planning/mode':
+                        if not modes or modes[-1]['mode'] != int(msg.data):
+                            modes.append(dict(receipt=t, mode=int(msg.data), last_ego=latest_ego))
+                    elif topic == '/planning/control_selector/diagnostics':
                         latest_selector = parse_selector(msg.data)
                         key = (latest_selector.get('mode'), latest_selector.get('selected_source'), latest_selector.get('command_fresh'))
                         selectors[str(key)] += 1
@@ -101,6 +119,7 @@ def analyze(directory, output_name='analysis'):
                         for status in msg.status:
                             values = {v.key:v.value for v in status.values}
                             reasons[status.message] += 1
+                            contact_decisions[values.get("contact_decision", "not_in_this_revision")] += 1
                             emit(stream, dict(receipt=t, topic=topic, reason=status.message, values=values,
                                               last_selector_sample=latest_selector))
                     elif topic == '/planning/camera_bbox_lane/result':
@@ -111,7 +130,12 @@ def analyze(directory, output_name='analysis'):
                         for b in boxes:
                             box_reasons[b['label']+' | '+b['reason'].split(':')[0]] += 1
                         emit(stream, dict(receipt=t, topic=topic, source_stamp_ns=key, valid=msg.valid,
-                                          reason=msg.reason, lane_stamp_ns=msg.lane_stamp.to_nsec(), boxes=boxes))
+                                          reason=msg.reason, lane_stamp_ns=msg.lane_stamp.to_nsec(), boxes=boxes,
+                                          contact_projection_valid=getattr(msg,'contact_projection_valid',None),
+                                          contact_support_x_max_m=getattr(msg,'contact_support_x_max_m',None),
+                                          ground_contact_valid=list(getattr(msg,'ground_contact_valid',[])),
+                                          ground_contacts=[[[p.x,p.y,p.z] for p in poly.points]
+                                              for poly in getattr(msg,'ground_contacts',[])]))
                         if not msg.valid or 5 in msg.assignments:
                             if key in images:gallery(key,msg)
                             else:pending[key]=msg
@@ -128,6 +152,8 @@ def analyze(directory, output_name='analysis'):
                    missing_required=[k for k in REQUIRED_TOPICS if k not in stats],
                    follower_reason_samples=dict(reasons), bbox_reason_samples=dict(box_reasons),
                    selector_samples=dict(selectors), gallery_cases=cases,
+                   contact_decision_samples=dict(contact_decisions), mode_transitions=modes,
+                   collision_report_samples=collision_samples, collision_report_ids=dict(collision_ids),
                    interpretation='Counts are message samples, not independent failures. Receipt gaps include startup/reset. '
                    'Last selector sample is diagnostic context, not per-command arbitration proof. '
                    'Gallery uses exact bbox/frame stamp; no independently measured geometry GT.')
