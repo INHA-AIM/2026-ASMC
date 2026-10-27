@@ -6,6 +6,7 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <limits>
 #include <stdexcept>
 
@@ -253,7 +254,10 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   if(config_.integrated_motion)motion=integrated_motion?*integrated_motion:tunnel_filter::EgoMotion{};
   anchor_valid_=local.st_IMU.b_ImuReady;anchor_stamp_=stamp;anchor_yaw_=local.st_IMU.f32_Yaw_rad;anchor_speed_=local.st_CAN.f32_CurrentVel_MPS;
   std::vector<std::uint8_t> protect,ambiguous;
+  const auto protection_start=std::chrono::steady_clock::now();
   Protection(*voxel,vehicle,camera,config_.protection,protect,ambiguous);
+  const double protection_ms=std::chrono::duration<double,std::milli>(
+    std::chrono::steady_clock::now()-protection_start).count();
   const bool available=config_.protection.enabled&&camera&&
     (camera->views.empty() ? camera->calibrated&&camera->available :
      std::all_of(camera->views.begin(),camera->views.end(),[](const auto& v){return v.calibrated&&v.available;}));
@@ -415,6 +419,13 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   out.report.ran=true;out.report.input_points=f.input_points;out.report.ceiling_labeled=f.ceiling_removed+structure_ceiling_points;
   out.report.wall_labeled=f.wall_removed+structure_wall_points;out.report.ground_labeled=f.ground_removed+structure_ground_points;
   out.report.removed_points=f.input_points-out.filtered->size();out.report.core_ms=f.timings.total_ms;
+  out.report.residual_clusters_reused=f.residual_clusters_reused;
+  const auto& t=f.timings;
+  out.report.timings_ms={{"protection",protection_ms},{"level",t.level_ms},
+    {"ceiling",t.ceiling_ms},{"ground_fit",t.ground_fit_ms},{"ground_remove",t.ground_remove_ms},
+    {"wall_fit",t.wall_fit_ms},{"wall_remove",t.wall_remove_ms},
+    {"residual_cluster",t.residual_cluster_ms},{"residual_obb",t.residual_obb_ms},
+    {"cluster",t.cluster_ms},{"obb",t.obb_ms},{"obb_filter",t.obb_filter_ms},{"core",t.total_ms}};
   return out;
 }
 }  // namespace asmc::lidar::pipeline

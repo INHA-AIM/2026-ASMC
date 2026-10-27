@@ -153,6 +153,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/preprocessing/ground_filter.cpp
     src/detection/clustering.cpp
     src/detection/obb.cpp
+    src/detection/euclidean_components.cpp
     src/geometry/scan_frame.cpp
     src/tracking/kalman.cpp
     src/tracking/motion_classifier.cpp
@@ -232,6 +233,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_ground test/pipeline/test_ground.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_clustering test/pipeline/test_clustering.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_obb test/pipeline/test_obb.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_euclidean_components test/pipeline/test_euclidean_components.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_scan_frame test/pipeline/test_scan_frame.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_tracker test/pipeline/test_tracker.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pose_history test/pipeline/test_pose_history.cpp)

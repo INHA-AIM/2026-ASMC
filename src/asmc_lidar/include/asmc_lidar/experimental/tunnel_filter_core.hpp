@@ -475,6 +475,9 @@ struct StageTimings {
     double ground_remove_ms = 0.0;
     double wall_fit_ms = 0.0;
     double wall_remove_ms = 0.0;
+    // Residual-wall classification previously hid clustering/OBB cost in wall_remove_ms.
+    double residual_cluster_ms = 0.0;
+    double residual_obb_ms = 0.0;
     double cluster_ms = 0.0;
     double obb_ms = 0.0;
     double obb_filter_ms = 0.0;
@@ -513,6 +516,7 @@ struct FrameResult {
     int objects_removed_ceiling = 0;
     int objects_removed_wall = 0;
     int objects_ground_residual = 0;
+    bool residual_clusters_reused = false;
     StageTimings timings;
 };
 
@@ -573,6 +577,10 @@ private:
     GroundTemporalFilter ground_filter_;
     std::array<WallTrack, 2> wall_tracks_;
     FrameResult result_;
+    // Same-call cache only. No cloud copies or reuse across scan/Reset.
+    bool residual_reusable_ = false;
+    std::vector<pcl::PointIndices> residual_clusters_;
+    std::vector<Obb> residual_obbs_;
 };
 
 }  // namespace tunnel_filter

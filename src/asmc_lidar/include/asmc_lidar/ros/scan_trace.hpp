@@ -372,6 +372,14 @@ inline void Tunnel(std::ostream& out,const pipeline::TunnelFilterStageReport& t)
   }
   out << ']';
   out << ",\"exterior_surface_removed\":" << t.exterior_surface_removed;
+  out << ",\"residual_clusters_reused\":";Bool(out,t.residual_clusters_reused);
+  out << ",\"timings_ms\":{";
+  bool first_timing=true;
+  for(const auto& value:t.timings_ms) {
+    if(!first_timing)out<<',';
+    first_timing=false;Str(out,value.first);out<<':';Num(out,value.second);
+  }
+  out<<'}';
   out << ",\"residual_decisions\":[";
   bool first_decision=true;
   for(const auto& d:t.residual_decisions) {
