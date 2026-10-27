@@ -582,6 +582,17 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
                         config_.max_time_offset_s, &prune_before_ns_);
       continue;
     }
+    // Receiver epoch/view invalidation can occur during point projection.
+    // Recheck at the application boundary, not only before expensive work.
+    if (!camera.Current(*yolo_frame.source, ros_now_ns, steady_now_ns)) {
+      ++counters_.not_current;
+      if (diagnostic) {
+        diagnostic->action="wait";
+        diagnostic->reason="observation_changed_during_projection";
+      }
+      pending_.push_front(std::move(synchronized_lidar_frame));
+      break;
+    }
     const bool reused = fusion_sync::ConsumeMatchedFrame(yolo_history, decision.yolo_index, reuse_);
     consumed_[yolo_frame.identity] = yolo_frame.stamp_ns;
     if (diagnostic) diagnostic->reused = reused;

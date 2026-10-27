@@ -1069,3 +1069,21 @@ TEST(FusionContract, InvalidProjectionIsNotAnEmptyCameraObservation) {
   ASSERT_FALSE(report.decisions.empty());
   EXPECT_EQ(report.decisions.back().reason,"projection_invalid");
 }
+
+TEST(FusionContract, RecheckCameraEpochAfterProjectionBeforeApplying) {
+  class ChangesDuringProjection : public FakeSource {
+   public:
+    int checks=0;
+    bool Current(const CameraFrame&,Ns,Ns) override { return ++checks == 1; }
+  } source;
+  FusionConfig config;config.initial_confirmations=1;
+  FrontCameraFusion fusion(config,FrontCalibration());TrackerSim tracker;
+  source.Set({MakeFrame(kT0,{TruckBox()})});
+  const auto report=tracker.Scan(fusion,source,kT0,kT0);
+  EXPECT_EQ(tracker.live[0].camera.str_ObjectClass,"unknown");
+  EXPECT_EQ(fusion.consumed_size(),0u);
+  EXPECT_EQ(report.matched_this_call,0u);
+  EXPECT_EQ(report.pending_scans,1u);
+  ASSERT_FALSE(report.decisions.empty());
+  EXPECT_EQ(report.decisions.back().reason,"observation_changed_during_projection");
+}
