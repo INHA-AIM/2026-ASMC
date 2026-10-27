@@ -64,6 +64,25 @@ class ScalarStats:
                     p50=percentile(.5),p95=percentile(.95),p99=percentile(.99),maximum=max(values) if values else None)
 
 
+def scenario_outcome_summary(directory):
+    """Lifecycle evidence is separate from recorder completeness and safety."""
+    counts=Counter();terminal=[];dropped=0
+    for path in sorted(Path(directory).glob('scenes/*/events.jsonl')):
+        with path.open(encoding='utf-8') as stream:
+            for line in stream:
+                row=json.loads(line);event=row.get('event')
+                if event not in ('driving_ready','run_ended','runtime_error','stop_requested',
+                                 'cleanup_confirmed','runs_finished','stop_completed'):continue
+                counts[event]+=1
+                if event in ('run_ended','runtime_error','runs_finished'):
+                    if len(terminal)>=100:dropped+=1;continue
+                    terminal.append({k:row[k] for k in ('event','time','episode','seed','section','reason',
+                        'elapsed_s','error') if k in row})
+    return dict(counts=dict(counts),terminal_events=terminal,dropped_terminal_events=dropped,
+        interpretation='section_end is the generator finish boundary, not independent collision-free acceptance. '
+                       'Missing driving_ready and runtime_error remain preparation failures even if bags finalized.')
+
+
 def native_contact_summary(directory):
     counts=Counter();ids=Counter();errors=Counter()
     for path in sorted(Path(directory).glob('scenes/*/events.jsonl')):
@@ -231,7 +250,7 @@ def analyze(directory, output_name='analysis',allow_incomplete=False):
                    follower_reason_samples=dict(reasons), bbox_reason_samples=dict(box_reasons),
                    selector_samples=dict(selectors), gallery_cases=cases,
                    contact_decision_samples=dict(contact_decisions), mode_transitions=modes,
-                   evaluated_contact_plan_wall_ms=planning_cost.summary(),native_contacts=native_contact_summary(directory),
+                   evaluated_contact_plan_wall_ms=planning_cost.summary(),native_contacts=native_contact_summary(directory),scenario_outcomes=scenario_outcome_summary(directory),
                    unresolved_collision_report_samples=unresolved_collision_samples,
                    collision_report_samples=collision_samples, collision_report_ids=dict(collision_ids),
                    interpretation='Counts are message samples, not independent failures. Receipt gaps include startup/reset. '
