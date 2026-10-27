@@ -512,6 +512,30 @@ uint8_t classifyBox(const lane_boundary_adapter::CameraBBox& box, const std::vec
     return Result::OUTSIDE;
 }
 
+// Contact uncertainty is carried separately from semantic lane assignment. The
+// planner may compare a swept vehicle corridor against it; it is NOT an OBB.
+bool groundContact(const lane_boundary_adapter::CameraBBox& box, geometry_msgs::Polygon& polygon) {
+    const double crop_bottom = camera.height * (1.0 - params.hood_crop_bottom_ratio) - params.bottom_clip_px;
+    if (maskOccludesContact(box) || box.ymax >= crop_bottom || box.xmin < 0 || box.ymin < 0 ||
+        box.xmax > camera.width || box.ymax > camera.height || box.xmax <= box.xmin || box.ymax <= box.ymin)
+        return false;
+    const auto inverse = camera.homography.inv(cv::DECOMP_SVD);
+    const double top = std::max<double>(box.ymin, box.ymax - params.contact_band_height_px);
+    const double bottom = std::min(crop_bottom, box.ymax + params.contact_row_tolerance_px);
+    for (const auto& pixel : std::vector<cv::Point2d>{
+        {box.xmin-params.boundary_margin_px,top},{box.xmax+params.boundary_margin_px,top},
+        {box.xmax+params.boundary_margin_px,bottom},{box.xmin-params.boundary_margin_px,bottom}}) {
+        const auto h = inverse * cv::Vec3d(pixel.x,pixel.y,1.0);
+        if (!std::isfinite(h[2]) || std::abs(h[2]) < 1e-9) return false;
+        const double x=h[0]/h[2], y=h[1]/h[2];
+        if (!std::isfinite(x) || !std::isfinite(y) || x < 0 || x > 200 || std::abs(y)>100) return false;
+        geometry_msgs::Point32 p; p.x=x; p.y=y;
+        p.z=camera.selected_plane[0]*x+camera.selected_plane[1]*y+camera.selected_plane[2];
+        polygon.points.push_back(p);
+    }
+    return polygon.points.size()==4;
+}
+
 double boxIoU(const lane_boundary_adapter::CameraBBox& a, const lane_boundary_adapter::CameraBBox& b) {
     const double intersection = std::max(0.0, static_cast<double>(std::min(a.xmax,b.xmax)-std::max(a.xmin,b.xmin))) *
                                 std::max(0.0, static_cast<double>(std::min(a.ymax,b.ymax)-std::max(a.ymin,b.ymin)));
@@ -671,6 +695,12 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
     result.adjacent_state = Result::NO_DETECTION;
     result.boxes = message->boxes;
     const auto quads = projectLanes(nearest->context);
+    result.contact_projection_valid = projection != nullptr || !params.projection_context_required;
+    double support[2] = {0.,0.};
+    for (const auto& segment: nearest->context.segments)
+        if (segment.lateral_index<2 && segment.valid_x_min_m <= 1.0 && segment.effective_confidence>=params.min_confidence)
+            support[segment.lateral_index]=std::max(support[segment.lateral_index],segment.valid_x_max_m);
+    result.contact_support_x_max_m=std::min(support[0],support[1]);
     bool own_hit = false, adjacent_hit = false, unknown = false, deferred_far = false;
     const auto matches = matchBoxTracks(result.boxes, stamp);
     std::vector<BoxTrack> next_tracks;
@@ -687,6 +717,11 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
             reason = "tracked_clipped_contact:geometric_lane=" + std::to_string(old->lane);
         }
         result.clipped_association.push_back(associated);
+        geometry_msgs::Polygon contact;
+        const bool contact_valid=result.contact_projection_valid && groundContact(box,contact);
+        if(!contact_valid) contact.points.clear();
+        result.ground_contacts.push_back(contact);
+        result.ground_contact_valid.push_back(contact_valid);
         if (assignment == Result::OWN || assignment == Result::ADJACENT) {
             BoxTrack track;
             track.box = box; track.stamp = stamp;

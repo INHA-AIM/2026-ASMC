@@ -19,5 +19,6 @@
     <arg name="control_topic" value="/ctrl_cmd/jamming"/>
     <arg name="use_rviz" value="false"/>
   </include>
+  <param name="camera_bbox_lane_change/contact_clearance_enabled" value="$(optenv ASMC_SHADOW_CONTACT_CLEARANCE false)" type="bool"/>
   <!-- The camera frame bridge consumes asmc_camera directly, independently of Main. -->
 </launch>
