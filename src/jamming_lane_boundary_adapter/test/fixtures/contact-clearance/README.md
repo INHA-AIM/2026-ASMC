@@ -30,3 +30,6 @@ during the turn. This is input for the next planner/controller comparison,
 not a regression requirement that this state must always remain rejected.
 The family/result stamps are paired exactly; the nearby live diagnostic was
 not atomic with those messages. No source images or simulator GT are embedded.
+The later15m completion fallback passes the same geometry guards for this one
+input after the original147 candidates fail. Its subsequent r48 driving trial
+still stops later; this fixture is not closed-loop driving acceptance.

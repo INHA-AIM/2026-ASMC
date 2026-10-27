@@ -959,7 +959,7 @@ void publishImage(cv::Mat image, const std_msgs::Header& header, const Result& r
 }
 
 // ============================================================================
-// 6. 설정 / 기존 보정 파일 로드. 깊이 모델과 라이다를 사용하지 않는다.
+// 6. 설정 / 카메라 정본 보정 로드. 별도 깊이 모델은 없으며, local OBB 소비는 실험 설정에서만 켠다.
 // ============================================================================
 void loadParameters(ros::NodeHandle& nh) {
     nh.param("local_contact_support_enabled",params.local_contact_support_enabled,false);
