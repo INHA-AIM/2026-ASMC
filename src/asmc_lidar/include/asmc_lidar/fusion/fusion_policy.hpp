@@ -156,6 +156,7 @@ inline std::string RawLabel(std::string label) {
 // classifier, latched class or a previous unconfirmed class. Timing/epoch/age
 // validation remains the caller's separate gate.
 inline std::string ObservedMissionGroup(const CameraClassEvidence& evidence) {
+  if(evidence.multiview_evidence)return evidence.protection_group;
   const auto group = Normalize(evidence.observed_class, true);
   return group != "unknown" && group == Normalize(evidence.observed_raw_class, true)
              ? group : "unknown";
@@ -177,6 +178,8 @@ inline void InvalidateObservation(TrackedObject& object, uint64 epoch) {
   object.camera.camera_observation_ns = 0;
   object.camera.camera_observation_epoch = epoch;
   object.camera.observed_class = object.camera.observed_raw_class = "unknown";
+  object.camera.multiview_evidence=false;object.camera.group_conflict=false;
+  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;
 }
 
 // false when this epoch already applied an image at or after stamp_ns.
@@ -192,6 +195,8 @@ inline bool BeginObservation(TrackedObject& object, uint64 stamp_ns, uint64 epoc
   object.camera.camera_observation_epoch = epoch;
   object.camera.camera_observation_ns = stamp_ns;
   object.camera.observed_class = object.camera.observed_raw_class = "unknown";
+  object.camera.multiview_evidence=false;object.camera.group_conflict=false;
+  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;
   return true;
 }
 
@@ -241,6 +246,8 @@ inline void Observe(TrackedObject& object, const std::string& label, const std::
 // Ported from Main FusionClassPolicy.hpp:118-127 (8f93c22e)
 inline void Miss(TrackedObject& object, int miss_grace) {
   object.camera.observed_class = object.camera.observed_raw_class = "unknown";
+  object.camera.multiview_evidence=false;object.camera.group_conflict=false;
+  object.camera.protection_group="unknown";object.camera.evidence_scan_ns=0;
   ++object.camera.class_miss_counter;
   object.camera.last_seen_class = "unknown";
   object.camera.continuity_counter = 0;
@@ -260,6 +267,10 @@ namespace fusion_state {
 
 // Ported from Main FusionClassState.hpp:11-21 (8f93c22e)
 inline void Copy(const TrackedObject& source, TrackedObject& target, bool unlock = false) {
+  target.camera.multiview_evidence=source.camera.multiview_evidence;
+  target.camera.group_conflict=source.camera.group_conflict;
+  target.camera.protection_group=source.camera.protection_group;
+  target.camera.evidence_scan_ns=source.camera.evidence_scan_ns;
   target.camera.str_ObjectClass = source.camera.str_ObjectClass;
   target.camera.str_YoloClass = source.camera.str_YoloClass;
   target.camera.last_seen_class = source.camera.last_seen_class;

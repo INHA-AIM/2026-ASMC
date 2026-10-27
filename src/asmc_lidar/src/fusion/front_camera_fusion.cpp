@@ -147,13 +147,37 @@ bool LidarToImage(const std::vector<TrackedObject>& objects, const asmc::lidar::
   return true;
 }
 
+double ProjectionIoU(const YoloBox& cam, const LidarImageBox& lid_bbox) {
+  float32 center_x = (lid_bbox.min_x + lid_bbox.max_x) / 2.0f;
+  float32 center_y = (lid_bbox.min_y + lid_bbox.max_y) / 2.0f;
+  float32 width = (lid_bbox.max_x - lid_bbox.min_x) * 1.3f;
+  float32 height = (lid_bbox.max_y - lid_bbox.min_y) * 1.5f;
+
+  LidarImageBox scaled_lid_box;
+  scaled_lid_box.min_x = center_x - width / 2.0f;
+  scaled_lid_box.min_y = center_y - height / 2.0f;
+  scaled_lid_box.max_x = center_x + width / 2.0f;
+  scaled_lid_box.max_y = center_y + height / 2.0f;
+
+  const float32 x_left = std::max(cam.min_x, scaled_lid_box.min_x);
+  const float32 y_top = std::max(cam.min_y, scaled_lid_box.min_y);
+  const float32 x_right = std::min(cam.max_x, scaled_lid_box.max_x);
+  const float32 y_bottom = std::min(cam.max_y, scaled_lid_box.max_y);
+  const float32 inter_area = std::max(0.0f, x_right - x_left) * std::max(0.0f, y_bottom - y_top);
+  const float32 cam_area =
+      std::max(0.0f, cam.max_x - cam.min_x) * std::max(0.0f, cam.max_y - cam.min_y);
+  const float32 lid_area = std::max(0.0f, scaled_lid_box.max_x - scaled_lid_box.min_x) *
+           std::max(0.0f, scaled_lid_box.max_y - scaled_lid_box.min_y);
+  const float32 union_area = cam_area + lid_area - inter_area;
+  return union_area > 1e-6f ? inter_area / union_area : 0.0;
+}
+
 // is_new_yolo_frame is always true at Main's only call site (:995) and is
 // dropped; vec_FusionIdx (debug image only) is not kept.
 // Ported from Main FusionCamera.cpp:357-493 (8f93c22e)
 void IOUFusion(std::vector<TrackedObject>& objects, const std::vector<YoloBox>& detected,
                const std::vector<LidarImageBox>& lidar_boxes, std::uint64_t image_stamp_ns,
                std::uint64_t epoch, const FusionConfig& config, FusionCounters* counters, MatchDiagnostic* diagnostic) {
-  const float32 fusion_x_offset = 0;
   if (diagnostic) {
     const auto n = std::min<std::size_t>(128, objects.size());
     diagnostic->associations.resize(n);
@@ -194,28 +218,7 @@ void IOUFusion(std::vector<TrackedObject>& objects, const std::vector<YoloBox>& 
     for (std::size_t j = 0; j < lidar_boxes.size(); ++j) {
       const auto& lid_bbox = lidar_boxes[j];
 
-      float32 center_x = (lid_bbox.min_x + lid_bbox.max_x) / 2.0f;
-      float32 center_y = (lid_bbox.min_y + lid_bbox.max_y) / 2.0f;
-      float32 width = (lid_bbox.max_x - lid_bbox.min_x) * 1.3f;
-      float32 height = (lid_bbox.max_y - lid_bbox.min_y) * 1.5f;
-
-      LidarImageBox scaled_lid_box;
-      scaled_lid_box.min_x = center_x - width / 2.0f + fusion_x_offset;
-      scaled_lid_box.min_y = center_y - height / 2.0f;
-      scaled_lid_box.max_x = center_x + width / 2.0f + fusion_x_offset;
-      scaled_lid_box.max_y = center_y + height / 2.0f;
-
-      const float32 x_left = std::max(cam.min_x, scaled_lid_box.min_x);
-      const float32 y_top = std::max(cam.min_y, scaled_lid_box.min_y);
-      const float32 x_right = std::min(cam.max_x, scaled_lid_box.max_x);
-      const float32 y_bottom = std::min(cam.max_y, scaled_lid_box.max_y);
-      const float32 inter_area = std::max(0.0f, x_right - x_left) * std::max(0.0f, y_bottom - y_top);
-      const float32 cam_area =
-          std::max(0.0f, cam.max_x - cam.min_x) * std::max(0.0f, cam.max_y - cam.min_y);
-      const float32 lid_area = std::max(0.0f, scaled_lid_box.max_x - scaled_lid_box.min_x) *
-                               std::max(0.0f, scaled_lid_box.max_y - scaled_lid_box.min_y);
-      const float32 union_area = cam_area + lid_area - inter_area;
-      const double iou = union_area > 1e-6f ? inter_area / union_area : 0.0;
+      const double iou = ProjectionIoU(cam, lid_bbox);
       if (diagnostic && lid_bbox.c_idx >= 0 &&
           std::size_t(lid_bbox.c_idx) < diagnostic->associations.size()) {
         auto& d = diagnostic->associations[lid_bbox.c_idx];

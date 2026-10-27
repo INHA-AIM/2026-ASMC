@@ -19,6 +19,11 @@ struct CameraClassEvidence {
   std::string observed_class = "unknown";
   std::string observed_raw_class = "unknown";
   bool is_class_locked = false;
+  bool multiview_evidence=false, group_conflict=false;
+  // Fresh common protection eligibility can survive vehicle/dynamic disagreement.
+  // It is not a confirmed class and never derives from measured speed.
+  std::string protection_group="unknown";
+  std::uint64_t evidence_scan_ns=0;
 
 };
 

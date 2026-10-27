@@ -165,6 +165,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/experimental/tunnel_filter_stage.cpp
     src/experimental/tunnel_route.cpp
     src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp
+    src/fusion/multi_camera_fusion.cpp
     src/fusion/front_camera_fusion.cpp
     src/fusion/buffer_camera_source.cpp)
   set_target_properties(asmc_lidar_pipeline PROPERTIES POSITION_INDEPENDENT_CODE ON)

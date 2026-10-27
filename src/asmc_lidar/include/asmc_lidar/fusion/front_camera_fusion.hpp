@@ -34,6 +34,7 @@ namespace fusion {
 struct FusionConfig {
   // Bounded, observation-only diagnostics. Disabling must not change fusion.
   bool capture_diagnostics = true;
+  std::string views = "front"; // internal rollback: front or all; no extra launch flag
   // Main ~fusion_* parameters (main.launch values).
   double max_time_offset_s = 0.05;    // Match only within +-50 ms (inclusive)
   double sync_wait_timeout_s = 0.20;  // stop waiting for a later frame after 200 ms
@@ -63,6 +64,7 @@ struct FusionConfig {
 struct CameraFrame {
   std::int64_t stamp_ns = 0;
   std::uint64_t epoch = 0;     // receiver epoch of the record
+  std::string frame_id = "camera_front";
   std::string identity;        // session|generation|frame_id|stamp|calibration_id
   int width = 0, height = 0;
   std::vector<camera::Box> boxes;
@@ -74,11 +76,16 @@ struct CameraFrame {
 // (gate closed, STANDBY/PREPARE, stale, invalid, missing...).
 struct CameraSnapshot {
   bool active = false;
+  bool gate_active = false;
+  std::string gate_reason;
+  std::uint64_t gate_epoch = 0;
+  std::map<std::string,std::vector<CameraFrame>> by_view;
   std::string reason;
   std::uint64_t epoch = 0;          // epoch of the returned frames; 0 when none
   std::vector<CameraFrame> frames;  // retained front frames, any order
   struct View {
     std::string frame_id, reason, session, calibration_id, model_id, config_id;
+    bool matching_implemented=false;
     std::uint64_t generation = 0;
     std::uint32_t wire_sequence = 0;
     std::int64_t stamp_ns = 0, image_minus_scan_ns = 0;
@@ -163,6 +170,8 @@ bool LidarToImage(const std::vector<TrackedObject>& objects, const asmc::lidar::
                   const camera::Calibration& camera, const FusionConfig& config,
                   std::vector<LidarImageBox>* boxes);
 
+// Same expanded rectangle arithmetic shared by legacy front and multi-view.
+double ProjectionIoU(const fusion_adapter::YoloBox&, const LidarImageBox&);
 // Main IOUFusion: greedy one-to-one IoU association, Observe on matches and
 // Miss on every other observed object. `detected` holds normalized classes.
 void IOUFusion(std::vector<TrackedObject>& objects,

@@ -6,6 +6,7 @@
 
 #include <asmc_lidar/geometry/camera_calibration.hpp>
 #include <asmc_lidar/fusion/front_camera_fusion.hpp>
+#include <asmc_lidar/fusion/multi_camera_fusion.hpp>
 #include <asmc_lidar/geometry/projection.hpp>
 
 #include <gtest/gtest.h>
@@ -1086,4 +1087,133 @@ TEST(FusionContract, RecheckCameraEpochAfterProjectionBeforeApplying) {
   EXPECT_EQ(report.pending_scans,1u);
   ASSERT_FALSE(report.decisions.empty());
   EXPECT_EQ(report.decisions.back().reason,"observation_changed_during_projection");
+}
+
+namespace {
+camera::Calibrations OverlapCameras() {
+  camera::Calibrations c;for(const auto name:{"camera_front","camera_left","camera_right"}) {
+    auto k=FrontCalibration();k.frame_id=name;k.id=std::string("test_")+name;c[name]=k;
+  }return c;
+}
+void ThreeFrames(FakeSource& source,Ns stamp,const std::vector<std::string>& labels) {
+  source.snapshot={};source.snapshot.gate_active=true;source.snapshot.gate_epoch=1;
+  const auto c=OverlapCameras();std::size_t i=0;
+  for(const auto& v:c) {
+    CameraFrame f=MakeFrame(stamp,{});f.frame_id=v.first;f.identity=v.first+std::to_string(stamp);
+    const auto label=labels.at(i++);
+    if(label!="empty")f.boxes={CameraBox(ProjectedBox(MakeCar(7,10)),label,fusion_class::Normalize(label,true))};
+    source.snapshot.by_view[v.first]={f};
+    CameraSnapshot::View d;d.frame_id=v.first;d.reason="ok";source.snapshot.views.push_back(d);
+  }
+}
+struct MultiRig {
+  MultiCameraFusion fusion{FusionConfig{},OverlapCameras()};FakeSource source;
+  std::vector<TrackedObject> objects{MakeCar(7,10)},history;
+  FusionReport Run(Ns stamp,Ns decision=0) {
+    if(!decision)decision=stamp;
+    auto c=LeveledContext(stamp);c.scan_sequence=stamp;
+    return fusion.Process(decision,stamp,c,objects,&history,source,decision,decision);
+  }
+};
+}
+TEST(MultiCameraFusion, ThreeViewsGiveOnlyOneConfirmationAndPreserveGeometry) {
+  MultiRig r;const auto before=r.objects.front();
+  for(int i=0;i<5;++i) {
+    ThreeFrames(r.source,kT0+i*100*kMs,{"car","car","car"});
+    const auto report=r.Run(kT0+i*100*kMs);
+    EXPECT_EQ(report.matched_this_call,3u);
+    if(i<4){EXPECT_EQ(r.objects[0].camera.str_ObjectClass,"unknown");EXPECT_EQ(r.objects[0].camera.continuity_counter,i+1);}
+  }
+  EXPECT_EQ(r.objects[0].camera.str_ObjectClass,"vehicle");
+  EXPECT_EQ(r.fusion.counters().observations,5u);ExpectSameGeometry(before,r.objects.front());
+}
+TEST(MultiCameraFusion, PositiveOverridesEmptyAndStaticConflictWithholdsProtection) {
+  MultiRig r;ThreeFrames(r.source,kT0,{"car","empty","empty"});r.Run(kT0);
+  EXPECT_EQ(r.objects[0].camera.class_miss_counter,0);EXPECT_EQ(r.objects[0].camera.continuity_counter,1);
+  EXPECT_EQ(fusion_class::ObservedMissionGroup(r.objects[0].camera),"vehicle");
+  ThreeFrames(r.source,kT0+100*kMs,{"car","person","empty"});r.Run(kT0+100*kMs);
+  EXPECT_TRUE(r.objects[0].camera.group_conflict);EXPECT_EQ(r.objects[0].camera.continuity_counter,1);
+  EXPECT_EQ(fusion_class::ObservedMissionGroup(r.objects[0].camera),"dynamic_obstacle");
+  ThreeFrames(r.source,kT0+200*kMs,{"car","box","empty"});r.Run(kT0+200*kMs);
+  EXPECT_EQ(fusion_class::ObservedMissionGroup(r.objects[0].camera),"unknown");
+}
+TEST(MultiCameraFusion, RawClassConflictDoesNotInventAnIdentity) {
+  MultiRig r;r.objects[0].camera.str_ObjectClass="vehicle";r.objects[0].camera.str_YoloClass="bus";
+  // Initial source epoch invalidates the pre-existing evidence, as in production.
+  ThreeFrames(r.source,kT0,{"car","truck","empty"});r.Run(kT0);
+  EXPECT_EQ(r.objects[0].camera.observed_raw_class,"unknown");
+  EXPECT_EQ(fusion_class::ObservedMissionGroup(r.objects[0].camera),"vehicle");
+  for(int i=1;i<6;++i){ThreeFrames(r.source,kT0+i*100*kMs,{"bus","bus","empty"});r.Run(kT0+i*100*kMs);}
+  ThreeFrames(r.source,kT0+600*kMs,{"bus","truck","empty"});r.Run(kT0+600*kMs);
+  EXPECT_EQ(r.objects[0].camera.str_YoloClass,"bus");
+}
+TEST(MultiCameraFusion, LateViewReaggregatesSameUnitButCannotUndoNewerScan) {
+  MultiRig r;ThreeFrames(r.source,kT0,{"car","car","car"});
+  const auto left=r.source.snapshot.by_view["camera_left"];
+  r.source.snapshot.by_view.erase("camera_left");r.Run(kT0);
+  EXPECT_EQ(r.objects[0].camera.continuity_counter,1);
+  r.source.snapshot.by_view["camera_left"]=left;r.Run(kT0,kT0+20*kMs);
+  EXPECT_EQ(r.objects[0].camera.continuity_counter,1);
+  ThreeFrames(r.source,kT0+100*kMs,{"car","car","car"});r.source.snapshot.by_view.erase("camera_right");r.Run(kT0+100*kMs);
+  ThreeFrames(r.source,kT0+200*kMs,{"car","car","car"});r.Run(kT0+200*kMs);
+  const auto counter=r.objects[0].camera.continuity_counter;
+  ThreeFrames(r.source,kT0+100*kMs,{"box","box","box"});r.Run(kT0+200*kMs,kT0+250*kMs);
+  EXPECT_EQ(r.objects[0].camera.continuity_counter,counter);
+}
+TEST(MultiCameraFusion, OutOfViewIsNotAMissAndStoppedViewDoesNotBlockOtherViews) {
+  MultiRig r;r.objects.push_back(MakeCar(8,-20));
+  for(int i=0;i<8;++i) {
+    ThreeFrames(r.source,kT0+i*100*kMs,{"car","empty","empty"});
+    r.source.snapshot.by_view.erase("camera_left");
+    r.Run(kT0+i*100*kMs);
+    EXPECT_EQ(r.objects[1].camera.class_miss_counter,0);
+    EXPECT_LE(r.fusion.pending_size(),3u);
+  }
+  EXPECT_EQ(r.objects[0].camera.str_ObjectClass,"vehicle");
+}
+TEST(MultiCameraFusion, RestartInvalidationAndUniqueFrames) {
+  MultiRig r;ThreeFrames(r.source,kT0,{"car","car","car"});r.Run(kT0);
+  r.Run(kT0+10*kMs);EXPECT_EQ(r.objects[0].camera.continuity_counter,1);
+  r.source.snapshot.gate_epoch=2;r.source.snapshot.by_view.clear();r.Run(kT0+20*kMs);
+  EXPECT_EQ(r.objects[0].camera.continuity_counter,0);
+  EXPECT_EQ(fusion_class::ObservedMissionGroup(r.objects[0].camera),"unknown");
+  r.source.snapshot.gate_active=false;r.Run(kT0+30*kMs);EXPECT_EQ(r.fusion.pending_size(),0u);
+}
+
+TEST(MultiCameraFusion, FrontOnlyCoordinatorMatchesExistingClassificationSequence) {
+  FusionConfig cfg;cfg.capture_diagnostics=true;
+  FrontCameraFusion before(cfg,FrontCalibration());
+  MultiCameraFusion after(cfg,{{"camera_front",FrontCalibration()}});
+  FakeSource a,b;std::vector<TrackedObject> oa{MakeCar(7,10)},ob=oa,ha,hb;
+  const std::vector<std::string> labels={"car","car","car","car","car","empty","empty","car","box","box","box","empty","empty","empty","empty"};
+  for(std::size_t i=0;i<labels.size();++i) {
+    const auto stamp=kT0+i*100*kMs;
+    auto f=MakeFrame(stamp,labels[i]=="empty"?std::vector<camera::Box>{}:std::vector<camera::Box>{CameraBox(ProjectedBox(oa[0]),labels[i],fusion_class::Normalize(labels[i],true))});
+    a.Set({f});b.snapshot=a.snapshot;b.snapshot.gate_active=true;b.snapshot.gate_epoch=1;
+    b.snapshot.by_view["camera_front"]={f};
+    before.Process(stamp,stamp,LeveledContext(stamp),oa,&ha,a,stamp,stamp);
+    after.Process(stamp,stamp,LeveledContext(stamp),ob,&hb,b,stamp,stamp);
+    EXPECT_EQ(StateOf(oa[0]),StateOf(ob[0]))<<"step "<<i;
+    ExpectSameGeometry(oa[0],ob[0]);
+  }
+}
+TEST(MultiCameraFusion, SideOpticalAxesOriginalDimensionsAndCalibrationIdentity) {
+  auto left=FrontCalibration();left.frame_id="camera_left";left.id="left";
+  left.width=640;left.height=480;left.intrinsic<<320,0,320,0,320,240,0,0,1;
+  left.base_from_camera.translation()=Vec(0,.8,1.2);
+  left.base_from_camera.linear()=rpy(0,0,std::acos(-1.)*.5);
+  camera::Calibrations cameras{{left.frame_id,left}};MultiCameraFusion fusion(FusionConfig{},cameras);
+  auto obj=MakeCar(7,10);for(auto& p:obj.detection.pcl_ClusterPoints){const float x=p.x;p.x=-p.y;p.y=x;}
+  std::vector<TrackedObject> live{obj},history;std::vector<LidarImageBox> boxes;
+  ASSERT_TRUE(LidarToImage(live,LeveledContext(kT0),left,FusionConfig{},&boxes));ASSERT_EQ(1u,boxes.size());
+  FakeSource source;source.snapshot.gate_active=true;source.snapshot.gate_epoch=1;
+  auto f=MakeFrame(kT0,{CameraBox(boxes[0],"person","dynamic_obstacle")});f.width=640;f.height=480;f.frame_id="camera_left";
+  source.snapshot.by_view["camera_left"]={f};
+  auto r=fusion.Process(kT0,kT0,LeveledContext(kT0),live,&history,source,kT0,kT0);
+  EXPECT_EQ(r.matched_this_call,1u);EXPECT_EQ(live[0].camera.observed_class,"dynamic_obstacle");
+  auto modified=cameras;modified["camera_left"].id="other";
+  EXPECT_NE(camera::fusion_calibration_identity(cameras,true),camera::fusion_calibration_identity(modified,true));
+  f.stamp_ns+=100*kMs;f.identity="wrong-size";f.width=1280;source.snapshot.by_view["camera_left"]={f};
+  r=fusion.Process(f.stamp_ns,f.stamp_ns,LeveledContext(f.stamp_ns),live,&history,source,f.stamp_ns,f.stamp_ns);
+  EXPECT_EQ(r.matched_this_call,0u);
 }

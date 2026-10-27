@@ -6,6 +6,16 @@ namespace asmc::lidar::camera {
 // Reads the camera-owned YAML. Hashes the full per-view mapping plus source SHA
 // with the same sorted ASCII JSON representation as ObservationIdentity.digest.
 Calibrations load_calibrations(const std::string& yaml_path);
+// Stable per-view identity; front-only retains its historical ID.
+inline std::string fusion_calibration_identity(const Calibrations& cameras, bool all) {
+  if (!all) {
+    const auto front = cameras.find("camera_front");
+    return front == cameras.end() ? "" : front->second.id;
+  }
+  std::string ids = "multi-view-calibration-v1\n";
+  for (const auto& view : cameras) ids += view.first + "=" + view.second.id + "\n";
+  return ids;
+}
 struct PixelResult {
   bool valid=false, time_compensated=false;
   std::string reason;
