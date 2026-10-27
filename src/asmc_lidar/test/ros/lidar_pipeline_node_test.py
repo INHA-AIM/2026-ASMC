@@ -477,6 +477,9 @@ class LidarPipelineNodeTest(unittest.TestCase):
         values = {kv.key: kv.value for kv in diagnostics.status[0].values}
         self.assertEqual(values['velocity_status'], 'unproven_moving_sensor_derivative')
         self.assertTrue(values['config_sha256'])
+        self.assertRegex(values['build_package_source_sha256'], r'^[0-9a-f]{64}$')
+        self.assertEqual(values['fusion_views'], 'all')
+        self.assertIn('original_tunnel_pipeline', values)
         self.assertEqual(values['roll_leveling'], 'true')
         self.assertEqual(values['tunnel_filter'], 'false')
         self.assertEqual(values['camera_fusion'], 'enabled')

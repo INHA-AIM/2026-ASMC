@@ -54,7 +54,8 @@ ROSTESTS = {'test_camera_receiver_ros': ('camera_receiver_ros', 1),
 
 def required_tests():
     """ctest names: catkin prefixes gtest/rostest entries with _ctest_<package>_<kind>_."""
-    names = list(LEGACY_PROGRAMS) + list(UNITTESTS) + ['asmc_lidar_hd_map_audit_equivalence']
+    names = list(LEGACY_PROGRAMS) + list(UNITTESTS) + [
+        'asmc_lidar_hd_map_audit_equivalence', 'asmc_lidar_runtime_build_identity']
     names += ['_ctest_asmc_lidar_gtest_%s' % name for name in GTESTS]
     names += ['_ctest_asmc_lidar_rostest_%s.test' % stem for stem in ROSTESTS]
     return names
