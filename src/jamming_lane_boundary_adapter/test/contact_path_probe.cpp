@@ -30,13 +30,17 @@ int interpolationRegression(){
 }
 int main(int argc,char**argv){
  if(argc==2 && std::string(argv[1])=="--interpolation-regression")return interpolationRegression();
- if(argc!=3 && argc!=5 && argc!=6)return 2;
+ const bool inspect=argc==4 && std::string(argv[3])=="--segments";
+ if(argc!=3 && argc!=5 && argc!=6 && !inspect)return 2;
+ if(inspect){adapter_config.consumer_x_max_m=params.consumer_x_max=20.;params.path_horizon=15.;}
  if(argc>=5){adapter_config.consumer_x_max_m=std::stod(argv[3]);params.consumer_x_max=std::stod(argv[3]);params.path_horizon=std::stod(argv[4]);}
  ros::Time::init();
  auto family=read<asmc_msgs::LaneBoundaryFamily>(argv[1]);
  auto bbox=read<BboxResult>(argv[2]);
  const auto context=lane_boundary_adapter::BuildBoundaryFamilyStripContext(*family,adapter_config);
  if(!context.usable()){std::cerr<<context.reason<<'\n';return 3;}
+ if(inspect){for(const auto& segment:context.segments)std::cout<<"lane="<<segment.lateral_index<<" begin="<<segment.valid_x_min_m<<" end="<<segment.valid_x_max_m<<" confidence="<<segment.effective_confidence<<'\n';return 0;}
+
  change_state.lanes=buildContinuousLanes(context);params.contact_clearance_enabled=true;
  follower_state.locked_lane=bbox->own_lane;follower_state.source_stamp=bbox->header.stamp;contact_result=bbox;
  contact_lane_history.push_back({bbox->lane_stamp,change_state.lanes});
