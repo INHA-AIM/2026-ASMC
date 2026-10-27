@@ -721,10 +721,14 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
         geometry_msgs::Polygon contact;
         bool contact_valid=result.contact_projection_valid && groundContact(box,contact);
         std::string contact_source=contact_valid?"image_plane":"unavailable";
-        if(!contact_valid && result.contact_projection_valid && result.local_obstacles_valid && local_matches[i]>=0 &&
-           (reason=="bottom_contact_occluded_by_ego_mask" || reason=="bottom_contact_clipped_by_hood_crop")) {
+        // A uniquely verified published 3D object supplies measured extent
+        // from first association onward. Waiting until visual contact is hidden
+        // changes the obstacle model mid-maneuver and can strand the controller.
+        if(result.contact_projection_valid && result.local_obstacles_valid && local_matches[i]>=0 &&
+           (contact_valid || reason=="bottom_contact_occluded_by_ego_mask" || reason=="bottom_contact_clipped_by_hood_crop")) {
             contact_valid=lane_boundary_adapter::LocalObstacleSupport::footprint(local->observation.objects.objects[local_matches[i]],contact);
-            if(contact_valid){contact_source="lidar_observed";reason="local_lidar_supported:"+reason;}
+            if(contact_valid){contact_source="lidar_observed";
+                if(assignment==Result::UNKNOWN)reason="local_lidar_supported:"+reason;}
         }
         if(!contact_valid) contact.points.clear();
         result.ground_contact_sources.push_back(contact_source);
