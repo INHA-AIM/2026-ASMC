@@ -1,0 +1,136 @@
+{
+  "images": 41666,
+  "manifest_sha256": "9b42a32cb11e23324a5e1f13c114cc01d734cc5539ab0980293b6a9e2fb9d3ed",
+  "sources": {
+    "train/aim": 59,
+    "train/bag": 2,
+    "train/capture": 24249,
+    "train/roboflow": 17035,
+    "selection/capture": 158,
+    "selection/roboflow": 36,
+    "selection/aim": 11,
+    "heldout/capture": 74,
+    "heldout/roboflow": 42
+  },
+  "supervision": {
+    "train/complete": 1473,
+    "train/partial": 39731,
+    "train/reviewed_negative": 141,
+    "selection/complete": 194,
+    "selection/partial": 11,
+    "heldout/complete": 116
+  },
+  "positive_annotations_by_evidence": {
+    "train": {
+      "box_only": 80485,
+      "polygon_requires_validation": 3924,
+      "native_rgba": 64966,
+      "packed_mask": 5162
+    },
+    "selection": {
+      "native_rgba": 261,
+      "polygon_requires_validation": 87,
+      "box_only": 11
+    },
+    "heldout": {
+      "native_rgba": 271,
+      "box_only": 174
+    }
+  },
+  "positive_annotations_by_class": {
+    "train": {
+      "deer": 4738,
+      "dog": 4602,
+      "box": 5161,
+      "motorcycle": 5178,
+      "bicycle": 6336,
+      "traffic_drum": 16221,
+      "steel_barricade": 5590,
+      "person": 31027,
+      "stroller": 2892,
+      "plastic_barrier": 4100,
+      "car": 13130,
+      "traffic_cone": 3277,
+      "concrete_barrier": 7570,
+      "bollard": 30165,
+      "bus": 7048,
+      "truck": 7502
+    },
+    "selection": {
+      "traffic_cone": 20,
+      "person": 52,
+      "stroller": 25,
+      "steel_barricade": 20,
+      "motorcycle": 21,
+      "plastic_barrier": 35,
+      "concrete_barrier": 20,
+      "deer": 22,
+      "bollard": 21,
+      "traffic_drum": 20,
+      "bicycle": 20,
+      "car": 22,
+      "box": 21,
+      "truck": 14,
+      "bus": 16,
+      "dog": 10
+    },
+    "heldout": {
+      "traffic_drum": 23,
+      "plastic_barrier": 27,
+      "bollard": 20,
+      "steel_barricade": 23,
+      "deer": 24,
+      "person": 63,
+      "stroller": 28,
+      "motorcycle": 43,
+      "box": 22,
+      "bicycle": 22,
+      "concrete_barrier": 22,
+      "bus": 22,
+      "truck": 29,
+      "car": 35,
+      "traffic_cone": 21,
+      "dog": 21
+    }
+  },
+  "complete_positive_frames_with_mask_metadata": {
+    "train": 186,
+    "selection": 151,
+    "heldout": 74
+  },
+  "inspection": {
+    "sampled_train_annotations": 48,
+    "passed": 48,
+    "class_sampling": "first up to 3 train annotations/class with native evidence, no heldout training"
+  },
+  "inspected_semantic_palette_pixels": {
+    "0,0,0": 3390412,
+    "0,255,255": 11269409,
+    "23,2,6": 1879474,
+    "76,255,76": 8976,
+    "98,2,255": 12032,
+    "99,48,250": 6110,
+    "113,178,37": 853519,
+    "127,127,127": 7460798,
+    "153,255,51": 487078,
+    "204,127,51": 35894,
+    "236,255,2": 62684,
+    "255,0,0": 14786,
+    "255,74,240": 20752,
+    "255,102,30": 399625,
+    "255,255,0": 164710,
+    "255,255,255": 327512,
+    "255,2,2": 16029,
+    "255,90,90": 2522,
+    "255,105,105": 6441,
+    "255,60,60": 296,
+    "255,75,75": 141
+  },
+  "limitations": [
+    "metadata evidence is not a full mask-file/annotation audit",
+    "partial label images require ignore-aware loss or complete-frame filtering",
+    "box/teacher-only records are not pixel GT",
+    "coarse standing_object includes fixed objects; not a wall/ceiling-only class",
+    "no model training or performance gain is claimed"
+  ]
+}

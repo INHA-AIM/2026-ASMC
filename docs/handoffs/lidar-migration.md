@@ -27,8 +27,9 @@ asmc_camera → /perception/camera/objects/observations → asmc_lidar
 
 | 담당 | 다음 작업 |
 |---|---|
-| 안승현 | HD맵 필터·카메라 수신/보정/시각/라벨 연결 지원. C0·bridge GPS0 복귀·공용 geodesy·IMU 거부 이력 수정 완료. 다음은 실제 source clock 대응 근거이며 LAN2LAN 설정과 분리 |
-| 손재호 | 추적·속도·운동 상태 정확도, GPS 없는 터널 local 객체·벽/천장 처리, 이후 3뷰 matching/fusion |
+| 안승현 | **M1 3뷰 matching/fusion**·카메라 수신/보정/시각/라벨·HD맵 보호 연결. F1 근거 재사용 |
+| 손재호 | **M2 터널 통합 확인 → M3 관측 위치/OBB → M4 추적·속도·운동 상태**. 승현과 공용 경계 리뷰 |
+| 장원태 | YOLO detect 추가학습·동일 val 회귀·배포 인수. seg는 별도 라벨/실행 pilot 이후 판단 |
 | 판제 | TTC·추종·정지·회피·센서 장애 대응과 local/map의 미션별 소비 |
 | 공동 | 좌표·시간·공용 계약 변경과 전체 미션 검증 |
 
@@ -36,8 +37,14 @@ asmc_camera → /perception/camera/objects/observations → asmc_lidar
 적용한다. 원본 tracker·OBB를 유지하고 동일 ID를 모든 발행 계열에서 제외한다. 유효한 카메라
 vehicle/dynamic_obstacle 매칭은 보호한다. LiDAR 속도 판정만으로 보호하지 않는다.
 
+단위별 선행 조건·완료 기준·고전 기법 후보는 [M0–M5 개선 계획](../../src/asmc_lidar/docs/improvement-milestones.md)이 정본이다.
+[참고 논문·Autoware/PCL 구현 목록](../../src/asmc_lidar/docs/improvement-milestones.md#우선-참고할-기준선과-적용-조건)에서
+M3의 Autoware shape estimation과 M4의 tracker 참고를 구분한다.
+[연구 브랜치 선별 통합](../records/lidar/2026-10-27-research-integration.md)은 과거 근거 보존이며 새 운영 성과가 아니다.
+
 ## GPS 없는 터널 개선 원칙
 
+PR #119는 2026-10-27 확인 시점에 구현·오프라인 검증 후 미병합이다. F1과 통합·실시간 검증을 별도로 남긴다.
 현재 local 기하 제공과 벽/천장 제거의 품질 수락은 구분한다. 새 map 위치를 만들어내거나 마지막
 GPS를 계속 사용하지 않는다. 세부 실패·검증 목록은 [보존한 터널 인계](../records/lidar/cutover-foundation-through-pr111.md#손재호-gps-없는-터널-local-인식)를 따른다.
 카메라 drivable/family는 보조 후보이며 아직 LiDAR 구조물 제거에 연결되지 않았다. 바깥 흰선과

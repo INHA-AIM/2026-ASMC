@@ -52,8 +52,11 @@ roslaunch asmc_lidar lidar.launch
 
 각 명령은 별도 터미널이다. 모델을 중복 시작하지 않는다. 카메라 없는 비교는 LiDAR의 `fusion:=false`를 사용한다.
 3뷰 확대는 뷰별 원본 보정·시각·관측 ID를 사용하며 느린 뷰를 기다리거나 같은 근거를 중복 확인 횟수로 세지 않는다.
-손재호는 matching/fusion을, 안승현은 카메라 API·보정·시간·라벨 연결을 담당한다.
+안승현은 **3뷰 matching/fusion과 카메라 API·보정·시간·라벨 연결**, 손재호는 **터널·OBB·추적/속도/운동 상태**를 담당한다.
+공동 수정 지점과 완료 기준은 [개선 계획](../../src/asmc_lidar/docs/improvement-milestones.md)을 따른다.
 
 bus/truck·차로 앞 bicycle/dog·dog 하위 종류 약세는 가중치 개선 기록이며, 현재 실행 구조와 구분해
-판제 요청과 실패 근거에 따라 추가학습한다. 구 정수 wire 및 이전 인계 수치는
+장원태가 detect 추가학습을 진행한다. 새 모델은 기존16종/3그룹·원본 좌표·B1/B2 TensorRT와 동일 val을 검증한 뒤 인수한다.
+Seg는 mask GT·binding·후처리·3뷰 지연까지 별도 확인할 후보이며 detect 납품의 선행 조건이 아니다.
+[인수할 모델·라벨 근거](../../src/asmc_lidar/docs/improvement-milestones.md#yolo-인수--detect-우선-seg는-조건부)를 참고한다. 구 정수 wire 및 이전 인계 수치는
 [PR #111까지의 기록](../records/lidar/camera-handoff-through-pr111.md)에 보존한다.

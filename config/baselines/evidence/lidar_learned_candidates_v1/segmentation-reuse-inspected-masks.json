@@ -1,0 +1,914 @@
+[
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000008",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "person",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000008.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 167,
+    "bounds": [
+      425.0,
+      333.0,
+      435.0,
+      365.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "d6ee78bee8b95323e504eb29a64bc9ed1e0a4fc2766689d1f11d74815847e889",
+    "export_mask": "masks/000-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000008",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "stroller",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000008.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 151,
+    "bounds": [
+      412.0,
+      346.0,
+      428.0,
+      365.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "d6ee78bee8b95323e504eb29a64bc9ed1e0a4fc2766689d1f11d74815847e889",
+    "export_mask": "masks/000-01.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_left_000019",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "person",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/left/000019.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 126,
+    "bounds": [
+      361.0,
+      211.0,
+      370.0,
+      238.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "15e6cbae9e86d6d9b2af245ad6d4947bd61dbfc9d16fd36dff603cf88fb40e09",
+    "export_mask": "masks/001-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_left_000019",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "stroller",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/left/000019.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 38,
+    "bounds": [
+      360.0,
+      223.0,
+      369.0,
+      237.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "15e6cbae9e86d6d9b2af245ad6d4947bd61dbfc9d16fd36dff603cf88fb40e09",
+    "export_mask": "masks/001-01.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_left_000022",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "person",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/left/000022.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 227,
+    "bounds": [
+      351.0,
+      209.0,
+      362.0,
+      246.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "524f27fe759e6c77e1a1afce27c48daa01273272bd0a66b11cdfcadc5605e110",
+    "export_mask": "masks/002-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_left_000022",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "stroller",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/left/000022.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 94,
+    "bounds": [
+      355.0,
+      223.0,
+      366.0,
+      244.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "524f27fe759e6c77e1a1afce27c48daa01273272bd0a66b11cdfcadc5605e110",
+    "export_mask": "masks/002-01.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000177",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "traffic_cone",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000177.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 178,
+    "bounds": [
+      241.0,
+      370.0,
+      261.0,
+      394.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "9a560088bafc74e2711835356ab134af1b5641fa7b4907f5671bd3ae2434aed7",
+    "export_mask": "masks/003-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000180",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "traffic_cone",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000180.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 206,
+    "bounds": [
+      399.0,
+      372.0,
+      420.0,
+      400.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "4b31220caf67879c88f1d79ecc0f377ed5db28b76e9342fd44ada3ea4c12f5cb",
+    "export_mask": "masks/004-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000182",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "traffic_cone",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000182.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 263,
+    "bounds": [
+      510.0,
+      376.0,
+      533.0,
+      408.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "384831637e1a2e9c9404a142f5eec5719f9e4095a77497be2a60955233c3fbb3",
+    "export_mask": "masks/005-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000460",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "plastic_barrier",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000460.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 616,
+    "bounds": [
+      742.0,
+      349.0,
+      775.0,
+      371.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "9461d9eb6ea6824bdfc895dcc50c0de1f38aab10650d22f79437d6609a7fa107",
+    "export_mask": "masks/006-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000118",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "steel_barricade",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000118.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 329,
+    "bounds": [
+      496.0,
+      347.0,
+      561.0,
+      371.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "1140a1bad82091debae4408dc2febd8167483d79becaf49ccbaaac0da2c3b91d",
+    "export_mask": "masks/007-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000504",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "steel_barricade",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000504.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 1217,
+    "bounds": [
+      385.0,
+      359.0,
+      504.0,
+      404.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "405137e321919c84f0ba39d33776b9feb499d3b06f398d3a7fc566a27ba4743b",
+    "export_mask": "masks/008-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261011T151930_795_front_000338",
+    "source": "capture:route_pp_30_20261011T151930_795",
+    "class_name": "concrete_barrier",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261011T151930_795/frames/instance/front/000338.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 2976,
+    "bounds": [
+      374.0,
+      351.0,
+      461.0,
+      387.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "eb1005ba25029fc389af7b563441df316d9f1d4a3eaa6202a1d61134553d5804",
+    "export_mask": "masks/009-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_left_000000",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "bicycle",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/left/000000.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 263,
+    "bounds": [
+      339.0,
+      227.0,
+      377.0,
+      259.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "f3843118ef95ac6e08fb017d167a2b82d02a04d0d100a797928568c985a2ca29",
+    "export_mask": "masks/010-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_left_000000",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "deer",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/left/000000.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 44,
+    "bounds": [
+      619.0,
+      217.0,
+      627.0,
+      226.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "f3843118ef95ac6e08fb017d167a2b82d02a04d0d100a797928568c985a2ca29",
+    "export_mask": "masks/010-01.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000001",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "motorcycle",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000001.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 129,
+    "bounds": [
+      702.0,
+      347.0,
+      716.0,
+      366.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "92d24b512fa4d71634367b045bf1ed687cfc4ecbc0f53e09860d881a07da16f7",
+    "export_mask": "masks/011-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000001",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "steel_barricade",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000001.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 53,
+    "bounds": [
+      327.0,
+      345.0,
+      348.0,
+      357.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "92d24b512fa4d71634367b045bf1ed687cfc4ecbc0f53e09860d881a07da16f7",
+    "export_mask": "masks/011-01.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000001",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "concrete_barrier",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000001.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 150,
+    "bounds": [
+      528.0,
+      348.0,
+      550.0,
+      356.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "92d24b512fa4d71634367b045bf1ed687cfc4ecbc0f53e09860d881a07da16f7",
+    "export_mask": "masks/011-02.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000001",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "deer",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000001.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 86,
+    "bounds": [
+      556.0,
+      341.0,
+      563.0,
+      360.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "92d24b512fa4d71634367b045bf1ed687cfc4ecbc0f53e09860d881a07da16f7",
+    "export_mask": "masks/011-03.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_right_000001",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "motorcycle",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/right/000001.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 54,
+    "bounds": [
+      0.0,
+      220.0,
+      9.0,
+      229.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "28b96d5e035e9fd408a96bc76babd39f03b091ede32210064458e558f65f009a",
+    "export_mask": "masks/012-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000002",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "motorcycle",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000002.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 149,
+    "bounds": [
+      708.0,
+      346.0,
+      723.0,
+      367.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "6adf3e6602a3546c508981c147fefbac8a47904c58a83324cc531855f1e84215",
+    "export_mask": "masks/013-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000002",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "concrete_barrier",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000002.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 167,
+    "bounds": [
+      528.0,
+      347.0,
+      551.0,
+      355.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "6adf3e6602a3546c508981c147fefbac8a47904c58a83324cc531855f1e84215",
+    "export_mask": "masks/013-01.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000002",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "deer",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000002.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 82,
+    "bounds": [
+      556.0,
+      340.0,
+      564.0,
+      360.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "6adf3e6602a3546c508981c147fefbac8a47904c58a83324cc531855f1e84215",
+    "export_mask": "masks/013-02.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_left_000002",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "bicycle",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/left/000002.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 463,
+    "bounds": [
+      239.0,
+      230.0,
+      298.0,
+      270.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "3f32a9a30f63cab084589f996b8e072233790457ffc098b3b72322bef9bded4e",
+    "export_mask": "masks/014-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_left_000003",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "bicycle",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/left/000003.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 793,
+    "bounds": [
+      151.0,
+      232.0,
+      231.0,
+      280.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "c26384d58aa55e2ac37973d5930669ee09ed23feb8f9a49f275809f31179eb97",
+    "export_mask": "masks/015-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000007",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "plastic_barrier",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000007.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 93,
+    "bounds": [
+      248.0,
+      346.0,
+      263.0,
+      354.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "f14855eff567abb0b1653e9c3ebd72ed0efd8c18ced7a242d6bcde6bc93644d0",
+    "export_mask": "masks/016-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000008",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "plastic_barrier",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000008.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 101,
+    "bounds": [
+      238.0,
+      346.0,
+      254.0,
+      354.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "d39620720678300df3312676f3bc2e1f2597e1bd93e9263e41bd1d4231bbbf1d",
+    "export_mask": "masks/017-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_right_000016",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "bollard",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/right/000016.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 38,
+    "bounds": [
+      19.0,
+      220.0,
+      27.0,
+      228.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "2be670c6bc7645ffc0380e001796182644f16882fd57bcbde18eba78d37b518e",
+    "export_mask": "masks/018-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000017",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "bollard",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000017.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 73,
+    "bounds": [
+      732.0,
+      351.0,
+      739.0,
+      368.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "ba275ca378de7c14bea5463630e9bd0fea7ac69f320d418dbdec451a2b2e2309",
+    "export_mask": "masks/019-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_right_000017",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "bollard",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/right/000017.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 42,
+    "bounds": [
+      25.0,
+      220.0,
+      34.0,
+      229.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "e6a931f0a1057db49b547a049b3f36f290f5d97af7393308d5b1d0de0aaa31bd",
+    "export_mask": "masks/020-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000023",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "box",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000023.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 97,
+    "bounds": [
+      308.0,
+      358.0,
+      327.0,
+      364.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "5070ad2e18b47ff1855140ab666decaafcb1a6c7ab644a23fed62e60d795be68",
+    "export_mask": "masks/021-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000024",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "box",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000024.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 120,
+    "bounds": [
+      291.0,
+      359.0,
+      312.0,
+      365.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "95ecb2418ca8f4daaddc9d45c52d042c150add1a3f0347b6101e19cf63c2412b",
+    "export_mask": "masks/022-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000025",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "box",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000025.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 134,
+    "bounds": [
+      265.0,
+      360.0,
+      288.0,
+      366.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "5fac2759146867940e2c1a728f2ad6bff7e4f40a3bb874df0eeb496500f27ba3",
+    "export_mask": "masks/023-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000051",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "dog",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000051.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 64,
+    "bounds": [
+      7.0,
+      350.0,
+      23.0,
+      360.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "73273005599863e3a9cb214f5f035bad8ed638cd06b2fd3064a2582e4bd38dbe",
+    "export_mask": "masks/024-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000053",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "dog",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000053.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 55,
+    "bounds": [
+      87.0,
+      349.0,
+      102.0,
+      359.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "5b8e4d149dc24a37ab251d01ea002d23994cd5aceb5ae84357949826b5ce3da7",
+    "export_mask": "masks/025-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000054",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "dog",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000054.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 49,
+    "bounds": [
+      130.0,
+      349.0,
+      143.0,
+      358.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "2b8beb69f35e3439471a13748ed458a310cfa8897af78fd6659404d6f84bd470",
+    "export_mask": "masks/026-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000071",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "traffic_drum",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000071.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 107,
+    "bounds": [
+      1190.0,
+      345.0,
+      1200.0,
+      357.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "f6ae9a1b904990ff2093d376a4c853199107f1b6577c86b08246e8ce0178ce3f",
+    "export_mask": "masks/027-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000072",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "traffic_drum",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000072.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 119,
+    "bounds": [
+      1236.0,
+      345.0,
+      1247.0,
+      358.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "71b368120fdc1d83a7eb8d371f86b4585bd0d68beb5bcfb5a688d644f8449901",
+    "export_mask": "masks/028-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T012837_666_front_000100",
+    "source": "capture:route_pp_30_20261012T012837_666",
+    "class_name": "traffic_drum",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T012837_666/frames/instance/front/000100.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 232,
+    "bounds": [
+      1177.0,
+      346.0,
+      1191.0,
+      364.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "3fc31fc7c2cc92aca0b2d051956fe79097646e67ab0ad289d558b11f0dcce717",
+    "export_mask": "masks/029-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T032742_843_front_000000",
+    "source": "capture:route_pp_30_20261012T032742_843",
+    "class_name": "bus",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T032742_843/frames/instance/front/000000.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 5571,
+    "bounds": [
+      798.0,
+      307.0,
+      911.0,
+      368.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "de671416fbadd841cbf80292939b373625750155c8cbcd74e19c5e1c3dd84eb2",
+    "export_mask": "masks/030-00.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T032742_843_front_000000",
+    "source": "capture:route_pp_30_20261012T032742_843",
+    "class_name": "truck",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T032742_843/frames/instance/front/000000.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 1808,
+    "bounds": [
+      418.0,
+      329.0,
+      474.0,
+      367.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "de671416fbadd841cbf80292939b373625750155c8cbcd74e19c5e1c3dd84eb2",
+    "export_mask": "masks/030-01.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T032742_843_front_000000",
+    "source": "capture:route_pp_30_20261012T032742_843",
+    "class_name": "truck",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T032742_843/frames/instance/front/000000.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 173,
+    "bounds": [
+      262.0,
+      341.0,
+      285.0,
+      352.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "de671416fbadd841cbf80292939b373625750155c8cbcd74e19c5e1c3dd84eb2",
+    "export_mask": "masks/030-02.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T032742_843_front_000000",
+    "source": "capture:route_pp_30_20261012T032742_843",
+    "class_name": "bus",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T032742_843/frames/instance/front/000000.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 422,
+    "bounds": [
+      394.0,
+      331.0,
+      418.0,
+      352.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "de671416fbadd841cbf80292939b373625750155c8cbcd74e19c5e1c3dd84eb2",
+    "export_mask": "masks/030-03.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T032742_843_front_000000",
+    "source": "capture:route_pp_30_20261012T032742_843",
+    "class_name": "truck",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T032742_843/frames/instance/front/000000.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 233,
+    "bounds": [
+      334.0,
+      333.0,
+      357.0,
+      350.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "de671416fbadd841cbf80292939b373625750155c8cbcd74e19c5e1c3dd84eb2",
+    "export_mask": "masks/030-04.png"
+  },
+  {
+    "row_id": "route_pp_30_20261012T032742_843_front_000000",
+    "source": "capture:route_pp_30_20261012T032742_843",
+    "class_name": "bus",
+    "method": "native_rgba",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/datasets/route_pp_30_20261012T032742_843/frames/instance/front/000000.png",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 173,
+    "bounds": [
+      378.0,
+      335.0,
+      396.0,
+      348.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "de671416fbadd841cbf80292939b373625750155c8cbcd74e19c5e1c3dd84eb2",
+    "export_mask": "masks/030-05.png"
+  },
+  {
+    "row_id": "f78389b1929751bbc9e32c253b9f62eea2d6062f8e90c189da8410114e9da943",
+    "source": "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+    "class_name": "car",
+    "method": "packed_mask",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-coco7-live-v1/gt-v2/masks/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/front/000220.npz",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 125,
+    "bounds": [
+      1167.0,
+      334.0,
+      1194.0,
+      341.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "12ac460562dda0cd5c7cd10c1c5c563eada164d1f9f88660363c144cce9c813c",
+    "export_mask": "masks/031-00.png"
+  },
+  {
+    "row_id": "d6ceff5c97eed3f210f2fcfa720e9aeb9a7bab47e524878538fb55f412aa01ca",
+    "source": "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+    "class_name": "car",
+    "method": "packed_mask",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-coco7-live-v1/gt-v2/masks/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/front/000221.npz",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 109,
+    "bounds": [
+      1262.0,
+      328.0,
+      1280.0,
+      336.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "be4f971d8a39fcea600cc1110930e2818bd13f17592849a505d700547301de84",
+    "export_mask": "masks/032-00.png"
+  },
+  {
+    "row_id": "7efeffd397cdf78cdee9416fa3843122f2b0429af9328c215bf4450ab9bf8780",
+    "source": "capture:20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+    "class_name": "car",
+    "method": "packed_mask",
+    "source_mask": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/artifacts/camera-coco7-live-v1/gt-v2/masks/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/front/000304.npz",
+    "split": "train",
+    "passed": true,
+    "visible_pixels": 114,
+    "bounds": [
+      771.0,
+      335.0,
+      788.0,
+      345.0
+    ],
+    "box_max_abs_delta_px": 0.0,
+    "native_mask_sha256": "f47d136beb7b00d037eba1d3ebe7963329e358515ffdf0252c327e203109513b",
+    "export_mask": "masks/033-00.png"
+  }
+]

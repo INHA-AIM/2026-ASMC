@@ -1,0 +1,21 @@
+{
+  "harp-nuscenes": {
+    "scans": 208,
+    "point_lineage_and_confidence_verified": true,
+    "strict_checkpoint": true
+  },
+  "harp-semantickitti-gpu": {
+    "scans": 208,
+    "point_lineage_and_confidence_verified": true,
+    "strict_checkpoint": true
+  },
+  "centerpoint-pillar": {
+    "scans": 208,
+    "nine_field_boxes_and_stamps_verified": true
+  },
+  "native_masks": {
+    "train_samples": 48,
+    "classes": 16,
+    "all_passed": true
+  }
+}
