@@ -41,11 +41,13 @@ def parse_selector(value):
     return dict(token.split('=', 1) for token in value.split() if '=' in token)
 
 
-def analyze(directory):
+def analyze(directory, output_name='analysis'):
     import rosbag
     from scen_runner.records.sensor_recording import REQUIRED_TOPICS, write_json
     directory = Path(directory)
-    output = directory/'analysis'
+    if Path(output_name).name != output_name or output_name in ('.','..'):
+        raise ValueError('analysis output must be a new subdirectory name')
+    output = directory/output_name
     output.mkdir(exist_ok=False)
     stats, reasons, box_reasons, selectors = {}, Counter(), Counter(), Counter()
     images, pending, cases = OrderedDict(), OrderedDict(), []
@@ -58,8 +60,8 @@ def analyze(directory):
         stream.write(json.dumps(record, ensure_ascii=False, allow_nan=False)+'\n')
 
     def gallery(stamp, result):
-        reason = result.reason
-        if result.valid or case_counts[reason] >= 2 or len(cases) >= 32 or stamp not in images:
+        reason = result.reason+' | '+','.join(sorted(set(result.box_reasons)))
+        if case_counts[reason] >= 2 or len(cases) >= 32 or stamp not in images:
             return
         frame = images[stamp]
         # Exact source identity only; no nearest-frame substitution.
@@ -103,7 +105,7 @@ def analyze(directory):
                             box_reasons[b['label']+' | '+b['reason'].split(':')[0]] += 1
                         emit(stream, dict(receipt=t, topic=topic, source_stamp_ns=key, valid=msg.valid,
                                           reason=msg.reason, lane_stamp_ns=msg.lane_stamp.to_nsec(), boxes=boxes))
-                        if not msg.valid:
+                        if not msg.valid or 5 in msg.assignments:
                             if key in images:gallery(key,msg)
                             else:pending[key]=msg
                         while len(pending)>64:pending.popitem(last=False)
@@ -137,8 +139,9 @@ def analyze(directory):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('run_directory', type=Path)
+    parser.add_argument('--output-name', default='analysis', help='new run subdirectory; never overwrites earlier analysis')
     args=parser.parse_args()
-    result=analyze(args.run_directory)
+    result=analyze(args.run_directory,args.output_name)
     print(json.dumps({k:result[k] for k in ('missing_required','follower_reason_samples','bbox_reason_samples')},ensure_ascii=False,indent=2))
 
 

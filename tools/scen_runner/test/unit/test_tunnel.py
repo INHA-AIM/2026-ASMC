@@ -13,6 +13,15 @@ from scen_runner.config import load_config
 
 
 class TunnelTest(unittest.TestCase):
+    def test_explicit_model_reuses_native_placement_and_rejects_invalid_override(self):
+        p=TunnelPlan(42,'static',static_models=['PE_Drum'])
+        p.prepare()
+        self.assertEqual(p.static.morai_model,'PE_Drum')
+        self.assertEqual(p.static_models,('PE_Drum',))
+        for models in ([],['not_a_catalog_model']):
+            with self.assertRaises(ValueError):TunnelPlan(42,'static',static_models=models)
+        with self.assertRaises(ValueError):TunnelPlan(42,'dynamic',static_models=['PE_Drum'])
+
     @classmethod
     def setUpClass(cls):
         cls.combined=TunnelPlan(42,'both');cls.combined.prepare()
