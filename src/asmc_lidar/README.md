@@ -24,6 +24,8 @@ HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계
 지도/pose 무효에서는 지도 제외를 중단하고, 최근 YOLO vehicle/dynamic 매칭은 모든 구간에서 보호한다.
 debug의 원본 tracker/점군은 검수를 위해 남긴다. 판제 기본 입력은 `planning_observations_map`의 공용 KF 품질 관측이다. 구 패키지·wire/JSON 중계는 폐기했다.
 
+- [M1 3뷰 fusion·웹 전달 표시·정적 클래스 보조](docs/three-view-fusion.md) — 내부 후보와 수락/복구 경계.
+
 ## 구조
 
 `include/asmc_lidar/`와 `src/`는 같은 책임으로 나눈다. 단계마다 ROS 노드를 만들지 않는다.

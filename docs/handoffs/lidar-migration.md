@@ -44,7 +44,7 @@ M3의 Autoware shape estimation과 M4의 tracker 참고를 구분한다.
 
 ## GPS 없는 터널 개선 원칙
 
-PR #119는 2026-10-27 확인 시점에 구현·오프라인 검증 후 미병합이다. F1과 통합·실시간 검증을 별도로 남긴다.
+PR #119는 `52017fe2`에 병합됐다. 터널 알고리즘의 전체 실시간 수락과 M1 카메라 보호 확대 수락은 별도로 남긴다.
 현재 local 기하 제공과 벽/천장 제거의 품질 수락은 구분한다. 새 map 위치를 만들어내거나 마지막
 GPS를 계속 사용하지 않는다. 세부 실패·검증 목록은 [보존한 터널 인계](../records/lidar/cutover-foundation-through-pr111.md#손재호-gps-없는-터널-local-인식)를 따른다.
 카메라 drivable/family는 보조 후보이며 아직 LiDAR 구조물 제거에 연결되지 않았다. 바깥 흰선과
@@ -55,3 +55,9 @@ GPS를 계속 사용하지 않는다. 세부 실패·검증 목록은 [보존한
 구 실행과 연구 결과는 [삭제 전 소스·시험 목록](../../config/baselines/lidar_canonicalization_v1.json)과
 [PR #111까지의 이관 기록](../records/lidar/migration-through-pr111.md)에 보존한다. 재현은 고정 revision의
 별도 checkout에서 수행하며 현행 실행에 구 overlay나 두 번째 객체 생산자를 연결하지 않는다.
+
+## M1 공동 확인
+
+[3뷰 fusion·웹·정적 보조 구현과 복구](../../src/asmc_lidar/docs/three-view-fusion.md)를 따른다.
+승현은 관측 연결과 semantic 보조 후보까지, 재호는 M3 관측 위치/OBB와 M4 추적·속도 개선을 맡는다.
+판제 메시지는 그대로이며 후보 수락 전 기본 전방/기존 운동 판단을 유지한다.
