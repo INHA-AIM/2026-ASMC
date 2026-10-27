@@ -1,8 +1,14 @@
 # 개발·시뮬레이터 운영 가이드
 
+> **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
+> `--require-competition-status`/`verify-field`도 이9099 입력을 검사하도록 정정했다.
+> 9798은 로컬 Detail 진단이며 LAN 운영·수락에서 제외한다. 아래 과거 P3 설명과 현재 역할은
+> [정정 기록](../records/bridge/2026-10-27-competition-9099-correction.md)을 기준으로 구분한다.
+
+
 > **문서 역할:** Canonical — Docker, MORAI UDP profile, bridge 기동과 시뮬 검증
 >
-> **현재 기준:** 공통 `morai_udp` bridge + 본선 `ASMC_sensor_set_v3.json` + ROS1 Noetic + Docker host network
+> **현재 기준:** 공통 `morai_udp` bridge + [버전별 v3 Sensor 정본](../../config/morai/README.md) + ROS1 Noetic + Docker host network
 
 대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 실행은
 [Planning/Control 규약](./planning-control.md), bag 기록·재생은
@@ -27,7 +33,7 @@ live acceptance가 끝난 것을 구분한다.
 |---|---|---|
 | 개발 IP | Host/Destination `127.0.0.1` | 동일 |
 | 현장 IP | profile 계약·생성본: MORAI `192.168.0.1`, Autonav `192.168.0.10` | 실제 두 PC 리허설 |
-| Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | local brake closed loop 통과; LAN2LAN 재검증 |
+| Ego Ctrl Cmd | `9093/9094`, UDP type 1·CtrlMode 2 | local brake closed loop 통과; LAN2LAN 재검증 |
 | 차량 상태 | UI CompetitionInfoPublisher `9088/9099` → `/Ego_topic`; 별도 `9797/9798` | 정차 packet 확인, 주행 부호·현장 LAN 미검증 |
 | TrafficLight simulator oracle | `258`, `7603/7502` | team production bridge에서 소비 금지 |
 | CollisionData | destination `9092` | `9091/9092` pair |
@@ -119,7 +125,7 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 | TrafficLight status | Host/Dest `7603/7502`, type 258 | simulator oracle; canonical bridge가 소비하지 않음 |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
-| Ego Ctrl Cmd | Host/Dest `9093/9094`, mode 2 | `asmc_bridge` network node가 `/ctrl_cmd`를 UDP로 전송 |
+| Ego Ctrl Cmd | Host/Dest `9093/9094`, UDP CtrlMode 2 | `asmc_bridge` network node가 `/ctrl_cmd`를 UDP로 전송 |
 
 ### 센서
 
@@ -155,7 +161,7 @@ source devel/setup.bash
 두 개 실행하지 않는다.
 
 26r1과 대회판 모두 같은 `morai_udp` launch를 사용한다. 현장에서는 별도로
-`ASMC_network_set_molitcomp03_lan2lan.json`을 MORAI에 로드해야 하며, 실제 LAN gate 전에는
+`261027_ASMC_LAN2LAN_Network_25.S4.MolitComp03.json`을 MORAI에 로드해야 하며, 실제 LAN gate 전에는
 이를 현장 설정 완료로 간주하지 않는다.
 
 현장 후보 명령은 명시적 transport를 함께 쓴다.
@@ -177,11 +183,10 @@ source devel/setup.bash
 ```bash
 ./scripts/docker_ros_up.sh verify 8 molitcomp03
 ./scripts/docker_ros_up.sh verify 8 26r1
-# 별도9798의 허용 송신이 확인된 환경에서만(현재 설정에 적용하지 않음):
+# 실제 CompetitionInfoPublisher9099 /Ego_topic LAN 수락:
 ./scripts/docker_ros_up.sh verify-field 30 molitcomp03
 
 rostopic hz /Ego_topic
-rostopic hz /Competition_topic
 rostopic hz /image_jpeg/compressed
 rostopic hz /velodyne_points
 rostopic hz /gps
@@ -190,9 +195,9 @@ rostopic echo /Ego_topic -n1
 ```
 
 `verify`는 RGB 4대, LiDAR, GPS, IMU, Ego, 유효 `/vehicle/state`와 privileged publisher
-부재를 확인한다. 현재 정상 Competition은 `/Ego_topic` 경로다. `verify-field`는
-별도 `/Competition_topic`을 추가 요구하는 기존 검사이며 현재 설정의 필수 수락으로 쓰지 않는다.
-release 인자는 bridge 동작이나 필수 목록을 바꾸지 않는 provenance label이다.
+부재를 확인한다. 현재 정상 Competition은 `/Ego_topic` 경로다. 정정된 `verify-field`는
+LAN의9099 `/Ego_topic`을 검사하며 `/Competition_topic` Detail publisher는 거부한다.
+release 인자는 provenance label이며 `verify-field` 수락 범위는 확인된 `molitcomp03`으로 제한한다.
 GT 실험 재현에서만 `--gt`와 `verify-gt 20 molitcomp03`을 함께 사용한다.
 
 LiDAR 실제 도착률만 별도로 검사할 때는 다음처럼 실행한다. 이 exact-arrival 진단은 v3의

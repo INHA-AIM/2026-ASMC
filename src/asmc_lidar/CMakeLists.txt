@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # fusion form the canonical pipeline below. Jaeho owns subsequent tracking,
 # velocity and 3-view fusion improvements. No camera inference or nested
 # Main dependencies.
-find_package(catkin REQUIRED COMPONENTS asmc_msgs roscpp diagnostic_msgs)
+find_package(catkin REQUIRED COMPONENTS asmc_geometry asmc_msgs roscpp diagnostic_msgs)
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -19,11 +19,11 @@ set(OpenSSL_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIR})
 set(OpenSSL_LIBRARIES ${OPENSSL_LIBRARIES})
 catkin_package(INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS}
   LIBRARIES asmc_lidar_frame_time asmc_lidar_camera_core asmc_lidar_camera_ros
-  CATKIN_DEPENDS asmc_msgs roscpp diagnostic_msgs
+  CATKIN_DEPENDS asmc_geometry asmc_msgs roscpp diagnostic_msgs
   DEPENDS Eigen3 yaml-cpp OpenSSL)
 
 add_library(asmc_lidar_frame_time src/core/frame_time_core.cpp src/geometry/projection.cpp src/geometry/bounded_pose.cpp)
-target_include_directories(asmc_lidar_frame_time PUBLIC include)
+target_include_directories(asmc_lidar_frame_time PUBLIC include ${catkin_INCLUDE_DIRS})
 target_link_libraries(asmc_lidar_frame_time PUBLIC Eigen3::Eigen)
 target_compile_options(asmc_lidar_frame_time PRIVATE -Wall -Wextra)
 
@@ -40,6 +40,12 @@ target_link_libraries(camera_observation_probe asmc_lidar_camera_ros)
 add_dependencies(camera_observation_probe ${catkin_EXPORTED_TARGETS})
 
 if(CATKIN_ENABLE_TESTING)
+  foreach(confirmation_test observation_confirmation_standalone adaptive_confirmation_standalone)
+    add_executable(asmc_lidar_${confirmation_test} test/experimental/${confirmation_test}.cpp)
+    target_include_directories(asmc_lidar_${confirmation_test} PRIVATE include)
+    target_compile_options(asmc_lidar_${confirmation_test} PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+    add_test(NAME asmc_lidar_${confirmation_test} COMMAND asmc_lidar_${confirmation_test})
+  endforeach()
   find_package(rostest REQUIRED)
   add_rostest_gtest(camera_receiver_ros_test test/camera_receiver_ros.test test/camera_receiver_ros_test.cpp)
   if(TARGET camera_receiver_ros_test)
@@ -147,6 +153,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/preprocessing/ground_filter.cpp
     src/detection/clustering.cpp
     src/detection/obb.cpp
+    src/detection/euclidean_components.cpp
     src/geometry/scan_frame.cpp
     src/tracking/kalman.cpp
     src/tracking/motion_classifier.cpp
@@ -157,7 +164,9 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/geometry/gps_ingest.cpp
     src/pipeline/pipeline.cpp
     src/experimental/tunnel_filter_stage.cpp
+    src/experimental/tunnel_route.cpp
     src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp
+    src/fusion/multi_camera_fusion.cpp
     src/fusion/front_camera_fusion.cpp
     src/fusion/buffer_camera_source.cpp)
   set_target_properties(asmc_lidar_pipeline PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -167,7 +176,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
   target_link_libraries(asmc_lidar_pipeline PUBLIC asmc_lidar_frame_time asmc_lidar_camera_core
     ${PCL_LIBRARIES} ${ASMC_LIDAR_GEOGRAPHICLIB_LIBRARY})
   target_compile_options(asmc_lidar_pipeline PRIVATE -Wall -Wextra)
-  # Preserved PR #102 core: byte-identical copy, compiled without new warnings.
+  # PR #102 algorithms preserved; M1 extends protected semantic labels only.
   set_source_files_properties(src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp
     PROPERTIES COMPILE_OPTIONS "-w")
 
@@ -224,6 +233,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_ground test/pipeline/test_ground.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_clustering test/pipeline/test_clustering.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_obb test/pipeline/test_obb.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_euclidean_components test/pipeline/test_euclidean_components.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_scan_frame test/pipeline/test_scan_frame.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_tracker test/pipeline/test_tracker.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pose_history test/pipeline/test_pose_history.cpp)
@@ -231,6 +241,8 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_fusion_policy test/pipeline/test_fusion_policy.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_front_camera_fusion test/pipeline/test_front_camera_fusion.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_tunnel_filter_stage test/pipeline/test_tunnel_filter_stage.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_tunnel_route test/pipeline/test_tunnel_route.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_tunnel_runtime test/runtime/test_tunnel_runtime.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_source_time test/pipeline/test_source_time.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pipeline test/pipeline/test_pipeline.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_motion_classifier test/pipeline/test_motion_classifier.cpp)
@@ -255,6 +267,8 @@ endif()
 
 # Isolation contract (pure Python, no PCL needed): runs whenever tests are enabled.
 if(CATKIN_ENABLE_TESTING)
+  add_test(NAME asmc_lidar_fusion_audit_test
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/perception/test_camera_lidar_fusion_audit.py)
   add_test(NAME asmc_lidar_pipeline_contract_test
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/pipeline_contract_test.py)
   add_test(NAME asmc_lidar_monitor_core_test

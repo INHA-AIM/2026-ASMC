@@ -1,5 +1,11 @@
 # asmc_bridge
 
+> **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
+> `--require-competition-status`/`verify-field`도 이9099 입력을 검사하도록 정정했다.
+> 9798은 로컬 Detail 진단이며 LAN 운영·수락에서 제외한다. 아래 과거 P3 설명과 현재 역할은
+> [정정 기록](../../docs/records/bridge/2026-10-27-competition-9099-correction.md)을 기준으로 구분한다.
+
+
 MORAI Network UDP, Sensor UDP와 GPS/IMU 기반 `/vehicle/state`를 소유하는 단일 ROS1
 패키지다. P3-F에서 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`,
 `integration_launch`의 구현을 이 패키지로 물리 통합했다. node와 diagnostics 이름은 소비자
@@ -44,8 +50,8 @@ bridge는 azimuth wrap으로 실제 회전을 조립하고 중복 cloud를 만�
 별도9798은 이번 환경에서138B `#DetailEgoInfo$`로 들어와 decoder가 거부했다.
 [실측과 한계](../../docs/records/bridge/2026-10-23-competition-channel-audit.md)를 따른다.
 
-`--require-competition-status`와 `verify-field`의 기존 competition gate는 별도9798 및
-`/Competition_topic`을 검사한다. 이 설정의 본선 준비 필수 명령으로 사용하지 않는다.
+`--require-competition-status`와 `verify-field`는 현재9099의 `/Ego_topic`을 검사한다.
+9798 Detail을 추가 요구하거나 정상 Competition 대신 사용하지 않는다.
 현재 정상 Competition은9099→`/Ego_topic` 경로로 확인하며, 현장판에서 UI·송신 설정을 다시 대조한다.
 이름을 바꾸거나 별도 Detail 채널로 자동 fallback하지 않는다. type258 TrafficLight oracle은
 production bridge에서 소비하지 않는다. 기존 미수신 선택 입력 diagnostics는 유지한다.

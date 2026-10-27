@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "run_id": "lidar-m1-three-view-20261027-r1",
+  "baseline": "52017fe2ff417e381746110122d5c2c7ee4f77da",
+  "performance_revision": "bc64e678",
+  "final_native_revision": "e96fdd70",
+  "web_revision": "caf060ba",
+  "inputs": [
+    {
+      "root": "storage",
+      "path": "artifacts/camera-lidar-f1-20261027-r1/stationary/signals.bag",
+      "sha256": "4417c36506471b4bf41e40f77ba88f91051964af5e604e3186e770a2cdb9094e"
+    },
+    {
+      "root": "storage",
+      "path": "artifacts/camera-lidar-f1-20261027-r1/straight/signals.bag",
+      "sha256": "0927053aad9fa75d5a85531d592e5c10b8d4d4ac18246c1eae9840a4b9f4e2d8"
+    },
+    {
+      "root": "storage",
+      "path": "artifacts/camera-lidar-f1-20261027-r1/tunnel/signals.bag",
+      "sha256": "1b25b2fa4d2fc16a550a85b47353e28645914e04c40b8f6184f82ac142c98a05"
+    },
+    {
+      "root": "storage",
+      "path": "artifacts/camera-lidar-f1-20261027-r1/foggy/signals.bag",
+      "sha256": "a03967ab17c629b43fae1799407c8445da609582803a6e63cb5ab18a9f87e325"
+    }
+  ],
+  "rollback_equal": true,
+  "native_unique_scans": 2848,
+  "performance": [
+    {
+      "dataset": "stationary",
+      "variant": "before",
+      "repeats": 3,
+      "processing_p95_ms": [
+        5.257917,
+        4.877563,
+        4.798832
+      ],
+      "max_rss_kib": 160644
+    },
+    {
+      "dataset": "stationary",
+      "variant": "front",
+      "repeats": 3,
+      "processing_p95_ms": [
+        5.068006,
+        4.847237,
+        4.984559
+      ],
+      "max_rss_kib": 160584
+    },
+    {
+      "dataset": "stationary",
+      "variant": "three",
+      "repeats": 3,
+      "processing_p95_ms": [
+        5.230746,
+        5.20279,
+        4.933394
+      ],
+      "max_rss_kib": 160200
+    },
+    {
+      "dataset": "stationary",
+      "variant": "semantic",
+      "repeats": 3,
+      "processing_p95_ms": [
+        4.846652,
+        4.880829,
+        4.853459
+      ],
+      "max_rss_kib": 160368
+    },
+    {
+      "dataset": "straight",
+      "variant": "before",
+      "repeats": 3,
+      "processing_p95_ms": [
+        3.312852,
+        3.488642,
+        3.378564
+      ],
+      "max_rss_kib": 160396
+    },
+    {
+      "dataset": "straight",
+      "variant": "front",
+      "repeats": 3,
+      "processing_p95_ms": [
+        3.193276,
+        3.454503,
+        3.449858
+      ],
+      "max_rss_kib": 160312
+    },
+    {
+      "dataset": "straight",
+      "variant": "three",
+      "repeats": 3,
+      "processing_p95_ms": [
+        3.432545,
+        3.508863,
+        3.47723
+      ],
+      "max_rss_kib": 160476
+    },
+    {
+      "dataset": "straight",
+      "variant": "semantic",
+      "repeats": 3,
+      "processing_p95_ms": [
+        3.499333,
+        3.559252,
+        3.436771
+      ],
+      "max_rss_kib": 160324
+    },
+    {
+      "dataset": "tunnel",
+      "variant": "before",
+      "repeats": 3,
+      "processing_p95_ms": [
+        3.367151,
+        3.361425,
+        3.218251
+      ],
+      "max_rss_kib": 160740
+    },
+    {
+      "dataset": "tunnel",
+      "variant": "front",
+      "repeats": 3,
+      "processing_p95_ms": [
+        3.306952,
+        3.302195,
+        3.383452
+      ],
+      "max_rss_kib": 160628
+    },
+    {
+      "dataset": "tunnel",
+      "variant": "three",
+      "repeats": 3,
+      "processing_p95_ms": [
+        42.729454,
+        42.119277,
+        43.060894
+      ],
+      "max_rss_kib": 160624
+    },
+    {
+      "dataset": "tunnel",
+      "variant": "semantic",
+      "repeats": 3,
+      "processing_p95_ms": [
+        42.721352,
+        42.12563,
+        42.221581
+      ],
+      "max_rss_kib": 160248
+    },
+    {
+      "dataset": "foggy",
+      "variant": "before",
+      "repeats": 3,
+      "processing_p95_ms": [
+        4.821397,
+        4.911188,
+        4.895656
+      ],
+      "max_rss_kib": 160416
+    },
+    {
+      "dataset": "foggy",
+      "variant": "front",
+      "repeats": 3,
+      "processing_p95_ms": [
+        4.835458,
+        4.741999,
+        4.770892
+      ],
+      "max_rss_kib": 160504
+    },
+    {
+      "dataset": "foggy",
+      "variant": "three",
+      "repeats": 3,
+      "processing_p95_ms": [
+        4.843701,
+        4.876572,
+        4.85753
+      ],
+      "max_rss_kib": 160064
+    },
+    {
+      "dataset": "foggy",
+      "variant": "semantic",
+      "repeats": 3,
+      "processing_p95_ms": [
+        4.832877,
+        4.869932,
+        4.964867
+      ],
+      "max_rss_kib": 160436
+    }
+  ],
+  "ros": [
+    {
+      "run_id": "lidar-m1-three-view-20261027-r1",
+      "debug": false,
+      "scans": 712,
+      "valid_scans": 711,
+      "min_full_5s_hz": 11.0,
+      "max_gap_ms": 317.4791089259088,
+      "rss_first_kib": 139424,
+      "rss_last_kib": 149664,
+      "rss_max_kib": 149664,
+      "debug_capture_p95_ms": null,
+      "browser_checked": false,
+      "limits": "Recorded sensor replay, no MORAI/camera inference contention or actuation",
+      "analysis_id": "ros-front-off-r2"
+    },
+    {
+      "run_id": "lidar-m1-three-view-20261027-r1",
+      "debug": false,
+      "scans": 712,
+      "valid_scans": 711,
+      "min_full_5s_hz": 10.8,
+      "max_gap_ms": 316.77915796171874,
+      "rss_first_kib": 139824,
+      "rss_last_kib": 149884,
+      "rss_max_kib": 149884,
+      "debug_capture_p95_ms": null,
+      "browser_checked": false,
+      "limits": "Recorded sensor replay, no MORAI/camera inference contention or actuation",
+      "analysis_id": "ros-three-off-r1"
+    },
+    {
+      "run_id": "lidar-m1-three-view-20261027-r1",
+      "debug": true,
+      "scans": 713,
+      "valid_scans": 711,
+      "min_full_5s_hz": 10.8,
+      "max_gap_ms": 316.1598870065063,
+      "rss_first_kib": 139180,
+      "rss_last_kib": 150432,
+      "rss_max_kib": 150432,
+      "debug_capture_p95_ms": 0.577105,
+      "browser_checked": true,
+      "limits": "Recorded sensor replay, no MORAI/camera inference contention or actuation",
+      "analysis_id": "ros-three-web-r1"
+    }
+  ],
+  "tests": {
+    "ctest": 39,
+    "ctest_passed": 39,
+    "javascript": 70,
+    "javascript_passed": 70
+  },
+  "default": {
+    "fusion_views": "front",
+    "semantic_static_enabled": false
+  },
+  "acceptance": {
+    "three_view_default": false,
+    "semantic_default": false,
+    "live_supply": false
+  },
+  "limitations": [
+    "Tunnel processing p95 regression exceeds +5ms; safe camera-unavailable ambiguity retains more wall clusters.",
+    "No confirmed static objects in real bag; semantic prior validated with synthetic geometry only.",
+    "Recorded ROS supply gaps exceed 250ms; prior F1 473.47ms unresolved.",
+    "No new MORAI GPU contention or independent position/motion GT acceptance."
+  ],
+  "evidence_sha256": {
+    "matrix-r2/summary.json": "a5093ca8e5fd1753c76e4dca3b7a9ba0295d07c8173f40d667a823835e571aef",
+    "matrix-r4/summary.json": "01963583458be885d7b63c6596ff416faedfed59d7d9782f05976e33cf4220c5",
+    "stationary-gallery-r2/matches.json": "405b8edc6cf8fe1f73405762c8654e20bb797fd87dbffee18c1058a74246b466",
+    "ros-three-web-r1/browser.json": "832ef2ba1fcb418d5a951d6ce54f04742c199af39d802f6f4aae9ede07fc45a4"
+  }
+}

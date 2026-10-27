@@ -1,16 +1,22 @@
 # 인지·판제 좌표계와 IMU 공통화 검토
+F1은 [전방 fusion 실제 선택·관측 수명 경계 검증](../records/lidar/2026-10-27-front-fusion-verification.md)을 추가했다.
+좌우 수신/투영과 실제 matching을 구분하며, 원본 source clock 매핑은 여전히 미확보다.
 
-**2026-10-26 선행 기반:** [기존 기능 보존 이식·판제 직접 소비](../../src/asmc_lidar/docs/planning-runtime.md)가
-구현됐다. 현재 공개 속도는 기존 Main의 적용 추정값이며 새 ego 보상/정밀도 개선을 뜻하지 않는다.
-사용자·판제의 새 경로 주행 확인과 B4 정본화 이후 필요한 C0–C4를 선택하며 이번에 이 문서의 광범위한 공통화를
-구현한 것은 아니다.
+
+**2026-10-26 현재 기준:** PR #112 `0dab4adf`에서 B4 정본화를 완료했다.
+[판제 직접 소비](../../src/asmc_lidar/docs/planning-runtime.md)는 `asmc_lidar`만 사용한다.
+C0는 [좌표·시각 대조 결과](../records/lidar/2026-10-26-frame-time-baseline.md)와 재현 도구까지 완료했다.
+운영 변환·필터·메시지는 바꾸지 않았다. 후속 사용자 승인으로 같은 PR에서
+[bridge GPS `(0,0)` 유효성·복귀 경계](../records/bridge/2026-10-26-gps-validity-recovery.md)를 수정했다.
+후속 승인으로 [공용 수학·scan 변환 재사용·인과적 오류 이력](../records/lidar/2026-10-27-frame-time-refactor.md)도
+같은 PR #115에서 구현했다. `asmc_geometry`는 헤더 라이브러리이며 pose 생산자 통합은 아직 후보안이다.
 
 ## 상태와 착수 순서
 
 2026-10-25에 `feat/lidar-hd-map-filter-audit`의 `80b64676` 코드를 대조한 후속 설계다.
-**PR #108은 main `ab8db094`에 병합됐다. 다음은 [판제 전환·구 패키지 폐기 기반 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md)이며,
-아래 광범위한 리팩토링은 그 기준선을 마련한 뒤 진행한다.** 최초 코드 대조 SHA는 당시 근거로 보존한다.
-이 문서 추가는 공용 라이브러리 구현, pose 생산자 통합, 판제 입력 전환이나 운영 수락을 의미하지 않는다.
+PR #108은 main `ab8db094`에 병합됐으며 [판제 전환·구 패키지 폐기 기반 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md)도 완료했다.
+최초 코드 대조 SHA는 당시 근거로 보존한다. 아래 C1–C4는 C0 결과를 반영해 순서를 다시 정할 후보이며 일괄 구현 계획이 아니다.
+최초 설계와 이후 구현을 구분한다. 이번 최소 공용화가 pose 생산자 통합·판제 입력 전환·전체 주행 수락을 의미하지 않는다.
 현재 실행·검증 정본은 [LiDAR 인계](../handoffs/lidar-migration.md)와
 [패키지 파이프라인](../../src/asmc_lidar/docs/pipeline.md)을 따른다.
 
@@ -52,9 +58,10 @@ ROS [REP 105](https://github.com/ros-infrastructure/rep/blob/master/rep-0105.rst
 [공용 출력 변환](../../src/asmc_lidar/src/ros/typed_output.cpp),
 [판제 frame 검사](../../src/asmc_planner/src/Parser/PlanningInput.cpp).
 
-운영 Main은 계속 별도다. [main.launch](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/main.launch)의
-`enable_common_geometry`와 `lidar_level_roll` 기본값은 false다. 새 asmc_lidar의 공통 경계·roll+pitch
-기본값이 운영 Main까지 자동 적용됐다고 표시하지 않는다. 실제 실행은 launch 인자와 ROS param도 확인한다.
+구 [main.launch](https://github.com/INHAautonav/2026-ASMC/blob/b2e8329f1cb71f11150d5125335e01c5b8d252c5/src/lidar%2Bsensorfusion/src/Main/main.launch)는
+B4 이전의 재현 자료다. 현재 Main을 따로 실행하거나 nested workspace를 source하지 않는다.
+실제 실행은 `lidar.launch`와 ROS param을 확인하며, 일반 판제 정본 입력은
+`/perception/lidar/planning_observations_map`이다. `/tracks_map`은 동일 의미의 속도 별칭이 아니다.
 
 ## 세 좌표계와 변환 불변식
 
@@ -86,8 +93,11 @@ local 기하를 정본으로 보존하고 지도 판단을 부가 결과로 두�
 그러나 base_link는 움직이는 좌표다. 전 프레임의 위치를 그대로 다음 프레임 Kalman에 넣으면
 자차 조향·이동이 객체 운동으로 섞인다. 현재 scan frame 정렬과 상대 CA 모델의 보상 의미를
 보존하고, CAN 이동량을 중복 차감하지 않는다. GPS가 없는 절대속도를 추정했다고 간주하지 않는다.
-새 공용 LidarObject의 relative/absolute velocity와 dynamic validity는 현재 false다.
-이 의미를 보존하는 추적·속도 보완은 재호와 별도 검증한다.
+현재 공용 출력에는 속도와 validity가 연결돼 있다. `/tracks_*`의 운동 분류용 추정과
+`/planning_observations_map`의 검증된 KF 속도 경계는 서로 다르다.
+후자는 상대 KF 속도를 실제 base로 회전하고 자차 병진 속도를 한 번 더한 뒤 map으로 회전한다.
+입력이 부족하면 UNKNOWN/무효를 유지한다. C0에서 같은 객체·순서·무효 속도의 UNKNOWN 처리를
+확인했지만 독립 속도 GT가 없어 정확도나 두 추정기 간 우열은 판정하지 않았다.
 
 연속 local 기준 odom이 추적에 유리할 수 있지만, 검증된 터널 상대 이동 입력 없이 새 odom을
 선언하지 않는다. 기존에 보류한 카메라 ego motion·시간 누적을 이번 공통화의 필수조건으로 확대하지 않는다.
@@ -135,6 +145,19 @@ HD맵 링크·전역경로·Frenet s/d와 map 궤적 계약은 유지한다. 전
 이 표는 세 생산자가 동일하다는 뜻이 아니며, 차이를 확인했다고 현행 판제 추정기를 bridge의 옛 구현으로 되돌리지 않는다.
 `frame_id=map`만 같아도 같은 pose는 아니다. 같은 시각·기준점·원점·yaw·보정 방식을 맞춰야 한다.
 
+C0 고정 bag의 LiDAR–판제 pose 위치 차이 p95는 두 자료에서 18.66cm/12.17cm였다.
+같은 source 시각의 쌍은 0개이므로 이는 **비동기 정책 차이**이며 위치 오차가 아니다.
+고정 OBB·전체 voxel 군집 지지점을 유지한 채 판제 xy/yaw만 적용하면 10,930 객체-프레임 중
+HD맵 판정이 5건 달라졌다. pose 교체나 10cm 경계값 변경을 채택한 결과는 아니다.
+
+실시간 터널 GPS `(0,0)`에서 LiDAR map과 판제 GPS/IMU 추정기는 무효 처리했으나,
+bridge `/vehicle/state`는 큰 비정상 좌표를 `valid=true`로 제공했다. 합성 fixture로도 재현했다.
+현행 autonomy 기본 `competition` 경로는 판제 GPS/IMU pose에 별도 속도 입력을 결합하며
+이 bridge 상태를 직접 소비하지 않는다. C0 probe는 pose 코어를 대조하며 그 속도 결합까지 재현하지 않는다.
+이 결함은 같은 PR에서 sentinel 거부와 무효/timeout 뒤의 속도 기준 재확보로 수정했다.
+LAN2LAN worktree의 UDP/IP 설정은 변경하지 않았다. bridge의 안테나 원점·ENU yaw·수신 시각 기반
+추정 정책까지 판제와 같게 만든 것은 아니다. 수정 전 자료는 v1, 수정 후 자료는 v2 manifest로 구분한다.
+
 현재 [VehicleState](../../src/asmc_msgs/msg/VehicleState.msg)는 map의 x/y/yaw와 하나의 valid를 제공한다.
 이를 그대로 local IMU 입력 대신 쓰면 GPS 무효가 local 처리를 막을 수 있다.
 자세·속도의 사용 가능성과 map 위치의 사용 가능성을 분리한 조회 계약을 먼저 설계한다.
@@ -152,6 +175,13 @@ HD맵 링크·전역경로·Frenet s/d와 map 궤적 계약은 유지한다. 전
 기하 수학 공통화와 timestamp 정책 변경은 별도 커밋·대조로 분리한다.
 카메라의 bracket 정책을 scan에 무조건 복제하거나, LiDAR의 최신 표본을 카메라에 대입하지 않는다.
 입력별 시각 근거·선택 표본·정책·실패 이유를 context로 조회할 수 있어야 한다.
+
+PR #115의 LiDAR 오류 이력은 IMU/CAN별 기존 history 기간(기본5초)·최대1024개로 제한된다.
+정상 표본뿐 아니라 거부 표본도 scan 이전에서 선택하므로, worker 대기 중 수신한 미래 오류가 과거 오류를
+덮어쓰지 않는다. 진단의 latest-received와 selected-before-scan은 구분한다. 정상 IMU age120ms,
+GPS bounded300ms·재확보3회, yaw guard5°+120°/s는 유지한다. 텔레포트 직후 명시적 reset은 시험 절차이며
+일반 충돌·센서 오류를 자동으로 정상화하는 운영 정책이 아니다.
+
 
 ## IMU 공통 모듈의 경계
 
@@ -173,8 +203,11 @@ family worker의 실제 프레임별 선택을 비교 BEV와 BBox 어댑터가 �
 다만 metadata 생산 주체는 여전히 family worker다. lane OFF에서도 필요한 미래 YOLO 지면 투영은
 독립 소비 연결을 설계해야 하며, 지금 모든 센서의 공용 서비스가 완성됐다고 표시하지 않는다.
 
-공용 수학을 family나 lidar 추론 패키지 한쪽에 계속 귀속시키기보다, 필요한 최소 기하·시각 코어를
-가칭 `asmc_geometry` 같은 작은 라이브러리로 분리하는 것이 후보 방향이다.
+PR #115는 [asmc_geometry](../../src/asmc_geometry/README.md)에 GPS 유효성·ENU/UTM 수학·grid yaw 규약과
+같은 clock의 past-only 표본 선택·정수 ns age 비교를 구현했다. bridge/planning은 중복 geodesy 구현을 제거했다.
+LiDAR는 기존 GeographicLib 투영을 유지하고 공통 grid-yaw 계산 규칙에 주입한다.
+카메라 Python SLERP와 지면 투영은 기존 코어를 유지하며 C++와 동일 fixture로 대조한다.
+나머지 quaternion·mount 전체 공통화는 후보로 남긴다.
 기존 `asmc_lidar_frame_time`의 공통 부분을 재사용하고 C++/Python은 같은 fixture로 수치·실패 의미를 검사한다.
 Python binding은 배포·호출 비용까지 비교한 뒤 결정한다. 즉시 모든 Python 연산을 C++로 바꾸지 않는다.
 `asmc_msgs`는 wire 정의만 담당하며 추정기·계산·파일 I/O 코드를 넣지 않는다.
@@ -191,20 +224,25 @@ Python binding은 배포·호출 비용까지 비교한 뒤 결정한다. 즉시
 
 작은 회전행렬 연산 절약만으로 TensorRT 추론이나 군집 지연이 크게 줄어든다고 예상하지 않는다.
 현재 가드레일의 긴 OBB 문제는 군집·관측 형상과 support 판정 문제도 포함하며 좌표계 변경만으로 해결되지 않는다.
-이 설계 자체에 대한 속도 개선율은 아직 미측정이다. 이전 HD맵/높이 ROI 실험 수치를 공통화 효과로 사용하지 않는다.
+PR #115에서 scan별 준비 변환·GPS별 yaw 보정 캐시·점군 변환의 중간 복사 제거를 적용했다.
+[대조 기록](../records/lidar/2026-10-27-frame-time-refactor.md)의 같은 bag 교차 측정만 이번 효과의 근거로 사용한다.
+이전 HD맵/높이 ROI 수치를 공통화 효과로 사용하지 않는다.
 
 ## PR #108 이후 작업 단위
 
 | 순서 | 작업 | 완료 근거 | 제외 범위 |
 |---|---|---|---|
-| C0 | 현행 생산자·소비자·frame/time/기준점 목록과 동일 입력 fixture 고정 | 같은 시각 pose 차이와 local/map round-trip 재현 | 알고리즘·토픽 변경 |
-| C1 | 기하·시각 공통 라이브러리 최소 분리 | 기존 수학·무효 처리 동등성, C++/Python fixture, 독립 빌드 | 위치 추정 gain·보간 정책 변경 |
+| C0 · 완료 | 현행 생산자·소비자·frame/time/기준점 목록과 동일 입력 fixture 고정 | 54 투영 사례·857 scan 동등성·실시간 GPS0 재현. 동일 시각 pose/독립 GT 부족은 명시 | 알고리즘·토픽 변경 |
+| 입력 경계 수정 · 완료 | bridge GPS0·결측·복귀 유효성 일치 | C0 합성 fixture·기록 재생·실제 노드 발행 회귀 | pose 생산자 통합·좌표/속도 추정식 변경 |
+| IMU 경계 수정 · 완료 | 거부 표본의 scan 이전 이력 조회·수신/선택 진단·명시적 시험 reset | 원래 stale26은 yaw 급변 거부, 추가3건의 오래된 자세 사용 차단. 합성·ROS 회귀 | freshness 완화·자동 collision reset |
+| C1 최소 범위 · 완료 | `asmc_geometry` 수학·시각 기초, scan 변환/입력 복사 정리 | 857 scan 객체 동등성, bridge/planning 상태 바이트 동일, C++/Python fixture | 위치 추정 gain·보간 정책 변경 |
 | C2 | 자세 조회를 센서별 정책으로 연결 | 카메라 M1/M0 동등성, LiDAR leveling·카메라 투영 동등성, 시각 실패 재현 | 새 ego motion·점별 deskew |
 | C3 | pose 정본과 scan 시각 조회 설계·대조 | lever arm·yaw·원점·GPS0/중단/복귀·예측 오차 비교 | 판제 단독 정책 변경 |
 | C4 | 중복 계산/출력 조립 축소 | 입력→출력 p50/p95/p99·최대 공백·RSS/CPU·복사 수 비교 | 근거 없는 품질 경량화 |
 | 공동 전환 | 검증된 pose/객체 소비 경계 연결 | 판제·재호와 고정 bag 및 실제 구간 수락·복구 확인 | 사용자 확인 없는 운영 전환 |
 
-전환 기반 B0–B4 뒤 공통화를 시작할 때는 **C0만 구체화**한다. 공통화할 패키지 이름이나 새 메시지는 그 경계 검토 후 확정한다.
+최소 공용 패키지는 `asmc_geometry`로 확정했으며 공개 메시지·MD5는 유지한다. 추가 공통화는 결과와 책임 경계를 보고 결정한다.
+서로 다른 clock을 억지로 통일하거나 현재 pose gain·보간을 공통 코드라는 이유로 바꾸지 않는다.
 안승현은 카메라·HD맵 연결과 공통 기하 대조, 재호는 추적·속도·fusion 의미를 확인한다.
 판제 담당은 현재 pose/궤적·Frenet 소비와 fallback 정책을 확인한다. 관련 공개 계약 변경은 공동 검토한다.
 
@@ -217,10 +255,10 @@ Python binding은 배포·호출 비용까지 비교한 뒤 결정한다. 즉시
 - IMU·속도 무효 시 정상 빈 결과와 혼동하지 않음. 무효 속도를0/static으로 승격하지 않음.
 - 같은 RGB/model-grid의 family 역할·기하·support·M1/M0, BEV와 BBox의 exact-image 정합.
 - 고정 scan의 점군/OBB/track/fusion·지도 판정 동등성. 의도적 정책 차이는 별도 비교.
-- 공개 메시지 MD5·기존 Main·판제 소비와 새 라이브러리 독립 빌드 유지.
+- 공개 메시지 MD5·현재 판제 소비와 새 라이브러리 독립 빌드 유지. 구 Main은 고정 revision 재현만 유지.
 - 단순 수학 분리 단계에서는 출력 동등성을 우선하고, 성능은 동일 입력에서만 비교한다.
 
 각 단계는 이전 설정·바이너리·fixture·SHA를 보존한다. 초기에는 시험 namespace에서 대조하고
-기존 Main·판제 소비는 유지한다. pose 계산이나 센서 선택의 의미가 바뀐 단계는 별도 수락한다.
+현재 `asmc_lidar`·판제 소비는 유지한다. pose 계산이나 센서 선택의 의미가 바뀐 단계는 별도 수락한다.
 기존 [카메라 IMU 설명](camera-imu-projection.md), [센서 시각](bridge-sensor-timing.md),
 [LiDAR 계약](../contracts/lidar-planning-consumer-v1.md)의 현행 의미를 이 문서의 후보안으로 덮어쓰지 않는다.

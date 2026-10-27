@@ -1,8 +1,11 @@
 # asmc_lidar
 
-ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 전방 카메라 fusion → local/map 객체를 처리한다. 공용 추적 관측을 판제가 직접 소비할 수 있다. 판제·수집·시나리오는 이 패키지를 정본으로 사용하며 nested Main/Msg 빌드·source는 폐기했다.
+ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 3뷰 카메라 fusion → local/map 객체를 처리한다. 공용 추적 관측을 판제가 직접 소비할 수 있다. 판제·수집·시나리오는 이 패키지를 정본으로 사용하며 nested Main/Msg 빌드·source는 폐기했다.
 
-안승현은 **HD맵 기반 필터·카메라 연결 지원**, 손재호는 **추적·속도·운동 상태·fusion 보완**을 진행한다. 좌표·시간·공용 계약과 판제 전환은 공동 확인한다.
+안승현은 **3뷰 fusion·HD맵·카메라 연결**, 손재호는 **터널 통합·관측 위치/OBB·추적·속도·운동 상태**를 진행한다.
+세부 순서와 인수 기준은 [M0–M5 개선 계획](docs/improvement-milestones.md)을 따른다. 좌표·시간·공용 계약과 판제 전환은 공동 확인한다.
+
+- [참고 논문·Autoware/PCL 구현과 적용 조건](docs/improvement-milestones.md#우선-참고할-기준선과-적용-조건) — 문헌 검토·구현 참고·로컬 실측을 구분한다.
 
 - [현재 판제 실행·이식 기능·검증·복구](docs/planning-runtime.md) — 구 Main의 적용 속도/4단계 운동·관측 품질과 직접 소비 연결. 고정 시설물/구역 blacklist 제거.
 - [판제 전환 기반·구 기능 대조·다음 작업](docs/cutover-foundation.md) — PR #108 당시 대조를 보존. 현재 구현은 위 실행 기준선, 구 실행 폐기 기록과 별도의 터널 개선 목록을 제공한다.
@@ -21,6 +24,8 @@ HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계
 지도/pose 무효에서는 지도 제외를 중단하고, 최근 YOLO vehicle/dynamic 매칭은 모든 구간에서 보호한다.
 debug의 원본 tracker/점군은 검수를 위해 남긴다. 판제 기본 입력은 `planning_observations_map`의 공용 KF 품질 관측이다. 구 패키지·wire/JSON 중계는 폐기했다.
 
+- [M1 3뷰 fusion·웹 전달 표시·정적 클래스 보조](docs/three-view-fusion.md) — 3뷰 기본값과 수락/복구 경계.
+
 ## 구조
 
 `include/asmc_lidar/`와 `src/`는 같은 책임으로 나눈다. 단계마다 ROS 노드를 만들지 않는다.
@@ -32,11 +37,11 @@ debug의 원본 tracker/점군은 검수를 위해 남긴다. 판제 기본 입�
 | `preprocessing/` | ROI·자차 제거·voxel·지면 분리 |
 | `detection/` | 군집·검출 관측·OBB |
 | `tracking/` | 연결·Kalman·track 상태 |
-| `fusion/` | 카메라 관측 버퍼·분류 근거·전방 fusion |
+| `fusion/` | 카메라 관측 버퍼·분류 근거·3뷰 fusion |
 | `filtering/` | ROS 독립 HD맵·상부 전달 필터. 발행 배열만 제외하며 원본 tracker 보존 |
 | `pipeline/` | 처리 단계 조합·scan context와 결과 |
 | `ros/` | 센서 수신·설정·메시지 변환·진단·실행 |
-| `experimental/` | 기본 OFF인 기존 TunnelFilter 원본과 연결 stage |
+| `experimental/` | map pose 무효 시 사용하는 터널 경로와 별도 opt-in 비교 stage |
 
 `DetectionObservation`이 점군과 현재 기하를 한 번 소유하고, `TrackState`와 `CameraClassEvidence`를 조합해 `TrackedObject`를 만든다. 기존 tracker 이력의 복사 정책은 유지한다. `filtering/`은 원본 객체와 분리된 작은 판정 결과만 소유한다.
 

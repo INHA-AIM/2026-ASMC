@@ -81,6 +81,14 @@ def main(args):
         deadline=time.monotonic()+seconds
         while time.monotonic()<deadline:
             control(brake=1.);time.sleep(.05)
+    def reset_lidar():
+        if not args.lidar_reset_service:return
+        from std_srvs.srv import Trigger
+        rospy.wait_for_service(args.lidar_reset_service,timeout=3.)
+        reply=rospy.ServiceProxy(args.lidar_reset_service,Trigger)()
+        if not reply.success:raise RuntimeError('LiDAR reset failed: '+reply.message)
+        report.setdefault('lidar_resets',[]).append(dict(service=args.lidar_reset_service,
+            ros_ns=rospy.Time.now().to_nsec(),message=reply.message))
     capture=None;changed=False;failure=None
     try:
         changed=True
@@ -90,6 +98,7 @@ def main(args):
         hold_brake(3.)
         rest=actors.GetActorState(ego,timeout=1)
         report['settled_before_drive']=MessageToDict(rest)
+        reset_lidar()  # New sensor/track generation after an intentional teleport.
         if abs(rest.transform.location.z-transform.location.z)>.25:raise RuntimeError('unsettled road height')
         if sum(getattr(rest.global_velocity,k)**2 for k in 'xyz')>.0025:raise RuntimeError('not stopped after placement')
         capture=subprocess.Popen([sys.executable,str(Path(__file__).with_name('capture_imu_lane.py')),
@@ -156,6 +165,7 @@ def main(args):
                     elif capture.returncode and failure is None:failure=RuntimeError('capture failed')
                 checked('SetTransform',SetTransformParam(actor_info=ego,transform=before.transform),timeout=2.)
                 hold_brake(1.)
+                reset_lidar()  # Also retire tunnel observations after restoring Ego.
                 checked('SetVehicleControlMode',VehicleControlModeParam(actor_info=ego,mode=original_mode))
                 # Native SetTransform/SetVehicleControlMode can reset gear to D.
                 # Restore gear last, then verify actual state, not just RPC ACK.
@@ -179,6 +189,7 @@ def main(args):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--execute',action='store_true')
+    p.add_argument('--lidar-reset-service',default='',help='explicit test LiDAR reset service after each teleport; never inferred')
     p.add_argument('--address',default='host.docker.internal:7789')
     p.add_argument('--grpc-root',type=Path,required=True)
     p.add_argument('--link-set',type=Path,required=True)

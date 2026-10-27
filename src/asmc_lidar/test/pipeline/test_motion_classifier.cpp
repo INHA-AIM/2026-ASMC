@@ -1,5 +1,6 @@
 #include <asmc_lidar/tracking/motion_classifier.hpp>
 #include <gtest/gtest.h>
+#include <cmath>
 using namespace asmc::lidar::pipeline::motion_classifier;
 
 static void Feed(MotionClassifier& classifier,std::vector<MotionObject>& objects,
@@ -62,3 +63,46 @@ TEST(MotionClassifier, OneGrowingFaceDoesNotBecomeRigidMotion) {
   EXPECT_EQ(v[0].s32_MotionState,1);
 }
 int main(int argc,char**argv){::testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}
+
+TEST(SemanticMotion, StaticNoiseSuppressionNeedsFreshClassAndGeometry) {
+  MotionClassifierConfig cfg;cfg.semantic_static_enabled=true;MotionClassifier c(cfg);
+  std::vector<MotionObject> v(1);v[0].semantic_static_eligible=true;
+  for(int i=0;i<20;++i)Feed(c,v,i,0,0,0,0);
+  ASSERT_TRUE(v[0].semantic_static_applied);ASSERT_EQ(v[0].s32_MotionState,1);
+  for(int i=20;i<35;++i){Feed(c,v,i,i%2?40:0,0,0,0);EXPECT_EQ(v[0].s32_MotionState,1);}
+  v[0].semantic_static_eligible=false;Feed(c,v,35,0,0,0,0);
+  EXPECT_FALSE(v[0].semantic_static_applied);
+}
+TEST(SemanticMotion, MisclassifiedMovingObjectBelowTenKphReleasesOnFirstRigidEvidence) {
+  MotionClassifierConfig cfg;cfg.semantic_static_enabled=true;MotionClassifier c(cfg);
+  std::vector<MotionObject> v(1);v[0].semantic_static_eligible=true;
+  for(int i=0;i<20;++i)Feed(c,v,i,0,0,0,0);
+  int first=-1,confirmed=-1;
+  for(int i=20;i<40;++i) {
+    Feed(c,v,i,6,0,(i-19)*.1*6/3.6,0);
+    if(v[0].semantic_reason=="rigid_motion_releases_static_prior") {
+      if(first<0){first=i;EXPECT_EQ(v[0].s32_MotionState,2);}
+      EXPECT_FALSE(v[0].semantic_static_applied);
+    }
+    if(v[0].s32_MotionState==3&&confirmed<0)confirmed=i;
+  }
+  ASSERT_GE(first,0);EXPECT_EQ(confirmed,first+2);
+}
+TEST(SemanticMotion, OneSidedGrowthCannotCertifySemanticStaticAndMapLossClearsIt) {
+  MotionClassifierConfig cfg;cfg.semantic_static_enabled=true;MotionClassifier c(cfg);
+  std::vector<MotionObject> v(1);v[0].semantic_static_eligible=true;
+  for(int i=0;i<20;++i)Feed(c,v,i,0,0,0,0);
+  for(int i=20;i<27;++i) {
+    v[0].max_e=2+(i-19)*.3;v[0].f32_AbsVx=5;c.Update(v,1+i*.1);
+  }
+  EXPECT_FALSE(v[0].semantic_static_applied);EXPECT_EQ(v[0].s32_MotionState,0);
+  c.InvalidateMapHistory(v);EXPECT_FALSE(v[0].motion_valid);EXPECT_EQ(v[0].s32_MotionState,0);
+}
+TEST(SemanticMotion, LabelAloneCannotOverrideAlreadyMovingAndInvalidVelocityIsNotZero) {
+  MotionClassifierConfig cfg;cfg.semantic_static_enabled=true;MotionClassifier c(cfg);
+  std::vector<MotionObject> v(1);
+  for(int i=0;i<20;++i)Feed(c,v,i,12,0,i*.1*12/3.6,0);
+  ASSERT_EQ(v[0].s32_MotionState,3);
+  v[0].semantic_static_eligible=true;Feed(c,v,20,12,0,20*.1*12/3.6,0);EXPECT_EQ(v[0].s32_MotionState,3);
+  Feed(c,v,21,NAN,0,7,0);EXPECT_FALSE(v[0].motion_valid);EXPECT_EQ(v[0].s32_MotionState,0);
+}

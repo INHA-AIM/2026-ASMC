@@ -44,13 +44,16 @@ pipeline::GpsInput GpsInputFromMsg(const morai_msgs::GPSMessage& msg) {
 // Ported from Main src/Parser/Parser.cpp:278-279,288-331 (fromROSMsg + raw
 // buffer copy) and src/Lidar/LidarProcess/LidarProcess.cpp:22-50
 // (MakePointCloudFromRaw) (8f93c22e). The raw buffer memcpy of whole PointXYZI
-// records round-trips the points bit-exactly, so the vector is copied directly.
+// records round-trips the points bit-exactly. Decode into the final owned buffer.
 pipeline::CloudPtr CloudFromMsg(const sensor_msgs::PointCloud2& msg) {
-  pcl::PointCloud<pcl::PointXYZI> pcl_Cloud;
-  pcl::fromROSMsg(msg, pcl_Cloud);
   pipeline::CloudPtr out(new pipeline::Cloud());
-  if (pcl_Cloud.points.empty()) return out;  // MakePointCloudFromRaw "Not enough data"
-  out->points = pcl_Cloud.points;
+  pcl::fromROSMsg(msg, *out);  // Decode directly into the owned buffer; no second vector copy.
+  out->header = pcl::PCLHeader{};  // Public stamp/frame live in ScanInput, not PCL internal metadata.
+  if (out->points.empty()) {
+    out->width = out->height = 0;
+    out->is_dense = true;  // Preserve the original empty Cloud metadata.
+    return out;
+  }
   out->width = static_cast<std::uint32_t>(out->points.size());
   out->height = 1;
   out->is_dense = false;

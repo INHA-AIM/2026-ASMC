@@ -80,6 +80,74 @@ void InitializeAtSpeed(frenet_planner_ros::GpsImuStateEstimator& estimator,
         Gps(estimator, time, x);
     }
 }
+
+void CheckInvalidGpsRecovery() {
+    // Each invalid form must retire both the position window and the old speed.
+    // Recovery at a distant location must not create a velocity across the gap.
+    for (int kind = 0; kind < 6; ++kind) {
+        frenet_planner_ros::GpsImuStateEstimator estimator(TestConfig());
+        double x = 0.0;
+        InitializeAtSpeed(estimator, 100.0, 8.0, x);
+        Expect(Speed(estimator, 101.0) > 7.0, "moving baseline before invalid GPS");
+        auto invalid = MakeGps(101.05, x);
+        switch (kind) {
+            case 0: invalid.latitude = invalid.longitude = 0.0; break;
+            case 1: invalid.status = 0; break;
+            case 2: invalid.latitude = std::numeric_limits<double>::quiet_NaN(); break;
+            case 3: invalid.header.stamp = ros::Time(); break;
+            case 4: invalid.longitude = 181.0; break;
+            case 5: invalid.eastOffset = std::numeric_limits<double>::infinity(); break;
+        }
+        Imu(estimator, 101.05, 5.0);
+        estimator.updateGps(invalid, Steady(101.05));
+        const auto unavailable = estimator.makeState(Steady(101.05));
+        Expect(!unavailable.valid && unavailable.x == 0.0 && unavailable.y == 0.0,
+               "invalid GPS must not project or publish a previous valid position");
+        Imu(estimator, 101.10, 0.0);
+        Gps(estimator, 101.10, x + 1000.0);
+        Expect(!estimator.makeState(Steady(101.10)).valid,
+               "first recovered fix must not revive pre-dropout speed");
+        Imu(estimator, 101.30, 0.0);
+        Gps(estimator, 101.30, x + 1000.0);
+        Expect(Speed(estimator, 101.30) < 1e-9,
+               "recovered stationary baseline must not inherit speed or acceleration");
+    }
+}
+
+void CheckMissingGpsRecovery() {
+    frenet_planner_ros::GpsImuStateEstimator estimator(TestConfig());
+    double x = 0.0;
+    InitializeAtSpeed(estimator, 110.0, 8.0, x);
+    Imu(estimator, 111.6, 0.0);
+    Expect(!estimator.makeState(Steady(111.6)).valid, "GPS timeout must be invalid");
+    Gps(estimator, 111.6, x + 2.0);
+    Expect(!estimator.makeState(Steady(111.6)).valid,
+           "first fix after silence requires a new baseline even without an invalid packet");
+    Imu(estimator, 111.8, 0.0);
+    Gps(estimator, 111.8, x + 2.0);
+    Expect(Speed(estimator, 111.8) < 1e-9, "no velocity from pre-timeout history");
+}
+
+void CheckReceiptRegressionAndRepeatedZero() {
+    frenet_planner_ros::GpsImuStateEstimator estimator(TestConfig());
+    double x = 0.0;
+    InitializeAtSpeed(estimator, 120.0, 8.0, x);
+    Gps(estimator, 121.0, x);  // Duplicate receipt cannot seed a velocity interval.
+    Expect(!estimator.makeState(Steady(121.0)).valid, "duplicate receipt clears baseline");
+    Gps(estimator, 120.9, x);
+    Expect(!estimator.makeState(Steady(120.9)).valid, "regressed receipt clears baseline");
+    Imu(estimator, 121.1, 0.0);
+    Gps(estimator, 121.1, x);
+    Expect(Speed(estimator, 121.1) < 1e-9, "fresh baseline after receipt regression");
+    for (int i = 0; i < 5; ++i) {
+        const double time = 122.0 + .2 * i;
+        auto gps = MakeGps(time, x);
+        gps.latitude = gps.longitude = 0.0;  // status remains 1, as in the live tunnel.
+        Imu(estimator, time, 0.0);
+        estimator.updateGps(gps, Steady(time));
+        Expect(!estimator.makeState(Steady(time)).valid, "repeated GPS zero remains invalid");
+    }
+}
 }  // namespace
 
 int main() {
@@ -177,7 +245,11 @@ int main() {
     Imu(outlier, 61.04, -12.0);
     Imu(outlier, 62.0, 8.0);
     Gps(outlier, 62.0, x + 10.0);
-    const double abnormal_dt_speed = Speed(outlier, 62.0);
+    Expect(!outlier.makeState(Steady(62.0)).valid,
+           "oversized GPS gap requires reacquisition");
+    Imu(outlier, 62.2, 0.0);
+    Gps(outlier, 62.2, x + 10.0);
+    const double abnormal_dt_speed = Speed(outlier, 62.2);
     Expect(std::isfinite(abnormal_dt_speed) && abnormal_dt_speed >= 0.0 &&
                abnormal_dt_speed <= TestConfig().maximum_speed_mps,
            "abnormal steady dt must not produce NaN or runaway speed");
@@ -185,6 +257,10 @@ int main() {
     // 8. Freshness behavior remains unchanged.
     Expect(!constant.makeState(Steady(12.6)).valid,
            "stale GPS/IMU must keep state invalid");
+
+    CheckInvalidGpsRecovery();
+    CheckMissingGpsRecovery();
+    CheckReceiptRegressionAndRepeatedZero();
 
     std::cout << "vehicle_state_adapter_test: PASS"
               << " constant=" << constant_speed

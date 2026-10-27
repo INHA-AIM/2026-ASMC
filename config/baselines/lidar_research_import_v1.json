@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "purpose": "Frozen historical evidence; not current runtime or performance acceptance",
+  "integration_date": "2026-10-27",
+  "runtime_baseline": "22577363340c83c8a69ef64b55adb1fd678bbee9",
+  "research_branch": "research/lidar-perception-20261018",
+  "preserved_research_head": "a296c0c4f14c09ff6c3f9b16372d809dc0d79b82",
+  "groups": [
+    {
+      "id": "lidar_fusion_shadow_v1",
+      "source_commit": "4da2a5b06039e5bc4226f1a8c24291493c25e9a4",
+      "summary": "config/baselines/evidence/lidar_fusion_shadow_v1/summary.json",
+      "gallery": "config/baselines/evidence/lidar_fusion_shadow_v1/index.html",
+      "files": [
+        {
+          "path": "config/baselines/evidence/lidar_fusion_shadow_v1/comparison-064.jpg",
+          "source_path": "config/baselines/evidence/lidar_fusion_shadow_v1/comparison-064.jpg",
+          "source_blob": "78fe3c2c5c6a5e808ec6ad08a7995272cd7712e5",
+          "bytes": 192245,
+          "sha256": "abfd2dc4a4f3acb103ff23e22a3f645a62592da5b28e862d4d42732e44922226"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_fusion_shadow_v1/comparison-112.jpg",
+          "source_path": "config/baselines/evidence/lidar_fusion_shadow_v1/comparison-112.jpg",
+          "source_blob": "c86f0fdaaa8e8494cf4525959cb5b5420edbe824",
+          "bytes": 199523,
+          "sha256": "5f7192cba53ee78d932680337ea2a51d0d2434454aba80e8229c170c0a67e2f5"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_fusion_shadow_v1/index.html",
+          "source_path": "config/baselines/evidence/lidar_fusion_shadow_v1/index.html",
+          "source_blob": "5d5441c544ca11bbff195e9ad52018e6f08e0e0e",
+          "bytes": 1930,
+          "sha256": "7ef999d70764a1c2280db26910c6e0fb87240aac2991d01ed3065496236b0c63"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_fusion_shadow_v1/structure-evidence.png",
+          "source_path": "config/baselines/evidence/lidar_fusion_shadow_v1/structure-evidence.png",
+          "source_blob": "3c3265006d1dd11a71b4350faf29ea559419e0eb",
+          "bytes": 206338,
+          "sha256": "ac424af50cd215d8840e52152fb70cf7f293cb7e9e37638c4cc2403d73731fcd"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_fusion_shadow_v1/summary.json",
+          "source_path": "config/baselines/evidence/lidar_fusion_shadow_v1/summary.json",
+          "source_blob": "d68b679f25431c526026412a153ea82924e240b0",
+          "bytes": 35789,
+          "sha256": "307d817641481055aeff38e3de82be3e6401f140c08097ead304bad2f27f3db1"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_fusion_shadow_v1/tracking-diagnostic.png",
+          "source_path": "config/baselines/evidence/lidar_fusion_shadow_v1/tracking-diagnostic.png",
+          "source_blob": "4e65515b067ae41e94eb9bc345b113a8c3daaae0",
+          "bytes": 112908,
+          "sha256": "50868e1ffaa755d7dadde051924c79e9b9c36c88f4cd1d09f53dc82f80903b11"
+        }
+      ]
+    },
+    {
+      "id": "lidar_learned_candidates_v1",
+      "source_commit": "ee97ffc52164c87e66cfeefc90a8134964c5075e",
+      "summary": "config/baselines/evidence/lidar_learned_candidates_v1/summary.json",
+      "gallery": "config/baselines/evidence/lidar_learned_candidates_v1/index.html",
+      "files": [
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/comparison-064.jpg",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/comparison-064.jpg",
+          "source_blob": "eae1dcb0f13559c272afd080f650471f650b6713",
+          "bytes": 290171,
+          "sha256": "99c0a5812b832bcb92bec23c857cf5f4df2aaed0595178b8ba7fd2e948a09f3c"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/comparison-112.jpg",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/comparison-112.jpg",
+          "source_blob": "494f8105b32d765d3a8c9b154bdcd8db60507c0a",
+          "bytes": 265630,
+          "sha256": "d81bde80f9fe2fc4455d93e4945a030b79458d6f3c2f8998a9983eadf4870b2a"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/index.html",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/index.html",
+          "source_blob": "d7c83c978cc93532d95a3468c24f41384a602b3c",
+          "bytes": 1239,
+          "sha256": "bf218801d18e57dfe5aee8b44a61c2593cd004d7846325af165182c95c80dc15"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/mask-proof-000.jpg",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/mask-proof-000.jpg",
+          "source_blob": "bd1f5eb585cbc9dc528342e5a57118181392ef86",
+          "bytes": 185550,
+          "sha256": "9d9cf778cac7dbba4dfd33929def37ff036d028384ea5d33b5969bd069359c1c"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/mask-proof-005.jpg",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/mask-proof-005.jpg",
+          "source_blob": "c44827611c0ef3e19c78862889780363fce7d3d8",
+          "bytes": 155391,
+          "sha256": "3b2f5815fb51ad842971570df0d5a86f94ac32677ca8d3e0597b71ec1391362c"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/segmentation-reuse-inspected-masks.json",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/segmentation-reuse-inspected-masks.json",
+          "source_blob": "6da60d2fc507554b29a9fb1fd44c74e327d41658",
+          "bytes": 32920,
+          "sha256": "0d7ad3708388a42b623b62eaf3ac652b8886ad9db2d6731492b59ed1ed92ceb8"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/segmentation-reuse-summary.json",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/segmentation-reuse-summary.json",
+          "source_blob": "250d8ba31a7dc115fffafeefdebf26063ba7d5cb",
+          "bytes": 3361,
+          "sha256": "4a0e24fbb67429c5f72234fb6ffae8dccbfa02f72cea534d2d90c47d918f3834"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/summary.json",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/summary.json",
+          "source_blob": "928f4a0fc1e7a9ae4899fe26abf0c78f9789698e",
+          "bytes": 15474,
+          "sha256": "24c559ca2dfeef32ed69c0ce81dc13b7de407b90f68e77fd436d562368b37d9b"
+        },
+        {
+          "path": "config/baselines/evidence/lidar_learned_candidates_v1/validation.json",
+          "source_path": "config/baselines/evidence/lidar_learned_candidates_v1/validation.json",
+          "source_blob": "65c31c46077877e79056b2a063a9a9886105a737",
+          "bytes": 452,
+          "sha256": "ce262d1da74d90fe66119603f0be11f3daf162cc48da438e505fc2112ff11b69"
+        }
+      ]
+    }
+  ],
+  "excluded": [
+    {
+      "source_commit": "010d1436",
+      "reason": "Historical LAN backport; latest main network/sensor configuration remains authoritative"
+    },
+    {
+      "source_commit": "a296c0c4",
+      "reason": "Historical LAN backport; preserve on research branch only"
+    },
+    {
+      "source_commit": "4da2a5b06039e5bc4226f1a8c24291493c25e9a4",
+      "paths": [
+        "tools/perception/benchmark_shadow_point_support.py",
+        "tools/perception/benchmark_shadow_structure.cpp",
+        "tools/perception/plot_shadow_support_evidence.py",
+        "tools/perception/summarize_shadow_point_support.py",
+        "tools/perception/test_shadow_point_support.py"
+      ],
+      "reason": "Historical executors use offline nearest matching/custom projection and unbounded all-pairs support; reproduce at pinned revision only. Current native F1 math and storage guard remain authoritative."
+    },
+    {
+      "source_commit": "ee97ffc52164c87e66cfeefc90a8134964c5075e",
+      "paths": [
+        "tools/perception/audit_segmentation_reuse.py",
+        "tools/perception/build_learned_lidar_review.py",
+        "tools/perception/prepare_learned_lidar_inputs.py",
+        "tools/perception/research_download.py",
+        "tools/perception/run_centerpoint_shadow.py",
+        "tools/perception/run_harp_shadow.py"
+      ],
+      "reason": "Optional external model runners and frozen-result writers; not dependencies of current runtime or CI"
+    },
+    {
+      "source_commit": "ee97ffc52164c87e66cfeefc90a8134964c5075e",
+      "paths": [
+        "docs/records/camera/camera-lidar-fusion-study.md",
+        "docs/handoffs/lidar-migration.md",
+        "src/asmc_lidar/docs/migration-tasks.md"
+      ],
+      "reason": "Old operational instructions and responsibility assignments superseded by current F1 handoff; original text remains in Git"
+    }
+  ]
+}

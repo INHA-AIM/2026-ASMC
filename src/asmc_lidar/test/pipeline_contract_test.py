@@ -101,7 +101,7 @@ class PipelineContractTest(unittest.TestCase):
         sections = catkin_package_block(without_comments((PACKAGE / 'CMakeLists.txt').read_text(), '#'))
         self.assertEqual(sections.get('LIBRARIES'),
                          ['asmc_lidar_frame_time', 'asmc_lidar_camera_core', 'asmc_lidar_camera_ros'])
-        self.assertEqual(sections.get('CATKIN_DEPENDS'), ['asmc_msgs', 'roscpp', 'diagnostic_msgs'])
+        self.assertEqual(sections.get('CATKIN_DEPENDS'), ['asmc_geometry', 'asmc_msgs', 'roscpp', 'diagnostic_msgs'])
         self.assertEqual(sections.get('DEPENDS'), ['Eigen3', 'yaml-cpp', 'OpenSSL'])
         self.assertEqual(sections.get('INCLUDE_DIRS'), ['include', '${EIGEN3_INCLUDE_DIRS}'])
 

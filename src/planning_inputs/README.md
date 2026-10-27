@@ -9,6 +9,9 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
 두 번째 명령은 차량 제어를 포함한다. 브릿지·카메라는 별도 실행한다. nested workspace를 source하지 않는다.
+예전 `lidar_source_policy`·`objects_source` 선택은 없다. 일반 autonomy·시나리오·수집용 planner가
+같은 `objects.launch` 기본 입력을 사용한다. `tracks_map`은 `LidarTrackingObservation`으로,
+현재 어댑터가 받는 `LidarPlanningObservation`과 다르므로 토픽만 바꿔 연결하지 않는다.
 
 ## 객체 입력 계약
 

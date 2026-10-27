@@ -147,8 +147,8 @@ class LidarPipelineNode {
     LoadConfig();
     SetUpCamera();
     SetUpDebug();
-    FinalizeRuntimeIdentity(config_, front_ ? front_->id : "");
-    runtime_ = std::make_shared<LidarRuntime>(config_, camera_, front_);
+    FinalizeRuntimeIdentity(config_, camera::fusion_calibration_identity(calibrations_, config_.fusion.views == "all"));
+    runtime_ = std::make_shared<LidarRuntime>(config_, camera_, front_, calibrations_);
     Advertise();
     Subscribe();
     reset_service_ = pnh_.advertiseService("reset", &LidarPipelineNode::Reset, this);
@@ -194,11 +194,15 @@ class LidarPipelineNode {
     std::string sensor_frame;
   };
   struct Stats {
+    pipeline::LocalInputSelection selected;
     std::uint64_t processed = 0, invalid = 0, stamp_errors = 0, scans_processed = 0;
     std::string input_reason = "waiting_for_input", map_reason = "gps_missing", pose_reason;
     bool camera_active = false;
     std::string camera_reason;
     fusion::FusionCounters fusion;
+    std::vector<fusion::CameraSnapshot::View> camera_views;
+    struct FusionSample { std::map<std::string, std::size_t> reasons; std::size_t omitted=0; };
+    std::deque<FusionSample> fusion_window;
     std::size_t pending_scans = 0;
     std::deque<double> total_ms, delivery_ms;
     struct AuditSample {
@@ -224,7 +228,7 @@ class LidarPipelineNode {
   }
 
   bool Reset(std_srvs::Trigger::Request&, std_srvs::Trigger::Response& reply) {
-    auto next = std::make_shared<LidarRuntime>(config_, camera_, front_);
+    auto next = std::make_shared<LidarRuntime>(config_, camera_, front_, calibrations_);
     std::lock_guard<std::mutex> epoch(epoch_mutex_);
     epoch_.Reset();
     runtime_ = std::move(next);  // old worker owns its retired runtime until it finishes
@@ -300,7 +304,7 @@ class LidarPipelineNode {
     pnh_.param("debug_rate_hz", debug_config_.rate_hz, 5.0);
     int debug_max_points = 20000;
     pnh_.param("debug_max_points", debug_max_points, 20000);
-    debug_config_.max_points = static_cast<std::size_t>(std::max(1, debug_max_points));
+    debug_config_.max_points = static_cast<std::size_t>(std::clamp(debug_max_points, 1, 20000));
     debug_config_.topic_prefix = nh_.resolveName(debug_config_.topic_prefix);
     debug_config_.leveled_frame = tf_child_frame_;
   }
@@ -367,7 +371,8 @@ class LidarPipelineNode {
   // keeps ~enable_camera_fusion (Main enable_sensor_fusion) with no camera source,
   // i.e. Main with no camera traffic: classes stay unknown, FusionLiDAR still runs.
   void SetUpCamera() {
-    if (!config_.enable_camera_fusion) {
+    if (!config_.enable_camera_fusion && !(config_.pipeline.tunnel.enabled &&
+        config_.pipeline.tunnel_route.original_pipeline && config_.pipeline.tunnel_route.protection.enabled)) {
       camera_reason_ = "disabled_by_config";
       return;
     }
@@ -619,12 +624,22 @@ class LidarPipelineNode {
     stats_.input_reason = output.input_reason();
     stats_.map_reason = output.map_reason();
     stats_.pose_reason = out.pose_ready ? "ready" : out.reason;
+    stats_.selected = out.selected;
     if (out.fusion_ran) {
       stats_.camera_active = out.fusion.camera_active;
       stats_.camera_reason = out.fusion.camera_reason;
       stats_.pending_scans = out.fusion.pending_scans;
+      stats_.camera_views = out.fusion.views;
+      Stats::FusionSample sample;
+      sample.omitted = out.fusion.decisions_omitted;
+      for (const auto& d : out.fusion.decisions) {
+        ++sample.reasons[d.reason];
+        sample.omitted += d.associations_omitted;
+      }
+      stats_.fusion_window.push_back(std::move(sample));
+      while (stats_.fusion_window.size() > 100) stats_.fusion_window.pop_front();
     }
-    if (const auto* camera_fusion = pending.runtime->fusion()) stats_.fusion = camera_fusion->counters();
+    stats_.fusion = pending.runtime->fusion_counters();
     stats_.audit_reason = out.hd_map_audit.reason;
     stats_.delivery_filter_applied=out.hd_map_audit.delivery_applied;
     stats_.delivery_input=out.hd_map_audit.delivery_input_count;
@@ -727,6 +742,13 @@ class LidarPipelineNode {
         number("gps_sample_arrival_ns", stats_.gps_sample_arrival_ns);
         number("gps_age_ms", stats_.gps_age_ms);
       }
+      number("imu_selected_stamp_ns", stats_.selected.imu_stamp_ns);
+      number("imu_latest_seen_ns", stats_.selected.imu_latest_seen_ns);
+      number("imu_latest_receipt_ns", stats_.selected.imu_latest_receipt_ns);
+      number("imu_invalid_stamp_ns", stats_.selected.imu_invalid_ns);
+      value("imu_rejection_reason", stats_.selected.imu_rejection_reason);
+      if(stats_.selected.imu_stamp_ns && stats_.last_stamp_ns>0 && static_cast<std::uint64_t>(stats_.last_stamp_ns)>=stats_.selected.imu_stamp_ns)
+        number("imu_selected_age_ms",double(stats_.last_stamp_ns-stats_.selected.imu_stamp_ns)/1e6);
       number("imu_rejected", runtime_->imu_rejected());
       number("can_rejected", runtime_->can_rejected());
       number("gps_rejected", runtime_->gps_rejected());
@@ -750,6 +772,24 @@ class LidarPipelineNode {
       number("fusion_confirmations_applied", f.confirmations_applied);
       number("fusion_misses_applied", f.misses_applied);
       number("fusion_pending_scans", stats_.pending_scans);
+      number("fusion_projection_invalid", f.projection_invalid);
+      std::map<std::string, std::size_t> fusion_reasons;
+      std::size_t fusion_omitted=0;
+      for (const auto& sample : stats_.fusion_window) {
+        fusion_omitted += sample.omitted;
+        for (const auto& reason : sample.reasons) fusion_reasons[reason.first] += reason.second;
+      }
+      number("fusion_window_scans", stats_.fusion_window.size());
+      number("fusion_diagnostics_omitted", fusion_omitted);
+      for (const auto& reason : fusion_reasons) number("fusion_reason_"+reason.first, reason.second);
+      for (const auto& v : stats_.camera_views) {
+        const std::string key = "fusion_view_"+v.frame_id;
+        value(key+"_reason", v.reason);
+        value(key+"_matching", v.matching_implemented ? "true" : "false");
+        number(key+"_candidates", v.candidates);
+        number(key+"_offset_ms", double(v.image_minus_scan_ns)/1e6);
+        number(key+"_stamp_ns", v.stamp_ns);
+      }
       const std::vector<double> window(stats_.total_ms.begin(), stats_.total_ms.end());
       value("hd_map_audit_mode", config.hd_map_audit_mode);
       value("delivery_filter_applied",stats_.delivery_filter_applied?"true":"false");

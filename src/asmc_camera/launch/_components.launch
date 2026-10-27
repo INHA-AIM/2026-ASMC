@@ -56,7 +56,7 @@
   <arg name="camera_batch_wait_ms" default="20.0"/>
   <arg name="camera_model_grid_max_hz" default="15.0"/>
   <arg name="camera_sensor_set_path"
-       default="$(find asmc_camera)/../../config/morai/sensors/ASMC_sensor_set_v3.json"/>
+       default="$(find asmc_camera)/../../tools/bridge/templates/sensor_v3.json"/>
   <arg name="camera_calibration_config"
        default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <arg name="bev_grid_config"

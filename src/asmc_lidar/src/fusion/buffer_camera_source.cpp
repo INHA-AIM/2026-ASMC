@@ -1,7 +1,8 @@
 // CameraSource over the asmc_lidar camera::Buffer (Receiver). Replaces Main's
 // /YOLO/BBox subscription, callback queue and InferenceStatus control gate
 // (FusionCamera.cpp:69-85, 192-243): the buffer validates status, time,
-// identity and boxes; this adapter only maps its front view to CameraFrames.
+// identity and boxes; this adapter exposes independent view frames plus the
+// unchanged front-only fields used by the rollback implementation.
 
 #include <asmc_lidar/fusion/front_camera_fusion.hpp>
 
@@ -41,6 +42,36 @@ CameraSnapshot BufferCameraSource::Read(std::int64_t reference_stamp_ns, std::in
   CameraSnapshot snapshot;
   // Non-blocking, non-consuming; expires old records and applies the gate.
   const camera::Query query = buffer_->query(reference_stamp_ns, window_ns, ros_now_ns, steady_now_ns);
+  snapshot.gate_active=query.gate_reason.empty();
+  snapshot.gate_reason=query.gate_reason;
+  snapshot.gate_epoch=query.epoch;
+  for (const auto& entry : query.views) {
+    for(const auto& c:entry.second.candidates)if(c.record) {
+      const auto& o=c.record->observation;
+      CameraFrame f;f.frame_id=o.header.frame_id;f.stamp_ns=o.header.stamp_ns;
+      f.epoch=c.record->epoch;f.width=o.width;f.height=o.height;f.boxes=o.boxes;f.record=c.record;
+      f.identity=o.session+"|"+std::to_string(o.generation)+"|"+o.header.frame_id+"|"+
+          std::to_string(o.header.stamp_ns)+"|"+o.calibration_id;
+      snapshot.by_view[entry.first].push_back(std::move(f));
+    }
+    CameraSnapshot::View summary;
+    summary.frame_id = entry.first;summary.matching_implemented=entry.first==front_;
+    summary.reason = entry.second.reason;
+    summary.candidates = entry.second.candidates.size();
+    if (!entry.second.candidates.empty() && entry.second.candidates.front().record) {
+      const auto& candidate = entry.second.candidates.front();
+      const auto& o = candidate.record->observation;
+      summary.stamp_ns = o.header.stamp_ns;
+      summary.wire_sequence = o.header.sequence;
+      summary.image_minus_scan_ns = candidate.image_minus_scan_ns;
+      summary.session = o.session;
+      summary.generation = o.generation;
+      summary.calibration_id = o.calibration_id;
+      summary.model_id = o.model_id;
+      summary.config_id = o.config_id;
+    }
+    snapshot.views.push_back(std::move(summary));
+  }
   const auto view = query.views.find(front_);
   if (view == query.views.end()) {
     snapshot.reason = "unknown_camera";

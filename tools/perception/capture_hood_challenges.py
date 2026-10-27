@@ -46,7 +46,7 @@ def main():
     if sum(getattr(initial.global_velocity,a)**2 for a in 'xyz')>.01:raise RuntimeError('Ego is moving')
     report=dict(profile='stationary_owned_actor_geometry_challenges',ego_before=MessageToDict(initial),mode_before=MessageToDict(mode),
                 official_scenario_sha256=hashlib.sha256(Path('/data/R_KR_PG_K-city_2025/2026_molit_comp_sample_scene.json').read_bytes()).hexdigest(),
-                sensor_config_sha256=hashlib.sha256((ROOT/'config/morai/sensors/ASMC_sensor_set_v3.json').read_bytes()).hexdigest(),rpc=[],frames=[],cleanup=[])
+                sensor_config_sha256=hashlib.sha256((ROOT/'tools/bridge/templates/sensor_v3.json').read_bytes()).hexdigest(),rpc=[],frames=[],cleanup=[])
     owned=[]
     yaw=math.radians(initial.transform.rotation.z);forward=np.array([math.cos(yaw),math.sin(yaw)]);left=np.array([-forward[1],forward[0]])
     def call(name,request):

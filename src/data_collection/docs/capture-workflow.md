@@ -20,10 +20,10 @@ MPC가 `/ctrl_cmd/normal`을 발행하고 선택기가 `/ctrl_cmd`로 전달하�
 
 | 파일 | 용도 |
 |---|---|
-| `config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 run 재현용 |
-| `config/morai/sensors/ASMC_sensor_set_v2.json` | 과거10Hz 회귀용 |
-| `config/morai/sensors/ASMC_sensor_set_v3.json` | 현재 주행 센서셋15Hz; 현장 수락은 별도 |
-| `config/morai/sensors/ASMC_sensor_set_GT.json` | v2 + Semantic Camera×3 + Instance LiDAR, 개발·학습 전용 |
+| `git show 2c691304:config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 run 재현용 |
+| `src/asmc_bridge/test/fixtures/sensor_v2_10hz.json` | 과거10Hz 회귀용 |
+| `config/morai/sensors/261027_ASMC_Local_Sensor_25.S4.MolitComp03.json` | 현재 주행 센서셋15Hz; 현장 수락은 별도 |
+| `config/morai/sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json` | v2 + Semantic Camera×3 + Instance LiDAR, 개발·학습 전용 |
 
 v1→v2의 유효 변경은 rear camera pitch `340°→328°`다. GT 센서셋의 LiDAR는 다음처럼
 동일 위치·주기에서 입력과 정답을 분리한다.

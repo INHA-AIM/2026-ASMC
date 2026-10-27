@@ -31,6 +31,7 @@ from geometry_msgs.msg import Vector3
 from morai_msgs.msg import (CollisionData, CtrlCmd, EgoVehicleStatus,
                             ObjectStatus, ObjectStatusList)
 
+from asmc_bridge.transport_policy import ego_status_enabled, detail_status_enabled
 from asmc_bridge.telemetry import BridgeTelemetry, publish_report, start_reporting
 
 KMH2MS = 1.0 / 3.6
@@ -40,7 +41,7 @@ TAIL = 2
 
 def input_required(kind, competition_status_required=False):
     """Return whether missing data for an enabled input is a fault."""
-    return kind != "competition" or bool(competition_status_required)
+    return kind != "competition"  # legacy 9798 Detail is never a required Competition input
 
 # --------------------------------------------------------------------------
 # Ego Vehicle Status
@@ -100,9 +101,9 @@ def is_optional_competition_variant(kind, data, transport, required):
     """Recognize only the observed local envelope; do not decode its body.
 
     This 105-byte DetailEgoInfo body is distinct from the validated 152-byte
-    MoraiInfo body. Required/field inputs and malformed envelopes stay faults.
+    MoraiInfo body. Malformed envelopes and actual 9099 inputs stay faults.
     """
-    if kind != 'competition' or transport != 'local' or required:
+    if kind != 'competition' or transport != 'local':
         return False
     header_size = len(OPTIONAL_DETAIL_EGO_HDR)
     if len(data) != header_size + AUX + 105 + TAIL:
@@ -218,8 +219,9 @@ class MoraiUdpBridge(object):
         if self.transport_profile == "lan2lan" and self.stream_profile != "competition":
             raise ValueError("lan2lan transport only permits the competition stream profile")
         self.enabled_inputs = {
-            "ego": bool(p("~enable_ego_status", True)),
-            "competition": bool(p("~enable_competition_status", True)),
+            "ego": ego_status_enabled(self.transport_profile, p("~enable_ego_status", True), self.ego_port),
+            "competition": detail_status_enabled(
+                self.transport_profile, p("~enable_competition_status", None)),
             "obj": bool(p("~enable_object", False)),
             "col": bool(p("~enable_collision", True)),
         }
@@ -227,9 +229,9 @@ class MoraiUdpBridge(object):
             p("~competition_status_required", False)
         )
         if (self.competition_status_required
-                and not self.enabled_inputs["competition"]):
+                and not self.enabled_inputs["ego"]):
             raise ValueError(
-                "competition_status_required needs enable_competition_status"
+                "competition_status_required needs 9099 enable_ego_status (/Ego_topic)"
             )
         if self.stream_profile == "competition" and self.enabled_inputs["obj"]:
             raise ValueError("competition stream profile forbids ObjectInfo")
@@ -333,7 +335,7 @@ class MoraiUdpBridge(object):
                     if port not in self.protocol_notices:
                         self.protocol_notices.add(port)
                         rospy.loginfo(
-                            'Competition status: optional local #DetailEgoInfo$ (105B body); '
+                            'Detail status: optional local #DetailEgoInfo$ (105B body); '
                             'kept in diagnostics, not decoded or published')
                     continue
                 self.telemetry.increment(kind, 'header_errors')

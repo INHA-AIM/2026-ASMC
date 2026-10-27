@@ -39,9 +39,13 @@ config/calibration ID를 함께 검사하고 local/map을 두 번의 독립 관�
 
 ## 분류와 전달 필터
 
-원본 이름·vehicle/dynamic_obstacle/static_obstacle은 공용 객체에 유지한다. private enum은
-vehicle/person/unknown만 표현하므로 dog/deer/bicycle/stroller 등을 숫자만으로 복원할 수 없다.
-unknown도 원본 충돌 기하·적용 속도·운동 상태를 유지한다. 카메라 dynamic_obstacle은 실제 움직임 판정이 아니다.
+원본 이름·vehicle/dynamic_obstacle/static_obstacle은 같은 공용 판제 관측의 객체에 유지한다.
+현재 private 어댑터는 vehicle/person/unknown만 생산한다. 판제 내부 STATIC_OBSTACLE=3 정의도
+있지만 아직 이 그룹에서 매핑하지 않는다. dog/deer/bicycle/stroller와 정적8종은 UNKNOWN이 되어
+숫자만으로 원본 종류·그룹을 복원할 수 없으며, 충돌 기하·적용 속도·운동 상태는 유지한다.
+vehicle/dynamic_obstacle도 정지해 있을 수 있다. static_obstacle도 실제 정지의 보증이 아니며
+그룹으로 motion_state·속도 validity를 덮어쓰지 않는다. PEDESTRIAN은 person 전용 정책 구분으로
+보존할 수 있다. [현재 소비 대조와 후속 제안](../handoffs/perception-to-planning.md#yolo-그룹과-판제-타입의-소비-대조--2026-10-28)을 따른다.
 
 HD맵 v7·안쪽10cm·점군3점/10% AND OBB10%·높이/상부·관측 확인3/5는 생산자에 적용한다.
 최신 유효 카메라 vehicle/dynamic 매칭은 보호한다. 필터는 전달 결과만 줄이고 tracker/원본 OBB는 보존한다.

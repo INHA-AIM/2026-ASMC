@@ -1,12 +1,18 @@
 # MORAI UDP — 시뮬 UI 치트시트
 
+> **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
+> `--require-competition-status`/`verify-field`도 이9099 입력을 검사하도록 정정했다.
+> 9798은 로컬 Detail 진단이며 LAN 운영·수락에서 제외한다. 아래 과거 P3 설명과 현재 역할은
+> [정정 기록](../../docs/records/bridge/2026-10-27-competition-9099-correction.md)을 기준으로 구분한다.
+
+
 > **공통 런타임:** `morai_udp` — 26.R1.H3와 25.S4.MolitComp03가 같은 bridge를 사용한다.
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.
 > 상세: [개발·시뮬레이터 운영 가이드](../../docs/operations/README.md)
 > bridge 구현·통합 gate: [MORAI bridge guide](../../src/asmc_bridge/docs/integration.md)
-> 본선 센서셋: [`ASMC_sensor_set_v3.json`](./sensors/ASMC_sensor_set_v3.json) — 설정·소비 15 Hz, 완성 scan 약 12 Hz 허용<br>
-> 회귀 센서셋: [`ASMC_sensor_set_v2.json`](./sensors/ASMC_sensor_set_v2.json) — 10 Hz 비교용<br>
-> GT용: [`ASMC_sensor_set_GT.json`](./sensors/ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
+> 팀 운영 v3 정본: [Local Sensor](sensors/261027_ASMC_Local_Sensor_25.S4.MolitComp03.json) — 설정·소비 15 Hz, 완성 scan 약 12 Hz 허용<br>
+> 10Hz 회귀 입력: [v2 fixture](../../src/asmc_bridge/test/fixtures/sensor_v2_10hz.json) — 10 Hz 비교용<br>
+> Local GT 정본: [SensorGT](sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json) (일반 센서 + Semantic Camera×3 + Instance LiDAR)
 
 ---
 
@@ -16,19 +22,18 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 
 1. Docker Desktop + WSL Integration ON → `./scripts/docker_ros_up.sh up`
 2. MORAI **Host/Dest IP 전부 `127.0.0.1`**
-3. **센서셋** `sensors/generated/ASMC_sensor_set_v3_local.json` Import
-   (10 Hz 과거 회귀가 필요할 때만 `...v2_local.json`)
-4. **Network Settings**: `network/generated/ASMC_network_set_26r1_local.json` Import
+3. **센서셋** `sensors/261027_ASMC_Local_Sensor_26.R1.H3.json` Import
+   (10 Hz 비교 입력은 `src/asmc_bridge/test/fixtures/sensor_v2_10hz.json`)
+4. **Network Settings**: `network/261027_ASMC_Local_Network_26.R1.H3.json` Import
    (현재 bridge 호환 Ego **9099** · Object **7505** · Collision **9092** 포함)
-5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9093 / 9094**, mode **2**
+5. **Cmd Control**: MoraiCmdController(type771), Host/Dest **9093 / 9094**. JSON `egoCtrlMode=3`(Auto), UDP payload `CtrlMode=2`(Auto).
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
 7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/vehicle/state`
 
-26.R1에는 `/Competition_topic`의 원천인 type 787이 없고, 참가팀 MolitComp03 local은 JSON에
-type 787 항목이 있어도 packet을 발행하지 않았다. 두 release의 local 검사는
-`./scripts/docker_ros_up.sh verify 8 <release>`를 사용한다. 주최 현장판 type 787 수락에서만
-`./scripts/docker_ros_up.sh verify-field 30 molitcomp03`을 사용한다. release 인자는 provenance
-label이며 bridge 동작이나 필수 토픽을 자동 변경하지 않는다.
+MolitComp03의 현재 CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
+`./scripts/docker_ros_up.sh verify-field 30 molitcomp03`은 이 입력을 검사한다.
+별도 type787/9798 Detail은 LAN 수락에서 제외한다.26.R1은 기존 릴리스 설정을 유지하고
+이번 MolitComp03 publisher 허용 판단으로 일반화하지 않는다.
 
 **LiDAR만 0이고 cam/gps/imu는 될 때:** `docker_ros_up.sh status`의 host mode, MORAI
 Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 Docker port forwarding은
@@ -56,7 +61,8 @@ Destination IP:   127.0.0.1
 타입:     Ego Ctrl Cmd          ← TrajectoryTrackingCmd 금지
 Host:     9093
 Dest:     9094
-Mode:     2
+JSON egoCtrlMode: 3 (AutoMode)
+UDP CtrlMode:     2 (AutoMode)
 ```
 
 ---
@@ -65,8 +71,9 @@ Mode:     2
 
 | 채널 | Dest | (참고 Host) |
 |------|------|-------------|
-| Ego Vehicle Status | **9099** | 9088 |
-| Competition Vehicle Status (MolitComp only) | **9798** | 9797 |
+| ROS status compatibility alias (9099 Competition above) | **9099** | 9088 |
+| CompetitionInfoPublisher (MolitComp03) | **9099** | 9088 |
+| Detail (local diagnostic only) | 9798 | 9797 |
 | TrafficLight status oracle | **7502** | 7603 |
 | Object Info | **7505** | 7605 |
 | Collision Data | **9092** | 9091 |
@@ -77,7 +84,7 @@ GetTrafficLight를 필수 채널로 가정하거나 본선 planning 입력으로
 
 ---
 
-## Sensor Setting — Destination PORT (v2)
+## Sensor Setting — Destination PORT (v3)
 
 | 센서 | Host / Dest | ROS 토픽 |
 |------|-------------|----------|
@@ -94,7 +101,7 @@ GetTrafficLight를 필수 채널로 가정하거나 본선 planning 입력으로
 
 ---
 
-## GT Semantic Camera (ASMC_sensor_set_GT.json)
+## GT Semantic Camera (Local SensorGT)
 
 기본 competition profile은 아래 포트나 publisher를 열지 않는다. GT 센서셋은
 local 개발 profile을 명시해야 수신한다.
@@ -111,7 +118,7 @@ local 개발 profile을 명시해야 수신한다.
 
 Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 
-## GT Instance LiDAR (ASMC_sensor_set_GT.json)
+## GT Instance LiDAR (Local SensorGT)
 
 ID 11은 local development profile에서만 독립 수신한다. 정합용 source stamp가 필요하면:
 

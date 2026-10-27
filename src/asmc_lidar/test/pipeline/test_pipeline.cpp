@@ -597,8 +597,8 @@ TEST(Pipeline, TunnelOnRunsBetweenGroundRemovalAndClustering) {
   Pipeline off(config);
   config.tunnel.enabled = true;
   Pipeline on(config);
-  const auto a = RunSequence(off, 3);
-  const auto b = RunSequence(on, 3);
+  const auto a = RunSequence(off, 3, false);
+  const auto b = RunSequence(on, 3, false);
   for (int k = 0; k < 3; ++k) {
     ASSERT_TRUE(b[k].processed);
     EXPECT_TRUE(b[k].tunnel.ran);
@@ -693,4 +693,28 @@ TEST(Pipeline, RepeatedRunsAreDeterministic) {
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
+}
+
+TEST(PipelineSemantic, FinalizeOnceAfterFusionAndMapLossInvalidatesAllTracks) {
+  auto cfg=Config();cfg.motion.semantic_static_enabled=true;Pipeline pipeline(cfg);
+  for(int i=0;i<14;++i) {
+    const auto stamp=kT0+i*kPeriod;const bool valid=i<12;
+    auto local=WithGps(Local(0,0,0),valid);local.st_CAN.f32_CurrentVel_MPS=0;local.st_CAN.f32_CurrentVel_KPH=0;
+    auto result=pipeline.Process(Scan(stamp,SequenceScene(0),i+1),local,MapPose(valid,stamp));
+    ASSERT_TRUE(result.processed);ASSERT_FALSE(result.objects.empty());
+    for(auto& o:result.objects) {
+      o.camera.str_ObjectClass=o.camera.observed_class="static_obstacle";
+      o.camera.camera_observation_ns=stamp;o.camera.class_miss_counter=0;
+    }
+    const auto corners=result.objects.front().detection.obb_corners_level;
+    pipeline.FinalizeMotion(result);
+    const auto motion=result.objects.front().tracking.motion;
+    pipeline.FinalizeMotion(result); // cannot count the same scan twice
+    EXPECT_EQ(motion.s32_MotionAcceptedSamples,result.objects.front().tracking.motion.s32_MotionAcceptedSamples);
+    EXPECT_EQ(motion.semantic_static_applied,result.objects.front().tracking.motion.semantic_static_applied);
+    EXPECT_FLOAT_EQ(corners[0].x,result.objects.front().detection.obb_corners_level[0].x);
+    if(!valid)for(const auto& o:result.objects) {
+      EXPECT_FALSE(o.tracking.motion.motion_valid);EXPECT_FALSE(o.tracking.motion.semantic_static_applied);
+    }
+  }
 }

@@ -33,6 +33,11 @@ source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
 ```
 
+위 환경은 main 배포 기준입니다. PR #122의 work 3뷰 LiDAR를 시험하는 처리·LiDAR 웹
+터미널은 [M1 빌드·실행파일 확인](../../src/asmc_lidar/docs/three-view-fusion.md#빌드와-실제-실행파일-확인)에
+따라 준비된 overlay 환경을 마지막에 적용합니다. `pipeline_config`로 work YAML만 선택해도
+main 실행파일이 3뷰 코드로 바뀌지는 않습니다. 기존 프로세스는 자동 교체하지 않습니다.
+
 ### 터미널별 실행
 
 각 행은 별도 터미널에서 foreground로 실행합니다. 기본 실행 명령은 인자 없이 사용하고,
@@ -135,6 +140,10 @@ LiDAR `view.launch`는 모니터만 시작합니다. 기본 `debug:=false`에서
 `debug` 옵션을 켭니다. 판제 주행에는 이 옵션이 필요하지 않습니다.
 기존 `lidar.launch`가 있다면 두 번째 처리 노드를 시작하지 않습니다.
 판제는 C의 `planning_observations_map`을 사용합니다. 상세는 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 봅니다.
+`asmc_lidar`를 고르는 별도 source 옵션은 없습니다. 기본 연결은
+`/perception/lidar/planning_observations_map` (`asmc_msgs/LidarPlanningObservation`)
+→ `planning_objects_adapter` → `/planning/objects`입니다. `tracks_map`은 다른 타입의
+분석용 출력이므로 판제 입력으로 대신 지정하지 않습니다. 수집용 planner도 같은 기본 입력을 상속합니다.
 
 판제 웹은 `http://127.0.0.1:8088/web/index_v2.html`, LiDAR 웹은 `http://127.0.0.1:8091/`입니다.
 기본 포트·ROS 노드 이름이 서로 다르고 두 웹 모두 관측만 합니다. 하나씩 사용하려면 해당 웹 launch
@@ -194,7 +203,7 @@ rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
 ```
 
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
-카메라 공용 관측과 전방 matching 계약는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
+카메라 공용 관측과 기본3뷰 matching 계약은 [LiDAR 인계](../handoffs/camera-to-lidar.md),
 판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.
 
 ## 2. Container·build 명령
@@ -253,7 +262,7 @@ source devel/setup.bash
 |---|---:|---|
 | `--transport` | `local` | `local`, `lan2lan`; Ctrl 목적지 IP를 결정 |
 | `--gt` | OFF | 일반 입력에 Object·Semantic·Instance LiDAR 추가; local 전용 |
-| `--require-competition-status` | false | 별도9798 경로를 필수화. 현재9099 Competition 설정에는 사용하지 않음 |
+| `--require-competition-status` | false | 9099 Competition → `/Ego_topic`을 필수로 검사 (MolitComp03 확인) |
 | `-h`, `--help` | — | 도움말 |
 
 추가로 덮어쓸 수 있는 `bridge.launch` 인자:
@@ -269,14 +278,14 @@ source devel/setup.bash
 | `lidar_rotation_rate` | `15.0` | v3/GT 조립 참고값. 실제 송신 주기는 MORAI 센서셋 설정; v2 비교는10.0 |
 | `cmd_ip` | transport에서 결정 | local `127.0.0.1`, LAN2LAN `192.168.0.1` |
 | `cmd_port` | `9093` | MORAI Ego Ctrl Cmd listen port |
-| `competition_port` | `9798` | 별도 상태 수신 port; 현재 UI Competition은 ego_port9099 경로 |
-| `competition_status_required` | `false` | true면 별도 competition 경로 미수신/미지원 형식을 실패로 처리 |
+| `competition_port` | `9798` | 로컬 Detail 진단 호환 port; LAN에서는 비활성 |
+| `competition_status_required` | `false` | true면9099 `/Ego_topic` 입력을 요구; Detail9798로 대체하지 않음 |
 | `enable_vehicle_state` | `true` | GPS/IMU 기반 `/vehicle/state` producer |
 
 `runtime_profile`, `transport_profile`, `stream_profile`은 wrapper가 관리한다.
 `transport_profile:=...`를 직접 넘기지 말고 `--transport`를 사용한다.
 `--streams`와 `ASMC_STREAMS`는 폐기했다. GT 개발은 `./scripts/udp_bridge.sh --gt`를 사용하고,
-MORAI UI에서 `config/morai/sensors/ASMC_sensor_set_GT.json`을 로드한다. Intensity·Instance
+MORAI UI에서 `config/morai/sensors/261027_ASMC_Local_SensorGT_25.S4.MolitComp03.json`을 로드한다. Intensity·Instance
 LiDAR 모두15Hz로 설정되어 있다. 주기 변경은 JSON 재로드 후 적용되며 실제 수신률은 별도로 확인한다.
 
 직접 launch도 가능하지만 local 디버그 외에는 wrapper가 더 안전하다.
@@ -349,112 +358,46 @@ roslaunch data_collection bag_replay.launch bag_path:=/data/rosbags/raw/<run_id>
 
 ## 6. LAN2LAN 연습 사전 준비
 
-역할별 Windows·장치관리자·WSL2·Wireshark 확인과 주최 채점 채널의 차이는
-[LAN2LAN 상세](lan2lan-rehearsal.md)를 먼저 확인한다. 아래 팀 포트 목록을 채점 프로그램
-전체의 방화벽 목록으로 사용하지 않으며 현장 주최 network JSON을 팀 생성본으로 덮지 않는다.
-사용자 확인상 채점·녹화도 추론 PC에서 실행한다. 필요한 채점 channel은 그 PC까지 전달하고,
-Windows 프로그램 수신과 WSL/Docker 알고리즘 입력을 구분한다.
+처음 연결은 [팀원용 안내](lan2lan-teammate.md), 채점 프로그램 경계는
+[두 PC 준비](lan2lan-rehearsal.md)를 따른다.
 
-연습과 현장은 포트를 바꾸지 않고 IP만 local에서 LAN2LAN으로 바꾼다.
+| 역할 | 전용 NIC IPv4 | 현재 MolitComp03 설정 |
+|---|---|---|
+| Windows MORAI PC | 192.168.0.1/24 | CompetitionInfoPublisher Host9088 → .10:9099 |
+| 실행 PC | 192.168.0.10/24 | Windows/Hyper-V 수신 → bridge → /Ego_topic |
 
-| 장치 | 전용 Ethernet NIC IPv4 | prefix/netmask |
-|---|---:|---:|
-| MORAI simulator PC | `192.168.0.1` | `/24` (`255.255.255.0`) |
-| Autonav code PC | `192.168.0.10` | `/24` (`255.255.255.0`) |
+전용 NIC는 gateway/DNS를 비우고 MAC·ARP로 상대를 확인한다. 인터넷 NIC의 IP를 대신
+바꾸지 않는다. 설정 도구는 미리보기 후 `-Apply`로 적용하며 기존 ASMC 규칙도 갱신한다.
+시뮬레이터에는 release별 Network JSON과 `261027_ASMC_LAN2LAN_Sensor_<시뮬레이터버전>.json`을 사용한다.
+이미 LAN 센서셋이 적용돼 있으면 Competition 수정 때문에 다시 로드하지 않는다.
 
-가정에서는 전용 케이블/스위치의 두 NIC에만 고정 IP를 설정하고 gateway·DNS는 비운다.
-현장에서는 **주최측이 제공한 NIC·netmask·gateway 값을 우선**하며, 이 문서를
-근거로 정상 설정된 현장 PC를 초기화하지 않는다.
-
-### Simulator PC
-
-1. MORAI 전용 Ethernet NIC를 `192.168.0.1/24`로 고정한다.
-2. Wi-Fi, VPN, Hyper-V adapter에 동일 `192.168.0.0/24` route가 없는지 확인한다.
-3. simulator release에 맞는 network JSON 하나와 v3 sensor JSON을 import한다.
+Windows/Hyper-V의 팀 수신 UDP는 다음과 같다. 상대 `.1`, 로컬 `.10`, 전용 NIC로 범위를 제한한다.
 
 ```text
-config/morai/network/generated/ASMC_network_set_26r1_lan2lan.json
-또는
-config/morai/network/generated/ASMC_network_set_molitcomp03_lan2lan.json
-
-config/morai/sensors/generated/ASMC_sensor_set_v3_lan2lan.json
+9099, 9092, 9291, 9293, 9295, 9297, 9299, 9301, 9303
 ```
 
-4. Windows Firewall에서 Autonav `192.168.0.10`에서 MORAI로 들어오는 Ctrl UDP
-   `9093`만 필요한 프로필에 허용한다. 전체 firewall을 끄지 않는다.
-5. MORAI를 열기 전·후 `route print`, `Get-NetIPConfiguration`으로 route가 변하지
-   않았는지 남긴다.
-
-### Autonav code PC — Windows + WSL + Docker Desktop
-
-1. Ethernet NIC를 `192.168.0.10/24`로 고정하고 동일 subnet route 충돌을 없앤다.
-2. `%UserProfile%\.wslconfig`에 다음을 적용한다.
-
-```ini
-[wsl2]
-networkingMode=mirrored
-firewall=true
-```
-
-3. PowerShell에서 `wsl --shutdown` 후 Docker Desktop을 재시작한다.
-4. Docker Desktop 4.34+ Linux container, WSL Integration, **Enable host networking**을
-   켜고 compose의 `network_mode: host`를 유지한다. Docker `ports:`로 UDP를 다시
-   매핑하지 않는다.
-5. Windows Firewall과 Hyper-V firewall에서 source `192.168.0.1`의 다음 inbound UDP만
-   허용한다.
-
-```text
-9798, 9092, 9099,
-9291, 9293, 9295, 9297, 9299, 9301, 9303
-```
-
-TrafficLight oracle `7502`, Object oracle `7505`, GT `9305/9307/9309/9311`은 팀 bridge/알고리즘
-입력에 추가하지 않는다. 별도 주최 채점 프로그램의 필요한 수신 경로까지 차단하라는 뜻이
-아니며 [채점 endpoint 확인](lan2lan-rehearsal.md#채점-전용-채널-아직-닫지-않은-경계)을 따른다.
-
-6. WSL과 container에서 실제 NIC·route·bind를 확인한다.
-
-```bash
-ip -br addr
-ip route get 192.168.0.1
-./scripts/docker_ros_up.sh status
-ss -lunp
-```
-
-7. bridge를 명시적 LAN2LAN으로 실행한다.
-
-```bash
-./scripts/udp_bridge.sh --transport lan2lan
-```
-
-별도9798에 허용 상태가 송신되는 것을 확인한 환경에서만 아래 검사를 쓴다.
-현재 CompetitionInfoPublisher9099→`/Ego_topic` 설정에는 적용하지 않는다
-([2026-10-23 확인](../records/bridge/2026-10-23-competition-channel-audit.md)).
+실행 PC의 WSL은 mirrored, Docker Desktop은 host networking 활성화 및 컨테이너 host mode를
+확인한다. 설정을 바꾼 경우 실행 PC의 작업을 저장하고 반영하며, 시뮬레이터 PC는 재시작하지 않는다.
+TCP용 portproxy로 UDP 전달을 해결하지 않는다. 별도 채점 프로그램의 endpoint는 별도로 확인한다.
 
 ```bash
 ./scripts/udp_bridge.sh --transport lan2lan --require-competition-status
+```
+
+별도 컨테이너 터미널에서 실제 메시지를 검사한다.
+
+```bash
+python3 scripts/verify_morai_topics.py --profile competition --transport lan2lan --require-competition-status --duration 30
 ./scripts/docker_ros_up.sh verify-field 30 molitcomp03
 ```
 
-### Native Linux code PC
+`--require-competition-status`, `competition_status_required`, `verify-field`는 실제9099의
+`/Ego_topic`을 검사한다. 과거9798 검사 의미를 정정했다. 9798 Detail은 LAN에서 수신·발행하지
+않고 속도 fallback으로 사용하지 않는다. 기존 `competition_port=9798`은 로컬 진단 호환 인자다.
+local·`--gt` 동작은 유지하며, 이번 MolitComp03 허용 판단을26.R1에 일반화하지 않는다.
+새 기록을 할 때만 [rosbag 안내](rosbag-evaluation.md)의 `competition_raw`와 저장소 사전 점검을 따른다.
 
-Windows/WSL 단계만 제외하고 `192.168.0.10/24`, firewall allowlist,
-`network_mode: host`, route·bind 검사를 동일하게 적용한다. Docker bridge network나
-port translation을 새로 넣지 않는다.
-
-### 연습·현장 공통 gate
-
-1. 양방향 IP reachability와 `192.168.0.0/24` route를 확인한다.
-2. code PC에서 sensor destination port의 packet count·size·rate를 확인한다.
-3. bridge diagnostics의 parse error, staleness, LiDAR raw packet/frame 조립률을 확인한다.
-4. Ctrl mode 2의 `192.168.0.1:9093` 전송과 실제 brake/steer 응답을 확인한다.
-5. bridge·container·MORAI를 하나씩 재시작해 복구를 검사한다.
-6. 15분 이상 CPU/GPU/RAM, packet drop과 topic Hz를 기록한다.
-
-generated JSON, 포트, source IP를 현장에서 즉석 편집하지 않는다. 연습을 끝낸 뒤
-local로 돌아갈 때는 MORAI에 `*_local.json`을 다시 import하고 bridge를 인자 없이
-실행한다. LAN2LAN 옵션을 환경변수로 숨기거나 수신 sender IP로 자동 판별하지
-않는다.
 
 ## 7. 종료
 

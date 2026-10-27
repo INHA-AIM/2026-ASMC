@@ -89,6 +89,8 @@ bool MotionClassifier::DirectionConsistent(
 }
 
 void MotionClassifier::ResetDecision(TrackState& track) const {
+    track.semantic_active=false;track.semantic_motion_watch=false;track.semantic_static_streak=0;
+    track.semantic_reason="reset";
     track.warmup.clear();
     track.accepted.clear();
     track.observations.clear();
@@ -193,7 +195,7 @@ void MotionClassifier::UpdateAcceptedHistory(
 }
 
 void MotionClassifier::UpdateDecision(
-    TrackState& track, const VelocitySample& raw_sample) const {
+    TrackState& track, const VelocitySample& raw_sample, bool semantic_eligible) const {
     if (track.accepted.empty()) {
         track.state = MotionState::Unknown;
         return;
@@ -260,8 +262,51 @@ void MotionClassifier::UpdateDecision(
             config_.longitudinal_threshold_kph &&
         track.corrected_displacement_speed_kph >=
             config_.longitudinal_displacement_kph;
+    bool semantic_ready=false,semantic_stationary=false,semantic_moving=false;
+    const bool had_semantic=track.semantic_active;
+    track.semantic_active=false;
+    track.semantic_reason=config_.semantic_static_enabled?"no_fresh_confirmed_static":"off";
+    if(config_.semantic_static_enabled) {
+      if(semantic_eligible)track.semantic_motion_watch=true;
+      if(track.observations.size()>=5) {
+        const auto& first=track.observations.front();const auto& last=track.observations.back();
+        const double dt=last.stamp_sec-first.stamp_sec;
+        const double de=.5*((last.obb_min_e-first.obb_min_e)+(last.obb_max_e-first.obb_max_e));
+        const double dn=.5*((last.obb_min_n-first.obb_min_n)+(last.obb_max_n-first.obb_max_n));
+        const double net=std::hypot(de,dn);bool rigid=true,consistent=true;
+        for(std::size_t i=1;i<track.observations.size();++i) {
+          const auto& a=track.observations[i-1];const auto& b=track.observations[i];
+          const double ex=b.obb_min_e-a.obb_min_e,fx=b.obb_max_e-a.obb_max_e;
+          const double ey=b.obb_min_n-a.obb_min_n,fy=b.obb_max_n-a.obb_max_n;
+          const double step=std::hypot(.5*(ex+fx),.5*(ey+fy));
+          rigid &= a.obb_bounds_valid&&b.obb_bounds_valid&&b.stamp_sec>a.stamp_sec&&
+            std::abs(ex-fx)<=config_.edge_agreement_tolerance_m&&std::abs(ey-fy)<=config_.edge_agreement_tolerance_m;
+          if(step>1e-4 && net>1e-4)consistent &= (.5*(ex+fx)*de+.5*(ey+fy)*dn)/(step*net)>=config_.direction_cosine_min;
+        }
+        // Also reject accumulated one-sided growth across the whole window.
+        rigid &= std::abs((last.obb_min_e-first.obb_min_e)-(last.obb_max_e-first.obb_max_e))<=config_.edge_agreement_tolerance_m &&
+          std::abs((last.obb_min_n-first.obb_min_n)-(last.obb_max_n-first.obb_max_n))<=config_.edge_agreement_tolerance_m;
+        semantic_ready=rigid&&dt>=config_.semantic_min_window_s-1e-6&&dt<=config_.semantic_max_window_s+1e-6;
+        semantic_stationary=semantic_ready&&track.corrected_displacement_speed_kph<=config_.exit_speed_kph;
+        semantic_moving=semantic_ready&&consistent&&net>config_.semantic_min_translation_m&&
+          track.corrected_displacement_speed_kph>config_.exit_speed_kph&&track.semantic_motion_watch;
+      }
+      if(semantic_eligible)track.semantic_reason=semantic_ready?"geometry_pending":"geometry_or_time_unverified";
+      if(semantic_eligible&&semantic_stationary)++track.semantic_static_streak;else track.semantic_static_streak=0;
+      if(semantic_moving)track.semantic_reason="rigid_motion_releases_static_prior";
+      else if(semantic_eligible&&semantic_stationary&&track.semantic_static_streak>=config_.low_threat_confirmations) {
+        track.semantic_active=true;track.semantic_reason="confirmed_static_and_stable_geometry";
+      }
+      if(had_semantic&&!semantic_eligible&&track.state==MotionState::LowThreat) {
+        track.state=MotionState::Unknown;track.low_threat_streak=0;
+        track.semantic_reason="camera_evidence_expired_or_conflicted";
+      }
+      if(semantic_eligible&&!semantic_ready&&track.state!=MotionState::Dynamic) {
+        track.state=MotionState::Unknown;track.low_threat_streak=0;track.dynamic_evidence_streak=0;return;
+      }
+    }
     const bool dynamic_evidence =
-        lateral_motion_evidence || longitudinal_motion_evidence;
+        lateral_motion_evidence || longitudinal_motion_evidence || semantic_moving;
     const bool fast_motion_hint =
         raw_abs_vy >= config_.fast_lateral_threshold_kph ||
         std::abs(raw_sample.vx_kph) >= config_.longitudinal_threshold_kph;
@@ -304,6 +349,10 @@ void MotionClassifier::UpdateDecision(
         return;
     }
 
+    if(track.semantic_active && track.state!=MotionState::Dynamic) {
+        track.state=MotionState::LowThreat;track.static_evidence_streak=0;
+        track.dynamic_evidence_streak=0;track.pending_frames=0;return;
+    }
     if (track.state == MotionState::DynamicPending) {
         track.dynamic_evidence_streak = 0;
         if (static_evidence) {
@@ -340,7 +389,7 @@ void MotionClassifier::UpdateDecision(
     // alone must not immediately re-enter PENDING. A new velocity change
     // candidate still gets the fast conservative response. Rigid displacement
     // takes the dynamic-evidence branch above; startup remains conservative.
-    if (fast_motion_hint && (!static_evidence || !track.candidates.empty())) {
+    if (fast_motion_hint && (!static_evidence || !track.candidates.empty()) && !track.semantic_active) {
         track.state_before_pending = track.state;
         track.state = MotionState::DynamicPending;
         track.dynamic_evidence_streak = 0;
@@ -362,6 +411,8 @@ void MotionClassifier::UpdateDecision(
 
 void MotionClassifier::WriteDiagnostics(
     const TrackState& track, MotionObject& object) const {
+    object.semantic_static_applied=track.semantic_active&&track.state==MotionState::LowThreat;
+    object.semantic_reason=track.semantic_reason;
     object.f32_DecisionVxKPH =
         static_cast<float32>(track.decision_vx_kph);
     object.f32_DecisionVyKPH =
@@ -420,7 +471,12 @@ void MotionClassifier::UpdateImpl(std::vector<MotionObject>& objects, double sta
         auto& track = tracks_[object.s32_Id];
         track.unseen_frames = 0;
 
+        if(config_.semantic_static_enabled && !track.observations.empty() &&
+            (stamp_sec<=track.observations.back().stamp_sec || stamp_sec-track.observations.back().stamp_sec>config_.semantic_max_window_s)) {
+          ResetDecision(track);track.semantic_reason="observation_time_discontinuity";
+        }
         if (object.s32_MissCount != 0) {
+            if(config_.semantic_static_enabled){track.semantic_static_streak=0;track.semantic_active=false;track.semantic_reason="prediction_not_evidence";}
             ++track.consecutive_misses;
             if (track.consecutive_misses > config_.short_miss_limit) {
                 ResetDecision(track);
@@ -434,6 +490,7 @@ void MotionClassifier::UpdateImpl(std::vector<MotionObject>& objects, double sta
             !std::isfinite(object.f32_AbsVy) ||
             !std::isfinite(object.f32_CoreE) ||
             !std::isfinite(object.f32_CoreN)) {
+            if(config_.semantic_static_enabled){ResetDecision(track);object.motion_valid=false;track.semantic_reason="invalid_velocity_or_pose";}
             WriteDiagnostics(track, object);
             continue;
         }
@@ -473,7 +530,7 @@ void MotionClassifier::UpdateImpl(std::vector<MotionObject>& objects, double sta
         track.warmup.clear();
         AppendObservation(track, sample);
         UpdateAcceptedHistory(track, sample);
-        UpdateDecision(track, sample);
+        UpdateDecision(track, sample, object.semantic_static_eligible);
         if(track.state==MotionState::Dynamic)track.previously_dynamic=true;
         WriteDiagnostics(track, object);
         object.motion_valid=track.state!=MotionState::Unknown;

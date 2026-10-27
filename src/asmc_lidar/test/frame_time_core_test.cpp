@@ -29,6 +29,15 @@ static Object obj() {
 }
 int main() {
   const std::vector<std::pair<std::string,std::function<void()>>> tests={
+    {"prepared_snapshot_and_invalid_geometry",[]{
+      auto c=context();auto prepared=prepare_transform(c);auto o=obj();
+      const auto expected=transform(o,c);c.base_from_sensor.translation().x()+=50.;
+      const auto actual=transform(o,prepared);close(actual.base.center,expected.base.center);
+      for(int i=0;i<8;++i)close(actual.map->corners[i],expected.map->corners[i]);
+      o.center.x()=std::numeric_limits<double>::quiet_NaN();check(!transform(o,prepared).valid);
+      c=context();c.map_pose.query_stamp_ns--;prepared=prepare_transform(c);
+      auto local=transform(obj(),prepared);check(local.valid&&!local.map);
+    }},
     {"mount_center_and_corners",[]{auto c=context();auto o=obj();auto r=transform(o,c);check(r.valid);close(r.base.center,Vec(5.8,1.2,-.25));for(int i=0;i<8;++i)close(r.base.corners[i],o.corners[i]+Vec(.8,0,1.45));}},
     {"rpy_nonzero_mount_and_roundtrip",[]{auto c=context();c.base_from_sensor.linear()=rpy(.13,-.17,.21);auto o=obj();auto r=transform(o,c);auto t=c.map_pose.map_from_base*c.base_from_sensor;for(int i=0;i<8;++i)close(t.inverse()*r.map->corners[i],o.corners[i]);close(t.inverse()*r.map->center,o.center);}},
     {"undo_exact_roll_pitch_leveling",[]{auto c=context();auto o=obj();const auto reference=transform(o,c);c.frame=Frame::LeveledSensor;c.applied_leveling=rpy(.2,-.15,0);c.leveling_source="exact_snapshot";o.center=c.applied_leveling*o.center;o.long_axis=c.applied_leveling*o.long_axis;for(auto& p:o.corners)p=c.applied_leveling*p;auto r=transform(o,c);close(r.map->center,reference.map->center);for(int i=0;i<8;++i)close(r.map->corners[i],reference.map->corners[i]);}},

@@ -45,12 +45,21 @@ def render_profile(
     except KeyError as exc:
         raise ProfileError(f"unknown profile key: {exc.args[0]}") from exc
 
+    if release == "molitcomp03":
+        verified = contract.get("verified_status_bindings", {}).get(release, {})
+        status = verified.get("competition", {})
+        detail = verified.get("detail", {})
+        if (status.get("pubsub_type"), status.get("destination_port"), status.get("lan_allowed"),
+                detail.get("pubsub_type"), detail.get("lan_allowed")) != (295, 9099, True, 787, False):
+            raise ProfileError("MolitComp03 requires the verified 9099 Competition / local-only Detail mapping")
     template = json.loads((REPO_ROOT / template_rel).read_text(encoding="utf-8"))
     result = copy.deepcopy(template)
     morai_ip = transport_data["morai_ip"]
     autonav_ip = transport_data["autonav_ip"]
     channels = contract["channels"]
     controller = contract["network_templates"][release].get("control_import", {})
+    if (controller.get("pubsub_type"), controller.get("ego_ctrl_mode")) != (771, 3):
+        raise ProfileError("Explicit MoraiCmdController and JSON AutoMode=3 are required; UDP mode2 is not an import default")
     field_transport = transport == "lan2lan"
     default_morai_ip = "127.0.0.1" if field_transport else morai_ip
     default_autonav_ip = "127.0.0.1" if field_transport else autonav_ip
@@ -79,18 +88,16 @@ def render_profile(
             ctrl = entry["EgoCtrlConfig"]
             udp = ctrl["udpConfig"]
             _rewrite_udp_ips(ctrl, morai_ip, autonav_ip)
-            # Import selection enums are release-specific and are unrelated
+            # JSON driving-mode enums are independent of the controller PUBSUB and unrelated
             # to the AutoMode byte (2) in a #MoraiCtrlCmd$ UDP payload. The
             # retained R1 source export selected TrajectoryTrackingCmd (786).
-            # Apply the verified MoraiCmdController selection without rewriting
+            # Apply the verified controller and AutoMode=3 without rewriting
             # that historical source/template or unrelated network entries.
             if controller:
                 entry["PUBSUB_TYPE"] = controller["pubsub_type"]
                 ctrl["_PUBSUB_TYPE"] = controller["pubsub_type"]
                 udp["receiveBufferSize"] = controller["receive_buffer_size"]
-            ctrl["egoCtrlMode"] = controller.get(
-                "ego_ctrl_mode", channels["ego_ctrl_cmd"]["ctrl_mode"]
-            )
+            ctrl["egoCtrlMode"] = controller["ego_ctrl_mode"]
             udp["hostPort"] = channels["ego_ctrl_cmd"]["host_port"]
             udp["destinationPort"] = channels["ego_ctrl_cmd"]["destination_port"]
             ctrl_found = True
@@ -98,7 +105,9 @@ def render_profile(
         pubsub = entry.get("PUBSUB_TYPE")
         if status_pubsub is not None and pubsub == status_pubsub:
             udp = entry["config"]["udpConfig"]
-            _rewrite_udp_ips(entry["config"], morai_ip, autonav_ip)
+            binding = contract.get("verified_status_bindings", {}).get(release, {})
+            if not field_transport or binding.get("detail", {}).get("lan_allowed", True):
+                _rewrite_udp_ips(entry["config"], morai_ip, autonav_ip)
             udp["hostPort"] = channels["competition_vehicle_status"]["host_port"]
             udp["destinationPort"] = channels["competition_vehicle_status"]["destination_port"]
             status_found = True

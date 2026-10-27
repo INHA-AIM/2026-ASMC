@@ -19,7 +19,7 @@ from asmc_camera.bev.calibration import (
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PACKAGE_ROOT.parents[1]
 SNAPSHOT = PACKAGE_ROOT / "config" / "bev" / "cameras_v2.yaml"
-SENSOR_SET = REPO_ROOT / "config/morai/sensors/ASMC_sensor_set_v2.json"
+SENSOR_SET = REPO_ROOT / "src/asmc_bridge/test/fixtures/sensor_v2_10hz.json"
 
 
 class CameraCalibrationTest(unittest.TestCase):

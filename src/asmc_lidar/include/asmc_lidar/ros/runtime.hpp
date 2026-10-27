@@ -14,11 +14,13 @@
 //   -> typed local (base_link) / map arrays.
 
 #include <asmc_lidar/fusion/front_camera_fusion.hpp>
+#include <asmc_lidar/fusion/multi_camera_fusion.hpp>
 #include <asmc_lidar/filtering/hd_map_audit.hpp>
 #include <asmc_lidar/filtering/delivery_preview.hpp>
 #include <asmc_lidar/filtering/delivery_filters.hpp>
 #include <asmc_lidar/pipeline/pipeline.hpp>
 #include <asmc_lidar/geometry/pose_history.hpp>
+#include <asmc_lidar/experimental/tunnel_motion.hpp>
 
 #include <asmc_msgs/LidarObjectArray.h>
 #include <asmc_msgs/LidarTrackingState.h>
@@ -143,8 +145,20 @@ class LidarRuntime {
   // camera may be null (LiDAR-only). The runtime never calls camera services.
   LidarRuntime(const RuntimeConfig& config,
                 std::shared_ptr<pipeline::fusion::CameraSource> camera,
-                const asmc::lidar::camera::Calibration* front_calibration);
+                const asmc::lidar::camera::Calibration* front_calibration,
+                const asmc::lidar::camera::Calibrations& cameras = {});
   const RuntimeConfig& config() const { return config_; }
+  // Single processing worker only, between scans (not a sensor callback).
+  void SetTunnelWallConfig(const pipeline::TunnelWallConfig& config,const std::string& config_id) {
+    pipeline_.SetTunnelWallConfig(config);
+    pipeline::ApplyTunnelWall(config_.pipeline.tunnel_route.params,config);
+    config_.config_id=config_id;
+  }
+  void SetTunnelClusterZConfig(const pipeline::TunnelClusterZConfig& config, const std::string& config_id) {
+    pipeline_.SetTunnelClusterZConfig(config);
+    config_.pipeline.tunnel_route.cluster_z=config;
+    config_.config_id=config_id;
+  }
 
   void OnImu(const pipeline::ImuInput& input, std::int64_t receipt_ns, std::int64_t ros_now_ns);
   void OnCan(const pipeline::CanInput& input, std::int64_t receipt_ns, std::int64_t ros_now_ns);
@@ -160,6 +174,8 @@ class LidarRuntime {
   const pipeline::PoseHistory& pose() const { return pose_; }
   const TypedOutput& output() const { return output_; }
   const pipeline::fusion::FrontCameraFusion* fusion() const { return fusion_.get(); }
+  pipeline::fusion::FusionCounters fusion_counters() const {return multi_fusion_?multi_fusion_->counters():fusion_?fusion_->counters():pipeline::fusion::FusionCounters{};}
+  std::uint64_t camera_epoch() const {return multi_fusion_?multi_fusion_->consumer_epoch():fusion_?fusion_->consumer_epoch():0;}
   const std::string& delivery_status() const { return delivery_filters_.status(); }
   std::uint64_t rejected_scans() const { return rejected_scans_; }
   std::uint64_t imu_rejected() const { return imu_rejected_; }
@@ -183,8 +199,15 @@ class LidarRuntime {
   pipeline::PoseHistory pose_;
   pipeline::GpsIngest gps_;
   pipeline::Pipeline pipeline_;
+  pipeline::TunnelMotionHistory tunnel_motion_history_;
+  std::mutex tunnel_motion_input_mutex_;  // commit pose acceptance and motion sample together
+  std::int64_t tunnel_motion_anchor_stamp_=0;
+  float tunnel_motion_anchor_yaw_=0;
   std::shared_ptr<pipeline::fusion::CameraSource> camera_;
+  std::unique_ptr<asmc::lidar::camera::Calibration> tunnel_camera_calibration_;
   std::unique_ptr<pipeline::fusion::FrontCameraFusion> fusion_;
+  std::unique_ptr<pipeline::fusion::MultiCameraFusion> multi_fusion_;
+  asmc::lidar::camera::Calibrations calibrations_;
   TypedOutput output_;
   filtering::DeliveryFilters delivery_filters_;
   std::int64_t last_accepted_scan_ns_ = 0;

@@ -15,6 +15,8 @@
 #include <asmc_lidar/geometry/scan_frame.hpp>
 #include <asmc_lidar/tracking/tracker.hpp>
 #include <asmc_lidar/experimental/tunnel_filter_stage.hpp>
+#include <asmc_lidar/experimental/tunnel_route.hpp>
+#include <asmc_lidar/experimental/tunnel_noise.hpp>
 
 #include <memory>
 #include <string>
@@ -35,9 +37,12 @@ struct PipelineConfig {
   GroundConfig ground;
   ClusteringConfig clustering;
   TrackingConfig tracking;
+  motion_classifier::MotionClassifierConfig motion;
   VehicleSpec vehicle;
   std::string calibration_id;  // non-empty
   TunnelFilterStageConfig tunnel;
+  TunnelRouteConfig tunnel_route;
+  TunnelNoiseConfig tunnel_noise;
   // Keep detections/centroids/stage clouds in ScanResult (replay and tests).
   bool capture_debug = false;
   // Monitoring-only observation hook (stage_observer.hpp), non-owning. nullptr =
@@ -75,6 +80,8 @@ struct ScanInput {
   CloudPtr points;                // sensor frame (velodyne), x/y/z/intensity
   std::uint64_t scan_sequence = 0;
   std::uint64_t generation = 1;  // processing-state epoch, not a per-scan counter
+  std::shared_ptr<const tunnel_filter::EgoMotion> tunnel_motion;
+  std::shared_ptr<const TunnelCameraInput> tunnel_camera;  // selected by runtime, never consumed
 };
 
 // When !processed only stamp_ns, previous_stamp_ns and reason are set (the
@@ -110,6 +117,17 @@ class Pipeline {
  public:
   explicit Pipeline(const PipelineConfig& config);
   const PipelineConfig& config() const { return config_; }
+  // Single processing worker only, between scans. Tracking state is preserved.
+  void SetTunnelWallConfig(const TunnelWallConfig& config) {
+    ValidateTunnelWall(config);
+    if(tunnel_route_)tunnel_route_->SetWallConfig(config);
+    ApplyTunnelWall(config_.tunnel_route.params,config);
+  }
+  void SetTunnelClusterZConfig(const TunnelClusterZConfig& config) {
+    ValidateTunnelClusterZ(config);
+    config_.tunnel_route.cluster_z=config;
+    if(tunnel_route_)tunnel_route_->SetClusterZConfig(config);
+  }
 
   // Called only after the local IMU/CAN lookup succeeded for this scan
   // (Main skips LidarProcess otherwise and the tracker is not advanced).
@@ -118,6 +136,8 @@ class Pipeline {
   // std::invalid_argument after the stamp was consumed; the tracker is untouched.
   ScanResult Process(const ScanInput& scan, const LocalState& local,
                      const asmc::lidar::PoseSelection& map_pose);
+
+  void FinalizeMotion(ScanResult& result); // M1: single update after fusion
 
   Tracker& tracker() { return tracker_; }
   const Tracker& tracker() const { return tracker_; }
@@ -128,8 +148,14 @@ class Pipeline {
   GroundFilter ground_;
   Tracker tracker_;
   motion_classifier::MotionClassifier motion_classifier_;
+  std::vector<motion_classifier::MotionObject> motion_inputs_;
+  bool motion_map_valid_=false;
+  std::int64_t motion_input_stamp_=0;
+  TunnelNoiseGate tunnel_noise_gate_;
+  std::int64_t tunnel_noise_entry_stamp_=0;
   ScanFrame frame_;
   std::unique_ptr<TunnelFilterStage> tunnel_;
+  std::unique_ptr<TunnelRoute> tunnel_route_;
   std::int64_t last_raw_ns_ = 0;
   std::int64_t previous_stamp_ns_ = 0;  // Main ts_PrevTime (0 before the first scan)
 };

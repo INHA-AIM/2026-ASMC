@@ -31,4 +31,11 @@ class LidarLaunchSelection(unittest.TestCase):
                  'lidar_input_topic:=/migration/lidar/planning_observations_map')
         self.assertEqual(c.params['/planning_objects_adapter/input_topic'].value,
                          '/migration/lidar/planning_observations_map')
+    def test_collection_uses_the_same_typed_contract(self):
+        c=config('src/data_collection/launch/capture_collection_planner.launch')
+        self.assertEqual(len([n for n in c.nodes if n.type=='lidar_pipeline_node']),1)
+        self.assertEqual(len([n for n in c.nodes if n.type=='planning_objects_adapter']),1)
+        self.assertEqual(c.params['/planning_objects_adapter/input_topic'].value,
+                         '/perception/lidar/planning_observations_map')
+        self.assertEqual(c.params['/planning_objects_adapter/output_topic'].value,'/planning/objects')
 if __name__=='__main__':unittest.main()

@@ -31,6 +31,7 @@ Competition에는 `pos_x/y/z`, `vel_y/z`, `accel_x/y/z`, 타이어 횡력·side 
 ## 2. 제어 명령 — cmd type 1, ctrl mode 2
 
 v1.2 2-8: Ego Ctrl Cmd는 `cmd type 1`(accel, brake)과 `ctrl mode 2`만 허용한다.
+이 숫자는 UDP payload의 필드다. 저장 JSON의 `egoCtrlMode=3`(Auto)과 구분한다.
 
 | 송신 노드 | 현재 | 요청 |
 |---|---|---|

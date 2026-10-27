@@ -1,5 +1,6 @@
 // Monitoring-only stage publisher (see shadow/debug_publisher.hpp).
 #include <asmc_lidar/ros/debug_publisher.hpp>
+#include <asmc_lidar/filtering/delivery_preview.hpp>
 
 #include <asmc_lidar/pipeline/pipeline.hpp>
 #include <asmc_lidar/ros/scan_trace.hpp>
@@ -71,6 +72,7 @@ DebugPublisher::ObjectSummary Summary(const pipeline::TrackedObject& o) {
   s.points = static_cast<int>(o.detection.pcl_ClusterPoints.size());
   s.cls = o.camera.str_ObjectClass;
   s.raw_cls = o.camera.str_YoloClass;
+  s.camera=o.camera;
   s.dist = o.detection.f32_Dist;
   s.cx = o.detection.f32_OBB_CenterX;
   s.cy = o.detection.f32_OBB_CenterY;
@@ -101,7 +103,8 @@ sensor_msgs::PointField Field(const char* name, std::uint32_t offset, std::uint8
 sensor_msgs::PointCloud2 CloudMsg(const DebugPublisher::StageSample& s, std::int64_t stamp_ns,
                                   const std::string& frame, const std::vector<std::uint8_t>* label,
                                   const std::vector<std::int32_t>* cluster,
-                                  const std::vector<std::int32_t>* track=nullptr) {
+                                  const std::vector<std::int32_t>* track=nullptr,
+                                  const std::vector<std::uint8_t>* road=nullptr) {
   sensor_msgs::PointCloud2 msg;
   msg.header.stamp.fromNSec(static_cast<std::uint64_t>(stamp_ns));
   msg.header.frame_id = frame;
@@ -116,7 +119,8 @@ sensor_msgs::PointCloud2 CloudMsg(const DebugPublisher::StageSample& s, std::int
     msg.fields.push_back(Field("cluster", 20, sensor_msgs::PointField::INT32));
   }
   if(track)msg.fields.push_back(Field("track",24,sensor_msgs::PointField::INT32));
-  msg.point_step = track ? 28 : cluster ? 24 : labelled ? 20 : 16;
+  if(road)msg.fields.push_back(Field("road",28,sensor_msgs::PointField::UINT8));
+  msg.point_step = road ? 32 : track ? 28 : cluster ? 24 : labelled ? 20 : 16;
   msg.height = 1;
   msg.width = s.sent;
   msg.row_step = msg.point_step * msg.width;
@@ -134,6 +138,7 @@ sensor_msgs::PointCloud2 CloudMsg(const DebugPublisher::StageSample& s, std::int
       std::memcpy(out + 20, &c, 4);
     }
     if(track){const std::int32_t id=i<track->size()?(*track)[i]:-1;std::memcpy(out+24,&id,4);}
+    if(road)out[28]=i<road->size()?(*road)[i]:0;
   }
   return msg;
 }
@@ -164,6 +169,11 @@ void Object(std::ostream& out, const DebugPublisher::ObjectSummary& o, bool trac
     trace::Str(out, o.cls);
     out << ",\"raw_class\":";
     trace::Str(out, o.raw_cls);
+    out << ",\"camera_evidence\":{\"ids\":";trace::Str(out,o.camera.evidence_ids);
+    out << ",\"scan_ns\":" << o.camera.evidence_scan_ns << ",\"image_ns\":" << o.camera.camera_observation_ns;
+    out << ",\"observed_class\":";trace::Str(out,o.camera.observed_class);
+    out << ",\"protection_group\":";trace::Str(out,o.camera.protection_group);
+    out << ",\"conflict\":";trace::Bool(out,o.camera.group_conflict);out << '}';
     out << ",\"kf_initialized\":";
     trace::Bool(out, o.kf_initialized);
     // Internal CA state: frame not validated, never a published velocity.
@@ -175,10 +185,16 @@ void Object(std::ostream& out, const DebugPublisher::ObjectSummary& o, bool trac
     trace::Num(out, o.velocity);
     out << ",\"motion\":{\"state\":" << o.motion.s32_MotionState << ",\"valid\":";
     trace::Bool(out,o.motion.motion_valid);
-    out << ",\"source\":\"main_algorithm_display_only\",\"vx_kph\":";
+    out << ",\"source\":\"canonical_motion_classifier\",\"vx_kph\":";
     trace::Num(out,o.motion.f32_DecisionVxKPH);
     out << ",\"vy_kph\":";trace::Num(out,o.motion.f32_DecisionVyKPH);
     out << ",\"displacement_kph\":";trace::Num(out,o.motion.f32_CorrectedDisplacementSpeedKPH);
+    out<<",\"planner_vx_kph\":";trace::Num(out,o.motion.f32_PlannerVxKPH);
+    out<<",\"planner_vy_kph\":";trace::Num(out,o.motion.f32_PlannerVyKPH);
+    out<<",\"raw_map_vx_kph\":";trace::Num(out,o.motion.map_vx*3.6);
+    out<<",\"raw_map_vy_kph\":";trace::Num(out,o.motion.map_vy*3.6);
+    out<<",\"semantic_applied\":";trace::Bool(out,o.motion.semantic_static_applied);
+    out<<",\"semantic_reason\":";trace::Str(out,o.motion.semantic_reason);
     out << ",\"samples\":" << o.motion.s32_MotionAcceptedSamples << '}';
   }
   out << '}';
@@ -196,8 +212,9 @@ std::vector<std::string> DebugPublisher::TopicNames(const std::string& prefix) {
 }
 
 DebugPublisher::DebugPublisher(ros::NodeHandle& nh, const DebugPublisherConfig& config, const RuntimeConfig& runtime)
-    : config_(config), use_roll_(runtime.pipeline.use_roll), tunnel_enabled_(runtime.pipeline.tunnel.enabled),
+    : config_(config), road_map_(runtime.hd_map_audit), use_roll_(runtime.pipeline.use_roll), tunnel_enabled_(runtime.pipeline.tunnel.enabled),
       vehicle_(runtime.pipeline.vehicle),range_(runtime.pipeline.range),roi_(runtime.pipeline.roi),height_roi_(runtime.pipeline.height_roi) {
+  config_.max_points=std::clamp<std::size_t>(config_.max_points,1,20000);
   const auto names = TopicNames(config_.topic_prefix);
   raw_pub_ = nh.advertise<sensor_msgs::PointCloud2>(names[0], 1);
   roi_pub_ = nh.advertise<sensor_msgs::PointCloud2>(names[1], 1);
@@ -332,6 +349,14 @@ void DebugPublisher::OnScan(const pipeline::StageView& view) {
 }
 
 void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
+  // Every processed scan, including throttled/no-viewer scans: late browsers
+  // see the last actual delivery decision. Bounded by live IDs, no point copies.
+  if(config_.enabled) {
+    std::set<int> alive;
+    for(const auto& o:out.result.objects)alive.insert(o.tracking.s32_Id);
+    delivery_history_.Update(producer_session_id_+"|"+std::to_string(generation_)+"|"+config_id_,
+                             stamp_ns,alive,out.hd_map_audit);
+  }
   std::unique_ptr<Snapshot> s;
   if (pending_ && pending_->stamp_ns == stamp_ns && pending_->stages) {
     s = std::move(pending_);
@@ -351,11 +376,13 @@ void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
   s->pose_ready = out.pose_ready;
   s->processed = out.processed;
   s->reason = out.reason;
+  s->fusion = out.fusion;
   s->fusion_ran = out.fusion_ran;
   s->camera_active = out.fusion.camera_active;
   s->camera_reason = out.fusion.camera_reason;
   s->arrays = out.arrays;
   s->hd_map_audit = out.hd_map_audit;
+  s->delivery_history=delivery_history_.entries();
   const auto ownership_start=Clock::now();
   // Exact sampled XYZ membership, never an OBB test or a second map query.
   // Read-only and bounded by the existing sampled cloud cap.
@@ -379,6 +406,24 @@ void DebugPublisher::Finish(std::int64_t stamp_ns, const ScanOutput& out) {
     counters_.capture_ms_last=s->capture_ms;
     counters_.capture_ms_max=std::max(counters_.capture_ms_max,s->capture_ms);
   }
+  // Same canonical grid and scan pose as delivery; sampled points only.
+  // No browser polygon queries and no geometry or delivery mutation.
+  const auto road_start=Clock::now();
+  s->leveled_road.assign(s->leveled.sent,0);
+  if(road_map_ && s->map_valid && s->base_from_leveled) {
+    const auto map_from_level=s->map_from_base * *s->base_from_leveled;
+    for(std::size_t i=0;i<s->leveled.sent;++i) {
+      const Eigen::Vector3d p(s->leveled.xyzi[4*i],s->leveled.xyzi[4*i+1],s->leveled.xyzi[4*i+2]);
+      const auto m=map_from_level*p;
+      filtering::PointEvidence e;
+      road_map_->Accumulate(e,{m.x(),m.y(),m.z()},0.);
+      s->leveled_road[i]=e.unknown?0:e.interior_road?3:e.road?2:1;
+    }
+  }
+  s->capture_ms+=Ms(road_start,Clock::now());
+  {std::lock_guard<std::mutex> lock(counters_mutex_);
+   counters_.capture_ms_last=s->capture_ms;
+   counters_.capture_ms_max=std::max(counters_.capture_ms_max,s->capture_ms);}
   s->tracks.clear();
   if (out.processed) {
     s->tracks.reserve(out.result.objects.size());
@@ -420,7 +465,7 @@ void DebugPublisher::Publish(const Snapshot& s) {
     if (voxel_pub_.getNumSubscribers() > 0)
       voxel_pub_.publish(CloudMsg(s.voxel, s.stamp_ns, s.sensor_frame, nullptr, nullptr));
     if (leveled_pub_.getNumSubscribers() > 0)
-      leveled_pub_.publish(CloudMsg(s.leveled, s.stamp_ns, config_.leveled_frame, &s.leveled_label, &s.leveled_cluster,s.leveled_track.empty()?nullptr:&s.leveled_track));
+      leveled_pub_.publish(CloudMsg(s.leveled, s.stamp_ns, config_.leveled_frame, &s.leveled_label, &s.leveled_cluster,s.leveled_track.empty()?nullptr:&s.leveled_track,&s.leveled_road));
   }
   if (scan_pub_.getNumSubscribers() > 0) {
     std_msgs::String text;
@@ -556,17 +601,23 @@ std::string DebugPublisher::ScanJson(const Snapshot& s) const {
     out << "],\"capture_ms\":";
     trace::Num(out, s.capture_ms);
   }
-  out << ",\"fusion\":{\"ran\":";
-  trace::Bool(out, s.fusion_ran);
-  out << ",\"camera_active\":";
-  trace::Bool(out, s.camera_active);
-  out << ",\"camera_reason\":";
-  trace::Str(out, s.camera_reason);
-  out << "},\"typed\":{\"local\":";
+  out << ",\"fusion\":";
+  trace::Fusion(out, s.fusion, s.fusion_ran);
+  out << ",\"typed\":{\"local\":";
   trace::Array(out, s.arrays.accepted, s.arrays.local);
   out << ",\"map\":";
   trace::Array(out, s.arrays.accepted, s.arrays.map);
   out << '}';
+  out << ",\"delivery_history\":[";
+  bool first_history=true;
+  for(const auto& e:s.delivery_history) {
+    if(!first_history)out<<',';
+    first_history=false;
+    out<<"{\"stamp_ns\":"<<e.second.stamp_ns<<",\"report\":";
+    filtering::AuditReport r;r.enabled=true;r.delivery_applied=true;r.objects={e.second.decision};
+    filtering::WriteAuditReport(out,r);out<<'}';
+  }
+  out<<']';
   if(s.hd_map_audit.enabled){out << ",\"hd_map_audit\":";filtering::WriteAuditReport(out,s.hd_map_audit);}
   out << '}';
   return out.str();

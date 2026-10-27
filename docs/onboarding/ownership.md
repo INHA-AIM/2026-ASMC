@@ -12,7 +12,7 @@
 | `@yuntae12-sudo` | 정윤태 | behavior, MPC, planning integration |
 | `@yangseojun` | 양서준 | MPC·behavior 공동 |
 | `@kante2` | 이강태 | Frenet planner, UDP bridge 공동 |
-| `@wkddnjsxo` | 장원태 | scenario, gRPC, traffic-light 연계 |
+| `@wkddnjsxo` | 장원태 | scenario, gRPC, traffic-light 연계, YOLO detect 추가학습 |
 | `@sonshiny` | 손재호 | LiDAR/3D perception, sensor fusion |
 
 ## 현재 코드 경계
@@ -29,7 +29,7 @@
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../../src/asmc_bridge/docs/integration.md) | 이강태·안승현, planning consumer 공동 리뷰 |
 | Perception façade와 typed 계약 | `src/asmc_camera/`; [runtime 계약](../contracts/perception-runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
 | Camera/BEV/traffic | `src/asmc_camera/` | 안승현, perception·planning consumer 공동 리뷰 |
-| LiDAR/3D·camera fusion | 정본·공동 개발 `src/asmc_lidar/` | 안승현: HD맵 필터·카메라 연결 지원. 손재호: 추적·속도·운동 상태·matching/fusion, GPS 없는 터널 local 인식·벽/천장 보완. 기존 기능 보존 이식·판제 직접 소비는 안승현이 진행하고 실제 인수는 공동 리뷰 |
+| LiDAR/3D·camera fusion | 정본·공동 개발 `src/asmc_lidar/` | 안승현: M1 3뷰 matching/fusion·HD맵·카메라 연결. 손재호: M2 터널 통합·M3 관측 위치/OBB·M4 추적/속도/운동 상태. 공용 runtime·좌표·시각·계약은 공동 리뷰 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |
 | Scenario/gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | 공용 infra | `docker/`, `.github/`, `docs/`, `scripts/` 공용 진입점 | 통합 리뷰 필수 |
@@ -42,9 +42,9 @@
 |---|---|
 | `asmc_hd_map` | 2단계 완료. 운영 map과 global/local topic 사용 |
 | `asmc_bridge` | P3-G local closeout 완료. 실제 두 PC LAN2LAN은 6단계 현장 리허설에서 검증 |
-| `asmc_camera`(구 `asmc_perception`) | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 LiDAR는 카메라 공용 관측을 직접 소비함. LiDAR 이관은 아래 L0–L8 담당을 따름 |
-| `asmc_camera` 현재 | rename·3뷰 YOLO 단일화·TensorRT·family 최적화 병합. 원본16종/소비3그룹 계약 제공. 추가학습은 판제 요청 시 |
-| `asmc_lidar` | PR #108까지 전달 필터 적용. 다음은 [전환 기반·구 패키지 폐기 B0–B4](../../src/asmc_lidar/docs/cutover-foundation.md); 리팩토링·3뷰 확대는 이후. 담당별 작업은 [공동 인수표](../../src/asmc_lidar/docs/migration-tasks.md#공동-개발-인수와-우선-작업), 운영은 asmc_lidar 정본·판제 공용 입력 단일화 |
+| `asmc_camera`(구 `asmc_perception`) | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 LiDAR는 카메라 공용 관측을 직접 소비함. LiDAR는 정본화 후 M0–M5 공동 개선을 따름 |
+| `asmc_camera` 현재 | rename·3뷰 YOLO 단일화·TensorRT·family 최적화 병합. 원본16종/소비3그룹 계약 제공. YOLO detect 추가학습은 장원태 진행, 새 모델 운영 인수는 별도 |
+| `asmc_lidar` | B4 정본화·구 패키지 폐기, C0/F1 병합 완료. 다음은 [3뷰·터널·OBB·추적 M0–M5](../../src/asmc_lidar/docs/improvement-milestones.md). 운영은 asmc_lidar 정본·판제 공용 입력 단일화 |
 | `learning*` 정리 | 완료. LBC teacher/debug 필요 기능만 `tools/research/lbc_teacher_bev` 이관 |
 | 실행·시각화 | P5-A~E 완료 기록 유지. bridge 별도 실행. LiDAR는 lidar.launch·RViz 선택 옵션, 웹은 구독 전용 view.launch |
 | LAN2LAN 현장 리허설 | 6단계 예정 |

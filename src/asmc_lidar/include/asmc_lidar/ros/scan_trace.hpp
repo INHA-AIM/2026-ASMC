@@ -145,6 +145,10 @@ inline void TrackFields(std::ostream& out, const pipeline::TrackedObject& o) {
   Str(out, o.camera.str_ObjectClass);
   out << ",\"raw_class\":";
   Str(out, o.camera.str_YoloClass);
+  out<<",\"semantic_static_applied\":";Bool(out,o.tracking.motion.semantic_static_applied);
+  out<<",\"semantic_reason\":";Str(out,o.tracking.motion.semantic_reason);
+  out<<",\"group_conflict\":";Bool(out,o.camera.group_conflict);
+  out<<",\"protection_group\":";Str(out,o.camera.protection_group);
   out << ",\"class_misses\":" << o.camera.class_miss_counter << ",\"continuity\":" << o.camera.continuity_counter
       << ",\"ground_evidence\":{\"valid\":";
   Bool(out, o.detection.ground_evidence.valid);
@@ -241,6 +245,75 @@ class LocalInputCache {
   std::deque<std::pair<std::uint64_t, pipeline::CanData>> can_;
 };
 
+// Shared by full trace and sampled web snapshots; no independent matching here.
+inline void Fusion(std::ostream& out, const pipeline::fusion::FusionReport& f, bool ran) {
+  out << "{\"ran\":"; Bool(out, ran);
+  out << ",\"camera_active\":"; Bool(out, f.camera_active);
+  out << ",\"camera_reason\":"; Str(out, f.camera_reason);
+  out << ",\"diagnostics_enabled\":"; Bool(out, f.diagnostics_enabled);
+  out << ",\"emitting_scan_sequence\":" << f.emitting_scan_sequence
+      << ",\"emitting_scan_stamp_ns\":" << f.emitting_scan_stamp_ns
+      << ",\"pending_scans\":" << f.pending_scans
+      << ",\"decisions_omitted\":" << f.decisions_omitted << ",\"views\":[";
+  bool comma = false;
+  for (const auto& v : f.views) {
+    if (comma) out << ',';
+    comma = true;
+    out << "{\"camera_id\":"; Str(out, v.frame_id);
+    out << ",\"matching_implemented\":"; Bool(out, v.matching_implemented);
+    out << ",\"reason\":"; Str(out, v.reason);
+    out << ",\"stamp_ns\":" << v.stamp_ns << ",\"image_minus_scan_ns\":" << v.image_minus_scan_ns
+        << ",\"candidates\":" << v.candidates << ",\"generation\":" << v.generation
+        << ",\"wire_sequence\":" << v.wire_sequence;
+    out << ",\"session\":"; Str(out, v.session);
+    out << ",\"calibration_id\":"; Str(out, v.calibration_id);
+    out << ",\"model_id\":"; Str(out, v.model_id);
+    out << ",\"config_id\":"; Str(out, v.config_id); out << '}';
+  }
+  out << "],\"decisions\":["; comma = false;
+  for (const auto& d : f.decisions) {
+    if (comma) out << ',';
+    comma = true;
+    out << "{\"scan_sequence\":" << d.scan_sequence << ",\"scan_stamp_ns\":" << d.scan_stamp_ns
+        << ",\"wait_ns\":" << d.wait_ns << ",\"image_stamp_ns\":" << d.image_stamp_ns
+        << ",\"image_minus_scan_ns\":" << d.image_minus_scan_ns
+        << ",\"generation\":" << d.generation << ",\"wire_sequence\":" << d.wire_sequence;
+    out << ",\"action\":"; Str(out, d.action);
+    out << ",\"reason\":"; Str(out, d.reason);
+    out << ",\"observation_id\":"; Str(out, d.observation_id);
+    out << ",\"camera_id\":"; Str(out, d.camera_id);
+    out << ",\"session\":"; Str(out, d.session);
+    out << ",\"calibration_id\":"; Str(out, d.calibration_id);
+    out << ",\"model_id\":"; Str(out, d.model_id);
+    out << ",\"config_id\":"; Str(out, d.config_id);
+    out << ",\"reused\":"; Bool(out, d.reused);
+    out << ",\"projection_valid\":"; Bool(out, d.projection_valid);
+    out << ",\"boxes_received\":" << d.boxes_received << ",\"boxes_admitted\":" << d.boxes_admitted
+        << ",\"associations_omitted\":" << d.associations_omitted << ",\"associations\":[";
+    bool c = false;
+    for (const auto& a : d.associations) {
+      if (c) out << ',';
+      c = true;
+      out << "{\"track_id\":" << a.track_id << ",\"source_box_index\":" << a.source_box_index;
+      out << ",\"iou\":"; Num(out, a.iou);
+      out << ",\"applied\":"; Bool(out, a.applied);
+      out << ",\"projected\":"; Bool(out, a.projected);
+      out << ",\"reason\":"; Str(out, a.reason);
+      out << ",\"raw_class\":"; Str(out, a.raw_class);
+      out << ",\"group\":"; Str(out, a.group);
+      out << ",\"class_before\":"; Str(out, a.class_before);
+      out << ",\"class_after\":"; Str(out, a.class_after);
+      out << ",\"projected_box\":[";
+      for (std::size_t i=0;i<4;++i) { if(i) out << ','; Num(out,a.projected_box[i]); }
+      out << "],\"camera_box\":[";
+      for (std::size_t i=0;i<4;++i) { if(i) out << ','; Num(out,a.camera_box[i]); }
+      out << "]}";
+    }
+    out << "]}";
+  }
+  out << "]}";
+}
+
 struct LineInput {
   std::string producer;
   std::string session_id, config_id, calibration_id;
@@ -256,6 +329,82 @@ struct LineInput {
   double input_to_publish_ms = -1;  // live node only, monotonic callback entry -> arrays enqueued
   bool debug = false;  // digests/clusters/detections (PipelineConfig::capture_debug)
 };
+
+inline void Tunnel(std::ostream& out,const pipeline::TunnelFilterStageReport& t) {
+  out << "{\"ran\":";Bool(out,t.ran);
+  out << ",\"ground_removed\":" << t.ground_labeled << ",\"wall_removed\":" << t.wall_labeled
+      << ",\"removed\":" << t.removed_points
+      << ",\"left_allowed\":";Bool(out,t.wall_left_removal_allowed);
+  out << ",\"right_allowed\":";Bool(out,t.wall_right_removal_allowed);
+  out << ",\"left_reanchored\":";Bool(out,t.wall_left_reanchored);
+  out << ",\"right_reanchored\":";Bool(out,t.wall_right_reanchored);
+  out << ",\"left_state\":";Str(out,t.wall_left_state);
+  out << ",\"right_state\":";Str(out,t.wall_right_state);
+  out << ",\"motion_integrated\":";Bool(out,t.motion_integrated);
+  out << ",\"motion_valid\":";Bool(out,t.motion_valid);
+  out << ",\"motion_reliable\":";Bool(out,t.motion_reliable);
+  out << ",\"motion_dt_s\":";Num(out,t.motion_dt_s);
+  out << ",\"motion_dyaw_rad\":";Num(out,t.motion_dyaw_rad);
+  out << ",\"motion_dx_m\":";Num(out,t.motion_dx_m);
+  out << ",\"motion_dy_m\":";Num(out,t.motion_dy_m);
+  out << ",\"boundary_rescued_clusters\":" << t.boundary_rescued_clusters << ",\"boundary_rescued_points\":" << t.boundary_rescued_points;
+  out << ",\"temporal_enabled\":";Bool(out,t.temporal_enabled);
+  out << ",\"temporal_entry_guard\":";Bool(out,t.temporal_entry_guard);
+  out << ",\"temporal_boundary_exempt\":" << t.temporal_boundary_exempt;
+  out << ",\"temporal_hold_frames\":" << t.temporal_hold_frames
+      << ",\"temporal_candidates\":" << t.temporal_candidates
+      << ",\"temporal_hidden\":" << t.temporal_hidden
+      << ",\"temporal_hidden_predictions\":" << t.temporal_hidden_predictions
+      << ",\"temporal_max_run\":" << t.temporal_max_run
+      << ",\"temporal_removed_points\":" << t.temporal_removed_points;
+  out << ",\"temporal_candidate_kinds\":[";
+  bool first_kind=true;
+  for(const auto& k:t.temporal_candidate_kinds) {
+    if(!first_kind)out << ',';
+    first_kind=false;out << '[' << k.first << ',' << k.second << ']';
+  }
+  out << ']';
+  out << ",\"temporal_required_frames\":[";
+  first_kind=true;
+  for(const auto& k:t.temporal_required_frames) {
+    if(!first_kind)out << ',';
+    first_kind=false;out << '[' << k.first << ',' << k.second << ']';
+  }
+  out << ']';
+  out << ",\"exterior_surface_removed\":" << t.exterior_surface_removed;
+  out << ",\"residual_clusters_reused\":";Bool(out,t.residual_clusters_reused);
+  out << ",\"timings_ms\":{";
+  bool first_timing=true;
+  for(const auto& value:t.timings_ms) {
+    if(!first_timing)out<<',';
+    first_timing=false;Str(out,value.first);out<<':';Num(out,value.second);
+  }
+  out<<'}';
+  out << ",\"residual_decisions\":[";
+  bool first_decision=true;
+  for(const auto& d:t.residual_decisions) {
+    if(!first_decision)out<<',';
+    first_decision=false;out<<"{\"obb\":[";
+    for(std::size_t i=0;i<d.first.size();++i){if(i)out<<',';Num(out,d.first[i]);}
+    out<<"],\"reason\":";Str(out,d.second);out<<'}';
+  }
+  out<<']';
+  out << ",\"wall_evidence\":[";
+  bool first_wall=true;
+  for(const auto& w:t.wall_evidence) {
+    if(!first_wall)out << ',';
+    first_wall=false;
+    out << "{\"side\":" << w.side << ",\"allowed\":";Bool(out,w.allowed);
+    out << ",\"valid\":";Bool(out,w.valid);
+    out << ",\"plane\":[";for(int i=0;i<4;++i){if(i)out<<',';Num(out,w.plane[i]);}
+    out << "],\"span\":";Num(out,w.span);out << ",\"reason\":";Str(out,w.reason);
+    out << ",\"intervals\":[";bool first_interval=true;
+    for(const auto& interval:w.intervals){if(!first_interval)out<<',';first_interval=false;out<<'[';Num(out,interval.first);out<<',';Num(out,interval.second);out<<']';}
+    out << "]}";
+  }
+  out << ']';
+  out << ",\"motion_steps\":" << t.motion_steps << '}';
+}
 
 inline std::string Line(const LineInput& in) {
   std::ostringstream out;
@@ -284,6 +433,10 @@ inline std::string Line(const LineInput& in) {
   out << ",\"reason\":";
   Str(out, o.pose_ready ? std::string() : o.reason);
   out << ",\"imu_ns\":" << o.selected.imu_stamp_ns << ",\"can_ns\":" << o.selected.can_stamp_ns;
+  out << ",\"input_selection\":{\"imu_latest_seen_ns\":" << o.selected.imu_latest_seen_ns
+      << ",\"imu_latest_receipt_ns\":" << o.selected.imu_latest_receipt_ns
+      << ",\"imu_invalid_ns\":" << o.selected.imu_invalid_ns << ",\"imu_rejection_reason\":";
+  Str(out,o.selected.imu_rejection_reason);out << '}';
   if (o.pose_ready) {
     if (in.imu && in.can) {
       out << ",\"local\":{\"roll_rad\":";
@@ -327,6 +480,7 @@ inline std::string Line(const LineInput& in) {
           << ",\"centroids\":" << n.centroids << ",\"detections\":" << n.detections
           << ",\"tracks\":" << n.tracks << ",\"observed\":" << n.observed_tracks
           << ",\"predicted\":" << n.predicted_tracks << '}';
+      out << ",\"tunnel\":";Tunnel(out,r.tunnel);
       if (in.debug) {
         out << ",\"digests\":{\"roi\":";
         Str(out, r.digests.roi);
@@ -380,6 +534,9 @@ inline std::string Line(const LineInput& in) {
       }
       out << ']';
     }
+  }
+  if (o.fusion_ran && o.fusion.diagnostics_enabled) {
+    out << ",\"fusion\":"; Fusion(out, o.fusion, true);
   }
   out << ",\"timings_ms\":{\"total\":" << o.total_ms
       << ",\"roi\":" << r.timings.roi_ms << ",\"voxel\":" << r.timings.voxel_ms

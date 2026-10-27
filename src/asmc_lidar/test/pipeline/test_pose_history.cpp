@@ -162,7 +162,7 @@ TEST(PoseHistory, TrueEnuHeadingAndPredictionUseUtmGrid) {
   PoseHistory h(EnuConfig());
   ASSERT_TRUE(AddImuAt(h, kT0 + 880 * kMs, M_PI / 2.));  // IMU before the first GPS
   ASSERT_TRUE(AddCanAt(h, kT0 + 880 * kMs, 10.));
-  // Attitude ages 20/60/110 ms (an exact 120 ms age is stale, see below).
+  // Attitude ages 20/60/110 ms (an exact 120 ms age is valid, see below).
   for (const int ms : {900, 940, 990}) AddGpsAt(h, kT0 + ms * kMs, Gps(10., 20.));
   ASSERT_TRUE(AddImuAt(h, kT0 + 1000 * kMs, M_PI / 2.));
   ASSERT_TRUE(AddCanAt(h, kT0 + 1000 * kMs, 10.));
@@ -197,8 +197,8 @@ TEST(PoseHistory, TrueEnuHeadingAndPredictionUseUtmGrid) {
 
 // ---- Local lookup: staleness, barriers, causality ----
 
-// Main compares double(age_ns)*1e-9 > 0.12: 120 ms exactly rounds to
-// 0.12000000000000001 and is stale (preserved quirk); 119.999999 ms is fresh.
+// C0 refactor: integer-nanosecond age is inclusive at 120ms; no floating
+// rounding to 0.12000000000000001. 120ms+1ns remains invalid.
 TEST(PoseHistory, ImuStalenessBoundary120ms) {
   PoseHistory h;
   ASSERT_TRUE(AddImuAt(h, kT0, 0.));
@@ -206,9 +206,7 @@ TEST(PoseHistory, ImuStalenessBoundary120ms) {
   LocalState local{};
   std::string reason;
   EXPECT_TRUE(h.WaitForLocalLookupNs(kT0 + 120 * kMs - 1, 0., &local, nullptr, &reason)) << reason;
-  EXPECT_FALSE(h.WaitForLocalLookupNs(kT0 + 120 * kMs, 0., &local, nullptr, &reason));
-  EXPECT_EQ("IMU is stale for LiDAR scan", reason);
-  EXPECT_EQ(double(120 * kMs) * 1e-9 > 0.12, true);
+  EXPECT_TRUE(h.WaitForLocalLookupNs(kT0 + 120 * kMs, 0., &local, nullptr, &reason));
   EXPECT_FALSE(h.WaitForLocalLookupNs(kT0 + 120 * kMs + 1, 0., &local, nullptr, &reason));
   EXPECT_EQ("IMU is stale for LiDAR scan", reason);
 }
@@ -220,7 +218,8 @@ TEST(PoseHistory, CanStalenessBoundary120ms) {
   LocalState local{};
   std::string reason;
   EXPECT_TRUE(h.WaitForLocalLookupNs(kT0 + 120 * kMs - 1, 0., &local, nullptr, &reason)) << reason;
-  EXPECT_FALSE(h.WaitForLocalLookupNs(kT0 + 120 * kMs, 0., &local, nullptr, &reason));
+  EXPECT_TRUE(h.WaitForLocalLookupNs(kT0 + 120 * kMs, 0., &local, nullptr, &reason));
+  EXPECT_FALSE(h.WaitForLocalLookupNs(kT0 + 120 * kMs + 1, 0., &local, nullptr, &reason));
   EXPECT_EQ("vehicle speed is stale for LiDAR scan", reason);
 }
 
@@ -485,6 +484,8 @@ TEST(PoseHistory, GpsWithoutFreshAttitudeIsInvalid) {
     ImuData bad = Imu(0.);
     bad.b_ImuReady = false;
     h.AddImu((kT0 + 10 * kMs) / kMs, bad, nullptr, kT0 + 10 * kMs, kT0 + 12 * kMs);
+    // A later rejected callback must not erase the error before these GPS stamps.
+    h.AddImu((kT0 + 70*kMs) / kMs, bad, nullptr, kT0 + 70*kMs, kT0 + 72*kMs);
     for (int i = 0; i < 3; ++i) AddGpsAt(h, kT0 + (20 + 10 * i) * kMs, Gps(1., 2.));
     EXPECT_EQ("gps_invalid", h.MapAt(ScanTime(kT0 + 40 * kMs, kT0 + 50 * kMs), Local(0., 0.)).reason);
   }
@@ -572,4 +573,52 @@ TEST(PoseHistory, SourceStampMsUsesRosNowOnlyForZeroHeader) {
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
+}
+
+// The C0 live failure had fresh 40Hz messages but a teleport yaw discontinuity.
+TEST(PoseHistory, FreshRejectedYawIsNotReportedAsSensorSilence) {
+  PoseHistory h;
+  ASSERT_TRUE(AddImuAt(h,kT0,0.));
+  for(int ms=25;ms<=250;ms+=25) EXPECT_FALSE(AddImuAt(h,kT0+ms*kMs,2.5));
+  ASSERT_TRUE(AddCanAt(h,kT0+250*kMs,0.));
+  LocalState local{};LocalInputSelection selected;std::string reason;
+  EXPECT_FALSE(h.WaitForLocalLookupNs(kT0+252*kMs,0.,&local,&selected,&reason));
+  EXPECT_EQ(reason,"imu_input_invalid");
+  EXPECT_EQ(selected.imu_stamp_ns,kT0);
+  EXPECT_EQ(selected.imu_latest_seen_ns,kT0+250*kMs);
+  EXPECT_EQ(selected.imu_invalid_ns,kT0+250*kMs);
+  EXPECT_EQ(selected.imu_rejection_reason,"implausible IMU yaw jump");
+  // Explicit scenario reset clears history; no automatic reset on a collision.
+  h.Configure(PoseHistoryConfig{});
+  ASSERT_TRUE(AddImuAt(h,kT0+300*kMs,2.5));
+  ASSERT_TRUE(AddCanAt(h,kT0+300*kMs,0.));
+  EXPECT_TRUE(h.WaitForLocalLookupNs(kT0+302*kMs,0.,&local,&selected,&reason));
+  EXPECT_EQ(selected.imu_invalid_ns,0U);
+  EXPECT_TRUE(selected.imu_rejection_reason.empty());
+  // Genuine sensor silence is still invalid even after the reset.
+  ASSERT_TRUE(AddCanAt(h,kT0+500*kMs,0.));
+  EXPECT_FALSE(h.WaitForLocalLookupNs(kT0+502*kMs,0.,&local,&selected,&reason));
+  EXPECT_EQ(reason,"IMU is stale for LiDAR scan");
+  EXPECT_EQ(selected.imu_stamp_ns,kT0+300*kMs);
+}
+
+TEST(PoseHistory, FutureRejectionCannotHidePastImuOrSpeedBarrier) {
+  PoseHistory h;
+  ASSERT_TRUE(AddImuAt(h, kT0, 0.));
+  ASSERT_TRUE(AddCanAt(h, kT0, 0.));
+  EXPECT_FALSE(AddImuAt(h, kT0 + 25*kMs, 2.5));
+  EXPECT_FALSE(AddImuAt(h, kT0 + 75*kMs, 2.5)); // already arrived while scan waits
+  LocalState local{}; LocalInputSelection selection; std::string why;
+  EXPECT_FALSE(h.WaitForLocalLookupNs(kT0 + 50*kMs, 0., &local, &selection, &why));
+  EXPECT_EQ(why, "imu_input_invalid");
+  EXPECT_EQ(selection.imu_invalid_ns, kT0 + 25*kMs);
+  EXPECT_EQ(selection.imu_latest_seen_ns, kT0 + 75*kMs);
+  EXPECT_TRUE(h.WaitForLocalLookupNs(kT0 + 20*kMs, 0., &local, nullptr, &why));
+  ASSERT_TRUE(AddImuAt(h, kT0 + 100*kMs, 0.));
+  EXPECT_FALSE(AddCanAt(h, kT0 + 100*kMs, -1.));
+  EXPECT_FALSE(AddCanAt(h, kT0 + 150*kMs, -1.));
+  EXPECT_FALSE(h.WaitForLocalLookupNs(kT0 + 110*kMs, 0., &local, nullptr, &why));
+  EXPECT_EQ(why, "speed_input_invalid");
+  ASSERT_TRUE(AddCanAt(h, kT0 + 160*kMs, 0.));
+  EXPECT_TRUE(h.WaitForLocalLookupNs(kT0 + 170*kMs, 0., &local, nullptr, &why));
 }

@@ -1,0 +1,509 @@
+{
+  "experiment": "lidar-learned-candidates-20261018-r1",
+  "models": {
+    "harp-nuscenes": {
+      "dataset": "nuscenes",
+      "scans": 208,
+      "classes": [
+        "barrier",
+        "bicycle",
+        "bus",
+        "car",
+        "construction_vehicle",
+        "motorcycle",
+        "pedestrian",
+        "traffic_cone",
+        "trailer",
+        "truck",
+        "driveable_surface",
+        "other_flat",
+        "sidewalk",
+        "terrain",
+        "manmade",
+        "vegetation"
+      ],
+      "class_points": {
+        "driveable_surface": 905343,
+        "manmade": 2631895,
+        "barrier": 58610,
+        "terrain": 114427,
+        "sidewalk": 319381,
+        "other_flat": 5316,
+        "traffic_cone": 501,
+        "vegetation": 16472,
+        "car": 15052,
+        "pedestrian": 750,
+        "trailer": 1102,
+        "truck": 501668,
+        "bus": 36793,
+        "construction_vehicle": 378
+      },
+      "preprocess_h2d_ms": {
+        "p50": 36.14864800329087,
+        "p95": 57.24904465314466,
+        "p99": 72.3694674561557
+      },
+      "forward_output_ms": {
+        "p50": 77.28021150251152,
+        "p95": 99.72444864179124,
+        "p99": 110.17716654780088
+      },
+      "total_ms": {
+        "p50": 112.77376749058021,
+        "p95": 148.47173179659873,
+        "p99": 175.67055573279507
+      },
+      "torch_peak_allocated_mib": 293.27294921875,
+      "torch_peak_reserved_mib": 814.0,
+      "weights_sha256": "6f7fc5a1c03e9123541458358b1c703babf37ffc0b8b4ea6beac6c9f8478a147",
+      "config_sha256": "431f7d91379dd9360494ced78258fe54277a292f1a6a513340f620fdb609a8b5",
+      "repo_revision": "69c52ddc54e1fefaa7e64ac8e3fffea33e814eda",
+      "input_manifest_sha256": "7c4ccaed236fe99b43f8411300b7d910e1eed2936a91663d9fff086fb33bad3b",
+      "strict_checkpoint": true,
+      "intensity_policy": "raw unchanged, matching official data loader; no arbitrary scaling",
+      "range_projection": {
+        "range_H": 32,
+        "range_W": 480,
+        "fov_up": 10.0,
+        "fov_down": -30.0
+      },
+      "clipped_fraction": 0.14433768084991866,
+      "preprocessing": "official CPU RangeInterpolation + SemLaserScan + Collate; appended points excluded from raw prediction output",
+      "torch": "2.5.1+cu121",
+      "precision": "autocast float16",
+      "semantic_gt": false,
+      "scope": "single original scan, no ground removal; shared GPU with other chat workload; no realtime or velocity acceptance"
+    },
+    "harp-semantickitti-gpu": {
+      "dataset": "semantic_kitti",
+      "scans": 208,
+      "classes": [
+        "car",
+        "bicycle",
+        "motorcycle",
+        "truck",
+        "other-vehicle",
+        "person",
+        "bicyclist",
+        "motorcyclist",
+        "road",
+        "parking",
+        "sidewalk",
+        "other-ground",
+        "building",
+        "fence",
+        "vegetation",
+        "trunk",
+        "terrain",
+        "pole",
+        "traffic-sign"
+      ],
+      "class_points": {
+        "road": 1013163,
+        "fence": 582631,
+        "vegetation": 205350,
+        "building": 931230,
+        "bicycle": 126517,
+        "terrain": 36321,
+        "other-vehicle": 9008,
+        "motorcycle": 1129251,
+        "person": 2322,
+        "motorcyclist": 6133,
+        "car": 553774,
+        "bicyclist": 2535,
+        "other-ground": 4366,
+        "pole": 1870,
+        "sidewalk": 778,
+        "traffic-sign": 2348,
+        "truck": 38,
+        "trunk": 53
+      },
+      "preprocess_h2d_ms": {
+        "p50": 63.87317049666308,
+        "p95": 96.28635944900448,
+        "p99": 101.66715061888681
+      },
+      "forward_output_ms": {
+        "p50": 92.97720249014674,
+        "p95": 109.30803544761147,
+        "p99": 116.90154824260391
+      },
+      "total_ms": {
+        "p50": 155.5178880080348,
+        "p95": 189.51316469829177,
+        "p99": 203.40982927547887
+      },
+      "torch_peak_allocated_mib": 433.47119140625,
+      "torch_peak_reserved_mib": 572.0,
+      "weights_sha256": "5b5db652540a179b56e044d09c792d9f8332c6e4af78801293af604ce1d309e3",
+      "config_sha256": "f6370d29cdc0ce0fa05e204bd331abb1aeb1a6fadd2888018bb23845081293c5",
+      "repo_revision": "69c52ddc54e1fefaa7e64ac8e3fffea33e814eda",
+      "input_manifest_sha256": "7c4ccaed236fe99b43f8411300b7d910e1eed2936a91663d9fff086fb33bad3b",
+      "strict_checkpoint": true,
+      "intensity_scale": 0.00392156862745098,
+      "intensity_policy": "raw unchanged for nuScenes; SemanticKITTI /255 is a declared byte-to-unit input adaptation, not a calibrated reflectance conversion",
+      "range_projection": {
+        "range_H": 64,
+        "range_W": 512,
+        "fov_up": 3.0,
+        "fov_down": -25.0
+      },
+      "clipped_fraction": 0.3049648760940411,
+      "preprocessing": "gpu official RangeInterpolation + SemLaserScan + Collate; appended points excluded from raw prediction output",
+      "script_sha256": "fc0193c86680aed387806de8a461810943e2a37d7eb581c33887a9ba59d81903",
+      "torch": "2.5.1+cu121",
+      "precision": "autocast float16",
+      "semantic_gt": false,
+      "scope": "single original scan, no ground removal; shared GPU with other chat workload; no realtime or velocity acceptance"
+    },
+    "centerpoint-pillar": {
+      "model": "CenterPoint-Pillar",
+      "scans": 208,
+      "classes": [
+        "car",
+        "truck",
+        "construction_vehicle",
+        "bus",
+        "trailer",
+        "barrier",
+        "motorcycle",
+        "bicycle",
+        "pedestrian",
+        "traffic_cone"
+      ],
+      "class_detections": {
+        "car": 895,
+        "truck": 277,
+        "bus": 151,
+        "barrier": 6645,
+        "motorcycle": 512,
+        "bicycle": 400,
+        "traffic_cone": 911,
+        "pedestrian": 884,
+        "construction_vehicle": 234,
+        "trailer": 281
+      },
+      "by_score_threshold": {
+        "0.1": {
+          "car": 895,
+          "truck": 277,
+          "bus": 151,
+          "barrier": 6645,
+          "motorcycle": 512,
+          "bicycle": 400,
+          "traffic_cone": 911,
+          "pedestrian": 884,
+          "construction_vehicle": 234,
+          "trailer": 281
+        },
+        "0.4": {
+          "car": 113,
+          "truck": 11,
+          "barrier": 138,
+          "bus": 14,
+          "motorcycle": 10,
+          "bicycle": 3,
+          "construction_vehicle": 25,
+          "pedestrian": 4,
+          "traffic_cone": 1
+        },
+        "0.7": {
+          "barrier": 5,
+          "car": 2
+        }
+      },
+      "latency_ms": {
+        "p50": 145.4865240084473,
+        "p95": 168.07593025660026,
+        "p99": 172.91562506230548
+      },
+      "torch_peak_allocated_mib": 164.376953125,
+      "torch_peak_reserved_mib": 242.0,
+      "weights_sha256": "191a38226d2ce990f26cc3f78c454310cc562d81d29e86d8ca8fa39c0a44215d",
+      "strict_checkpoint": true,
+      "config": "/usr/local/lib/python3.8/dist-packages/mmdet3d/.mim/configs/centerpoint/centerpoint_pillar02_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py",
+      "config_sha256": "f65e622570896f391a4b7f30e8baf81b7a21cbc34e62c5c27e621af57a51839d",
+      "mmdet3d": "1.4.0",
+      "torch": "2.1.2+cu118",
+      "precision": "official FP32",
+      "input_features": "raw x/y/z/intensity + current-scan time offset 0",
+      "box_convention": "LiDARInstance3DBoxes: raw sensor x/y/bottom_z/dx/dy/dz/yaw/vx/vy; no base_link transform",
+      "training_domain": "nuScenes 10 sweeps; this run only one VLP16 scan; no box class",
+      "velocity_valid": false,
+      "object_gt": false,
+      "scope": "isolated model process, shared GPU with other chat; no end-to-end/real-time/velocity acceptance"
+    }
+  },
+  "input_manifest_sha256": "7c4ccaed236fe99b43f8411300b7d910e1eed2936a91663d9fff086fb33bad3b",
+  "input_bag_sha256": "9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34",
+  "input_scans": 208,
+  "point_features": "raw x/y/z/intensity; no ground removal, no accumulation, no synthetic per-point time",
+  "intensity_percentiles": {
+    "0": 0.0,
+    "1": 0.0,
+    "50": 0.0,
+    "95": 47.0,
+    "99": 60.0,
+    "100": 147.0
+  },
+  "camera_calibration_sha256": "54637d8bbbe5af9b0255824644e4118c86de4b3c683661ddc827913ed1817538",
+  "segmentation_reuse": {
+    "images": 41666,
+    "manifest_sha256": "9b42a32cb11e23324a5e1f13c114cc01d734cc5539ab0980293b6a9e2fb9d3ed",
+    "sources": {
+      "train/aim": 59,
+      "train/bag": 2,
+      "train/capture": 24249,
+      "train/roboflow": 17035,
+      "selection/capture": 158,
+      "selection/roboflow": 36,
+      "selection/aim": 11,
+      "heldout/capture": 74,
+      "heldout/roboflow": 42
+    },
+    "supervision": {
+      "train/complete": 1473,
+      "train/partial": 39731,
+      "train/reviewed_negative": 141,
+      "selection/complete": 194,
+      "selection/partial": 11,
+      "heldout/complete": 116
+    },
+    "positive_annotations_by_evidence": {
+      "train": {
+        "box_only": 80485,
+        "polygon_requires_validation": 3924,
+        "native_rgba": 64966,
+        "packed_mask": 5162
+      },
+      "selection": {
+        "native_rgba": 261,
+        "polygon_requires_validation": 87,
+        "box_only": 11
+      },
+      "heldout": {
+        "native_rgba": 271,
+        "box_only": 174
+      }
+    },
+    "positive_annotations_by_class": {
+      "train": {
+        "deer": 4738,
+        "dog": 4602,
+        "box": 5161,
+        "motorcycle": 5178,
+        "bicycle": 6336,
+        "traffic_drum": 16221,
+        "steel_barricade": 5590,
+        "person": 31027,
+        "stroller": 2892,
+        "plastic_barrier": 4100,
+        "car": 13130,
+        "traffic_cone": 3277,
+        "concrete_barrier": 7570,
+        "bollard": 30165,
+        "bus": 7048,
+        "truck": 7502
+      },
+      "selection": {
+        "traffic_cone": 20,
+        "person": 52,
+        "stroller": 25,
+        "steel_barricade": 20,
+        "motorcycle": 21,
+        "plastic_barrier": 35,
+        "concrete_barrier": 20,
+        "deer": 22,
+        "bollard": 21,
+        "traffic_drum": 20,
+        "bicycle": 20,
+        "car": 22,
+        "box": 21,
+        "truck": 14,
+        "bus": 16,
+        "dog": 10
+      },
+      "heldout": {
+        "traffic_drum": 23,
+        "plastic_barrier": 27,
+        "bollard": 20,
+        "steel_barricade": 23,
+        "deer": 24,
+        "person": 63,
+        "stroller": 28,
+        "motorcycle": 43,
+        "box": 22,
+        "bicycle": 22,
+        "concrete_barrier": 22,
+        "bus": 22,
+        "truck": 29,
+        "car": 35,
+        "traffic_cone": 21,
+        "dog": 21
+      }
+    },
+    "complete_positive_frames_with_mask_metadata": {
+      "train": 186,
+      "selection": 151,
+      "heldout": 74
+    },
+    "inspection": {
+      "sampled_train_annotations": 48,
+      "passed": 48,
+      "class_sampling": "first up to 3 train annotations/class with native evidence, no heldout training"
+    },
+    "inspected_semantic_palette_pixels": {
+      "0,0,0": 3390412,
+      "0,255,255": 11269409,
+      "23,2,6": 1879474,
+      "76,255,76": 8976,
+      "98,2,255": 12032,
+      "99,48,250": 6110,
+      "113,178,37": 853519,
+      "127,127,127": 7460798,
+      "153,255,51": 487078,
+      "204,127,51": 35894,
+      "236,255,2": 62684,
+      "255,0,0": 14786,
+      "255,74,240": 20752,
+      "255,102,30": 399625,
+      "255,255,0": 164710,
+      "255,255,255": 327512,
+      "255,2,2": 16029,
+      "255,90,90": 2522,
+      "255,105,105": 6441,
+      "255,60,60": 296,
+      "255,75,75": 141
+    },
+    "limitations": [
+      "metadata evidence is not a full mask-file/annotation audit",
+      "partial label images require ignore-aware loss or complete-frame filtering",
+      "box/teacher-only records are not pixel GT",
+      "coarse standing_object includes fixed objects; not a wall/ceiling-only class",
+      "no model training or performance gain is claimed"
+    ]
+  },
+  "native_mask_sample_classes": [
+    "bicycle",
+    "bollard",
+    "box",
+    "bus",
+    "car",
+    "concrete_barrier",
+    "deer",
+    "dog",
+    "motorcycle",
+    "person",
+    "plastic_barrier",
+    "steel_barricade",
+    "stroller",
+    "traffic_cone",
+    "traffic_drum",
+    "truck"
+  ],
+  "cases": [
+    {
+      "scan_index": 64,
+      "e8_box": {
+        "label": "box",
+        "confidence": 0.9136930704116821,
+        "xyxy": [
+          692.5,
+          344.5208333333333,
+          740.7083333333334,
+          382.5208333333333
+        ],
+        "box": {
+          "points": 38,
+          "depth_p05_m": 19.99935793625941,
+          "depth_p95_m": 63.28811312025014,
+          "observed_mean_xyz": [
+            34.173858642578125,
+            -3.801076889038086,
+            -1.023158073425293
+          ],
+          "observed_min_xyz": [
+            21.01589584350586,
+            -6.072580337524414,
+            -1.5869309902191162
+          ],
+          "observed_max_xyz": [
+            72.3164291381836,
+            -1.7345679998397827,
+            -0.6243074536323547
+          ]
+        },
+        "geometry": {
+          "points": 20,
+          "depth_p05_m": 19.97262876256343,
+          "depth_p95_m": 20.60160842033185,
+          "observed_mean_xyz": [
+            21.329944610595703,
+            -2.4311578273773193,
+            -1.1253224611282349
+          ],
+          "observed_min_xyz": [
+            21.01589584350586,
+            -3.226344347000122,
+            -1.1574620008468628
+          ],
+          "observed_max_xyz": [
+            21.84876251220703,
+            -1.7345679998397827,
+            -1.1101503372192383
+          ]
+        },
+        "mask": null,
+        "component_sizes": [
+          20,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "hints_are_not_point_gt": true,
+      "harp-nuscenes_labels_in_e8_box": {
+        "manmade": 38
+      },
+      "harp-semantickitti-gpu_labels_in_e8_box": {
+        "fence": 33,
+        "motorcyclist": 3,
+        "vegetation": 2
+      }
+    }
+  ],
+  "review_tool_hashes": {
+    "prepare_learned_lidar_inputs.py": "e1f7ae2701b30edb7f43d2e4abe498af55e13287abb4ccd4f6db01d81d2cff95",
+    "run_harp_shadow.py": "fc0193c86680aed387806de8a461810943e2a37d7eb581c33887a9ba59d81903",
+    "run_centerpoint_shadow.py": "ad0552c5387b8b6a5e54277d6abca51bf3d1fa65d0e73e369eef5deb6fe69bed",
+    "audit_segmentation_reuse.py": "a4ff2d3c388923430cc772729332b4b48162581d67df8840a780b0c9982df8e8",
+    "research_download.py": "6ed646f4d449363d2d70fee745d412fe4820f5baf4e46d7fc9df56aca389a126",
+    "build_learned_lidar_review.py": "4ba5da48463eed2eed150820b4053fc55462b714b9e24fcf3ab9847a285862d8"
+  },
+  "limitations": [
+    "one reused development bag, no independent point/box/velocity GT",
+    "concurrent GPU work from another chat, no exclusive runtime or end-to-end acceptance",
+    "HARP raw sensor FoV differs: clipped points are drawn gray; no point suppression",
+    "CenterPoint 10-sweep checkpoint probed with one VLP16 scan; velocity invalid; no box class",
+    "native mask metadata is not all-annotation QA; 48 sampled masks only",
+    "no training performed and no runtime default changes",
+    "early smoke metadata failed due missing git; first nuScenes GPU summary failed after all 208 outputs; raw logs preserved, not a primary comparison"
+  ],
+  "branch": "research/lidar-perception-20261018",
+  "previous_baseline_commit": "4da2a5b0"
+}

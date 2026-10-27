@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <asmc_lidar/tracking/track.hpp>
 // Shadow runtime: sensor input gates and the per-scan sequence of Main's
 // TemporalThread (common geometry), transport-free (see shadow/runtime.hpp).
@@ -78,14 +79,19 @@ void UpdateAABB(std::vector<pipeline::TrackedObject>& objects) {
 
 LidarRuntime::LidarRuntime(const RuntimeConfig& config,
                              std::shared_ptr<pipeline::fusion::CameraSource> camera,
-                             const asmc::lidar::camera::Calibration* front_calibration)
+                             const asmc::lidar::camera::Calibration* front_calibration,
+                             const asmc::lidar::camera::Calibrations& cameras)
     : config_(config), pose_(config.pose), gps_(config.gps), pipeline_(config.pipeline),
       camera_(std::move(camera)), output_(config.stamp_provenance),
       delivery_filters_(config.delivery_filters ? *config.delivery_filters : filtering::DeliveryFilters{}) {
+  calibrations_=cameras;
+  if(front_calibration && calibrations_.empty())calibrations_[front_calibration->frame_id]=*front_calibration;
+  if(front_calibration) tunnel_camera_calibration_=std::make_unique<asmc::lidar::camera::Calibration>(*front_calibration);
   if (config_.enable_camera_fusion && camera_) {
     if (!front_calibration)
       throw std::invalid_argument("LidarRuntime: camera fusion needs the front camera calibration");
-    fusion_ = std::make_unique<pipeline::fusion::FrontCameraFusion>(config_.fusion, *front_calibration);
+    if(config_.fusion.views=="all")multi_fusion_=std::make_unique<pipeline::fusion::MultiCameraFusion>(config_.fusion,calibrations_);
+    else fusion_ = std::make_unique<pipeline::fusion::FrontCameraFusion>(config_.fusion, *front_calibration);
   }
 }
 
@@ -93,22 +99,28 @@ LidarRuntime::LidarRuntime(const RuntimeConfig& config,
 // common branch) (8f93c22e). The raw IMU buffer write (:614-618) only feeds
 // legacy/camera consumers and is not ported.
 void LidarRuntime::OnImu(const pipeline::ImuInput& input, std::int64_t receipt_ns, std::int64_t ros_now_ns) {
+  std::lock_guard<std::mutex> input_commit(tunnel_motion_input_mutex_);
   const pipeline::ImuData data = pipeline::ImuFromInput(input);
   std::string sanity_reason;
   // Main passes stamp_ms of (header or ros::Time::now()) and the raw header ns.
   const auto stamp_ms = pipeline::SourceStampMs(input.stamp_ns, static_cast<std::uint64_t>(ros_now_ns));
-  if (!pose_.AddImu(stamp_ms, data, &sanity_reason, input.stamp_ns, static_cast<std::uint64_t>(receipt_ns)))
-    ++imu_rejected_;
+  const bool accepted=pose_.AddImu(stamp_ms,data,&sanity_reason,input.stamp_ns,static_cast<std::uint64_t>(receipt_ns));
+  if(!accepted)++imu_rejected_;
+  if(config_.pipeline.tunnel_route.integrated_motion)
+    tunnel_motion_history_.AddYaw(input.stamp_ns,data.b_ImuReady?data.f32_Yaw_rad:NAN,accepted);
 }
 
 // Ported from Main src/Parser/Parser.cpp:519-543 (CANParser_Callback, common
 // branch) (8f93c22e). The raw CAN buffer write (:545-549) is not ported.
 void LidarRuntime::OnCan(const pipeline::CanInput& input, std::int64_t receipt_ns, std::int64_t ros_now_ns) {
+  std::lock_guard<std::mutex> input_commit(tunnel_motion_input_mutex_);
   const pipeline::CanData data = pipeline::CanFromInput(input);
   std::string sanity_reason;
   const auto stamp_ms = pipeline::SourceStampMs(input.stamp_ns, static_cast<std::uint64_t>(ros_now_ns));
-  if (!pose_.AddCan(stamp_ms, data, &sanity_reason, input.stamp_ns, static_cast<std::uint64_t>(receipt_ns)))
-    ++can_rejected_;
+  const bool accepted=pose_.AddCan(stamp_ms,data,&sanity_reason,input.stamp_ns,static_cast<std::uint64_t>(receipt_ns));
+  if(!accepted)++can_rejected_;
+  if(config_.pipeline.tunnel_route.integrated_motion)
+    tunnel_motion_history_.AddSpeed(input.stamp_ns,input.vx,accepted,input.vy);
 }
 
 // Ported from Main src/Parser/Parser.cpp:398-468 (GPSParser_Callback, common
@@ -182,7 +194,55 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   const auto map = pose_.MapAt(input.time, local);
   out.ego_speed_mps = local.st_CAN.f32_CurrentVel_MPS;
   BackFillAntenna(map, config_.pipeline.vehicle, &local);
+  if(config_.pipeline.tunnel.enabled && config_.pipeline.tunnel_route.original_pipeline && !map.valid) {
+    auto selected=std::make_shared<pipeline::TunnelCameraInput>();
+    if(tunnel_camera_calibration_) {selected->calibrated=true;selected->calibration=*tunnel_camera_calibration_;}
+    const auto& protection=config_.pipeline.tunnel_route.protection;
+    if(config_.fusion.views != "all" && camera_ && selected->calibrated && protection.enabled) {
+      ScanTimes now=times;
+      if(times.refresh_before_fusion)times.refresh_before_fusion(now);
+      const auto limit=static_cast<std::int64_t>(protection.max_time_offset_s*1e9);
+      const auto snapshot=camera_->Read(scan_stamp,limit,now.ros_now_ns,now.steady_now_ns);
+      const pipeline::fusion::CameraFrame* best=nullptr;
+      std::int64_t distance=limit+1;
+      if(snapshot.active)for(const auto& frame:snapshot.frames) {
+        const auto delta=std::llabs(frame.stamp_ns-scan_stamp);
+        if(delta<=limit && delta<distance) {best=&frame;distance=delta;}
+      }
+      if(best && camera_->Current(*best,now.ros_now_ns,now.steady_now_ns)) {
+        selected->available=true;selected->boxes=best->boxes;
+      }
+    }
+    if(config_.fusion.views=="all") {
+      selected->views.clear();selected->available=false;selected->calibrated=false;
+      ScanTimes now=times;if(times.refresh_before_fusion)times.refresh_before_fusion(now);
+      const auto limit=static_cast<std::int64_t>(protection.max_time_offset_s*1e9);
+      const auto snapshot=camera_?camera_->Read(scan_stamp,limit,now.ros_now_ns,now.steady_now_ns):pipeline::fusion::CameraSnapshot{};
+      for(const auto& c:calibrations_) {
+        pipeline::TunnelCameraView v;v.calibrated=true;v.calibration=c.second;v.common_projection=true;
+        auto found=snapshot.by_view.find(c.first);
+        const pipeline::fusion::CameraFrame* best=nullptr;
+        if(snapshot.gate_active&&found!=snapshot.by_view.end())for(const auto& f:found->second)
+          if(std::llabs(f.stamp_ns-scan_stamp)<=limit && (!best||std::llabs(f.stamp_ns-scan_stamp)<std::llabs(best->stamp_ns-scan_stamp)))best=&f;
+        if(best&&camera_->Current(*best,now.ros_now_ns,now.steady_now_ns)){v.available=true;v.boxes=best->boxes;}
+        selected->views.push_back(std::move(v));
+      }
+    }
+    input.tunnel_camera=std::move(selected);
+  }
+  const bool tunnel_motion_enabled=config_.pipeline.tunnel.enabled &&
+      config_.pipeline.tunnel_route.original_pipeline && config_.pipeline.tunnel_route.integrated_motion && !map.valid;
+  if(tunnel_motion_enabled) {
+    std::lock_guard<std::mutex> input_commit(tunnel_motion_input_mutex_);
+    const auto motion=tunnel_motion_history_.Between(tunnel_motion_anchor_stamp_,scan_stamp,
+        tunnel_motion_anchor_yaw_,local.st_IMU.f32_Yaw_rad,
+        pipeline::ScanFrame::SensorMount(config_.pipeline.vehicle).translation());
+    input.tunnel_motion=std::make_shared<tunnel_filter::EgoMotion>(motion);
+  } else tunnel_motion_anchor_stamp_=0;
   out.result = pipeline_.Process(input, local, map);
+  if(out.result.processed && tunnel_motion_enabled) {
+    tunnel_motion_anchor_stamp_=scan_stamp;tunnel_motion_anchor_yaw_=local.st_IMU.f32_Yaw_rad;
+  }
   out.processed = out.result.processed;
   if (!out.processed) {
     delivery_filters_.BeginFrame(false);
@@ -196,16 +256,20 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   // Without a camera source runCameraFusion is skipped; this equals Main with
   // no camera status/YOLO traffic, where the call leaves every class unchanged.
   if (config_.enable_camera_fusion) {
-    if (fusion_ && camera_) {
+    if ((fusion_ || multi_fusion_) && camera_) {
       ScanTimes now = times;
       if (times.refresh_before_fusion) times.refresh_before_fusion(now);
-      out.fusion = fusion_->Process(now.decision_ns, out.result.stamp_ns, out.result.context,
+      if(multi_fusion_)out.fusion=multi_fusion_->Process(now.decision_ns,out.result.stamp_ns,out.result.context,
+          out.result.objects,pipeline_.tracker().LastFrame(),*camera_,now.ros_now_ns,now.steady_now_ns);
+      else out.fusion = fusion_->Process(now.decision_ns, out.result.stamp_ns, out.result.context,
                                     out.result.objects, pipeline_.tracker().LastFrame(), *camera_,
                                     now.ros_now_ns, now.steady_now_ns);
       out.fusion_ran = true;
     }
+    pipeline_.FinalizeMotion(out.result);
     UpdateAABB(out.result.objects);
   }
+  if(!config_.enable_camera_fusion)pipeline_.FinalizeMotion(out.result);
   out.arrays = output_.Observed(out.result, out.result.objects);
   Audit(out);
   FilterDelivery(out);
@@ -294,7 +358,7 @@ void LidarRuntime::Audit(ScanOutput& out) const {
             }
             const auto& c=source->camera;
             const bool positive=filtering::PositiveCameraEvidence(frame.stamp_ns,c.camera_observation_ns,
-              fusion_?fusion_->consumer_epoch():0,c.camera_observation_epoch,c.class_miss_counter,
+              camera_epoch(),c.camera_observation_epoch,c.class_miss_counter,
               config_.delivery_preview.camera_age_ms,config_.fusion.max_time_offset_s*1e3);
             const auto group=pipeline::fusion_class::ObservedMissionGroup(c);
             decision.camera_observed_group=group;
