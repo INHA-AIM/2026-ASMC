@@ -28,8 +28,6 @@
   <group if="$(optenv ASMC_SHADOW_CONTACT_CLEARANCE false)">
     <param name="camera_bbox_lane_change/consumer_x_max" value="20.0" type="double"/>
     <param name="camera_bbox_lane_change/path_horizon" value="15.0" type="double"/>
-    <param name="camera_bbox_lane_change/contact_preferred_margin" value="0.0" type="double"/>
-    <param name="camera_bbox_lane_change/contact_early_adjacent" value="true" type="bool"/>
   </group>
   <!-- Trial-only preparation: the existing final arbitration cap applies to
        KEEP/FOLLOW/AVOID alike. A normal_cruise link cap is insufficient when a
