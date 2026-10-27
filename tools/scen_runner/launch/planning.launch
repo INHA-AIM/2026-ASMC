@@ -29,10 +29,11 @@
     <param name="camera_bbox_lane_change/consumer_x_max" value="20.0" type="double"/>
     <param name="camera_bbox_lane_change/path_horizon" value="15.0" type="double"/>
   </group>
-  <!-- Trial-only preparation speed: reuse the planner's typed route-link cap.
-       Does not change the GPS mode boundary or authorize early lane crossing. -->
+  <!-- Trial-only preparation: the existing final arbitration cap applies to
+       KEEP/FOLLOW/AVOID alike. A normal_cruise link cap is insufficient when a
+       visible obstacle selects another behavior. GPS ownership stays unchanged. -->
   <group if="$(optenv ASMC_SHADOW_APPROACH_CAP false)">
-    <param name="behavior_planner/normal_cruise/link_speed_caps_kph/A2256W000448" value="5.0" type="double"/>
+    <param name="behavior_planner/maximum_speed_kph" value="5.0" type="double"/>
   </group>
   <!-- The camera frame bridge consumes asmc_camera directly, independently of Main. -->
 </launch>

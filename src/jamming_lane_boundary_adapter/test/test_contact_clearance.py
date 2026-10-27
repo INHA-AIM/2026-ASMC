@@ -7,11 +7,19 @@ import subprocess
 import roslib.packages
 import rospy
 import rostest
+from morai_msgs.msg import EgoVehicleStatus
 spec=importlib.util.spec_from_file_location('legacy',str(Path(__file__).with_name('test_camera_bbox_lane_change.py')))
 legacy=importlib.util.module_from_spec(spec);spec.loader.exec_module(legacy)
 class ContactTest(unittest.TestCase):
     setUpClass=legacy.LaneChangeTest.__dict__['setUpClass']
-    feed=legacy.LaneChangeTest.feed
+    def feed(self,*args,**kwargs):
+        if not hasattr(self,'speed_pub'):
+            self.speed_pub=rospy.Publisher('/Ego_topic',EgoVehicleStatus,queue_size=1)
+            self.speed_value=1.0
+            def speed(_):
+                m=EgoVehicleStatus();m.header.stamp=rospy.Time.now();m.velocity.x=self.speed_value;self.speed_pub.publish(m)
+            self.speed_timer=rospy.Timer(rospy.Duration(.025),speed)
+        legacy.LaneChangeTest.feed(self,*args,**kwargs)
     following=legacy.LaneChangeTest.following
     stopped=legacy.LaneChangeTest.stopped
     status=legacy.LaneChangeTest.status
@@ -19,6 +27,7 @@ class ContactTest(unittest.TestCase):
         rospy.set_param('/camera_bbox_lane_change/contact_clearance_enabled',True)
         legacy.LaneChangeTest.setUp(self)
     def tearDown(self):
+        if hasattr(self,'speed_timer'):self.speed_timer.shutdown()
         legacy.LaneChangeTest.tearDown(self)
         rospy.delete_param('/camera_bbox_lane_change/contact_clearance_enabled')
     def test_recorded_drum_heading_has_feasible_candidate(self):
@@ -43,6 +52,13 @@ class ContactTest(unittest.TestCase):
         self.assertEqual(self.status()[1]['bbox_stop_suppressed'],'false')
         self.feed([0,3.5],box_x=7.,duration=.3)
         self.stopped('contact_target_path_blocked')
+    def test_actual_speed_must_be_low_and_fresh(self):
+        self.feed();self.speed_value=4.0;self.feed(duration=.3)
+        self.stopped('contact_actual_speed_above_trial_limit')
+        self.speed_value=1.0;self.feed(duration=.3);self.following()
+        self.speed_timer.shutdown();self.feed(duration=.5)
+        self.stopped('contact_actual_speed_unavailable')
+
     def test_contact_invalid_and_input_loss_remain_stops(self):
         self.feed()
         self.feed(bbox=False,duration=.8)

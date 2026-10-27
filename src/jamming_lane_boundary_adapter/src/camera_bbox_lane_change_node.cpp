@@ -12,6 +12,7 @@
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <geometry_msgs/PointStamped.h>
 #include <morai_msgs/CtrlCmd.h>
+#include <morai_msgs/EgoVehicleStatus.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/UInt8.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -231,6 +232,16 @@ std::string contact_decision = "disabled";
 unsigned contact_candidates = 0, contact_road_rejected=0, contact_collision_rejected=0;
 bool contact_geometry_ready = false;
 double contact_plan_wall_ms = 0.;
+// Competition CAN speed remains valid in GPS shadow; never use its zeroed map
+// pose. The geometric trial is limited to low ACTUAL speed, not just a command.
+ros::Time contact_speed_stamp;
+ros::SteadyTime contact_speed_receipt;
+double contact_actual_speed=std::numeric_limits<double>::quiet_NaN();
+void contactSpeedCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& m) {
+    contact_actual_speed=std::isfinite(m->velocity.x)?std::abs(m->velocity.x):std::numeric_limits<double>::quiet_NaN();
+    contact_speed_stamp=m->header.stamp;contact_speed_receipt=ros::SteadyTime::now();
+}
+
 ros::Subscriber bbox_subscriber;
 ros::Subscriber mode_subscriber;
 ros::Publisher reference_lane_publisher;
@@ -1067,6 +1078,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "contact_clearance_enabled", params.contact_clearance_enabled?"true":"false");
     addDiagnosticValue(status, "contact_decision", contact_decision);
     addDiagnosticValue(status, "contact_plan_wall_ms",std::to_string(contact_plan_wall_ms));
+    addDiagnosticValue(status, "contact_actual_speed_mps",std::isfinite(contact_actual_speed)?std::to_string(contact_actual_speed):"unavailable");
     addDiagnosticValue(status, "contact_candidates", std::to_string(contact_candidates));
     addDiagnosticValue(status, "contact_road_rejected", std::to_string(contact_road_rejected));
     addDiagnosticValue(status, "contact_collision_rejected", std::to_string(contact_collision_rejected));
@@ -1115,6 +1127,8 @@ void initializeRosInterface(ros::NodeHandle& nh) {
     ros_interface.target_pub = nh.advertise<geometry_msgs::PointStamped>(params.target_topic, 1);
     ros_interface.marker_pub = nh.advertise<visualization_msgs::MarkerArray>(params.markers_topic, 1);
     ros_interface.diagnostic_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(params.diagnostics_topic, 1);
+    static ros::Subscriber contact_speed_sub;
+    if(params.contact_clearance_enabled) contact_speed_sub=nh.subscribe("/Ego_topic",1,contactSpeedCallback);
     ros_interface.lane_sub = nh.subscribe(params.input_topic, params.contact_clearance_enabled?8:1, laneBoundaryCallback);
     ros_interface.stop_sub = nh.subscribe(params.emergency_stop_topic, 1, emergencyStopCallback);
     mode_subscriber = nh.subscribe("/planning/mode", 1, modeCallback);
@@ -1368,6 +1382,12 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
 std::string bboxStopReason() {
     // 차선 입력·경로·비상정지·변경 시간 제한은 별도 검사에서 계속 적용한다.
     if (ignoreBboxDuringLaneChange()) return "";
+    if(params.contact_clearance_enabled) {
+        const double speed_age=(ros::Time::now()-contact_speed_stamp).toSec();
+        if(contact_speed_stamp.isZero() || !std::isfinite(contact_actual_speed) || speed_age<-.05 || speed_age>.35 ||
+           (ros::SteadyTime::now()-contact_speed_receipt).toSec()>.35)return "contact_actual_speed_unavailable";
+        if(contact_actual_speed>1.6)return "contact_actual_speed_above_trial_limit";
+    }
     if(params.contact_clearance_enabled && (!contact_result || !contact_result->contact_projection_valid))
         return "contact_projection_unavailable";
     if (!change_state.bbox_valid) return change_state.bbox_error;
