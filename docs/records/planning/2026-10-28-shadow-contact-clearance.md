@@ -44,6 +44,9 @@ source/수신350ms를 별도로 적용한다. 이 서로 다른 계약을 모두
   후방0.790m, 횡 여유0.30m, 종 여유0.50m와 sampling 여유를 검사한다.
   영상 접점의 미관측 하류 영역은 도로 reference를 따라 점유로 둔다. 측정 local extent에는 이
   무한 하류 가정을 붙이지 않고, 현재 실제 발행 객체 전체를 함께 검사한다.
+- 영상 접점의 네 투영점을 볼록 사각형으로 보존한다. 원거리 꼭짓점의 횡 범위를 근거리까지
+  축 정렬 사각형으로 늘리지 않는다. 가장 먼 접점 이후의 미관측 깊이는 종전 보수적 점유를 유지한다.
+  순서가 잘못되거나 퇴화한 사각형은 무효다. 이는 전체 물체 깊이를 복원한 것이 아니다.
 - 경로는 가용 family support 안에서 차체 앞부분까지 검사한다. 도로 내부 보간 공백을 메우거나
   부족한15–20m를 임의 외삽하지 않는다. 근거리 후방 도로 검사는 기존 접선 근사를 유지한다.
 - 현재 차로의 중심 offset0/±0.05…±0.50m와 길이3/4/5/6/8/10/12m, 최대147개를 차로별로 검사한다.
@@ -89,6 +92,28 @@ source/수신350ms를 별도로 적용한다. 이 서로 다른 계약을 모두
 - r30: 시작점을 터널 쪽으로 옮겼으나 이미 GPS0인 곳이어서 기존 판제 준비 검사가 실패했다.
   가짜 위치나 과거 GPS로 준비를 통과시키지 않았다. 주행·회피 검증 표본이 아니다.
 
+- r33: near-start 수정 후 SUNNY 입구 plastic은 지원 범위17.91m가 있어도 모든 후보가 막혔다.
+  음영 제어 진입 시 접점은 약7.30–8.08m 앞이었다. 같은 결과의 local 배열에는 전방 plastic이 없고
+  뒤쪽 관측만 있었다. 영상 접점만으로 전체 물체 깊이가 해결된 것처럼 처리하지 않았다.
+- r34: FOGGY11 concrete의 실제 연속 support14.764m를 고정15m 요구 때문에 전부 버렸다.
+  `short-end-*` native fixture에서 수정 전 후보0개/road reference 누락, 수정 후 같은 hard margin으로
+  후보가 만들어진다. 실제 지원 범위에서 차체 전체 길이를 뺀 기존 sampling grid까지만 생성한다.
+- r35: NORMAL의 low-speed fallback이 터널 전에 거부됐다. JAMMING 개선의 실패/성공과 분리한다.
+- r36: valid-entry concrete는 고정15m 실패가 사라졌지만 가까워진 뒤 모든 경로가 막혔다.
+  계산 p95=3.146ms, native 접촉0/70조회. 이 경계는 여전히 미해결이다.
+- r37: 추가15cm 여유를 선호하는 후보는 concrete 정지를 해결하지 못했다(p95=3.305ms).
+- r38: 인접 차로를 일찍 우선하는 후보도 concrete에서 실행 가능한 인접 경로를 찾지 못했다.
+  두 선택 정책은 결과를 보존하고 최종 실행 코드·설정에서 제거했다. 원본 커밋과 run SHA로만 재현한다.
+- r39: 네 투영점 보존 후에도 SUNNY 입구 plastic은 약8m 앞에서 전체 경로가 막혔다.
+  p95=3.348ms, native 접촉0/49조회. 투영 표현 수정이 이 주행 실패까지 해결했다는 의미가 아니다.
+- r40: 불채택 선택 정책을 제거한 최종 후보도 분리 FOGGY11 drum의 `section_end`에 도달했다.
+  생성기 구간 시간98.873초, driver의 주행 허용/정리 창106.808초, native 접촉0/107조회.
+  새 계획1,647표본 p95=1.436ms·p99=1.856ms·최대2.383ms. local 미수신 정지 표본0이지만
+  projection 만료3·support 부족3·ego-mask 접점17표본은 남았다. 무정지 수락은 아니다.
+
+r28/r32의100.912/97.801초는 private driver의 주행 허용/정리 창이다. 정확한 생성기 구간 시간은
+각 `events.jsonl`의 `run_ended.elapsed_s`로 확인한다. 준비·정리 시간을 처리 성능이나 순수 주행 시간에 섞지 않는다.
+
 r23부터 분리 장면은 원래 정적 차량29를300m 옆으로 임시 이동하고, pose readback으로 위치·yaw를
 확인해 매번 복원한다. 원래 다중 객체 장면의 성공으로 집계하지 않는다. `fixture-events.jsonl`이 근거다.
 Ego·날씨·시간도 복원하고, 시험 소유 actor·프로세스만 종료한다. 원래 bridge/master는 유지한다.
@@ -115,6 +140,11 @@ r26의 동일 native 입력에서 차선 구간 검색을 대조했다. 이어 �
 근거는 `shadow-stop-fix-20261028-audit01/interpolation`에 저장했다.
 
 ## 참고한 기준과 사용하지 않은 것
+
+[Coulter, CMU-RI-TR-92-01, §4.1](https://publications.ri.cmu.edu/storage/publications/pub_files/pub3/coulter_r_craig_1992_1/coulter_r_craig_1992_1.pdf)의
+lookahead와 경로 수렴 관계를 대조했다. 짧은 후보 밖을 바라보던 추종점 선택을 수정했지만,
+1.5–4m 범위는 우리 저속 실험값이다. 논문이 이 차량·값의 안전성이나 성능을 입증한 것으로 인용하지 않는다.
+
 
 [Werling et al., ICRA2010](https://publikationen.bibliothek.kit.edu/1000022393)의 경로/시간 후보·
 끝점 조건과, [Autoware obstacle avoidance](https://autowarefoundation.github.io/autoware.universe_planning/pr-5562/planning/obstacle_avoidance_planner/)의

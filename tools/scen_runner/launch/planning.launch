@@ -35,6 +35,10 @@
        visible obstacle selects another behavior. GPS ownership stays unchanged. -->
   <group if="$(optenv ASMC_SHADOW_APPROACH_CAP false)">
     <param name="behavior_planner/maximum_speed_kph" value="5.0" type="double"/>
+    <!-- Matched-speed legacy/candidate comparison. The contact candidate
+         already caps these commands; legacy must not accelerate to20 on handoff. -->
+    <param name="camera_bbox_lane_change/target_speed_kph" value="5.0" type="double"/>
+    <param name="camera_bbox_lane_change/inferred_speed_kph" value="5.0" type="double"/>
   </group>
   <!-- The camera frame bridge consumes asmc_camera directly, independently of Main. -->
 </launch>

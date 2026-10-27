@@ -16,3 +16,9 @@ uses the same contiguous-support function as the classifier; the expected end
 is19.4756m and the unchanged road/vehicle/obstacle checks find a path. This is
 not a driving-success or independent geometry-GT fixture. Interior gaps and
 near starts beyond one0.25m sampling interval remain rejected.
+
+`short-end-*` preserves r34's exact input, where the shared observed support ends
+at14.764m. The former fixed15m requirement produced no road reference. Runtime
+now generates only to the existing grid point whose entire inflated vehicle is
+inside the paired support. It does not extrapolate to15m or relax road/curvature
+checks. `short-end-provenance.json` preserves the source and original failure.
