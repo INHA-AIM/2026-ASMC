@@ -9,6 +9,7 @@
 namespace asmc::lidar::pipeline {
 struct TunnelProtectionConfig {
   bool enabled = true;
+  bool multiview = false;
   double max_time_offset_s = .05;
   float box_margin_ratio = .10f, box_margin_px = 8.f;
   float depth_vehicle_m = 6.f, depth_person_m = 1.5f;
@@ -47,10 +48,14 @@ struct TunnelRouteConfig {
     params.wall_remove_distance_m = .25f;
   }
 };
-struct TunnelCameraInput {
+struct TunnelCameraView {
+  bool common_projection=false; // M1 uses the canonical optical-axis transform
   bool calibrated = false, available = false;
   camera::Calibration calibration;
   std::vector<camera::Box> boxes;
+};
+struct TunnelCameraInput : TunnelCameraView {
+  std::vector<TunnelCameraView> views; // empty preserves the front rollback path
 };
 struct TunnelRouteOutput {
   CloudPtr leveled{new Cloud}, filtered{new Cloud}, centroids{new Cloud};
