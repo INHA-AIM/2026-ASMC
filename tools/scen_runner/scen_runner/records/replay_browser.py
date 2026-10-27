@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from scen_runner.records.collision_archive import SAVE_ROOT,SCHEMA,STAGNATION_SCHEMA,VERSION,load_collision,saved_event
+from scen_runner.records.collision_archive import SAVE_ROOT,SCHEMA,STAGNATION_SCHEMA,TRIAL_SCHEMA,VERSION,load_collision,saved_event
 
 
 @dataclass(frozen=True)
@@ -33,9 +33,10 @@ class ReplayRun:
     def label(self):
         stamp=datetime.fromisoformat(self.started).strftime('%Y-%m-%d %H:%M:%S')
         collisions=sum(c.event_type=='collision' for c in self.cases)
-        stagnations=len(self.cases)-collisions
+        trials=sum(c.event_type=='trial' for c in self.cases)
+        stagnations=len(self.cases)-collisions-trials
         counts=f'충돌 {collisions}건' if not stagnations else f'충돌 {collisions}건 · 정체 {stagnations}건'
-        return f'{stamp} · {counts}'
+        return f'{stamp} · {counts}'+(f' · 장면 {trials}건' if trials else '')
 
 
 def saved_runs(root=SAVE_ROOT):
@@ -50,7 +51,7 @@ def saved_runs(root=SAVE_ROOT):
             if path.name=='run.json':continue
             try:
                 record=json.loads(path.read_text(encoding='utf-8'))
-                if record.get('schema') not in (SCHEMA,STAGNATION_SCHEMA) or record.get('version')!=VERSION:
+                if record.get('schema') not in (SCHEMA,STAGNATION_SCHEMA,TRIAL_SCHEMA) or record.get('version')!=VERSION:
                     raise ValueError('지원하지 않는 기록 형식')
                 if not record.get('replay_available') or not record.get('replay'):continue
                 kind,event=saved_event(record);stamp=event['time']['kst']
@@ -60,7 +61,7 @@ def saved_runs(root=SAVE_ROOT):
                 for section,definition in sorted(record['replay'].items()):
                     if not definition.get('baseline'):continue
                     models=sorted({r['model'] for r in record.get('all_section_settings',())
-                                   if r.get('section')==section and (kind=='stagnation' or r.get('native_id') in ids)})
+                                   if r.get('section')==section and (kind!='collision' or r.get('native_id') in ids)})
                     cases.append(ReplayCase(path,section,stamp,record['episode'],', '.join(models),
                                             environment.get('weather'),environment.get('hour'),kind))
                 started=run_start if started is None else min(started,run_start)
