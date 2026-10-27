@@ -1,0 +1,104 @@
+# S1 정지 수정 실험: 영상 접점과 local 관측의 제한된 경로 검사
+
+2026-10-28 KST, PR #125, `fix/shadow-stop-reproduction`.
+사용자가 기존 6회 재현 이후 **4시간의 자율 수정·반복 주행과 S1의 D 공간 예외**를 승인했다.
+[첫 6회 기록](2026-10-28-shadow-scenario-reproduction.md)은 수정 전 결과로 보존한다.
+이 문서는 후속 수정 실험이다. 일반 `autonomy.launch`의 운영 기본값은 그대로이고,
+새 동작은 시나리오의 내부 실험 설정으로만 켠다. 전체 음영 주행 수락과 동일하지 않다.
+
+## 수정한 원인과 경계
+
+| 원인 | 변경 | 유지한 제한 |
+|---|---|---|
+| 가까운 BOTH 접점과 먼 DEFERRED_FAR가 함께 있으면 전역 정지 | 정확히 대응한 family 안에서 차량 footprint와 접점 점유를 검사 | far/UNKNOWN을 삭제하지 않음. 모르는 객체 깊이는 관측 도로를 따라 하류 점유로 유지 |
+| family의 observed/inferred가 연속인데 첫 조각의 끝만 지평으로 사용 | support 구간을 연결하되 INVALID gap은 넘지 않음 | 실제 두 차로·소비자 가용 길이의 교집합 사용 |
+| 분류기가 사용한 family가 소비자의 최신값으로 교체됨 | stamp로 대응하는 최대8개 family cache와 queue8 | 같은 frame을 못 찾으면 정지. 최신 family를 대신 사용하지 않음 |
+| 변경 길이를 재설정하며 끝점 방향이 부정확 | 기존 quintic 경로의 시작 기울기 Hermite basis 수정, 전체 shift 후보 분리 | 기존 기본 경로의 partial-shift 계산 유지. 도로·곡률·차체 여유 검사 유지 |
+| 차로 중앙선을 걸친 객체를 반드시 전체 차로 변경으로 회피 | 충돌 검사된 현재 차로 내 경로를 우선 | 현재 차로가 막히면 기존 상태 머신의 인접 차로 확인·변경 사용 |
+| 가까운 drum의 접점이 ego mask에 가려짐 | 동일 시각의 실제 발행 local OBB를 유일한 기존 클래스/투영 대응일 때 사용 | 빈 결과·예측 track·중복 대응·오래된 관측은 영상 불확실성을 해소하지 못함 |
+| 실험 감속값이 KEEP에만 적용돼 회피 중 약25km/h 진입 | 기존 Behavior의 최종 `maximum_speed_kph`를 시험에서5로 제한, 실제 CAN 속도도 검사 | GPS가0이어도 CAN 속도만 사용. 무효 위치를 복원하지 않음 |
+| 60초 이후 bag이 닫히기 전에 첫 split만 분석 | recorder 자식의 종료/전체 inventory 검증 후 분석 | 이미 동결한 원본·부분 분석은 덮어쓰지 않고 별도 재분석으로 교정 |
+
+모델, LiDAR 검출·추적·fusion·HD맵·터널 임계값은 수정하지 않았다.
+차로 변경 pause/진행 timeout, freshness350ms, selector watchdog250ms를 늘리지 않았다.
+새 제어 발행자나 두 번째 tracker·운동 분류기를 만들지 않았다.
+
+## 입력과 경로의 의미
+
+- 이미지 하단 접점은 실제 선택된 영상 시각 IMU 평면으로 base_link에 역투영한다.
+  객체의 전체 3D 크기나 독립 깊이 GT가 아니다. 가림·잘린 하단·잘못된 projection은 무효다.
+- local은 `/perception/lidar/tracks_local`의 기존 atomic 관측을 읽는다. base_link·session·generation·
+  config/calibration ID, source/수신 freshness350ms, 미래50ms, 영상–scan 차이±50ms를 검사한다.
+  뷰별 카메라 inference를 새로 실행하거나 fusion 확인 횟수를 증가시키지 않는다.
+- 관측 OBB8코너의 XY envelope에25cm를 더한다. 이것은 현재 관측 점의 extent이며 가려진 전체 물체의
+  정답 형상이 아니다. `OBSERVED`, miss0, 실제 지지점3개 이상과 유한 크기/코너를 요구한다.
+  발행된 다른 local 객체도 클래스와 무관하게 충돌 검사에 포함한다.
+- 이미지↔기존 local 클래스 이름 일치, 현재 카메라 보정의 원본1280×720 투영 IoU≥0.25,
+  양방향 유일 대응일 때만 이미지 접점을 측정 local footprint로 대체한다.
+  모든 local 객체를 새 클래스 근거로 사용하지 않는다. 빈 local이 unresolved bbox를 지우지 않는다.
+- 그림상 같은 시각처럼 보이더라도 ego motion/deskew를 구현한 것은 아니다. family–image≤150ms와
+  image–local≤50ms의 제한된 시간차를 저속 실험에서 허용한다. 물리적 정합 정확도 보장은 별도다.
+- 같은 기존 Pure Pursuit·차로 변경 상태 머신을 사용한다. 기존 차체 폭1.892m, 전방3.845m,
+  후방0.790m, 횡 여유0.30m, 종 여유0.50m와 sampling 여유를 검사한다.
+  영상 접점의 미관측 하류 영역은 도로 reference를 따라 점유로 둔다. 측정 local extent에는 이
+  무한 하류 가정을 붙이지 않고, 현재 실제 발행 객체 전체를 함께 검사한다.
+- 경로는 가용 family support 안에서 차체 앞부분까지 검사한다. 도로 내부 보간 공백을 메우거나
+  부족한15–20m를 임의 외삽하지 않는다. 근거리 후방 도로 검사는 기존 접선 근사를 유지한다.
+- 후보 수·탈락 원인·실제 새 계획 계산 wall time을 diagnostics로 제공한다. 이전 계산값을
+  입력 정지 동안 반복 샘플링하여 계산 p95를 부풀리지 않는다.
+
+## 재현 자료와 결과 해석
+
+후속 run 접두사는 `shadow-stop-fix-20261028-`이고, D의 `artifacts/<run-id>`가 정본이다.
+각 run은 실행 전 소스 revision·scene/config SHA·용량 상한을 등록했다. 기록 용량 상한은3GiB,
+수집 중 비상 잔여 공간은2GiB다. 예외는 사용자 승인 S1에만 적용했고 저장 정책 파일은 바꾸지 않았다.
+
+- r07–r17: 접점 지평·정확한 family 대응·경로 수학·차체 전체 검사를 대조한 실패 자료.
+- r12: SUNNY plastic을 지나갔지만 배경 차량29 앞에서 정지. 전체 구간 통과가 아니다.
+- r18: FOGGY concrete를 지나갔지만 배경 차량29 앞에서 정지. 전체 구간 통과가 아니다.
+- r19/r20: 가려진 drum과 현재 local OBB의 유일 대응을 확인했으나 중간 경로가 막혔다.
+- r13–r21의 일부 진입 실제 속도는 약6.8m/s였다. KEEP-only 감속을5km/h 진입으로 잘못 해석하면 안 된다.
+- r22: 전 행동 최종5km/h cap을 적용해 실제 약1.36m/s로 진입, drum을 지나간 뒤 배경 차량29 앞 정지.
+- r23: 배경29를 일시 이동한 분리 장면에서 불필요한 전체 차로 변경 후 경로 막힘/30초 pause watchdog.
+  같은 실패 geometry에서 짧은3/4/5m 후보도 통과하지 못했다. 이 실패를 해결된 것으로 표시하지 않는다.
+- r24: 현재 차로 우선에서도 좁은 경로가 후보 격자 사이에 빠졌다. 같은 native C++ 검사에서
+  offset−0.35m/길이3m는 기존 안전 여유로 통과했다. 작은 Git fixture로 보존했다.
+
+r23부터 분리 장면은 원래 정적 차량29를300m 옆으로 임시 이동하고, pose readback으로 위치·yaw를
+확인해 매번 복원한다. 원래 다중 객체 장면의 성공으로 집계하지 않는다. `fixture-events.jsonl`이 근거다.
+Ego·날씨·시간도 복원하고, 시험 소유 actor·프로세스만 종료한다. 원래 bridge/master는 유지한다.
+
+원태 생성기의 접촉 판정은 소유 actor를 대상으로 한다. 추가 native query 기록에는 배경 객체 접촉도
+담지만 저빈도/변경 시 샘플이며 연속 무충돌 GT가 아니다. `/CollisionData`의 type−1/id0 상시 sentinel은
+충돌로 세지 않고 별도 미확정 수량으로 남긴다. 종료 시 `Channel closed!`도 기록에서 삭제하지 않는다.
+GPS 무효 때 `/Ego_topic.position`의0 좌표로 주행 진척을 계산하지 않는다.
+
+r10의 동결 manifest는 두 번째 split을 빠뜨렸고 r07–r17의 일부 첫 요약은 첫 split만 읽었다.
+원본은 보존했다. `shadow-stop-fix-20261028-audit01/reanalysis`의 별도 분석과 r17의
+`analysis-complete`를 사용한다. r18부터 종료를 기다리는 소유 프로세스 실행기로 재검사했다.
+토픽 하나에 세 카메라가 교차 발행한 stamp는 뷰/session/generation별로 검사하며,
+왼쪽 stamp를 앞 카메라 stamp와 비교해 역행으로 세지 않는다.
+
+## 참고한 기준과 사용하지 않은 것
+
+[Werling et al., ICRA2010](https://publikationen.bibliothek.kit.edu/1000022393)의 경로/시간 후보·
+끝점 조건과, [Autoware obstacle avoidance](https://autowarefoundation.github.io/autoware.universe_planning/pr-5562/planning/obstacle_avoidance_planner/)의
+reference/객체/차체 제한 분리를 대조했다. 현재 구현은 기존 경로 생성기의 제한된 후보 검사이며,
+논문의 전체 최적 궤적 알고리즘을 이식하거나 그 논문의 성능을 재현했다는 의미가 아니다.
+[Frustum PointNets](https://stanford.edu/~rqi/frustum-pointnets/)와
+[Autoware projection fusion](https://autowarefoundation.github.io/autoware_universe/main/perception/autoware_image_projection_based_fusion/)은
+2D 검출과 실제3D 관측을 연결할 때의 깊이·대응 한계를 확인하는 참고다. 새 학습 모델은 사용하지 않았다.
+
+## 배포와 남은 범위
+
+- 새 실험 동작은 기본 OFF다. [실행 안내](../../../tools/scen_runner/docs/shadow-recording.md)의 실험
+  환경값을 scenario planning supervisor 시작 전에 지정한다. 일반 autonomy 명령은 종전 동작이다.
+- **private `lane_boundary_adapter/CameraBBoxLaneResult` MD5가 바뀐다.** classifier·follower·dashboard와
+  관련 소비자를 같은 소스로 재빌드·재시작한다. 공용 `asmc_msgs`는 변경하지 않았다.
+  옛 bag은 rosbag의 내장 정의로 오프라인 분석하거나 당시 revision에서 재생한다.
+- `contact_clearance_enabled=false`, `local_contact_support_enabled=false`, `contact_local_required=false`가
+  복구 경로다. scenario supervisor를 종료하고 세 실험 환경값을 해제한 뒤 다시 시작한다.
+- `asmc_planner/src/jamming` 흡수, 일반 Frenet/MPC의 local 입력 경계, 벽 통로·출구 복귀,
+  ego motion, 얇은 객체 복구와 정적 semantic 보조는 이번 실험과 분리된 후속이다.
+- 좁은 후보가 존재한다는 오프라인 결과만으로 제어기가 그 경로를 추종하거나 전체 구간을 통과한다고
+  인정하지 않는다. 실제 반복 주행·충돌 근거·진척·제어 공급을 함께 보고 기본 승격을 판단한다.

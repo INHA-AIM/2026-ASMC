@@ -102,7 +102,45 @@ Source/header는 원문대로 보존하며 ROS receipt와 monotonic 시간을 �
 
 ## 현재 적용 범위
 
-이 기능은 시험·재현 도구다. 인지 모델, bbox confidence/contact 기준, family freshness,
-차로 변경 timeout과 판제 행동은 변경하지 않는다. local LiDAR는 함께 녹화하지만
-현재 bbox 음영 제어기가 local OBB를 회피 입력으로 소비하게 바뀐 것은 아니다.
+기록 기능 자체는 시험·재현 도구이며 행동을 변경하지 않는다. 아래 S1 수정 후보를 명시적으로
+선택한 경우에만 local OBB와 접점 기반 경로 검사가 활성화된다. 운영 기본은 기존 bbox 방식이고,
+모델·bbox confidence·family freshness·차로 변경 timeout은 두 설정에서 유지한다.
 실제 실패와 후속 단위는 [음영 판제 계획](../../../docs/architecture/shadow-planning-refactoring.md)을 따른다.
+
+## S1 수정 후보를 별도로 실행
+
+후속4시간 실험에서는 동일한 제어기 안에 제한된 clearance 후보를 추가했다.
+일반 `autonomy.launch`는 그대로이며, 아래 환경값을 **scenario planning 실행기 시작 전**에 지정할 때만
+영상 접점·local 관측·저속 확인을 사용한다. 외부 판제와 중복 실행하지 않는다.
+
+```bash
+cd /root/ws
+source devel/setup.bash
+ASMC_SHADOW_CONTACT_CLEARANCE=true \
+ASMC_SHADOW_LOCAL_CONTACT=true \
+ASMC_SHADOW_APPROACH_CAP=true \
+./tools/scen_runner/run_planning.sh
+```
+
+세 값은 하나의 시험 프로필로 함께 사용한다. 기존 시나리오 실행 명령에서 준비·재현·녹화를 진행한다.
+이 프로필은 최종 Behavior 속도 cap5km/h를 적용하므로 진입부 일반 주행도 느려진다.
+그것은 대회 속도 정책의 운영 기본값 변경이 아니다. 실제 CAN 속도도 별도로 확인하고,
+local 관측이 없거나 잘못된 경우 진행하지 않는다. local은 GPS 무효를 이유로 map으로 위장하지 않는다.
+
+**이 버전은 private `CameraBBoxLaneResult` 정의가 바뀐다.** 실행 중인 사용자의 stack을 중복 시작하지 말고,
+같은 소스로 빌드한 classifier/follower/dashboard를 함께 사용한다. 공용 `asmc_msgs` MD5는 유지한다.
+
+```bash
+cd /root/ws
+./scripts/build_ws.sh -j2 -l2 -DCATKIN_WHITELIST_PACKAGES=""
+source devel/setup.bash
+```
+
+복구는 시험 실행기를 정상 종료하고, 세 환경값 없이 기존 `run_planning.sh` 또는 일반 autonomy를
+다시 시작하는 것이다. 이미 실행 중인 노드에 `rosparam set`만 보내서는 생성자 설정이 바뀌지 않는다.
+새 사용자용 shell wrapper나 별도 제어 노드는 없다.
+
+분석은 recorder가 모든 split을 닫고 manifest의 파일/크기 목록이 실제 bag과 일치할 때만 시작한다.
+판정 비용은 해당 주기에 실제 계획한 표본만 집계하고, 세 카메라 stamp는 뷰/session/generation별로 비교한다.
+추가 native 접촉 기록은 배경 actor도 포함하며 종료 query 오류도 보존한다. 이 기록은 독립 연속 GT와 다르다.
+수정별 성공·실패와 복구 경계는 [S1 수정 결과](../../../docs/records/planning/2026-10-28-shadow-contact-clearance.md)를 따른다.
