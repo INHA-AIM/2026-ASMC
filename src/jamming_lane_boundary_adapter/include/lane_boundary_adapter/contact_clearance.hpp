@@ -18,6 +18,15 @@ inline double nearReferenceX(double first_x,double nominal=1.) {
   return std::isfinite(first_x) && first_x<=nominal+kNearSampleAllowanceM ?
       std::max(first_x,nominal):std::numeric_limits<double>::quiet_NaN();
 }
+inline double contiguousSupport(std::vector<std::pair<double,double>> intervals) {
+  std::sort(intervals.begin(),intervals.end());double end=0.;bool started=false;
+  for(const auto& span:intervals){
+    if(!std::isfinite(span.first)||!std::isfinite(span.second)||span.second<=span.first)return 0.;
+    if(!started){if(!std::isfinite(nearReferenceX(span.first)))break;end=span.second;started=true;}
+    else if(span.first<=end+1e-4)end=std::max(end,span.second);
+    else break; // interior INVALID remains a hard split.
+  }return end;
+}
 struct Point { double x=0, y=0; };
 struct Bounds { double xmin=0, xmax=0, ymin=0, ymax=0; };
 struct Vehicle { double front=3.845,rear=.790,half_width=.946,lateral_margin=.30,longitudinal_margin=.5; };
