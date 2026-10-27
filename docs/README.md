@@ -16,6 +16,7 @@
 | 음영구간 차선·판제 연결 | [카메라→판제](handoffs/camera-to-planning.md), [판제 운영](operations/planning-control.md) |
 | 공용 메시지·좌표·시간 확인 | [계약 목록](contracts/README.md), [센서 원본/수신 시각](architecture/bridge-sensor-timing.md), [IMU 지면 투영](architecture/camera-imu-projection.md) |
 | 인지·판제 좌표계와 IMU 공통화 후속 검토 | [현행 경계·pose 차이·단계별 리팩토링 후보](architecture/perception-coordinate-refactoring.md) — 판제 전환 기반 마련 이후 착수 |
+| LiDAR·fusion 개선의 참고 논문과 구현 | [선별 baseline·Autoware·적용 조건](../src/asmc_lidar/docs/improvement-milestones.md#우선-참고할-기준선과-적용-조건), [과거 실측과 한계](records/lidar/2026-10-27-research-integration.md) |
 | 대회 입력·객체 범위 확인 | [대회 환경](competition/README.md), [에셋과 라벨](competition/obstacle-assets-and-labels.md) |
 | 데이터 수집·라벨·재현 | [데이터 준비](operations/data-preparation.md), [데이터 계약](contracts/dataset-labeling-split.md), [bag 평가](operations/rosbag-evaluation.md) |
 | 실험 결과·실패 근거 확인 | [기록 목록](records/README.md) |

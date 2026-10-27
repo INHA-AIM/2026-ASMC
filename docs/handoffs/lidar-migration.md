@@ -38,6 +38,8 @@ asmc_camera → /perception/camera/objects/observations → asmc_lidar
 vehicle/dynamic_obstacle 매칭은 보호한다. LiDAR 속도 판정만으로 보호하지 않는다.
 
 단위별 선행 조건·완료 기준·고전 기법 후보는 [M0–M5 개선 계획](../../src/asmc_lidar/docs/improvement-milestones.md)이 정본이다.
+[참고 논문·Autoware/PCL 구현 목록](../../src/asmc_lidar/docs/improvement-milestones.md#우선-참고할-기준선과-적용-조건)에서
+M3의 Autoware shape estimation과 M4의 tracker 참고를 구분한다.
 [연구 브랜치 선별 통합](../records/lidar/2026-10-27-research-integration.md)은 과거 근거 보존이며 새 운영 성과가 아니다.
 
 ## GPS 없는 터널 개선 원칙

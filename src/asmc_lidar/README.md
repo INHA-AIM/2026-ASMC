@@ -5,6 +5,8 @@ ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 
 안승현은 **3뷰 fusion·HD맵·카메라 연결**, 손재호는 **터널 통합·관측 위치/OBB·추적·속도·운동 상태**를 진행한다.
 세부 순서와 인수 기준은 [M0–M5 개선 계획](docs/improvement-milestones.md)을 따른다. 좌표·시간·공용 계약과 판제 전환은 공동 확인한다.
 
+- [참고 논문·Autoware/PCL 구현과 적용 조건](docs/improvement-milestones.md#우선-참고할-기준선과-적용-조건) — 문헌 검토·구현 참고·로컬 실측을 구분한다.
+
 - [현재 판제 실행·이식 기능·검증·복구](docs/planning-runtime.md) — 구 Main의 적용 속도/4단계 운동·관측 품질과 직접 소비 연결. 고정 시설물/구역 blacklist 제거.
 - [판제 전환 기반·구 기능 대조·다음 작업](docs/cutover-foundation.md) — PR #108 당시 대조를 보존. 현재 구현은 위 실행 기준선, 구 실행 폐기 기록과 별도의 터널 개선 목록을 제공한다.
 - [재호의 PR #104 인수 시작](../../docs/records/lidar/migration-through-pr111.md#재호의-pr-104-인수-시작) · [담당별 다음 작업](docs/migration-tasks.md#공동-개발-인수와-우선-작업)

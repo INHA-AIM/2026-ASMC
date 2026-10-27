@@ -79,19 +79,57 @@ M4는 안정된 M3 관측에 대해 연관 오류면 covariance 기반 gate, mis
 
 ## 우선 참고할 기준선과 적용 조건
 
-| 우선 | 참고 기준선 | 현재 코드에 적용할 부분과 한계 |
-|---|---|---|
-| M1 | [EagerMOT 공식 구현](https://github.com/aleksandrkim61/EagerMOT) | 2D/3D 관측의 연관·한 센서만 있을 때의 근거 관리 참고. 기존 거대 군집을 점 단위로 분리하는 기법은 아님. 전체 tracker 이식은 보류 |
-| M1 이후 혼입이 남을 때 | 기존 E8 box + 깊이/연결 지지점 후보 | 과거 scan64의 배경 혼입 감소는 가능성 근거. 최근접 성분이 항상 객체가 아님. 점/이웃 탐색 상한·원본 index·unknown 보존부터 구현해야 함 |
-| M3 | [L-shape 기반 Autoware shape estimation](https://github.com/autowarefoundation/autoware_universe/blob/main/perception/autoware_shape_estimation/README.md) | 이미 있는 L-shape의 reference yaw·shape·실패 보존을 대조. 규칙 기반 경로만 참고하며 ROS2/PointNet 전체 도입 아님 |
-| M4 | [Probabilistic 3D MOT](https://github.com/eddyhkchiu/mahalanobis_3d_multi_object_tracking) | residual과 covariance가 맞는지 확인 후 Mahalanobis gate 대조. 불확실성 수치 없이 gate만 추가하지 않음 |
-| M4 | [SimpleTrack](https://github.com/tusen-ai/SimpleTrack) | 관측 확인·miss 유지/종료·재관측을 분리해 검토. 전체 검출기/추적기 교체 대신 재현된 규칙 하나씩 대조 |
-| 조건부 | [PCL Conditional Clustering](https://pointclouds.org/documentation/tutorials/conditional_euclidean_clustering.html), [depth_clustering](https://github.com/PRBonn/depth_clustering) | 실제 표면 혼입이 남을 때만 군집 대조. 다른 점을 통해 연결될 수 있고, 센서 투영·원본 index와 계산 비용 검증 필요 |
+이 절은 팀이 공유할 **선별 참고 목록의 정본**이다. 개인 연구 목록 전체를 의존성이나 필수 과제로
+옮기지 않는다. 논문은 방법의 근거, Autoware/PCL은 구현 참고, 우리 갤러리는 제한된 로컬 실측으로
+구분한다. 아래 문헌·공식 구현은 2026-10-27 확인했으며, 외부 전체 알고리즘을 우리 bag에 새로
+이식·검증한 상태가 아니다. 실제 이식 시 사용한 외부 revision·라이선스·변경 지점을 기록한다.
 
-FEC/FastPoly는 각각 군집/연관 계산이 병목일 때, Poly-MOT는 관측이 정상인데 운동 모델이 틀릴 때,
-Patchwork++는 지면 실패가 입증됐을 때만 검토한다. 지면·벽·군집·tracker 전체 교체를 기본 과제로
-두지 않는다. 학습 Plan B(CenterPoint-Pillar)와 Plan A(HARP 계열+영상 semantic)는 이 개선 이후
-고전 처리의 한계가 남고 도메인 GT·GPU 예산을 확보할 때 별도 실험한다.
+### 먼저 읽고 부분 대조할 논문
+
+| 연결 단위 | 논문·발표 / 원문·공식 구현 | 우리 코드에서 대조할 부분 |
+|---|---|---|
+| M1 | **EagerMOT: 3D Multi-Object Tracking via Sensor Fusion**, ICRA2021. [논문](https://arxiv.org/abs/2104.14682) · [공식 코드](https://github.com/aleksandrkim61/EagerMOT) | 2D/3D 관측 연결·한 센서만 있을 때의 근거 관리. 거대 군집의 점 분리 기법은 아니며 전체 tracker 이식은 보류 |
+| M3 | **Efficient L-Shape Fitting for Vehicle Detection Using Laser Scanners**, IV2017. [저자 기관 논문](https://publications.ri.cmu.edu/efficient-l-shape-fitting-for-vehicle-detection-using-laser-scanners) | 이미 있는 L-shape의 fitting 기준·가시 면·위치 기준점 대조. L-shape 신규 도입으로 설명하지 않음 |
+| M4 | **Probabilistic 3D Multi-Object Tracking for Autonomous Driving**, arXiv2020. [논문](https://arxiv.org/abs/2001.05673) · [공식 코드](https://github.com/eddyhkchiu/mahalanobis_3d_multi_object_tracking) | residual·covariance 검증 후 Mahalanobis gate 대조. 학습 통계·좌표를 확인하지 않은 gate 강화는 금지 |
+| M4 | **SimpleTrack: Understanding and Rethinking 3D Multi-object Tracking**, ECCVW2022. [논문](https://arxiv.org/abs/2111.09621) · [공식 코드](https://github.com/tusen-ai/SimpleTrack) | 관측 확인·miss 유지/종료·재관측을 분리. 재현된 lifecycle 규칙 하나씩 대조 |
+
+SimpleTrack는 arXiv2021 공개·ECCVW2022 발표이며 proceedings 출판 시점과 구분한다.
+Probabilistic 3D MOT는 NeurIPS2019 워크숍 nuScenes 챌린지 방법을 기술한2020 논문으로,
+학습 feature를 사용하는 Multi-Modal 후속과 혼동하지 않는다.
+
+### Autoware와 PCL — 공식 구현 참고
+
+**Autoware는 제외하지 않는다. M3의 우선 구현 참고이며 M4에서도 필요한 부분을 읽는다.**
+Autoware 전체를 하나의 논문 또는 이미 도입한 baseline으로 표시하지 않고 아래 모듈을 지정한다.
+
+| 연결 단위 | 공식 구현 | 적용 후보·제한 |
+|---|---|---|
+| **M3 · 우선** | **[Autoware shape estimation](https://github.com/autowarefoundation/autoware_universe/blob/main/perception/autoware_shape_estimation/README.md)** | 규칙 기반 L-shape, 참조 yaw/size를 이용한 형상 추정·보정·유효성 검사. 현재 관측 중심·OBB 중심·KF 기준점과 대조하며 PointNet/ROS2 스택을 함께 도입하지 않음 |
+| **M4 · 참고** | **[Autoware multi-object tracker](https://github.com/autowarefoundation/autoware_universe/blob/main/perception/autoware_multi_object_tracker/README.md)** | class별 연관 gate·운동 모델·크기 관리 설계. 현 CA/Hungarian을 즉시 교체하거나 상대/절대속도 계약을 바꾸지 않음 |
+| M2 이후 혼입이 남을 때 | [PCL Conditional Euclidean Clustering](https://pointclouds.org/documentation/tutorials/conditional_euclidean_clustering.html) · [평면 추정](https://pointclouds.org/documentation/tutorials/planar_segmentation.html) | 연결 조건·실제 지지 범위의 표면 분리. 다른 점을 통한 우회 연결·법선 비용·실물 손실 검사. 평면 전체를 무조건 삭제하지 않음 |
+
+Autoware의 클래스별 형상 거부·크기 기본값을 우리16종/3그룹에 그대로 복사하지 않는다.
+미확정 객체·부분 관측의 충돌 기하 보존, yaw 모호성, 참조 형상을 오래 유지하는 오류를 따로
+검사한다. shape/연관 정책의 부분 대조이지 공용 메시지나 Noetic 실행 구조 교체가 아니다.
+
+### 실패 원인이 확인될 때만 볼 후보
+
+| 후보 / 원문·공식 구현 | 착수 조건과 우선순위 |
+|---|---|
+| 기존 E8 box + 깊이/연결 지지점 후보 · [과거 실측](../../../docs/records/lidar/2026-10-27-research-integration.md#수치를-해석할-때) | M1 이후 배경 혼입이 남을 때. 최근접 성분이 항상 객체가 아니므로 점/이웃 탐색 상한·원본 index·unknown 보존부터 구현 |
+| **depth_clustering**, IROS2016/PFG2017. [공식 코드·논문 목록](https://github.com/PRBonn/depth_clustering#related-publications) | range-image 각도/깊이 연결 대조. MORAI VLP-16 투영·raw index·과분할 확인 후 사용 |
+| **TRAVEL / AOS**, RA-L2022. [논문](https://arxiv.org/abs/2206.03190) · [공식 코드](https://github.com/url-kaist/TRAVEL) | 지면 전체 교체 대신 객체 군집 부분의 혼입/분리 대조. 과거 로컬 검토 기록을 현 runtime 수락으로 승격하지 않음 |
+| **AB3DMOT**, IROS2020/ECCVW2020. [공식 코드·논문](https://github.com/xinshuoweng/AB3DMOT) | 동일 OBB sequence에 대한 단순 KF/Hungarian 대조군. 현재와 중복이 많아 전면 교체는 후순위 |
+| **FEC: Fast Euclidean Clustering**, Drones2022. [저자 페이지·논문](https://yizhenlao.github.io/FEC/) · [공식 코드](https://github.com/YizhenLAO/FEC) | 군집 계산이 실측 병목일 때. 빨라지는 것과 벽/객체가 정확히 분리되는 것은 별도 |
+| **Poly-MOT**, IROS2023. [논문](https://arxiv.org/abs/2307.16675) · [공식 코드](https://github.com/lixiaoyu2000/Poly-MOT) | 관측은 정상인데 회전·class별 운동 모델이 원인일 때. 불안정한 class/yaw를 강제 확정하지 않음 |
+| **Fast-Poly**, RA-L2024. [논문](https://arxiv.org/abs/2403.13443) · [공식 코드](https://github.com/lixiaoyu2000/FastPoly) | 추적·연관 계산이 병목일 때. 저자 tracker FPS를 전체 인지 처리율로 사용하지 않음 |
+| **Patchwork++**, IROS2022. [논문](https://arxiv.org/abs/2207.11919) · [공식 코드](https://github.com/url-kaist/patchwork-plusplus) | 실제 지면 분리 실패가 확인될 때. 벽/천장 semantic 분리기의 대체재로 취급하지 않음 |
+
+위 조건과 비용·위험은 현재 코드에 대한 **적용 판단**이다. 논문 benchmark 성능이 MORAI에서
+재현됐다는 뜻이 아니다. 지면·군집·tracker 전체 교체를 필수 과제로 두지 않는다.
+학습 Plan B(CenterPoint-Pillar)와 Plan A(HARP 계열+영상 semantic)는 기존 구조 개선 뒤에도
+한계가 남고 도메인 GT·GPU 예산을 확보할 때 별도 실험한다. 관련 실행·라벨 근거는
+[동결 연구 갤러리와 한계](../../../docs/records/lidar/2026-10-27-research-integration.md)에 유지한다.
 
 ## YOLO 인수 — detect 우선, seg는 조건부
 
