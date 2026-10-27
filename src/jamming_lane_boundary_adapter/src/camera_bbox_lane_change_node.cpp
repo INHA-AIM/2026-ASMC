@@ -41,6 +41,7 @@ struct Parameters {
     bool contact_clearance_enabled = false;
     bool contact_local_required = false;
     double contact_speed_kph = 5.0;
+    bool contact_early_adjacent = false; // internal comparison: center-line avoidance before an offset corridor
     double contact_preferred_margin = 0.0; // trial-only soft reserve, never weakens hard clearance
     double contact_max_skew = 0.15; // no ego-motion alignment is claimed
 
@@ -1101,6 +1102,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "contact_plan_wall_ms",std::to_string(contact_plan_wall_ms));
     addDiagnosticValue(status, "contact_actual_speed_mps",std::isfinite(contact_actual_speed)?std::to_string(contact_actual_speed):"unavailable");
     addDiagnosticValue(status,"contact_maneuver_length_m",std::to_string(contact_maneuver_length));
+    addDiagnosticValue(status, "contact_early_adjacent",params.contact_early_adjacent?"true":"false");
     addDiagnosticValue(status, "contact_preferred_margin_m",std::to_string(params.contact_preferred_margin));
     addDiagnosticValue(status, "contact_candidates", std::to_string(contact_candidates));
     addDiagnosticValue(status, "contact_road_rejected", std::to_string(contact_road_rejected));
@@ -1172,6 +1174,7 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("contact_local_required",params.contact_local_required,false);
     private_nh.param("contact_speed_kph",params.contact_speed_kph,5.0);
     private_nh.param("contact_preferred_margin",params.contact_preferred_margin,0.0);
+    private_nh.param("contact_early_adjacent",params.contact_early_adjacent,false);
     if(!std::isfinite(params.contact_preferred_margin)||params.contact_preferred_margin<0.||params.contact_preferred_margin>.3)
         throw std::runtime_error("contact_preferred_margin must be in [0,0.3]");
     if(!std::isfinite(params.contact_speed_kph)||params.contact_speed_kph<=0||params.contact_speed_kph>5.0)
@@ -1691,9 +1694,14 @@ std::string updateContactPathPlan() {
     // path if neither lane has reserve, or the existing change budget forbids it.
     const bool preference_allowed=(!change_state.has_completed || !params.one_lane_change_only) &&
         (!change_state.has_completed || (ros::SteadyTime::now()-change_state.completed_at).toSec()>=params.lane_change_cooldown);
-    const bool adjacent_clear=!change_state.changing && (!clear || (!candidate.preferred && preference_allowed)) &&
+    // Bounded comparison after r37: if the nominal current center path is
+    // obstructed, test a complete adjacent lane before squeezing farther off
+    // center. This uses the same full swept-body guard and3 fresh confirmations;
+    // a center-line overlap alone does not trigger it when offset0 is feasible.
+    const bool early_adjacent=params.contact_early_adjacent && clear && std::abs(candidate.offset)>params.epsilon && preference_allowed;
+    const bool adjacent_clear=!change_state.changing && (!clear || ((!candidate.preferred || early_adjacent) && preference_allowed)) &&
         find(1-follower_state.locked_lane,adjacent);
-    const bool prefer_adjacent=adjacent_clear && (!clear || adjacent.preferred);
+    const bool prefer_adjacent=adjacent_clear && (!clear || adjacent.preferred || early_adjacent);
     if(!change_state.changing && (!clear || prefer_adjacent)){
         if(change_state.has_completed && params.one_lane_change_only)return fail("lane_change_already_completed");
         if(change_state.has_completed && (ros::SteadyTime::now()-change_state.completed_at).toSec()<params.lane_change_cooldown)
