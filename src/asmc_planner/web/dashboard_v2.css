@@ -234,3 +234,12 @@
 .motion-summary .summary-clear { color: #6debaa; }
 .motion-summary .summary-blocked { color: #ffcf7f; }
 .object-empty { padding: 8px 0; color: #8299a8; font: 11px ui-monospace, monospace; }
+
+/* Separate local scene from global-map policy; no duplicate controller. */
+.toolbar select { background: #162733; color: #d8e6ef; border: 1px solid #3a5365; padding: 5px; max-width: 270px; }
+.shadow-panel { border-left: 3px solid #20e6d0; }
+.shadow-panel small { color: #a5b8c7; line-height: 1.6; display: block; margin-top: 8px; }
+#selectedMode { font-size: 12px; color: #20e6d0; }
+#shadowBoxes { max-height: 150px; overflow-y: auto; }
+#shadowGrid strong { white-space: normal; overflow-wrap: anywhere; }
+#shadowGrid > div:nth-child(3) { grid-column: 1 / -1; }

@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Planning &amp; LiDAR Debug Console</title>
-  <link rel="stylesheet" href="dashboard.css?v=v2-lidar-5">
-  <link rel="stylesheet" href="dashboard_v2.css?v=v2-lidar-5">
+  <link rel="stylesheet" href="dashboard.css?v=v2-shadow-1">
+  <link rel="stylesheet" href="dashboard_v2.css?v=v2-shadow-1">
 </head>
 <body data-interface="v2">
   <header>
@@ -21,15 +21,16 @@
     <section class="map-panel">
       <canvas id="map"></canvas>
       <div class="toolbar">
+        <select id="sceneMode" aria-label="좌표 보기"><option value="auto">자동 NORMAL/map · JAMMING/local</option><option value="local">음영 local/base_link</option><option value="map">일반 map</option></select>
         <button id="fit">전체 지도</button>
         <button id="follow">Ego 추적</button>
         <label><input id="showObjects" type="checkbox" checked>필터 통과 OBB</label>
         <label><input id="showDroppedObjects" type="checkbox" checked>필터 제거(raw)</label>
         <label><input id="showVelocity" type="checkbox" checked>속도</label>
-        <label><input id="showLabels" type="checkbox" checked>ID/type</label>
+        <label><input id="showLabels" type="checkbox" checked>ID/클래스·그룹</label>
         <label><input id="showCorridor" type="checkbox" checked>AVOID 회랑</label>
         <label><input id="showSignals" type="checkbox" checked>신호</label>
-        <label><input id="showTrajectory" type="checkbox" checked>Frenet 경로</label>
+        <label><input id="showTrajectory" type="checkbox" checked>선택 경로</label>
       </div>
       <details class="legend-toggle">
         <summary>지도 범례</summary>
@@ -60,7 +61,7 @@
     <aside>
       <section class="hero hero-v2">
         <div>
-          <span class="label">BEHAVIOR SELECTED</span>
+          <span class="label">NORMAL · BEHAVIOR SELECTED</span>
           <h1 id="behaviorName">WAITING</h1>
           <span id="behaviorCode" class="code">–</span>
         </div>
@@ -80,6 +81,14 @@
           <small id="stateCode">–</small>
         </div>
       </section>
+      <section class="shadow-panel">
+        <h2>실제 제어 · 음영 주행 <span id="selectedMode">WAIT</span></h2>
+        <div id="shadowGrid" class="kv"></div>
+        <div id="shadowBoxes" class="reasons"></div>
+        <small>local OBB는 수신 관측 참고입니다. 현재 카메라 회피 제어기에 연결된 입력은 아닙니다.
+        family 실선=관측, 점선=구조 추정 · 청록=실제 추종 경로 · 회색=파생 차로 중심.
+        미관측 차선과 끊긴 구간은 연결하지 않습니다.</small>
+      </section>
       <section>
         <h2>LiDAR Perception</h2>
         <div id="lidarGrid" class="kv"></div>
@@ -93,6 +102,6 @@
       <section><h2>Topic Health</h2><div id="health" class="kv"></div></section>
     </aside>
   </main>
-  <script src="dashboard_v2.js?v=v2-lidar-5"></script>
+  <script src="dashboard_v2.js?v=v2-shadow-1"></script>
 </body>
 </html>

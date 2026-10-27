@@ -22,6 +22,7 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>rospkg</exec_depend>
   <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
   <test_depend>rostest</test_depend>
   <test_depend>gtest</test_depend>
   <export/>

@@ -17,6 +17,13 @@ from morai_msgs.msg import ObjectStatusList
 from rosgraph_msgs.msg import Log
 from std_msgs.msg import String
 from visualization_msgs.msg import MarkerArray
+from diagnostic_msgs.msg import DiagnosticArray
+from std_msgs.msg import UInt8
+from asmc_msgs.msg import LaneBoundaryFamily, LidarTrackingObservation
+from lane_boundary_adapter.msg import CameraBBoxLaneResult
+from dashboard_observation import LocalScene, family_payload, markers_payload, objects_payload, stamp_ns
+
+local_scene = LocalScene()
 
 
 TRAJECTORY_FAILURE_NAMES = {
@@ -75,6 +82,9 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
                 # Encoding candidate paths must not block high-rate ROS callbacks.
                 snapshot = dict(self.snapshot)
                 snapshot["received_at"] = dict(self.snapshot["received_at"])
+            # Receive age uses server monotonic time, source age uses ROS time.
+            # Browser/Windows clocks never decide ROS observation freshness.
+            snapshot["shadow"] = local_scene.snapshot(rospy.Time.now().to_nsec())
             body = json.dumps(snapshot, separators=(",", ":")).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -92,8 +102,9 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def set_snapshot(key, message):
+    converted = ros_to_dict(message)
     with DashboardHandler.snapshot_lock:
-        DashboardHandler.snapshot[key] = ros_to_dict(message)
+        DashboardHandler.snapshot[key] = converted
         DashboardHandler.snapshot["received_at"][key] = time.time()
 
 
@@ -168,6 +179,49 @@ def set_ros_log(message):
         _set_recent_planning_issue_locked("MPC", reason, message.msg)
 
 
+def set_shadow_family(message):
+    payload, valid, reason = family_payload(message)
+    local_scene.put("family", payload, stamp_ns(message.header), message.header.frame_id, valid, reason)
+
+
+def set_shadow_markers(message):
+    payload, stamp, valid, reason = markers_payload(message)
+    local_scene.put("path", payload, stamp, "base_link", valid, reason)
+
+
+def set_shadow_objects(message):
+    payload, valid, reason = objects_payload(message)
+    o = message.observation
+    local_scene.put("objects", payload, stamp_ns(o.objects.header), o.objects.header.frame_id,
+                    valid, reason, (o.producer_session_id, int(o.generation)), int(o.scan_sequence))
+
+
+def set_shadow_diagnostics(message):
+    for status in message.status:
+        if status.name == "camera_bbox_lane_change":
+            payload = {entry.key: entry.value for entry in status.values[:80]}
+            payload.update(reason=status.message, level=int(status.level))
+            local_scene.put("controller", payload, stamp_ns(message.header))
+            break
+
+
+def set_shadow_bbox(message):
+    boxes = []
+    for i, box in enumerate(message.boxes[:100]):
+        boxes.append(dict(label=box.label, bbox=[box.xmin, box.ymin, box.xmax, box.ymax],
+                          assignment=int(message.assignments[i]) if i < len(message.assignments) else None,
+                          reason=message.box_reasons[i] if i < len(message.box_reasons) else "missing_assignment"))
+    # Keep invalid-result diagnostics visible; never use them as free-space.
+    local_scene.put("bbox", dict(valid=message.valid, reason=message.reason,
+                                 own_lane=message.own_lane, boxes=boxes,
+                                 omitted_boxes=max(0, len(message.boxes)-100)), stamp_ns(message.header))
+
+
+def set_control_selector(message):
+    fields = dict(item.split("=", 1) for item in message.data.split() if "=" in item)
+    local_scene.put("selector", fields)
+
+
 def set_lidar_motion_debug(message):
     """Decode the debug-only JSON stream without changing planner messages."""
     try:
@@ -230,6 +284,15 @@ def main():
     interface_version = rospy.get_param("~interface_version", "v1")
     DashboardHandler.snapshot["interface_version"] = interface_version
     if interface_version == "v2":
+        # Diagnostics only: no control publishers, inference or duplicate fits.
+        rospy.Subscriber("/planning/mode", UInt8,
+                         lambda m: local_scene.put("mode", dict(mode=int(m.data))), queue_size=1)
+        rospy.Subscriber("/planning/control_selector/diagnostics", String, set_control_selector, queue_size=1)
+        rospy.Subscriber("/planning/camera_bbox_lane_change/diagnostics", DiagnosticArray, set_shadow_diagnostics, queue_size=1)
+        rospy.Subscriber("/planning/camera_bbox_lane_change/markers", MarkerArray, set_shadow_markers, queue_size=1)
+        rospy.Subscriber("/planning/camera_bbox_lane/result", CameraBBoxLaneResult, set_shadow_bbox, queue_size=1)
+        rospy.Subscriber("/perception/lane/boundary_family", LaneBoundaryFamily, set_shadow_family, queue_size=1)
+        rospy.Subscriber("/perception/lidar/tracks_local", LidarTrackingObservation, set_shadow_objects, queue_size=1)
         rospy.Subscriber(
             rospy.get_param("~command_topic", "/behavior/command_v2"),
             BehaviorCommand,

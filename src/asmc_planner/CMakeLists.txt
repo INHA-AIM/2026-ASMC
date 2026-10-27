@@ -748,6 +748,11 @@ catkin_install_python(PROGRAMS
   scripts/steering_calibration_node.py
   tools/frenet/planner_visualizer.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+# An imported module must not be a catkin executable relay (the relay exports
+# no module globals on import). Keep the same adjacent-module layout in both spaces.
+configure_file(scripts/dashboard_observation.py
+  ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_observation.py COPYONLY)
+install(FILES scripts/dashboard_observation.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(TARGETS v2_ros_regression_test empty_objects_test_publisher lane_change_test_publisher
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

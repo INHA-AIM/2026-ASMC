@@ -14,7 +14,7 @@ const hook = "  canvas.addEventListener('wheel',";
 assert(source.includes(hook), 'dashboard event boundary missing');
 source = source.replace(hook,
   "  globalThis.probe = {data, objectMotion, updateLidarPanel, updateHealth}; return;\n" + hook);
-const sandbox = {document: {getElementById: element}, console, Date};
+const sandbox = {document: {getElementById: element}, console, Date, performance: {now: () => 1000}};
 vm.createContext(sandbox);
 vm.runInContext(source, sandbox);
 const p = sandbox.probe;
@@ -25,7 +25,7 @@ assert.strictEqual(p.objectMotion({motion_state: 3}, null).name, 'DYNAMIC');
 assert.strictEqual(p.objectMotion({motion_state: 99}, null).name, 'UNKNOWN');
 assert.strictEqual(p.objectMotion({}, {motion_state: 'PENDING'}).name, 'PENDING');
 p.data.lidarObjects = {header: {frame_id: 'map', stamp: 100},
-  objects: [0,1,2,3].map((state, id) => ({id, type: 1, motion_state: state,
+  objects: [0,1,2,3].map((state, id) => ({id, type: 1, motion_state: state, classification: 'static_obstacle', camera_class: 'plastic_barrier',
     center: {x: 0, y: 0}, length: 4, width: 2, vx: 2, vy: 0}))};
 p.data.receivedAt.lidar_objects = Date.now() / 1000;
 p.updateLidarPanel();
@@ -42,4 +42,6 @@ p.data.lidarObjects.objects = [];
 p.data.receivedAt.lidar_objects = Date.now() / 1000;
 p.updateHealth();
 assert.strictEqual(element('motionStatus').textContent, 'MOTION LIVE', 'fresh empty output is valid');
+assert(element('lidarObjects').innerHTML.includes('plastic_barrier'));
+assert(element('lidarObjects').innerHTML.includes('static_obstacle'));
 console.log('PASS dashboard motion rendering: zero/authority, four states, diagnostics absent, stale and empty frames');
