@@ -597,8 +597,8 @@ TEST(Pipeline, TunnelOnRunsBetweenGroundRemovalAndClustering) {
   Pipeline off(config);
   config.tunnel.enabled = true;
   Pipeline on(config);
-  const auto a = RunSequence(off, 3, false);
-  const auto b = RunSequence(on, 3, false);
+  const auto a = RunSequence(off, 3);
+  const auto b = RunSequence(on, 3);
   for (int k = 0; k < 3; ++k) {
     ASSERT_TRUE(b[k].processed);
     EXPECT_TRUE(b[k].tunnel.ran);

@@ -10,9 +10,6 @@
 #include <asmc_lidar/core/types.hpp>
 
 #include <memory>
-#include <array>
-#include <map>
-#include <string>
 #include <vector>
 
 namespace asmc {
@@ -25,37 +22,7 @@ struct TunnelFilterStageConfig {
   bool suppress_wall = true;
 };
 
-struct TunnelWallEvidence {
-  int side=0; bool allowed=false,valid=false;
-  std::array<float,4> plane{};float span=0;
-  std::vector<std::pair<float,float>> intervals;
-  std::string reason;
-};
 struct TunnelFilterStageReport {
-  std::vector<TunnelWallEvidence> wall_evidence;
-  bool original_pipeline = false, protection_available = false;
-  int boundary_rescued_clusters=0, boundary_rescued_points=0;
-  std::map<int,int> temporal_candidate_kinds,temporal_required_frames;
-  bool temporal_enabled=false, temporal_entry_guard=false;
-  int temporal_boundary_exempt=0;
-  int temporal_hold_frames=0, temporal_candidates=0, temporal_hidden=0, temporal_hidden_predictions=0, temporal_max_run=0, temporal_removed_points=0;
-  bool motion_integrated = false, motion_valid = false, motion_reliable = false;
-  bool wall_left_reanchored = false, wall_right_reanchored = false;
-  float motion_dt_s = 0, motion_dyaw_rad = 0, motion_dx_m = 0, motion_dy_m = 0;
-  int motion_steps = 0;
-  std::string wall_left_state, wall_right_state;
-  std::vector<std::pair<std::array<float,7>,std::string>> residual_decisions;
-  int exterior_surface_removed=0;
-  int protected_points = 0, objects_removed = 0;
-  bool cluster_z_enabled = false;
-  float cluster_z_min_sensor_m = -1.30f;
-  int cluster_z_removed = 0, cluster_z_removed_points = 0, cluster_z_removed_tracks = 0;
-  int wall_ambiguous_skipped = 0;
-  int clusters_before_filters = 0, clusters_after_filters = 0, unclustered_points = 0;
-  float wall_fit_distance_m = 0, wall_remove_distance_m = 0, wall_track_max_offset_m = 0;
-  bool ground_fallback_used = false;
-  bool wall_left_removal_allowed = false, wall_right_removal_allowed = false;
-  float cluster_tolerance_m = 0;
   bool ran = false;
   int input_points = 0;
   int ceiling_labeled = 0;

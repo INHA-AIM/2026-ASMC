@@ -19,7 +19,6 @@
 #include <asmc_lidar/filtering/delivery_filters.hpp>
 #include <asmc_lidar/pipeline/pipeline.hpp>
 #include <asmc_lidar/geometry/pose_history.hpp>
-#include <asmc_lidar/experimental/tunnel_motion.hpp>
 
 #include <asmc_msgs/LidarObjectArray.h>
 #include <asmc_msgs/LidarTrackingState.h>
@@ -146,17 +145,6 @@ class LidarRuntime {
                 std::shared_ptr<pipeline::fusion::CameraSource> camera,
                 const asmc::lidar::camera::Calibration* front_calibration);
   const RuntimeConfig& config() const { return config_; }
-  // Single processing worker only, between scans (not a sensor callback).
-  void SetTunnelWallConfig(const pipeline::TunnelWallConfig& config,const std::string& config_id) {
-    pipeline_.SetTunnelWallConfig(config);
-    pipeline::ApplyTunnelWall(config_.pipeline.tunnel_route.params,config);
-    config_.config_id=config_id;
-  }
-  void SetTunnelClusterZConfig(const pipeline::TunnelClusterZConfig& config, const std::string& config_id) {
-    pipeline_.SetTunnelClusterZConfig(config);
-    config_.pipeline.tunnel_route.cluster_z=config;
-    config_.config_id=config_id;
-  }
 
   void OnImu(const pipeline::ImuInput& input, std::int64_t receipt_ns, std::int64_t ros_now_ns);
   void OnCan(const pipeline::CanInput& input, std::int64_t receipt_ns, std::int64_t ros_now_ns);
@@ -195,12 +183,7 @@ class LidarRuntime {
   pipeline::PoseHistory pose_;
   pipeline::GpsIngest gps_;
   pipeline::Pipeline pipeline_;
-  pipeline::TunnelMotionHistory tunnel_motion_history_;
-  std::mutex tunnel_motion_input_mutex_;  // commit pose acceptance and motion sample together
-  std::int64_t tunnel_motion_anchor_stamp_=0;
-  float tunnel_motion_anchor_yaw_=0;
   std::shared_ptr<pipeline::fusion::CameraSource> camera_;
-  std::unique_ptr<asmc::lidar::camera::Calibration> tunnel_camera_calibration_;
   std::unique_ptr<pipeline::fusion::FrontCameraFusion> fusion_;
   TypedOutput output_;
   filtering::DeliveryFilters delivery_filters_;

@@ -40,12 +40,6 @@ target_link_libraries(camera_observation_probe asmc_lidar_camera_ros)
 add_dependencies(camera_observation_probe ${catkin_EXPORTED_TARGETS})
 
 if(CATKIN_ENABLE_TESTING)
-  foreach(confirmation_test observation_confirmation_standalone adaptive_confirmation_standalone)
-    add_executable(asmc_lidar_${confirmation_test} test/experimental/${confirmation_test}.cpp)
-    target_include_directories(asmc_lidar_${confirmation_test} PRIVATE include)
-    target_compile_options(asmc_lidar_${confirmation_test} PRIVATE -Wall -Wextra -Werror -UNDEBUG)
-    add_test(NAME asmc_lidar_${confirmation_test} COMMAND asmc_lidar_${confirmation_test})
-  endforeach()
   find_package(rostest REQUIRED)
   add_rostest_gtest(camera_receiver_ros_test test/camera_receiver_ros.test test/camera_receiver_ros_test.cpp)
   if(TARGET camera_receiver_ros_test)
@@ -163,7 +157,6 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/geometry/gps_ingest.cpp
     src/pipeline/pipeline.cpp
     src/experimental/tunnel_filter_stage.cpp
-    src/experimental/tunnel_route.cpp
     src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp
     src/fusion/front_camera_fusion.cpp
     src/fusion/buffer_camera_source.cpp)
@@ -238,8 +231,6 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_fusion_policy test/pipeline/test_fusion_policy.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_front_camera_fusion test/pipeline/test_front_camera_fusion.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_tunnel_filter_stage test/pipeline/test_tunnel_filter_stage.cpp)
-    lidar_pipeline_gtest(asmc_lidar_test_tunnel_route test/pipeline/test_tunnel_route.cpp)
-    lidar_pipeline_gtest(asmc_lidar_test_tunnel_runtime test/runtime/test_tunnel_runtime.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_source_time test/pipeline/test_source_time.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pipeline test/pipeline/test_pipeline.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_motion_classifier test/pipeline/test_motion_classifier.cpp)

@@ -1,4 +1,3 @@
-#include <asmc_lidar/experimental/confirmation_wall_evidence.hpp>
 #include <asmc_lidar/tracking/planning_velocity.hpp>
 #include <asmc_lidar/detection/detections.hpp>
 #include <asmc_lidar/core/source_time.hpp>
@@ -13,8 +12,6 @@
 #include <limits>
 #include <stdexcept>
 #include <utility>
-#include <set>
-#include <tuple>
 
 namespace asmc {
 namespace lidar {
@@ -75,12 +72,8 @@ Pipeline::Pipeline(const PipelineConfig& config)
   if (config_.calibration_id.empty())
     throw std::invalid_argument("pipeline calibration_id must be non-empty");
   frame_.Configure(config_.vehicle, config_.calibration_id);
-  ValidateTunnelNoise(config_.tunnel_noise);
-  // Construct only when enabled; shipped YAML enables GPS-denied routing.
-  if (config_.tunnel.enabled) {
-    if (config_.tunnel_route.original_pipeline) tunnel_route_ = std::make_unique<TunnelRoute>(config_.tunnel_route);
-    else tunnel_ = std::make_unique<TunnelFilterStage>(config_.tunnel);
-  }
+  // Experimental stage, default OFF: never constructed unless enabled.
+  if (config_.tunnel.enabled) tunnel_ = std::make_unique<TunnelFilterStage>(config_.tunnel);
 }
 
 // Ported from Main src/main.cpp:492-495 + src/Lidar/LidarProcess/LidarProcess.cpp:151-318 (8f93c22e)
@@ -131,9 +124,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   // MakePointCloudFromRaw is a plain copy of the PointCloud2 points; the input
   // cloud is read directly (Roi does not modify it).
   auto begin = Clock::now();
-  const bool original_tunnel = tunnel_route_ && tunnel_route_->Select(map_pose.valid);
   Roi(scan.points, roi_cloud, config_.range, config_.roi, config_.vehicle);
-  if (original_tunnel) tunnel_route_->RestrictRoi(roi_cloud);
   auto end = Clock::now();
   timings.roi_ms = Ms(begin, end);
   counts.roi_points = static_cast<int>(roi_cloud->points.size());
@@ -159,37 +150,10 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   counts.leveled_points = static_cast<int>(leveled_cloud->points.size());
   if (debug) result.digests.leveled = CloudDigest(*leveled_cloud);
 
-  std::vector<int> height_kept_indices, ground_kept_indices, pre_tunnel_kept_indices;
-  std::vector<std::string> tunnel_classes;
-  GroundPlaneSnapshot effective_ground_plane;
-  if(original_tunnel) {
-    begin=Clock::now();
-    auto migrated=tunnel_route_->Process(voxeled_cloud,local,raw,config_.vehicle,scan.tunnel_camera.get(),scan.tunnel_motion.get());
-    leveled_cloud=migrated.leveled;
-    frame_.StoreLeveling(migrated.leveling);
-    ground_cloud=migrated.filtered;
-    ground_kept_indices=std::move(migrated.kept_indices);
-    pre_tunnel_kept_indices=std::move(migrated.pre_filter_indices);
-    centroid_cloud=migrated.centroids;
-    all_cluster_indices=std::move(migrated.clusters);
-    tunnel_classes=std::move(migrated.protected_classes);
-    effective_ground_plane=migrated.plane;
-    result.tunnel=migrated.report;
-    timings.tunnel_ms=Ms(begin,Clock::now());
-    // Height ROI is deliberately bypassed by the original tunnel route; keep
-    // observer voxel identities complete instead of labelling them all cropped.
-    if(config_.height_roi.enabled)for(std::size_t i=0;i<voxeled_cloud->size();++i)height_kept_indices.push_back(i);
-    counts.height_kept_points=counts.leveled_points;
-    counts.ground_kept_points=static_cast<int>(ground_cloud->size());
-    counts.tunnel_removed_points=result.tunnel.removed_points;
-    counts.cluster_input_points=static_cast<int>(ground_cloud->size());
-    counts.centroids=static_cast<int>(centroid_cloud->size());
-    counts.clusters=static_cast<int>(all_cluster_indices.size());
-    if(debug) {result.digests.leveled=CloudDigest(*leveled_cloud);result.digests.ground_kept=CloudDigest(*ground_cloud);}
-  } else {
   // Cheap gravity-aligned cap before RANSAC/cluster/OBB. The mount's vertical
   // lever is rotated once per scan; no GPS or per-point map projection is used.
   CloudPtr height_cloud=leveled_cloud;
+  std::vector<int> height_kept_indices;
   begin=Clock::now();
   if(config_.height_roi.enabled) {
     height_cloud.reset(new Cloud);
@@ -205,6 +169,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
 
   // Main NormalVectorFiltering (LidarProcess.cpp:211-216). ransac_points is
   // taken here, before Clustering pushes its dummy point.
+  std::vector<int> ground_kept_indices;
   begin = Clock::now();
   ground_.Filter(height_cloud, ground_cloud, &ground_kept_indices);
   if(config_.height_roi.enabled)
@@ -216,11 +181,12 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   if (debug) result.digests.ground_kept = CloudDigest(*ground_cloud);
 
   // Observer copy of the pre-tunnel indices (the stage filters them in place).
+  std::vector<int> pre_tunnel_kept_indices;
   if (observe && tunnel_) pre_tunnel_kept_indices = ground_kept_indices;
 
   // Experimental tunnel stage (not in Main): after RANSAC, before clustering.
   // It levels with the same roll choice as the common path (roll 0 when pitch-only).
-  if (tunnel_ && !map_pose.valid) {
+  if (tunnel_) {
     begin = Clock::now();
     result.tunnel = tunnel_->Apply(voxeled_cloud, config_.use_roll ? local.st_IMU.f32_Roll_rad : 0.f,
                                    local.st_IMU.f32_Pitch_rad, ground_cloud, ground_kept_indices);
@@ -239,19 +205,11 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   counts.clusters = static_cast<int>(all_cluster_indices.size());
   // Main debug cloud publishers (/lidar/debug_*, debug_clustered_map) are not ported.
 
-    effective_ground_plane=ground_.CurrentPlane();
-  }
-
   // Main Objectinfo_for_km (LidarProcess.cpp:257-259) on the mutated cloud.
   begin = Clock::now();
   BuildDetections(object, ground_cloud, centroid_cloud, all_cluster_indices);
   end = Clock::now();
   timings.detection_ms = Ms(begin, end);
-  if(original_tunnel) {
-    for(std::size_t i=0;i<object.size()&&i<tunnel_classes.size();++i)if(tunnel_classes[i]!="unknown") {
-      object[i].camera.str_ObjectClass=tunnel_classes[i];object[i].camera.str_YoloClass=tunnel_classes[i];
-    }
-  }
   counts.detections = static_cast<int>(object.size());
   if (debug) {
     result.detections = object;
@@ -317,7 +275,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   std::sort(object.begin(), object.end(),
             [](const TrackedObject& a, const TrackedObject& b) { return a.detection.f32_Dist < b.detection.f32_Dist; });
   // Main LidarProcess.cpp:297-306.
-  const GroundPlaneSnapshot ground_plane = effective_ground_plane;
+  const GroundPlaneSnapshot ground_plane = ground_.CurrentPlane();
   for (auto& tracked_object : object) {
     if (tracked_object.tracking.s32_MissCount == 0) frame_.RecordTrackingFrame(tracked_object);
     tracked_object.detection.ground_evidence = ObjectGroundEvidence{};
@@ -327,117 +285,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     }
   }
   // Main LidarProcess.cpp:307-313: vec_Objects and the 3-frame queue.
-  // A threshold edit must also retire carried low tracks, not leave old noise
-  // predicted on screen or in the tracker history after its detections vanish.
-  if(original_tunnel && config_.tunnel_route.cluster_z.enabled) {
-    const auto sensor_from_level=result.context.applied_leveling.transpose().eval();
-    object.erase(std::remove_if(object.begin(),object.end(),[&](const auto& o) {
-      const auto z=(sensor_from_level*asmc::lidar::Vec(o.detection.f32_CoreX,o.detection.f32_CoreY,o.detection.f32_CoreZ)).z();
-      if(o.tracking.s32_MissCount>0 && z < config_.tunnel_route.cluster_z.min_sensor_z_m) {
-        ++result.tunnel.cluster_z_removed_tracks;return true;
-      }
-      return false;
-    }),object.end());
-  }
   tracker_.Commit(object);
-  // Preserve the complete tracker state, then suppress short lived shape
-  // candidates from delivered objects AND their current point support.
-  TunnelNoiseGate::Stats noise_stats;
-  if(!original_tunnel)tunnel_noise_entry_stamp_=0;
-  else if(!tunnel_noise_entry_stamp_)tunnel_noise_entry_stamp_=raw;
-  const bool noise_interior=original_tunnel&&raw-tunnel_noise_entry_stamp_>=2000000000LL;
-  std::set<int> boundary_exempt;
-  if(original_tunnel)for(const auto& o:object)
-    if(!tunnel_route_->InsideCurrentWalls(o))boundary_exempt.insert(o.tracking.s32_Id);
-  std::map<int,ConfirmationKind> confirmation_kinds;
-  const auto confirmation_walls=original_tunnel && config_.tunnel_noise.adaptive_confirmation?
-      ConfirmationWallSegments(tunnel_route_->last(),config_.tunnel_route.params):
-      std::vector<tunnel_filter::WallSegment>{};
-  if(original_tunnel && config_.tunnel_noise.adaptive_confirmation)for(const auto& o:object) {
-    const auto& d=o.detection;
-    ConfirmationEvidence e;
-    e.length=d.obb_length_m;e.width=d.obb_width_m;e.height=d.f32_OBB_ZMax-d.f32_OBB_ZMin;
-    e.ground_valid=d.ground_evidence.valid;
-    e.median_ground_clearance=d.ground_evidence.median_clearance_m;
-    const double axis=d.f32_OBB_YawRad+(d.obb_width_m>d.obb_length_m?1.5707963267948966:0);
-    const double dx=std::cos(axis),dy=std::sin(axis);
-    for(const auto& seg:confirmation_walls) {
-        const double norm=std::hypot(seg.plane.a,seg.plane.b);
-        if(norm<=0 || d.pcl_ClusterPoints.empty())continue;
-        int support=0;
-        for(const auto& q:d.pcl_ClusterPoints) {
-          const double dist=std::fabs(seg.plane.a*q.x+seg.plane.b*q.y+seg.plane.c*q.z+seg.plane.d)/norm;
-          if(dist<=.8 && seg.InIntervals(seg.AlongWall(q.x,q.y),0))++support;
-        }
-        const double fraction=double(support)/d.pcl_ClusterPoints.size();
-        if(!e.wall_valid || fraction>e.wall_support_fraction) {
-          e.wall_valid=true;e.wall_support_fraction=fraction;
-          e.wall_axis_sine=std::fabs(seg.plane.a*dx+seg.plane.b*dy)/norm;
-        }
-      }
-    confirmation_kinds[o.tracking.s32_Id]=ClassifyConfirmation(e);
-    result.tunnel.temporal_candidate_kinds[o.tracking.s32_Id]=static_cast<int>(confirmation_kinds[o.tracking.s32_Id]);
-  }
-  const auto hidden=tunnel_noise_gate_.Update(object,ground_plane,
-      result.tunnel.wall_left_removal_allowed||result.tunnel.wall_right_removal_allowed,
-      (config_.tunnel_noise.confirmation_all_unknown?original_tunnel:noise_interior),raw,config_.tunnel_noise,noise_stats,
-      config_.tunnel_noise.confirmation_all_unknown?nullptr:&boundary_exempt,&confirmation_kinds);
-  if(original_tunnel) {
-    result.tunnel.temporal_required_frames=noise_stats.required_frames;
-    result.tunnel.temporal_enabled=config_.tunnel_noise.enabled;
-    result.tunnel.temporal_entry_guard=!config_.tunnel_noise.confirmation_all_unknown&&!noise_interior;
-    for(const auto& o:object)if(!config_.tunnel_noise.confirmation_all_unknown&&!o.tracking.s32_MissCount&&boundary_exempt.count(o.tracking.s32_Id))++result.tunnel.temporal_boundary_exempt;
-    result.tunnel.temporal_hold_frames=config_.tunnel_noise.confirmation_all_unknown?
-        config_.tunnel_noise.confirmation_frames-1:config_.tunnel_noise.hold_frames;
-    result.tunnel.temporal_candidates=noise_stats.candidates;
-    result.tunnel.temporal_hidden=noise_stats.hidden;
-    result.tunnel.temporal_hidden_predictions=noise_stats.hidden_predictions;
-    result.tunnel.temporal_max_run=noise_stats.max_run;
-  }
-  if(!hidden.empty()) {
-    using Key=std::tuple<float,float,float>;
-    std::set<Key> rejected;
-    for(const auto& o:object)if(!o.tracking.s32_MissCount&&hidden.count(o.tracking.s32_Id))
-      for(const auto& q:o.detection.pcl_ClusterPoints)rejected.emplace(q.x,q.y,q.z);
-    // Shared support belongs to a surviving observed object, so keep it.
-    for(const auto& o:object)if(!o.tracking.s32_MissCount&&!hidden.count(o.tracking.s32_Id))
-      for(const auto& q:o.detection.pcl_ClusterPoints)rejected.erase(Key(q.x,q.y,q.z));
-    std::vector<int> remap(ground_cloud->size(),-1),kept;
-    CloudPtr filtered(new Cloud);filtered->header=ground_cloud->header;
-    for(std::size_t k=0;k<ground_cloud->size();++k) {
-      const auto& q=ground_cloud->at(k);
-      if(rejected.count(Key(q.x,q.y,q.z))){++result.tunnel.temporal_removed_points;continue;}
-      remap[k]=filtered->size();filtered->push_back(q);kept.push_back(ground_kept_indices.at(k));
-    }
-    ground_cloud=filtered;ground_kept_indices=std::move(kept);
-    CloudPtr centers(new Cloud);std::vector<pcl::PointIndices> clusters;
-    for(const auto& c:all_cluster_indices) {
-      pcl::PointIndices mapped;pcl::PointXYZI center{};
-      for(int i:c.indices)if(remap.at(i)>=0){mapped.indices.push_back(remap[i]);const auto& q=filtered->at(remap[i]);center.x+=q.x;center.y+=q.y;center.z+=q.z;}
-      if(mapped.indices.empty())continue;
-      center.x/=mapped.indices.size();center.y/=mapped.indices.size();center.z/=mapped.indices.size();
-      clusters.push_back(std::move(mapped));centers->push_back(center);
-    }
-    all_cluster_indices=std::move(clusters);centroid_cloud=centers;
-    auto removed_detection=[&](const auto& o) {
-      return !o.detection.pcl_ClusterPoints.empty()&&std::all_of(o.detection.pcl_ClusterPoints.begin(),o.detection.pcl_ClusterPoints.end(),[&](const auto& q){return rejected.count(Key(q.x,q.y,q.z));});
-    };
-    observed_detections.erase(std::remove_if(observed_detections.begin(),observed_detections.end(),removed_detection),observed_detections.end());
-    result.detections.erase(std::remove_if(result.detections.begin(),result.detections.end(),removed_detection),result.detections.end());
-    object.erase(std::remove_if(object.begin(),object.end(),[&](const auto& o){return hidden.count(o.tracking.s32_Id);}),object.end());
-    result.tunnel.removed_points+=result.tunnel.temporal_removed_points;
-    counts.ground_kept_points=counts.cluster_input_points=ground_cloud->size();
-    counts.tunnel_removed_points=result.tunnel.removed_points;
-    counts.clusters=counts.centroids=all_cluster_indices.size();
-    counts.detections=all_cluster_indices.size();
-    result.tunnel.clusters_after_filters=all_cluster_indices.size();
-    result.tunnel.unclustered_points=ground_cloud->size();
-    for(const auto& c:all_cluster_indices)result.tunnel.unclustered_points-=c.indices.size();
-    if(debug) {
-      result.digests.ground_kept=CloudDigest(*ground_cloud);result.centroids=centroid_cloud;
-      result.cluster_sizes.clear();for(const auto& c:all_cluster_indices)result.cluster_sizes.push_back(c.indices.size());
-    }
-  }
   // Main /lidar_tracking_markers (LidarProcess.cpp:320-344) are not ported.
   end = Clock::now();
   timings.post_ms = Ms(begin, end);
@@ -464,7 +312,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
                          height_kept_indices,
                          *ground_cloud,
                          ground_kept_indices,
-                         (tunnel_ || original_tunnel) ? pre_tunnel_kept_indices : ground_kept_indices,
+                         tunnel_ ? pre_tunnel_kept_indices : ground_kept_indices,
                          all_cluster_indices,
                          observed_detections};
     config_.observer->OnScan(view);
