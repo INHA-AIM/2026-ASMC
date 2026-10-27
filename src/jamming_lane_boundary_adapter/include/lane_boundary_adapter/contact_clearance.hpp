@@ -6,9 +6,18 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <vector>
 
 namespace lane_boundary_adapter::clearance {
+// IMU-corrected shared-normal samples need not start at exactly x=1m.
+// Allow at most one existing0.25m sample interval for the NEAR tangent anchor;
+// this never joins an interior INVALID gap or extends forward support.
+constexpr double kNearSampleAllowanceM=.25;
+inline double nearReferenceX(double first_x,double nominal=1.) {
+  return std::isfinite(first_x) && first_x<=nominal+kNearSampleAllowanceM ?
+      std::max(first_x,nominal):std::numeric_limits<double>::quiet_NaN();
+}
 struct Point { double x=0, y=0; };
 struct Bounds { double xmin=0, xmax=0, ymin=0, ymax=0; };
 struct Vehicle { double front=3.845,rear=.790,half_width=.946,lateral_margin=.30,longitudinal_margin=.5; };

@@ -1,4 +1,4 @@
-// 카메라 BBOX로 내 차로 점유를 확인하면 옆 차로로 변경. 거리/라이다 입력 없음.
+// 운영 기본은 기존 BBOX 차로 변경. 선택한 실험에서는 같은 제어기에 local OBB·접점 검사를 연결한다.
 // 이 파일에 파라미터, ROS callback, 주행 함수, main을 함께 둔다.
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
 #include "lane_boundary_adapter/contact_clearance.hpp"
@@ -1435,7 +1435,8 @@ const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* g
     for (const auto& lane : geometry ? *geometry : change_state.lanes) {
         if (lane.lane_index != lane_index) continue;
         LaneSample first, last;
-        if (!interpolateLaneAtX(lane, params.planning_start_x, first) ||
+        const double near_x=params.contact_clearance_enabled ? lane_boundary_adapter::clearance::nearReferenceX(lane.centerline.front().x,params.planning_start_x):params.planning_start_x;
+        if (!std::isfinite(near_x) || !interpolateLaneAtX(lane, near_x, first) ||
             !interpolateLaneAtX(lane, params.path_horizon, last)) continue;
         if (found != nullptr) return nullptr;  // 겹친 경계가 모호하면 변경하지 않는다.
         found = &lane;
@@ -1444,11 +1445,14 @@ const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* g
 }
 
 bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample) {
-    if (x >= params.planning_start_x && interpolateLaneAtX(lane, x, sample)) return true;
+    if(lane.centerline.empty())return false;
+    const double near_x=params.contact_clearance_enabled ? lane_boundary_adapter::clearance::nearReferenceX(lane.centerline.front().x,params.planning_start_x):params.planning_start_x;
+    if(!std::isfinite(near_x))return false;
+    if (x >= near_x && interpolateLaneAtX(lane, x, sample)) return true;
     // 후방 차로 점유 확인은 관측되지 않는 경계를 근거리 접선으로 연장한 보수적 근사다.
     // 전방도 관측 끝 밖에서는 마지막 1m 접선으로 검사하되 주행 경로 자체에는 외삽하지 않는다.
-    double first_x = params.planning_start_x;
-    if (x >= params.planning_start_x) {
+    double first_x = near_x;
+    if (x >= near_x) {
         // 관측 중간의 INVALID gap을 다른 조각의 접선으로 메우지 않는다.
         // 경로 끝까지 연속 관측된 조각만 앞범퍼 검사에 필요한 끝단 외삽을 허용한다.
         if (x <= lane.centerline.back().x || lane.centerline.back().x < params.path_horizon) return false;
@@ -1700,7 +1704,7 @@ std::string updateContactPathPlan() {
             }
         }else change_state.clear_hits=0;
     }
-    // A fixed4m target lies beyond a3m residual maneuver and cuts its
+    // The legacy8m target lies beyond a3m residual maneuver and cuts its
     // curvature. This only selects a target ON the checked path; it does not
     // relax the vehicle/road/obstacle guards or add another controller.
     contact_maneuver_length=candidate.length;
