@@ -2,6 +2,7 @@
 // 기존 YOLO와 차선 모듈을 그대로 사용하고, 영상 하단 접점의 차로만 분류한다.
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
 #include "lane_boundary_adapter/ground_projection.hpp"
+#include "lane_boundary_adapter/local_obstacle_support.hpp"
 #include <lane_boundary_adapter/CameraBBoxFrame.h>
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
 #include <sensor_msgs/Image.h>
@@ -32,6 +33,7 @@ using Context = lane_boundary_adapter::BoundaryFamilyStripContext;
 // 1. Parameters: 기본값, 단위, 설명. 모두 private ROS parameter로 설정 가능.
 // ============================================================================
 struct Parameters {
+    bool local_contact_support_enabled=false; // trial-only, public LiDAR contract unchanged.
     std::string reference_lane_topic;      // 선택 사항: 주행 노드의 기준 차로. 비어 있으면 관측 전용 자동 선택.
     double reference_timeout = 0.5;        // [s] 기준 차로 미수신 시 자동 선택으로 복귀.
     std::string calibration_file;          // Canonical cameras_v3; explicit v2 is legacy replay only.
@@ -91,6 +93,7 @@ struct Camera {
     double slope_x = 0.0, slope_y = 0.0;
     cv::Vec3d selected_plane;
 } camera;
+lane_boundary_adapter::LocalObstacleSupport local_obstacles;
 std::vector<cv::Point2d> ego_polygon;
 cv::Mat ego_bitmap;
 
@@ -188,6 +191,10 @@ int main(int argc, char** argv) {
         diagnostic_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(params.diagnostics_topic, 1);
         const auto lane_sub = nh.subscribe(params.lane_topic, 1, laneCallback);
         const auto frame_sub = nh.subscribe(params.frame_topic, 1, frameCallback);
+        ros::Subscriber local_sub;
+        if(params.local_contact_support_enabled)
+            local_sub=nh.subscribe<asmc_msgs::LidarTrackingObservation>("/perception/lidar/tracks_local",8,
+                [](const asmc_msgs::LidarTrackingObservation::ConstPtr& m){local_obstacles.accept(m,ros::Time::now(),ros::SteadyTime::now());});
         ros::Subscriber projection_sub, lane_status_sub;
         if(params.projection_context_required) {
             projection_sub=nh.subscribe<asmc_msgs::CameraGroundProjection>(params.projection_topic,8,
@@ -713,6 +720,20 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
     result.contact_support_x_max_m=std::min(support[0],support[1]);
     bool own_hit = false, adjacent_hit = false, unknown = false, deferred_far = false;
     const auto matches = matchBoxTracks(result.boxes, stamp);
+    const auto local=params.local_contact_support_enabled ?
+        local_obstacles.select(stamp,ros::Time::now(),ros::SteadyTime::now()):asmc_msgs::LidarTrackingObservation::ConstPtr();
+    std::vector<int> local_matches(result.boxes.size(),-1);
+    if(local){
+        const auto& obs=local->observation;
+        result.local_obstacles_valid=true;result.local_obstacles_stamp=obs.objects.header.stamp;
+        result.local_obstacles_session=obs.producer_session_id;result.local_obstacles_generation=obs.generation;
+        result.local_obstacles_sequence=obs.scan_sequence;
+        local_matches=lane_boundary_adapter::LocalObstacleSupport::associate(result.boxes,*local,camera.intrinsic,camera.rotation,camera.translation);
+        for(const auto& object:obs.objects.objects){geometry_msgs::Polygon footprint;
+            if(!lane_boundary_adapter::LocalObstacleSupport::footprint(object,footprint)){result.local_obstacles_valid=false;break;}
+            result.local_obstacle_footprints.push_back(footprint);}
+        if(!result.local_obstacles_valid){result.local_obstacle_footprints.clear();std::fill(local_matches.begin(),local_matches.end(),-1);}
+    }
     std::vector<BoxTrack> next_tracks;
     for (std::size_t i=0; i<result.boxes.size(); ++i) {
         const auto& box = result.boxes[i];
@@ -728,8 +749,15 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
         }
         result.clipped_association.push_back(associated);
         geometry_msgs::Polygon contact;
-        const bool contact_valid=result.contact_projection_valid && groundContact(box,contact);
+        bool contact_valid=result.contact_projection_valid && groundContact(box,contact);
+        std::string contact_source=contact_valid?"image_plane":"unavailable";
+        if(!contact_valid && result.contact_projection_valid && result.local_obstacles_valid && local_matches[i]>=0 &&
+           (reason=="bottom_contact_occluded_by_ego_mask" || reason=="bottom_contact_clipped_by_hood_crop")) {
+            contact_valid=lane_boundary_adapter::LocalObstacleSupport::footprint(local->observation.objects.objects[local_matches[i]],contact);
+            if(contact_valid){contact_source="lidar_observed";reason="local_lidar_supported:"+reason;}
+        }
         if(!contact_valid) contact.points.clear();
+        result.ground_contact_sources.push_back(contact_source);
         result.ground_contacts.push_back(contact);
         result.ground_contact_valid.push_back(contact_valid);
         if (assignment == Result::OWN || assignment == Result::ADJACENT) {
@@ -923,6 +951,7 @@ void publishImage(cv::Mat image, const std_msgs::Header& header, const Result& r
 // 6. 설정 / 기존 보정 파일 로드. 깊이 모델과 라이다를 사용하지 않는다.
 // ============================================================================
 void loadParameters(ros::NodeHandle& nh) {
+    nh.param("local_contact_support_enabled",params.local_contact_support_enabled,false);
 #define PARAM(name) nh.param(#name, params.name, params.name)
     PARAM(reference_lane_topic); PARAM(reference_timeout);
     PARAM(projection_context_required); PARAM(projection_manifest); PARAM(projection_topic); PARAM(lane_status_topic);

@@ -20,6 +20,7 @@
     <arg name="use_rviz" value="false"/>
   </include>
   <param name="camera_bbox_lane_change/contact_clearance_enabled" value="$(optenv ASMC_SHADOW_CONTACT_CLEARANCE false)" type="bool"/>
+  <param name="camera_bbox_lane/local_contact_support_enabled" value="$(optenv ASMC_SHADOW_LOCAL_CONTACT false)" type="bool"/>
   <!-- Trial-only preparation speed: reuse the planner's typed route-link cap.
        Does not change the GPS mode boundary or authorize early lane crossing. -->
   <group if="$(optenv ASMC_SHADOW_APPROACH_CAP false)">
