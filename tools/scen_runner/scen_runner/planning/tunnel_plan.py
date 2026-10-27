@@ -153,7 +153,7 @@ def tunnel_static_models():
 
 
 class TunnelPlan:
-    def __init__(self,seed=None,scene_type=None,cross_pattern=None):
+    def __init__(self,seed=None,scene_type=None,cross_pattern=None,static_models=None):
         self.cfg=load_yaml(TOOL_ROOT/'config/tunnel.yaml')
         if self.cfg['static_max_tries']<=0 or self.cfg.get('static_tick_candidates',12)<=0:
             raise ValueError('정적 탐색 배치 크기는 양수여야 합니다.')
@@ -165,6 +165,14 @@ class TunnelPlan:
         self.rng=random.Random(self.seed)
         self.scene_type=scene_type or self.rng.choice(self.cfg['scene_types'])
         if self.scene_type not in SCENE_LABELS:raise ValueError('지원하지 않는 터널 씬 유형')
+        self.static_models=None
+        if static_models is not None:
+            if not isinstance(static_models,list) or not static_models or not all(isinstance(x,str) for x in static_models):
+                raise ValueError('static_models는 비어 있지 않은 모델 이름 목록이어야 합니다.')
+            allowed={model.name for model in tunnel_static_models()}
+            if set(static_models)-allowed:raise ValueError('터널 배치가 허용되지 않은 모델: '+','.join(sorted(set(static_models)-allowed)))
+            if self.scene_type=='dynamic':raise ValueError('dynamic 씬에 static_models를 지정할 수 없습니다.')
+            self.static_models=tuple(dict.fromkeys(static_models))
         self.links=load_links(repo_path(self.cfg['link_map']))
         for a,b in zip(self.cfg['ego_links'],self.cfg['ego_links'][1:]):
             if self.links[a]['to_node_idx']!=self.links[b]['from_node_idx']:raise ValueError('터널 진로 링크 연결 오류')
@@ -227,7 +235,9 @@ class TunnelPlan:
             cfg['zone'].update(evaluation_s_range=[s0,s1],view_s_range=[s0-45,s1+10],grid_resolution_m=.1)
             cfg['search']['goal_after_checkpoint_m']=0.
             self.scene=load_scene(cfg)
-            self._static_context=(s0,AvoidanceChecker(self.scene,cfg),tunnel_static_models())
+            models=tunnel_static_models()
+            if self.static_models is not None:models=[m for m in models if m.name in self.static_models]
+            self._static_context=(s0,AvoidanceChecker(self.scene,cfg),models)
         s0,checker,models=self._static_context
         low,high=self.cfg['static_station_m']
         count=max_candidates if max_candidates is not None else self.cfg['static_max_tries']

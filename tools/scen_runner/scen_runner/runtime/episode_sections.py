@@ -110,7 +110,7 @@ class DynamicSection(Section):
 class TunnelSection(Section):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.plan = TunnelPlan(self.seed)
+        self.plan = TunnelPlan(self.seed,**self.base.get('tunnel_profile',{}))
         self.spawned = False
         self.route_registered=False
 

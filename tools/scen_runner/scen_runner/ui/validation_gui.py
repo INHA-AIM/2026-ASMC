@@ -2,6 +2,7 @@
 import argparse
 import atexit
 import json
+import hashlib
 import math
 import os
 from pathlib import Path
@@ -69,10 +70,23 @@ class ValidationRunner(QtCore.QThread):
 
     def __init__(self,mode,section,seed,sample_json=None,collision_debug=False,speed_debug=False,
                  replay=None,save_dir=None,save_collisions=True,replay_runs=(),run_counts=None,
-                 with_planning=False,stack_config=None,recording_spec=None):
+                 with_planning=False,stack_config=None,recording_spec=None,tunnel_profile=None):
         super().__init__();base=load_config();self.route=EpisodeRoute(sample_json)
         self.link=EpisodeLink(base);self.link.client_key='validation_ego_'+uuid.uuid4().hex
         self.engine=EpisodeController(self.link,self.route,mode,section,seed)
+        self.tunnel_profile=None
+        if tunnel_profile:
+            from scen_runner.config import load_yaml
+            from scen_runner.planning.tunnel_plan import TunnelPlan
+            raw=Path(tunnel_profile).read_bytes();profile=load_yaml(tunnel_profile)
+            if not isinstance(profile,dict) or set(profile)-{'scene_type','cross_pattern','static_models'}:
+                raise ValueError('터널 프로필은 scene_type/cross_pattern/static_models만 지정합니다.')
+            if profile.get('static_models') and profile.get('scene_type') not in ('static','both'):
+                raise ValueError('모델 지정 시 scene_type은 static 또는 both여야 합니다.')
+            TunnelPlan(0,**profile)  # Validate before simulator mutation, no placement/spawn.
+            self.engine.base['tunnel_profile']=profile
+            self.tunnel_profile=dict(path=str(tunnel_profile),sha256=hashlib.sha256(raw).hexdigest(),values=profile)
+            if replay or replay_runs:raise ValueError('재현 파일과 새 터널 프로필을 동시에 적용할 수 없습니다.')
         if with_planning:
             from scen_runner.orchestration.control import PlanningClient,settings
             self.engine.planning=PlanningClient(settings(stack_config))
@@ -281,6 +295,7 @@ class ValidationRunner(QtCore.QThread):
             if self.save_collisions:
                 try:
                     self.archive=CollisionArchive(self.save_dir,notify=self.archive_message)
+                    if self.tunnel_profile:self.archive.metadata['tunnel_profile']=self.tunnel_profile
                     if self.recording:self.archive.metadata['sensor_run_id']=self.recording.spec['run_id']
                     self.archive.start()
                 except Exception as exc:
@@ -383,10 +398,10 @@ class ValidationRunner(QtCore.QThread):
 class ValidationWindow(QtWidgets.QMainWindow):
     def __init__(self,mode='scene',section='static',seed=None,sample_json=None,collision_debug=False,speed_debug=False,
                  replay=None,save_dir=None,save_collisions=True,replay_runs=(),run_counts=None,
-                 with_planning=False,stack_config=None,recording_spec=None):
+                 with_planning=False,stack_config=None,recording_spec=None,tunnel_profile=None):
         super().__init__();self.runner=ValidationRunner(mode,section,seed,sample_json,collision_debug,speed_debug,
                                                      replay,save_dir,save_collisions,replay_runs,run_counts,
-                                                     with_planning,stack_config,recording_spec)
+                                                     with_planning,stack_config,recording_spec,tunnel_profile)
         replay=self.runner.replay
         if replay:mode='section';section=replay['section']
         self.pending=None;self.pending_ego=None;self.last=None;self.allow_close=False;self.view='ego'
@@ -687,6 +702,7 @@ def main():
     parser.add_argument('--with-planning',action='store_true',help='판제 실행기의 종료/새 위치 입력 준비를 확인하고 주행')
     parser.add_argument('--stack-config',type=Path,help='4개 실행기 연동 설정; 기본 config/stack.yaml')
     parser.add_argument('--recording-spec',type=Path,help='등록된 실험 run의 ROS 센서·판단 녹화 JSON')
+    parser.add_argument('--tunnel-profile',type=Path,help='터널 반복 시험의 씬/정적 모델 선택 YAML; 배치 검사는 유지')
     args=parser.parse_args()
     try:require_morai_endpoint(load_config()['morai'])
     except (OSError,ValueError) as error:parser.error(str(error))
@@ -717,7 +733,7 @@ def main():
     try:
         win=ValidationWindow(args.mode,args.section,args.seed,args.sample_json,args.collision_debug,args.speed_debug,
                              replay,args.collision_log_dir,not args.no_save_collision,replay_runs,args.run_counts,
-                             args.with_planning,args.stack_config,args.recording_spec)
+                             args.with_planning,args.stack_config,args.recording_spec,args.tunnel_profile)
     except (OSError,ValueError) as error:parser.error(str(error))
     win.resize(1350,950);win.show()
     pending_close=[False]
