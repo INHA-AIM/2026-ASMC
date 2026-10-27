@@ -42,12 +42,26 @@ def parse_selector(value):
     return dict(token.split('=', 1) for token in value.split() if '=' in token)
 
 
+def completed_bags(directory):
+    """Never report only the finalized first split while recording is active."""
+    directory=Path(directory)
+    manifest=json.loads((directory/'ros/manifest.json').read_text())
+    if manifest.get('status')!='complete' or list((directory/'ros').glob('*.active')):
+        raise ValueError('recording must be closed and complete before analysis')
+    bags=sorted((directory/'ros').glob('*.bag'))
+    expected={f['file']:f['bytes'] for f in manifest.get('files',[])}
+    if not bags or {p.name:p.stat().st_size for p in bags}!=expected:
+        raise ValueError('finalized bag inventory differs from recording manifest')
+    return bags
+
+
 def analyze(directory, output_name='analysis'):
     import rosbag
     from scen_runner.records.sensor_recording import REQUIRED_TOPICS, write_json
     directory = Path(directory)
     if Path(output_name).name != output_name or output_name in ('.','..'):
         raise ValueError('analysis output must be a new subdirectory name')
+    bags=completed_bags(directory)
     output = directory/output_name
     output.mkdir(exist_ok=False)
     stats, reasons, box_reasons, selectors = {}, Counter(), Counter(), Counter()
@@ -90,7 +104,7 @@ def analyze(directory, output_name='analysis'):
     with logs.open('x', encoding='utf-8') as stream:
         # rosbag split files are timestamped; process in file order, never join
         # unrelated runs or select future sensor state for an earlier decision.
-        for path in sorted((directory/'ros').glob('*.bag')):
+        for path in bags:
             with rosbag.Bag(str(path)) as bag:
                 for topic, msg, receipt in bag.read_messages():
                     t = receipt.to_sec()
@@ -153,7 +167,7 @@ def analyze(directory, output_name='analysis'):
                     elif topic == '/rosout_agg' and msg.level >= 4:
                         emit(stream, dict(receipt=t, topic=topic, node=msg.name, message=msg.msg))
 
-    summary = dict(schema='asmc.shadow_trial_analysis.v1', topics={k:v.summary() for k,v in stats.items()},
+    summary = dict(schema='asmc.shadow_trial_analysis.v1', input_bags=[dict(file=p.name,bytes=p.stat().st_size) for p in bags], topics={k:v.summary() for k,v in stats.items()},
                    missing_required=[k for k in REQUIRED_TOPICS if k not in stats],
                    follower_reason_samples=dict(reasons), bbox_reason_samples=dict(box_reasons),
                    selector_samples=dict(selectors), gallery_cases=cases,

@@ -159,6 +159,16 @@ class ValidationRunner(QtCore.QThread):
                 self.archive.checkpoint(self.engine,'before_cleanup')
 
     def receive_contact(self,sample):
+        # Reuse the existing native query. Record background contacts as well as
+        # owned actors; the scenario collision oracle deliberately owns only its
+        # actors, so its silence alone is not an all-scene collision proof.
+        if self.recording and self.archive and sample['epoch']==self.engine.contact_epoch:
+            self.archive.event(dict(event='native_contact_sample',epoch=sample['epoch'],
+                query_started_utc=sample.get('query_started_utc'),
+                received_at_utc=sample.get('received_at_utc'),query_s=sample.get('query_s'),
+                native_timestamp=sample.get('native_timestamp'),native_tick_count=sample.get('native_tick_count'),
+                contacts=list(sample.get('contacts',())),error=sample.get('error'),
+                actor_states=[state_evidence(s) for s in sample.get('actor_states',())]))
         self.engine.contact(sample)
         current=self.engine.last_contact_evidence
         if (sample['epoch']==self.engine.contact_epoch and current is not None and
