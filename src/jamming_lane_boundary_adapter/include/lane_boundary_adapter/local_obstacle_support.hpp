@@ -17,15 +17,18 @@ class LocalObstacleSupport {
   struct Entry { Scan::ConstPtr message; ros::SteadyTime received; };
   void accept(const Scan::ConstPtr& m,const ros::Time& now,const ros::SteadyTime& receipt) {
     const auto& o=m->observation;const auto& a=o.objects;const auto stamp=a.header.stamp;
+    // A delayed retired/duplicate packet must not flush the current producer's
+    // fresh evidence or renew its receipt time. Identity precedes age checks.
+    if(std::find(retired_sessions_.begin(),retired_sessions_.end(),o.producer_session_id)!=retired_sessions_.end())return;
+    const bool same_session=session_==o.producer_session_id;
+    const bool same_epoch=same_session && generation_==o.generation;
+    if(same_session && o.generation<generation_)return;
+    if(same_epoch && o.scan_sequence<=last_sequence_)return;
     if(stamp.isZero()||a.header.frame_id!="base_link"||o.producer_session_id.empty()||
        o.config_id.empty()||o.calibration_id.empty()||
        (now-stamp).toSec()>.35||(stamp-now).toSec()>.05){entries_.clear();return;}
-    if(!last_stamp_.isZero() && stamp<last_stamp_){entries_.clear();return;}
+    if(same_epoch && !last_stamp_.isZero() && stamp<last_stamp_){entries_.clear();return;}
     if((a.status!=a.OBSERVED && a.status!=a.OBSERVED_EMPTY)||a.objects.size()>256){entries_.clear();return;}
-    // Retired producers cannot become current again through delayed delivery.
-    if(std::find(retired_sessions_.begin(),retired_sessions_.end(),o.producer_session_id)!=retired_sessions_.end())return;
-    const bool same_session=session_==o.producer_session_id;
-    if(same_session && o.generation<generation_)return;
     if(same_session && generation_==o.generation &&
        (config_!=o.config_id || calibration_!=o.calibration_id)){
       entries_.clear();return; // IDs may change only with an explicit reset.
@@ -39,7 +42,7 @@ class LocalObstacleSupport {
       }
     }
     session_=o.producer_session_id;generation_=o.generation;config_=o.config_id;
-    calibration_=o.calibration_id;last_stamp_=stamp;
+    calibration_=o.calibration_id;last_stamp_=stamp;last_sequence_=o.scan_sequence;
     entries_.push_back({m,receipt});while(entries_.size()>8)entries_.pop_front();
   }
   Scan::ConstPtr select(const ros::Time& image,const ros::Time& now,const ros::SteadyTime& steady)const {
@@ -91,6 +94,6 @@ class LocalObstacleSupport {
     return result;
   }
  private:
-  std::deque<Entry> entries_;std::deque<std::string> retired_sessions_;ros::Time last_stamp_;std::string session_,config_,calibration_;uint64_t generation_=0;
+  std::deque<Entry> entries_;std::deque<std::string> retired_sessions_;ros::Time last_stamp_;std::string session_,config_,calibration_;uint64_t generation_=0,last_sequence_=0;
 };
 } // namespace lane_boundary_adapter

@@ -5,7 +5,7 @@ using Support=lane_boundary_adapter::LocalObstacleSupport;
 using Scan=asmc_msgs::LidarTrackingObservation;
 Scan::Ptr scan(double stamp=10.,std::string session="one",uint64_t generation=1){
  auto m=boost::make_shared<Scan>();auto& o=m->observation;o.producer_session_id=session;o.generation=generation;
- o.config_id="config";o.calibration_id="calibration";o.objects.header.frame_id="base_link";
+ o.scan_sequence=std::llround(stamp*1000);o.config_id="config";o.calibration_id="calibration";o.objects.header.frame_id="base_link";
  o.objects.header.stamp=ros::Time(stamp);o.objects.status=o.objects.OBSERVED_EMPTY;return m;
 }
 asmc_msgs::LidarObject object(){
@@ -33,6 +33,19 @@ TEST(LocalSupport,OldProducerAndSameGenerationIdentityMutationAreNotAccepted){
  EXPECT_FALSE(c.select(ros::Time(10.21),ros::Time(10.21),ros::SteadyTime(20.21)));
  mutation->observation.generation=2;c.accept(mutation,ros::Time(10.21),ros::SteadyTime(20.21));
  EXPECT_TRUE(c.select(ros::Time(10.21),ros::Time(10.21),ros::SteadyTime(20.21)));
+}
+TEST(LocalSupport,RetiredOrDuplicatePacketsDoNotInvalidateCurrentEvidence){
+ Support c;c.accept(scan(),ros::Time(10.),ros::SteadyTime(20.));
+ auto current=scan(10.1,"two");c.accept(current,ros::Time(10.1),ros::SteadyTime(20.1));
+ c.accept(scan(9.7,"one"),ros::Time(10.2),ros::SteadyTime(20.2));
+ EXPECT_EQ(current,c.select(ros::Time(10.1),ros::Time(10.2),ros::SteadyTime(20.2)));
+ auto duplicate=scan(10.2,"two");duplicate->observation.scan_sequence=current->observation.scan_sequence;
+ c.accept(duplicate,ros::Time(10.2),ros::SteadyTime(20.2));
+ EXPECT_FALSE(c.select(ros::Time(10.2),ros::Time(10.2),ros::SteadyTime(20.2)));
+ EXPECT_EQ(current,c.select(ros::Time(10.1),ros::Time(10.2),ros::SteadyTime(20.2)));
+ EXPECT_FALSE(c.select(ros::Time(10.1),ros::Time(10.2),ros::SteadyTime(20.46)));
+ auto reset=scan(10.2,"two",2);reset->observation.scan_sequence=0;c.accept(reset,ros::Time(10.2),ros::SteadyTime(20.3));
+ EXPECT_EQ(reset,c.select(ros::Time(10.2),ros::Time(10.2),ros::SteadyTime(20.3)));
 }
 TEST(LocalSupport,UniqueBothWaysAndEmptyIsNotMatched){
  const cv::Matx33d K(100,0,100,0,100,100,0,0,1),R=cv::Matx33d::eye();const cv::Vec3d t(0,0,0);
