@@ -25,11 +25,13 @@ class ContactTest(unittest.TestCase):
     status=legacy.LaneChangeTest.status
     def setUp(self):
         rospy.set_param('/camera_bbox_lane_change/contact_clearance_enabled',True)
+        rospy.set_param('/camera_bbox_lane_change/contact_preferred_margin',.15 if self._testMethodName.startswith('test_preferred') else 0.)
         legacy.LaneChangeTest.setUp(self)
     def tearDown(self):
         if hasattr(self,'speed_timer'):self.speed_timer.shutdown()
         legacy.LaneChangeTest.tearDown(self)
         rospy.delete_param('/camera_bbox_lane_change/contact_clearance_enabled')
+        rospy.delete_param('/camera_bbox_lane_change/contact_preferred_margin')
     def test_interpolation_equivalence(self):
         executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
         output=subprocess.check_output([executable,'--interpolation-regression'],text=True,timeout=5)
@@ -81,6 +83,21 @@ class ContactTest(unittest.TestCase):
         self.assertEqual(self.status()[1]['bbox_stop_suppressed'],'false')
         self.feed([0,3.5],box_x=7.,duration=.3)
         self.stopped('contact_target_path_blocked')
+    def test_preferred_reserve_preserves_hard_collision_and_change_budget(self):
+        self.feed();self.following()
+        self.assertEqual(float(self.status()[1]['contact_preferred_margin_m']),.15)
+        self.assertEqual(self.status()[1]['locked_lane'],'1')
+        self.feed([0],box_x=12.,duration=.8)
+        self.assertEqual(self.status()[1]['locked_lane'],'0')
+        self.feed([],shift=-3.5,duration=.7)
+        self.assertEqual(self.status()[1]['change_completed'],'true')
+        self.feed([3.5],shift=-3.5,box_x=12.,duration=.5)
+        self.stopped('lane_change_already_completed')
+
+    def test_preferred_reserve_never_authorizes_a_blocked_road(self):
+        self.feed();self.feed([0,3.5],box_x=6.,duration=.5)
+        self.stopped('contact_all_paths_blocked')
+
     def test_actual_speed_must_be_low_and_fresh(self):
         self.feed();self.speed_value=4.0;self.feed(duration=.3)
         self.stopped('contact_actual_speed_above_trial_limit')
