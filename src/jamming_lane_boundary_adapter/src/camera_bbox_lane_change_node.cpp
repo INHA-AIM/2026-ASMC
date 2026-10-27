@@ -1616,15 +1616,9 @@ std::string updateContactPathPlan() {
         const auto* original=getPlanningLane(index,geometry);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
             params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
-        // Receding-horizon candidates include short remaining maneuvers: an
-        // already turning vehicle must not restart a minimum6 m shift every
-        // frame. Unchanged curvature and full footprint constraints reject
-        // short candidates that the vehicle cannot physically follow.
-        // Prefer the shortest feasible completion. Reinitializing a12 m
-        // maneuver at every frame continually moves its endpoint away; the
-        // vehicle can then reach the obstacle before completing the shift.
-        // Curvature, footprint and contact guards still reject aggressive paths.
-        for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{3.,4.,5.,6.,8.,10.,12.}) {
+        // Search a bounded set through unchanged curvature/footprint guards.
+        // Prefer a short feasible completion without weakening vehicle limits.
+        for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{6.,8.,10.,12.}) {
             LaneChain lane=*original;
             // Offset only the target center, never the observed road boundaries.
             for(auto& p:lane.centerline)p.y+=offset;
@@ -1649,12 +1643,11 @@ std::string updateContactPathPlan() {
     int target=change_state.changing?change_state.target_lane:follower_state.locked_lane;
     bool clear=find(target,candidate);
     Candidate adjacent;
-    // Do not postpone a verified lane change by repeatedly squeezing along
-    // the road edge: that consumes the longitudinal room needed to shift.
-    // A nominally clear center corridor still stays in its current lane.
-    const bool centered_blocked=clear && std::abs(candidate.offset)>params.epsilon &&
-        change_state.occupancy[follower_state.locked_lane]==BboxResult::DETECTED;
-    const bool adjacent_clear=!change_state.changing && (!clear || centered_blocked) &&
+    // Keep a verified collision-free corridor in the current lane. A box
+    // touching the lane divider does not require a full lane change. Forcing
+    // that change because a0.1m offset was needed stranded the low-speed drum
+    // trial mid-turn; earlier high-speed trials had confounded this policy.
+    const bool adjacent_clear=!change_state.changing && !clear &&
         find(1-follower_state.locked_lane,adjacent);
     if(!change_state.changing && (!clear || adjacent_clear)){
         target=1-follower_state.locked_lane;
