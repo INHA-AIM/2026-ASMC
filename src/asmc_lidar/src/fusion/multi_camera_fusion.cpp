@@ -40,11 +40,13 @@ void MultiCameraFusion::Aggregate(Scan& scan,std::vector<TrackedObject>& live,
     auto inserted=scan.start.emplace(id,object.camera);
     TrackedObject scratch;scratch.camera=inserted.first->second;
     std::set<std::string> groups,raws;
-    std::int64_t stamp=0;bool visible=false;
+    std::int64_t stamp=0,positive_stamp=0;bool visible=false;
     for(const auto& e:evidence) {
       stamp=std::max(stamp,e.source.stamp_ns);visible|=e.visible;
-      if(e.positive){groups.insert(e.group);raws.insert(e.raw);}
+      if(e.positive){groups.insert(e.group);raws.insert(e.raw);positive_stamp=std::max(positive_stamp,e.source.stamp_ns);}
     }
+    // A newer empty view cannot rejuvenate an older positive camera token.
+    if(positive_stamp)stamp=positive_stamp;
     // Start-state reaggregation replaces the same scan unit, never increments it
     // once per camera or on every later callback. Newer units seal older units.
     scratch.camera.evidence_ids.clear();

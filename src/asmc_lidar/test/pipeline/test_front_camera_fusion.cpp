@@ -1217,3 +1217,11 @@ TEST(MultiCameraFusion, SideOpticalAxesOriginalDimensionsAndCalibrationIdentity)
   r=fusion.Process(f.stamp_ns,f.stamp_ns,LeveledContext(f.stamp_ns),live,&history,source,f.stamp_ns,f.stamp_ns);
   EXPECT_EQ(r.matched_this_call,0u);
 }
+
+TEST(MultiCameraFusion, NewerEmptyViewDoesNotRefreshPositiveEvidenceTime) {
+  MultiRig r;ThreeFrames(r.source,kT0,{"car","empty","empty"});
+  for(const auto view:{"camera_left","camera_right"}) {
+    auto& f=r.source.snapshot.by_view[view].front();f.stamp_ns+=40*kMs;
+  }
+  r.Run(kT0);EXPECT_EQ(r.objects[0].camera.camera_observation_ns,static_cast<std::uint64_t>(kT0));
+}
