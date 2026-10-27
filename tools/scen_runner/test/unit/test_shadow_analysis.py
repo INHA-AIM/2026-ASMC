@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from scen_runner.records.analyze_shadow import TopicStats, parse_selector, completed_bags
+from scen_runner.records.analyze_shadow import TopicStats, ScalarStats, native_contact_summary, parse_selector, completed_bags
 
 
 class AnalysisTest(unittest.TestCase):
@@ -41,6 +41,21 @@ class AnalysisTest(unittest.TestCase):
             with self.assertRaises(ValueError):completed_bags(r)
             (r/'ros/b.bag.active').rename(r/'ros/b.bag')
             with self.assertRaises(ValueError):completed_bags(r)
+
+    def test_bounded_cost_and_native_query_errors_are_explicit(self):
+        stat=ScalarStats(3)
+        for n in range(5):stat.observe(n)
+        self.assertEqual(stat.summary()['dropped_samples'],2)
+        self.assertEqual(stat.summary()['p50'],3.)
+        with tempfile.TemporaryDirectory() as root:
+            p=Path(root)/'scenes/run';p.mkdir(parents=True)
+            (p/'events.jsonl').write_text('\n'.join(json.dumps(x) for x in [
+                dict(event='native_contact_sample',contacts=['29'],error=None),
+                dict(event='native_contact_sample',contacts=[],error='Channel closed!')]))
+            summary=native_contact_summary(root)
+            self.assertEqual(summary['counts']['samples_with_contact'],1)
+            self.assertEqual(summary['contact_ids'],{'29':1})
+            self.assertEqual(summary['query_errors'],{'Channel closed!':1})
 
     def test_selector_sample_does_not_infer_unknown_source(self):
         self.assertEqual(parse_selector('mode=JAMMING selected_source=/ctrl_cmd/jamming command_fresh=false'),
