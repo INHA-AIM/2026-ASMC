@@ -16,7 +16,7 @@ template<class T> boost::shared_ptr<T> read(const char* file){
 // Exercise the previous linear selection exactly, including its epsilon
 // boundary convention. The runtime geometry is monotonic by construction.
 int interpolationRegression(){
- LaneChain lane;for(int i=0;i<241;++i){double x=i*.083;lane.centerline.push_back({x,std::sin(x)});lane.left_boundary.push_back({x,std::sin(x)+2});lane.right_boundary.push_back({x,std::sin(x)-2});}
+ LaneChain lane;lane.monotonic_x=true;for(int i=0;i<241;++i){double x=i*.083;lane.centerline.push_back({x,std::sin(x)});lane.left_boundary.push_back({x,std::sin(x)+2});lane.right_boundary.push_back({x,std::sin(x)-2});}
  for(int k=-20;k<24200;++k){double x=k*.00083;LaneSample old,now;bool expected=false;
   if(x>=lane.centerline.front().x-params.epsilon && x<=lane.centerline.back().x+params.epsilon)
    for(size_t i=1;i<lane.centerline.size();++i){if(x>lane.centerline[i].x+params.epsilon)continue;
