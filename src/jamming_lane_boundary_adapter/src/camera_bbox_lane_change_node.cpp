@@ -41,6 +41,7 @@ struct Parameters {
     bool contact_clearance_enabled = false;
     bool contact_local_required = false;
     double contact_speed_kph = 5.0;
+    double contact_preferred_margin = 0.0; // trial-only soft reserve, never weakens hard clearance
     double contact_max_skew = 0.15; // no ego-motion alignment is claimed
 
     // 실행 모드와 목표점
@@ -1100,6 +1101,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "contact_plan_wall_ms",std::to_string(contact_plan_wall_ms));
     addDiagnosticValue(status, "contact_actual_speed_mps",std::isfinite(contact_actual_speed)?std::to_string(contact_actual_speed):"unavailable");
     addDiagnosticValue(status,"contact_maneuver_length_m",std::to_string(contact_maneuver_length));
+    addDiagnosticValue(status, "contact_preferred_margin_m",std::to_string(params.contact_preferred_margin));
     addDiagnosticValue(status, "contact_candidates", std::to_string(contact_candidates));
     addDiagnosticValue(status, "contact_road_rejected", std::to_string(contact_road_rejected));
     addDiagnosticValue(status, "contact_collision_rejected", std::to_string(contact_collision_rejected));
@@ -1169,6 +1171,9 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("contact_clearance_enabled",params.contact_clearance_enabled,false);
     private_nh.param("contact_local_required",params.contact_local_required,false);
     private_nh.param("contact_speed_kph",params.contact_speed_kph,5.0);
+    private_nh.param("contact_preferred_margin",params.contact_preferred_margin,0.0);
+    if(!std::isfinite(params.contact_preferred_margin)||params.contact_preferred_margin<0.||params.contact_preferred_margin>.3)
+        throw std::runtime_error("contact_preferred_margin must be in [0,0.3]");
     if(!std::isfinite(params.contact_speed_kph)||params.contact_speed_kph<=0||params.contact_speed_kph>5.0)
         throw std::runtime_error("contact_speed_kph must be in (0,5]");
     private_nh.param("bbox_topic", params.bbox_topic, params.bbox_topic);
@@ -1636,11 +1641,13 @@ std::string updateContactPathPlan() {
     const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
     change_state.decision_sequence=change_state.bbox_sequence;
     if(change_state.entry_lane<0)change_state.entry_lane=follower_state.locked_lane;
-    struct Candidate { LaneChain lane; std::vector<FamilyPoint2d> path; double offset=0,length=0; };
+    struct Candidate { LaneChain lane; std::vector<FamilyPoint2d> path; double offset=0,length=0; bool preferred=false; };
     auto find=[&](int index,Candidate& found){
         const auto* original=getPlanningLane(index,geometry,horizon);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
             params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
+        auto preferred_shape=shape;preferred_shape.lateral_margin+=params.contact_preferred_margin;
+        bool any=false;
         // Recorded r24 has a feasible -0.35m/3m remaining corridor missed by
         // the old0.1m/6m grid. Search147 bounded candidates per lane through
         // unchanged curvature, inflated footprint and observed-road guards.
@@ -1666,21 +1673,28 @@ std::string updateContactPathPlan() {
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
             for(const auto& p:path)points.push_back({p.x,p.y});
             if(!lane_boundary_adapter::clearance::pathClearOfPolygons(points,occupied,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
-            found={std::move(lane),std::move(path),offset,length};return true;
+            const bool preferred=params.contact_preferred_margin==0. ||
+                lane_boundary_adapter::clearance::pathClearOfPolygons(points,occupied,preferred_shape,horizon,params.path_sample_step);
+            if(!any || preferred)found={std::move(lane),std::move(path),offset,length,preferred};
+            any=true;
+            if(preferred)return true;
         }
-        return false;
+        return any;
     };
     Candidate candidate;
     int target=change_state.changing?change_state.target_lane:follower_state.locked_lane;
     bool clear=find(target,candidate);
     Candidate adjacent;
-    // Keep a verified collision-free corridor in the current lane. A box
-    // touching the lane divider does not require a full lane change. Forcing
-    // that change because a0.1m offset was needed stranded the low-speed drum
-    // trial mid-turn; earlier high-speed trials had confounded this policy.
-    const bool adjacent_clear=!change_state.changing && !clear &&
+    // Hard feasibility remains mandatory. Optional15cm reserve is only a
+    // preference: r36 repeatedly chose a barely clear corridor until too close
+    // to change lanes. Prefer more room early, but keep the hard-feasible own
+    // path if neither lane has reserve, or the existing change budget forbids it.
+    const bool preference_allowed=(!change_state.has_completed || !params.one_lane_change_only) &&
+        (!change_state.has_completed || (ros::SteadyTime::now()-change_state.completed_at).toSec()>=params.lane_change_cooldown);
+    const bool adjacent_clear=!change_state.changing && (!clear || (!candidate.preferred && preference_allowed)) &&
         find(1-follower_state.locked_lane,adjacent);
-    if(!change_state.changing && (!clear || adjacent_clear)){
+    const bool prefer_adjacent=adjacent_clear && (!clear || adjacent.preferred);
+    if(!change_state.changing && (!clear || prefer_adjacent)){
         if(change_state.has_completed && params.one_lane_change_only)return fail("lane_change_already_completed");
         if(change_state.has_completed && (ros::SteadyTime::now()-change_state.completed_at).toSec()<params.lane_change_cooldown)
             return fail("lane_change_cooldown");
