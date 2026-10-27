@@ -190,7 +190,7 @@ rosservice call /perception/camera/lane/set_mode '{mode: 0, target_hz: 0.0}'
 ```
 
 원본 좌표·빈/무효·세대/시간 규칙은 [카메라 계약](../contracts/camera-runtime-v1.md),
-카메라 공용 관측과 전방 matching 계약는 [LiDAR 인계](../handoffs/camera-to-lidar.md),
+카메라 공용 관측과 기본3뷰 matching 계약은 [LiDAR 인계](../handoffs/camera-to-lidar.md),
 판제 단독/통합 차이는 [판제 운영](planning-control.md)을 봅니다.
 
 ## 2. Container·build 명령

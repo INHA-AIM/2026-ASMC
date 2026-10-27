@@ -207,7 +207,7 @@
 | `namespace` | `/perception/lidar` | Output namespace; inputs keep their canonical paths |
 | `pipeline_config` | `$(find asmc_lidar)/config/lidar_pipeline.yaml` | Processing configuration YAML |
 | `lidar_level_roll` | `(빈 문자열)` | — |
-| `fusion` | `true` | Use camera observations for classification; false runs LiDAR alone |
+| `fusion` | `true` | Use three camera views for classification; false runs LiDAR alone |
 | `rviz` | `false` | Open RViz and display this pipeline's published objects and ego box |
 | `camera_calibration_config` | `(빈 문자열)` | — |
 | `experimental_tunnel_filter` | `(빈 문자열)` | — |

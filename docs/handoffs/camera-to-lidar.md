@@ -1,14 +1,15 @@
 # 카메라 → LiDAR 연결 인계
 
 카메라 추론은 `asmc_camera`, 관측과 3D 객체의 matching/fusion은 `asmc_lidar`가 담당한다.
-현재 3뷰 관측 수신·버퍼·보정/투영 API와 전방 matching이 구현돼 있다. 3뷰 객체 fusion 확대는 후속이다.
+현재3뷰 관측 수신·버퍼·보정/투영과 독립 matching이 구현됐고, 최적화 후3뷰가 기본이다.
+[실행·복구](../../src/asmc_lidar/docs/three-view-fusion.md)와 [미연결 장애물 복구의 후속 범위](../../src/asmc_lidar/docs/fusion-recovery.md)를 구분한다.
 
 ## 현재 연결과 소유권
 
 ```text
 asmc_camera/camera.launch
  → /perception/camera/objects/observations : asmc_msgs/CameraObjectObservation
- → asmc_lidar의 뷰별 수신·버퍼 → 전방 matching·분류 유지
+ → asmc_lidar의 뷰별 수신·버퍼 → 3뷰 matching·scan별 근거 통합·분류 유지
  → 공용 planning_observations_map → planning_inputs → 판제
  → tracks_local/map (분석·local 기하)
 ```

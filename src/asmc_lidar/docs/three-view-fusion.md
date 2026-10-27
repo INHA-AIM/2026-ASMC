@@ -1,8 +1,10 @@
 # M1 3뷰 fusion·전달 표시·정적 클래스 보조
 
 기준선은 PR #119·#121 병합본 `52017fe2`다. 구현은 `feat/lidar-three-view-fusion`에서
-진행한다. **웹 표시는 수정 경로를 사용하고, 3뷰와 semantic 정적 보조는 수락 전 후보**다.
-현재 정본 YAML은 `fusion.views: front`, `motion.semantic_static_enabled: false`를 유지한다.
+진행한다. 2026-10-28 사용자 승인에 따라 **최적화한 3뷰 fusion을 기본으로 승격**했다.
+정본 YAML과 코드 기본값은 `fusion.views: all`이다. `motion.semantic_static_enabled: false`는 유지한다.
+기본 선택과 전체 대회 주행 수락은 구분한다. 초기 입력 공백·얇은 물체 소실은 미해결이며,
+[승격 검증과 후속 복구 설계](fusion-recovery.md)를 따른다.
 [시험 결과](../../../docs/records/lidar/2026-10-27-m1-three-view-fusion.md)에서 구현·검증·미수락을 구분한다.
 
 ## 실행 경계와 복구
@@ -11,17 +13,18 @@
 점군 단계와 상세 근거를 보려면 처리 쪽에 `debug:=true`가 필요하다. 판제 입력은 debug와 독립적이다.
 공개 ROS 타입·MD5·토픽·판제 행동 코드는 바꾸지 않는다.
 
-시험 YAML에서만 다음 두 키를 선택한다. 다른 값·보정·필터 임계값을 함께 바꾸지 않는다.
+다음 키는 내부 YAML에서 관리한다. 다른 값·보정·필터 임계값을 함께 바꾸지 않는다.
 
-| 설정 | 복구/현재 기본 | 후보 |
+| 설정 | 현재 기본 | 내부 복구/후보 |
 |---|---|---|
-| `fusion.views` | `front` | `all` — 독립적인 전방·좌·우 matching와 터널 보호 |
+| `fusion.views` | `all` — 전방·좌·우 matching와 터널 보호 | `front` — 전방 단독 복구 |
 | `motion.semantic_static_enabled` | `false` | `true` — 확인된 static 클래스 + 연속 기하 근거 |
 
 시험은 `lidar.launch namespace:=/migration/lidar pipeline_config:=<시험 YAML> debug:=true`와
 `view.launch namespace:=/migration/lidar dashboard_port:=8093 pipeline_config:=<같은 YAML>`로 실행한다.
 이미 같은 입력의 운영 생산자가 있으면 처리 부하를 먼저 확인하며, 동일 정식 출력의 생산자를 추가하지 않는다.
-복구는 시험 프로세스를 종료하고 정본 YAML로 실행한다. launch 인자에 모델/운동 정책 선택지를 추가하지 않는다.
+전방 복구는 정본 YAML을 별도 파일로 복사해 `fusion.views`만 `front`로 바꾸고
+`pipeline_config:=<복구 YAML>`로 실행한다. 다른 임계값·보정은 유지하며 새 config ID로 시작한다. launch 인자에 모델/운동 정책 선택지를 추가하지 않는다.
 
 ## 관측 선택과 확인 단위
 
@@ -42,6 +45,9 @@ static과 보호 그룹 충돌에서는 새 보호를 보류한다. 같은 그�
 세 카메라의 정렬된 frame/보정 ID를 모두 포함한다. 원본 크기와 보정 ID가 맞지 않으면 해당 관측은 사용하지 않는다.
 상세 trace는 실제 matching scan과 발행 scan을 구분한다. 진단 제한은 별도 수량이며,
 확정 분류·현재 양성 관측·HD맵 보호 자격은 서로 다른 값이다.
+모든 기여 관측원이 무효/중단되면 분류와 확인 상태를 초기화한다.
+과거 매칭 token만 만료되고 스트림은 정상인 경우 기존 분류는 유지하되 새 보호 근거는 해제한다. 한 뷰만 무효일 때는
+다른 유효 근거를 유지한다. 무효를 미검출 횟수로 세지 않고 LiDAR track·기하는 보존한다.
 
 ## 터널 연결
 
@@ -67,7 +73,7 @@ optical 변환이 없는 별도 수식이었으므로 복구 경로와 구분한
 
 판제 family 어댑터는3경계에서2차로 중앙선을 유도한다. LiDAR 터널의 입력이 아니며,
 이번 replay에는 판제/family 노드가 없었다. 계산 기준 통과는 실제 객체 보존·전체 공급
-수락과 별개이므로3뷰/semantic 후보의 기본 OFF는 유지한다.
+수락과 별개다. 계산 개선과 사용자 승인으로3뷰만 기본 승격했으며 semantic 보조는 OFF다.
 
 ## 웹 표시
 

@@ -7,7 +7,7 @@ B4에서 폐기했다. 사용자와 판제의 새 경로 주행 확인을 기반
 ## 현재 실행과 계약
 
 ```text
-bridge → asmc_lidar (검출·추적·전방 카메라 fusion·전달 필터)
+bridge → asmc_lidar (검출·추적·3뷰 카메라 fusion·전달 필터)
        → /perception/lidar/planning_observations_map → planning_inputs → /planning/objects → 판제
        → /perception/lidar/tracks_local (GPS 무효에도 local 기하 유지)
 asmc_camera → /perception/camera/objects/observations → asmc_lidar
@@ -60,4 +60,6 @@ GPS를 계속 사용하지 않는다. 세부 실패·검증 목록은 [보존한
 
 [3뷰 fusion·웹·정적 보조 구현과 복구](../../src/asmc_lidar/docs/three-view-fusion.md)를 따른다.
 승현은 관측 연결과 semantic 보조 후보까지, 재호는 M3 관측 위치/OBB와 M4 추적·속도 개선을 맡는다.
-판제 메시지는 그대로이며 후보 수락 전 기본 전방/기존 운동 판단을 유지한다.
+판제 메시지는 그대로이며 최적화 후 사용자 승인으로3뷰를 기본 승격했다. 기존 운동 판단은 유지하며
+semantic 보조는 OFF다. local은 GPS와 독립이고 map은 유효 pose에서만 제공한다.
+[얇은 물체 복구·벽 폭 사전정보 검토](../../src/asmc_lidar/docs/fusion-recovery.md)는 후속 PR로 분리한다.

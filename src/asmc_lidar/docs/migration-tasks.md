@@ -13,7 +13,7 @@
 | C0 리팩토링 · 완료 | 안승현 | [공용 수학·IMU causal 이력](../../../docs/records/lidar/2026-10-27-frame-time-refactor.md). stale26은 텔레포트 yaw 거부로 확인, 오래된 자세 사용3건 차단. scan 변환 재사용·점군 복사 제거 |
 | F1 · 완료(공급 제한 명시) | 안승현 | [전방 native 결정·두 연결 결함·동시 기록](../../../docs/records/lidar/2026-10-27-front-fusion-verification.md). 좌우는 수신·투영까지만, matching 확대 아님 |
 | M0 · 미착수 | 승현, 재호 검수 | C0/F1·터널 자료의 선택 실패 사례만 단계별 연결. 새 광범위 진단/수집은 아님 |
-| M1 · 검증 대기 | **안승현** | [3뷰·웹·정적 보조 구현](three-view-fusion.md). 전방 복구 유지, 후보 기본 승격은 검증 결과에 따름 |
+| M1 · 기본 승격/공동 검증 대기 | **안승현** | [3뷰·웹·정적 보조 구현](three-view-fusion.md). 3뷰 기본·전방 복구, semantic 보조 OFF |
 | M2 · 검증 대기 | 손재호, 승현 통합 지원 | PR #119 병합 완료(`52017fe2`). 회귀·실물 보존/확인 지연·실시간 확인 필요 |
 | M3 · 미착수 | **손재호** | 관측 위치·OBB 중심/yaw/치수 안정화. 기존 L-shape·참조점 대조 |
 | M4 · 미착수 | **손재호** | M3 이후 연관·miss·재초기화·속도/운동 상태. 오류 원인 하나씩 대조 |
@@ -27,9 +27,9 @@
 
 ## 현재 완료된 기반
 
-책임별 디렉토리·공용 식별 계약, local/map 출력, 전방 fusion·3뷰 수신 API,
+책임별 디렉토리·공용 식별 계약, local/map 출력, 3뷰 fusion·수신 API,
 HD맵 v7·10cm·점군3점/10% AND OBB10%·상부 제외·관측 확인3/5가 연결돼 있다.
-필터는 전달 배열만 줄이고 tracker·측정 OBB는 보존한다. 3뷰 matching은 M1 내부 후보이며 운영 기본 승격과 구분한다.
+필터는 전달 배열만 줄이고 tracker·측정 OBB는 보존한다. 3뷰 matching은 최적화 후 기본 승격했다. 전체 장면·공급 공동 수락과 구분한다.
 
 C0 시험 도구는 [frame_time](../../../tools/perception/frame_time/README.md)에 있다. 재호는 고정
 projection/scan/pose fixture를 추적·fusion 변경의 좌표 회귀에 재사용할 수 있다. 서로 다른 속도 추정값의
@@ -42,3 +42,6 @@ projection/scan/pose fixture를 추적·fusion 변경의 좌표 회귀에 재사
 
 구 패키지 실행은 삭제 전 고정 revision에서만 재현한다. 현재 checkout에 구 overlay나
 두 번째 LiDAR 생산자를 연결하지 않는다. [정본화 manifest](../../../config/baselines/lidar_canonicalization_v1.json)를 따른다.
+
+2026-10-28: 사용자 승인으로 최적화한3뷰를 기본 승격했다. [승격 검증·후속 복구 설계](fusion-recovery.md)를 따른다.
+얇은 장애물의 미연결 점 복구·벽 폭 사전정보는 다음 PR이며, semantic 운동 보조는 OFF다.
