@@ -20,11 +20,19 @@ int main(int argc,char**argv){
  if(!context.usable()){std::cerr<<context.reason<<'\n';return 3;}
  change_state.lanes=buildContinuousLanes(context);params.contact_clearance_enabled=true;
  follower_state.locked_lane=bbox->own_lane;follower_state.source_stamp=bbox->header.stamp;contact_result=bbox;
+ contact_lane_history.push_back({bbox->lane_stamp,change_state.lanes});
+ change_state.changing=true;change_state.target_lane=bbox->own_lane;
+ std::cout<<"runtime_decision="<<updateContactPathPlan()<<" candidates="<<contact_candidates<<" road_rejected="<<contact_road_rejected<<" collision_rejected="<<contact_collision_rejected<<'\n';
+ std::vector<lane_boundary_adapter::clearance::Polygon> local_occupied;
  std::vector<lane_boundary_adapter::clearance::Bounds> contacts;
+ unsigned contact_index=0;
  for(const auto& poly:bbox->ground_contacts){
   lane_boundary_adapter::clearance::Bounds b{1e100,-1e100,1e100,-1e100};
   for(const auto&p:poly.points){b.xmin=std::min(b.xmin,double(p.x));b.xmax=std::max(b.xmax,double(p.x));b.ymin=std::min(b.ymin,double(p.y));b.ymax=std::max(b.ymax,double(p.y));}
-  contacts.push_back(b);
+  if(bbox->ground_contact_sources.size()==bbox->boxes.size() && bbox->ground_contact_sources[contact_index]=="lidar_observed")
+   local_occupied.push_back({{{b.xmin,b.ymin},{b.xmax,b.ymin},{b.xmax,b.ymax},{b.xmin,b.ymax}}});
+  else contacts.push_back(b);
+  ++contact_index;
   std::cout<<"contact "<<b.xmin<<','<<b.xmax<<','<<b.ymin<<','<<b.ymax<<'\n';
  }
  double horizon=bbox->contact_support_x_max_m;
@@ -33,6 +41,8 @@ int main(int argc,char**argv){
  for(const auto& lane:change_state.lanes)if(lane.lane_index==1)for(const auto& p:lane.left_boundary)reference.push_back({p.x,p.y});
  std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
  if(!lane_boundary_adapter::clearance::contactOccupancy(contacts,reference,horizon,occupied))return 4;
+ for(const auto& p:bbox->local_obstacle_footprints){lane_boundary_adapter::clearance::Polygon o;for(unsigned i=0;i<4;++i)o[i]={p.points[i].x,p.points[i].y};local_occupied.push_back(o);}
+ occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
  for(const auto& original:change_state.lanes)for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5})for(double length:{6.,8.,10.,12.}){
   auto lane=original;for(auto&p:lane.centerline)p.y+=offset;
