@@ -1,7 +1,8 @@
 // CameraSource over the asmc_lidar camera::Buffer (Receiver). Replaces Main's
 // /YOLO/BBox subscription, callback queue and InferenceStatus control gate
 // (FusionCamera.cpp:69-85, 192-243): the buffer validates status, time,
-// identity and boxes; this adapter only maps its front view to CameraFrames.
+// identity and boxes; this adapter exposes independent view frames plus the
+// unchanged front-only fields used by the rollback implementation.
 
 #include <asmc_lidar/fusion/front_camera_fusion.hpp>
 

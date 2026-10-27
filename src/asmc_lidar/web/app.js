@@ -170,7 +170,7 @@
     for(const d of report&&report.objects||[]) {const v=d.preview?d.preview.decision:d.decision;counts[v]=(counts[v]||0)+1;}
     const mapMismatch=report&&report.map_sha256&&state.road&&state.road.sha256&&report.map_sha256!==state.road.sha256;
     el('audit-summary').textContent=(report&&report.delivery_applied?'관측 '+report.delivery_input_count+' · 발행 '+report.delivery_output_count+' · 실제 제외 '+report.delivery_excluded_count+' · 예측 '+((state.scene.tracks||[]).filter(t=>t.miss>0).length):report&&report.enabled?'원본 '+(report.objects||[]).length+' · 유지 '+counts.keep+' · 비교상 제외 후보 '+counts.exclude_candidate+' · 보류 '+counts.undetermined:'audit OFF · 원본 표시')+
-      (report&&report.delivery_applied?' · ROS 발행 '+report.delivery_output_count+' / '+report.delivery_input_count+' · 실제 제외 '+report.delivery_excluded_count:' · audit 비교 · ROS 발행 유지')+
+      (report&&report.delivery_applied?'':' · audit 비교 · ROS 발행 유지')+
       (report?' · 안쪽 경계 '+fmt(report.road_inset_m*100,0)+'cm':'')+(mapMismatch?' · 주의: 배경/판정 지도 SHA 다름':'')+
       (report&&report.pose_source_age_ms>=0?' · GPS age '+fmt(report.pose_source_age_ms,0)+'ms':'')+' · 그리기 '+fmt(state.lastRenderMs,1)+'ms';
     const tracks=state.scene&&state.scene.tracks||[];
@@ -653,7 +653,7 @@
       ['matching Δ / 대기',match ? fmt(match.image_minus_scan_ns/1e6,1)+' / '+fmt(match.wait_ns/1e6,1)+'ms' : '-'],
       ['실제 IoU / 분류 반영',assoc ? fmt(assoc.iou,3)+' · '+assoc.reason+' · '+assoc.class_before+' → '+assoc.class_after : '-'],
       ['화면 표시',visibleTrack(t)?'표시 대상 · 레이어 선택에 따름':'숨김 유지 · 상세 선택은 숨김을 해제하지 않음'],
-      ['필터 미리보기',a.label+' · '+a.detail],
+      [sc.hd_map_audit&&sc.hd_map_audit.delivery_applied?'전달 판정':'필터 비교',a.label+' · '+a.detail],
       ['실제 ROS 전달',t.miss>0?(audit&&audit.historical?'마지막 관측 판정 · '+audit.observed_stamp_ns:'예측 · 현재 전달 대상 아님'):audit&&audit.delivery_excluded?'제외 · 원본 tracker는 유지':sc.hd_map_audit&&sc.hd_map_audit.delivery_applied?'보존':'전달 필터 OFF'],
       ['독립 근거 · 점군 / OBB / 높이',p?[p.point_decision,p.obb_decision,p.height_decision].map(x=>({keep:'유지',exclude_candidate:sc.hd_map_audit.delivery_applied?'제외':'비교 후보',undetermined:'보류'}[x]||'이전 버전')).join(' / '):'미계산'],
       ['전달 판단 / 보류 근거',audit?audit.decision+' / '+audit.reason:'OFF'],

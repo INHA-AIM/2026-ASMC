@@ -118,7 +118,7 @@
     cluster_boundary_protected:'경계 여유 보호',exception_space_protected:'구형 미션 영역 일괄 보호 · 생산자 재시작 필요',
     cluster_outside_boundary_uncertain:'도로 내부 근거 부족 · 경계 오차 미확정',
     obb_support_outside:'OBB 도로 겹침 기준 미달 · 점 근거 부족',
-    cluster_support_outside:'도로 내부 근거 부족',overhead_clearance_candidate:'자차 상부 높이 후보',
+    cluster_support_outside:'도로 내부 근거 부족',overhead_clearance_candidate:'자차 상부 높이 근거',
     overhead_lower_surface_unverified:'하부 관측 검증 대기',insufficient_cluster_support:'근거 점 부족',
     unknown_support_map_cells:'점 위치의 지도 근거 부족',map_or_pose_unavailable:'지도/위치 무효',
     pose_error_bound_unverified:'위치 오차 검증 대기',point_policy_pose_and_scope_unverified:'위치·구간 검증 대기'};
@@ -169,8 +169,8 @@
   }
   // One policy for final track boxes, typed boxes and their support points.
   // Selection only opens details; it must not bypass an explicit hide switch.
-  // An incompatible map cannot justify hiding, even when a candidate was
-  // computed against another map. Prediction visibility stays independent.
+  // A different background map invalidates audit-only hiding, never an explicit
+  // producer delivery exclusion. Prediction history follows the same rule.
   function displayVisibility(scene,road,track,showPred,hideCandidates,hideReasons={}) {
     if(!showPred&&track.miss>0)return {visible:false,reason:'prediction_hidden'};
     const report=scene&&scene.hd_map_audit;
