@@ -374,6 +374,7 @@ void resetActuationLifecycle() {
     follower_state.last_control_time = ros::SteadyTime::now();
 
     contact_lane_history.clear();
+    contact_speed_ready=false;
     // Keep latest camera/BBOX observations, but never credit frames received
     // before activation toward a new lane-change decision.
     change_state.path.clear();
@@ -1076,7 +1077,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "change_completed", change_state.has_completed ? "true" : "false");
     addDiagnosticValue(status, "change_drive_time_sec", std::to_string(change_state.drive_time_sec));
     addDiagnosticValue(status, "change_pause_time_sec", std::to_string(change_state.pause_time_sec));
-    addDiagnosticValue(status, "uses_obstacle_distance", params.contact_clearance_enabled?"camera_ground_contact_only":"false");
+    addDiagnosticValue(status, "uses_obstacle_distance", params.contact_clearance_enabled?"image_contact_and_observed_local_footprint":"false");
     addDiagnosticValue(status, "contact_clearance_enabled", params.contact_clearance_enabled?"true":"false");
     addDiagnosticValue(status, "contact_decision", contact_decision);
     addDiagnosticValue(status, "contact_plan_wall_ms",std::to_string(contact_plan_wall_ms));
@@ -1409,7 +1410,7 @@ std::string bboxStopReason() {
 }
 
 // ============================================================================
-// 12. 경로 생성 / 차량 모서리의 도로 경계 검사 (장애물 충돌 거리 검사는 없음)
+// 12. 공통 경로 생성·도로 경계 검사 (실험 경로의 장애물 검사는 별도 clearance 코어)
 // ============================================================================
 const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* geometry) {
     const LaneChain* found = nullptr;
@@ -1615,11 +1616,15 @@ std::string updateContactPathPlan() {
         const auto* original=getPlanningLane(index,geometry);if(!original)return false;
         const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,
             params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
-        // Prefer the shortest feasible completion. Reinitializing a 12 m
+        // Receding-horizon candidates include short remaining maneuvers: an
+        // already turning vehicle must not restart a minimum6 m shift every
+        // frame. Unchanged curvature and full footprint constraints reject
+        // short candidates that the vehicle cannot physically follow.
+        // Prefer the shortest feasible completion. Reinitializing a12 m
         // maneuver at every frame continually moves its endpoint away; the
         // vehicle can then reach the obstacle before completing the shift.
         // Curvature, footprint and contact guards still reject aggressive paths.
-        for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{6.,8.,10.,12.}) {
+        for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5}) for(double length:{3.,4.,5.,6.,8.,10.,12.}) {
             LaneChain lane=*original;
             // Offset only the target center, never the observed road boundaries.
             for(auto& p:lane.centerline)p.y+=offset;
