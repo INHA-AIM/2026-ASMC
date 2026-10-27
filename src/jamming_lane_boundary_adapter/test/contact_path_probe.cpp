@@ -28,9 +28,9 @@ int main(int argc,char**argv){
   std::cout<<"contact "<<b.xmin<<','<<b.xmax<<','<<b.ymin<<','<<b.ymax<<'\n';
  }
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
- for(const auto& original:change_state.lanes)for(double offset:{0.,-.25,.25,-.5,.5})for(double length:{10.,8.,6.}){
+ for(const auto& original:change_state.lanes)for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5})for(double length:{12.,10.,8.,6.}){
   auto lane=original;for(auto&p:lane.centerline)p.y+=offset;
-  std::vector<FamilyPoint2d> path;if(!buildPath(lane,true,path,1.,length))continue;
+  std::vector<FamilyPoint2d> path;if(!buildPath(lane,true,path,1.,length,true))continue;
   const bool road=pathInsideRoad(path);
   std::vector<lane_boundary_adapter::clearance::Point> pts;for(const auto&p:path)pts.push_back({p.x,p.y});
   const bool clear=lane_boundary_adapter::clearance::pathClear(pts,contacts,shape,bbox->contact_support_x_max_m,params.path_sample_step);
