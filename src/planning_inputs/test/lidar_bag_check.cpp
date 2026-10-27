@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     auto packet=message.instantiate<asmc_msgs::LidarPlanningObservation>();
     if (!packet) continue;
     planning_inputs::DetectedObjectArray output; std::string reason;
-    if (!gate.Convert(*packet,message.getTime().toSec(),&output,&reason)) {
+    if (!gate.Convert(*packet,message.getTime(),&output,&reason)) {
       ++rejected; ++reasons[reason];
       const auto& a=packet->observation.objects;
       pose_lost |= a.status!=a.OBSERVED && a.status!=a.OBSERVED_EMPTY;

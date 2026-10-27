@@ -19,4 +19,15 @@ inline bool WithinAge(std::uint64_t sample, std::uint64_t query, double maximum_
         maximum_seconds >= 0 && maximum_seconds <= 1e6 &&
         query - sample <= static_cast<std::uint64_t>(std::llround(maximum_seconds * 1e9));
 }
+// ROS-stamped observations may have a small, explicit future tolerance.
+// Use integer ns before subtracting: Unix-epoch doubles lose ns precision.
+// This is NOT a mapping between sensor, ROS and monotonic clock domains.
+inline bool WithinStampWindow(std::uint64_t sample, std::uint64_t query,
+                              double maximum_age, double future_tolerance) {
+    if (!sample || !query || !std::isfinite(maximum_age) || maximum_age < 0 ||
+        maximum_age > 1e6 || !std::isfinite(future_tolerance) ||
+        future_tolerance < 0 || future_tolerance > 1e6) return false;
+    return sample <= query ? WithinAge(sample, query, maximum_age)
+                           : WithinAge(query, sample, future_tolerance);
+}
 } }  // namespace asmc::geometry

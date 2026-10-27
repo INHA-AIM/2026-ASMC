@@ -30,7 +30,7 @@ TEST(LidarObservation, FourStatesPreserveMeasuredSpeedAndOnlyLowThreatStopsPredi
     p.observation.objects.objects[0].dynamic_valid = state == p.LOW_THREAT || state == p.DYNAMIC;
     p.observation.objects.objects[0].is_dynamic = state == p.DYNAMIC;
     planning_inputs::DetectedObjectArray out; std::string reason;
-    ASSERT_TRUE(gate.Convert(p, 10.1, &out, &reason)) << reason;
+    ASSERT_TRUE(gate.Convert(p, ros::Time(10.1), &out, &reason)) << reason;
     ASSERT_EQ(out.objects.size(), 1u);
     EXPECT_EQ(out.objects[0].motion_state, state);
     EXPECT_DOUBLE_EQ(out.objects[0].vx, state == p.LOW_THREAT ? 0. : 3.);
@@ -52,7 +52,7 @@ TEST(LidarObservation, InvalidCannotBecomeEmptyOrMeasuredZero) {
     if (variant == 8) p.motion_states[0] = p.DYNAMIC;
     if (variant == 9) p.observation.producer_session_id.clear();
     planning_inputs::DetectedObjectArray out; out.header.frame_id = "untouched"; std::string reason;
-    EXPECT_FALSE(gate.Convert(p, 10.1, &out, &reason)) << variant;
+    EXPECT_FALSE(gate.Convert(p, ros::Time(10.1), &out, &reason)) << variant;
     EXPECT_EQ(out.header.frame_id, "untouched");
   }
 }
@@ -61,7 +61,7 @@ TEST(LidarObservation, UnmeasuredVelocityRetainsGeometryWithoutInventingStationa
   p.observation.objects.objects[0].absolute_velocity_valid = false;
   p.observation.objects.objects[0].absolute_velocity_mps.x = NAN;  // invalid storage is never read
   planning_inputs::DetectedObjectArray out; std::string reason;
-  ASSERT_TRUE(gate.Convert(p, 10.1, &out, &reason)) << reason;
+  ASSERT_TRUE(gate.Convert(p, ros::Time(10.1), &out, &reason)) << reason;
   ASSERT_EQ(out.objects.size(), 1u);
   EXPECT_TRUE(out.objects[0].velocity_unavailable);
   EXPECT_EQ(out.objects[0].motion_state, out.objects[0].MOTION_UNKNOWN);
@@ -74,26 +74,45 @@ TEST(LidarObservation, ValidEmptyAndSourceAge) {
   p.observation.objects.status = p.observation.objects.OBSERVED_EMPTY;
   planning_inputs::DetectedObjectArray out; std::string reason;
   planning_inputs::LidarObservationGate gate;
-  EXPECT_TRUE(gate.Convert(p, 10.1, &out, &reason)); EXPECT_TRUE(out.objects.empty());
-  for (double now : {9., 11., double(NAN)}) {
+  EXPECT_TRUE(gate.Convert(p, ros::Time(10.1), &out, &reason)); EXPECT_TRUE(out.objects.empty());
+  // ros::Time cannot represent NaN; zero is the invalid/uninitialized clock.
+  for (double now : {9., 11., 0.}) {
     planning_inputs::LidarObservationGate fresh;
-    EXPECT_FALSE(fresh.Convert(p, now, &out, &reason));
+    EXPECT_FALSE(fresh.Convert(p, ros::Time(now), &out, &reason));
   }
 }
 TEST(LidarObservation, EpochsDoNotReusePrivateIdsOrAcceptRetiredPackets) {
   planning_inputs::LidarObservationGate gate; planning_inputs::DetectedObjectArray out; std::string reason;
-  auto a = Frame(); ASSERT_TRUE(gate.Convert(a, 10., &out, &reason)); int first = out.objects[0].id;
-  EXPECT_FALSE(gate.Convert(a, 10., &out, &reason));
+  auto a = Frame(); ASSERT_TRUE(gate.Convert(a, ros::Time(10.), &out, &reason)); int first = out.objects[0].id;
+  EXPECT_FALSE(gate.Convert(a, ros::Time(10.), &out, &reason));
   a.observation.objects.header.stamp.fromSec(10.1);
-  EXPECT_FALSE(gate.Convert(a, 10.1, &out, &reason));  // same scan
+  EXPECT_FALSE(gate.Convert(a, ros::Time(10.1), &out, &reason));  // same scan
   a.observation.scan_sequence = 2;
-  ASSERT_TRUE(gate.Convert(a, 10.1, &out, &reason)); EXPECT_EQ(first, out.objects[0].id);
+  ASSERT_TRUE(gate.Convert(a, ros::Time(10.1), &out, &reason)); EXPECT_EQ(first, out.objects[0].id);
   a.observation.generation++; a.observation.scan_sequence = 1; a.observation.objects.header.stamp.fromSec(10.2);
-  ASSERT_TRUE(gate.Convert(a, 10.2, &out, &reason)); EXPECT_NE(first, out.objects[0].id);
+  ASSERT_TRUE(gate.Convert(a, ros::Time(10.2), &out, &reason)); EXPECT_NE(first, out.objects[0].id);
   int second = out.objects[0].id;
   a.observation.producer_session_id = "session-b"; a.observation.objects.header.stamp.fromSec(10.3);
-  ASSERT_TRUE(gate.Convert(a, 10.3, &out, &reason)); EXPECT_NE(second, out.objects[0].id);
+  ASSERT_TRUE(gate.Convert(a, ros::Time(10.3), &out, &reason)); EXPECT_NE(second, out.objects[0].id);
   a.observation.producer_session_id = "session-a"; a.observation.objects.header.stamp.fromSec(10.4);
-  EXPECT_FALSE(gate.Convert(a, 10.4, &out, &reason)); EXPECT_EQ(reason, "retired_session");
+  EXPECT_FALSE(gate.Convert(a, ros::Time(10.4), &out, &reason)); EXPECT_EQ(reason, "retired_session");
 }
 }  // namespace
+
+TEST(LidarObservationTime, NanosecondBoundariesAtUnixEpochAndIdentityPreserved) {
+  const uint64_t ns = 1793000000000000000ULL;
+  for (int64_t delta : {-50000001LL,-50000000LL,0LL,300000000LL,300000001LL}) {
+    planning_inputs::LidarObservationGate gate; auto p = Frame();
+    p.observation.objects.header.stamp.fromNSec(ns);
+    ros::Time now; now.fromNSec(ns+delta);
+    planning_inputs::DetectedObjectArray out; std::string reason;
+    const bool accepted = gate.Convert(p, now, &out, &reason);
+    EXPECT_EQ(accepted, delta >= -50000000LL && delta <= 300000000LL);
+    if (accepted) {
+      EXPECT_EQ(out.header.stamp.toNSec(), ns);
+      EXPECT_EQ(out.producer_session_id, p.observation.producer_session_id);
+      EXPECT_EQ(out.scan_sequence, p.observation.scan_sequence);
+      EXPECT_EQ(out.objects[0].camera_class, "car");
+    }
+  }
+}

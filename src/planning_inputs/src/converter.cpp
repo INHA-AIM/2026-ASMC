@@ -146,9 +146,9 @@ std::uint8_t ConvertClassification(const std::string& source,
   // competition asset category, not proof of zero velocity. Never derive
   // motion_state/velocity validity from these names (or vice versa).
   // Keep all geometry and motion for the two obstacle groups. Group and raw
-  // class exist in the SAME incoming LidarPlanningObservation; the private
-  // DetectedObject type currently loses them. A future lossless extension
-  // should copy them there, not join an independent tracks_map topic.
+  // class are copied losslessly from the SAME incoming observation into the
+  // private DetectedObject. No independent tracks_map join or class-derived
+  // velocity is used. Existing numeric behavior policy is deliberately kept.
   // Planning must keep UNKNOWN geometry as a collision candidate. The enum
   // cannot recover a source class or decide whether an object actually moves;
   // preserve original class/group separately from the pedestrian policy type.
@@ -240,6 +240,8 @@ ConversionStatus ConvertPlanningGeometry(
     bool supported = true;
     DetectedObject target;
     target.id = object.track_id;
+    target.classification = object.classification;
+    target.camera_class = object.camera_class;
     target.type = ConvertClassification(object.classification == "dynamic_obstacle" &&
         object.camera_class == "person" ? "person" : object.classification, &supported);
     target.velocity_unavailable = !object.absolute_velocity_valid;
@@ -284,6 +286,7 @@ ConversionStatus ConvertLidarObservation(
     return Fail(ConversionStatus::INVALID_OBSERVATION, 0, -1, "invalid identity/status/tracking alignment", detail);
   DetectedObjectArray converted;
   converted.header = array.header;
+  CopyObservationIdentity(observation, &converted);
   ConversionStats counts;
   counts.total = array.objects.size();
   std::unordered_set<std::int32_t> ids;
@@ -310,6 +313,8 @@ ConversionStatus ConvertLidarObservation(
     bool supported = true;
     DetectedObject target;
     target.id = object.track_id;
+    target.classification = object.classification;
+    target.camera_class = object.camera_class;
     target.type = ConvertClassification(object.classification == "dynamic_obstacle" &&
         object.camera_class == "person" ? "person" : object.classification, &supported);
     target.motion_state = state;

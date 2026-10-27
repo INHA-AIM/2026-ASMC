@@ -11,6 +11,8 @@ namespace {
 planning_inputs::DetectedObject MakeObject(int id, std::uint8_t type) {
   planning_inputs::DetectedObject object;
   object.id = id;
+  object.classification = "static_obstacle";
+  object.camera_class = "plastic_barrier";
   object.type = type;
   object.motion_state = planning_inputs::DetectedObject::MOTION_DYNAMIC_PENDING;
   object.center.x = 10.0 + id;
@@ -91,4 +93,18 @@ TEST(DetectedMsgConverter, RejectsInvalidNumericObjects) {
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
+}
+
+TEST(PlanningSemanticMetadata, IsNotAMotionPolicy) {
+  planning_inputs::DetectedObjectArray input;
+  planning_inputs::DetectedObject object;
+  object.id=10; object.type=0; object.classification="static_obstacle";
+  object.camera_class="plastic_barrier"; object.vx=3.; object.vy=4.;
+  object.motion_state=object.MOTION_DYNAMIC;
+  input.objects.push_back(object);
+  const auto output=behavior_planner::DetectedMsgConverter::toPerceptionObjects(input);
+  ASSERT_EQ(output.obstacles.size(),1u);
+  EXPECT_EQ(output.obstacles[0].camera_class,"plastic_barrier");
+  EXPECT_EQ(output.obstacles[0].classification,"static_obstacle");
+  EXPECT_DOUBLE_EQ(output.obstacles[0].speed,5.);
 }

@@ -40,6 +40,8 @@ struct RiskFeature { bool static_obstacle_ahead=false,pedestrian_risk=false,emer
 struct RoundaboutFeature { bool enabled=false,approach=false; std::string source_link_id,target_link_id; double distance_to_stop=1e9; };
 struct UrbanFeature { DynamicDecision dynamic; RoundaboutFeature roundabout; double timestamp=0; int frame_count=0; EgoFeature ego; RouteFeature route; SignalFeature signal; SurroundingFeature surrounding; RiskFeature risk; std::unordered_map<std::string,double> extra_values; std::unordered_map<std::string,bool> extra_flags; };
 using EgoState = asmc_planner::EgoState;
-struct TrackedObject { int id=-1; ObjectType type=ObjectType::UNKNOWN; MotionState motion_state=MotionState::UNKNOWN; double x=0,y=0,yaw=0,vx=0,vy=0,speed=0,accel=0,length=4.5,width=1.8; bool velocity_unavailable=false; };
+// Preserve original class/group for policy review; semantic identity alone does
+// not establish motion. Existing type and motion_state decisions remain separate.
+struct TrackedObject { int id=-1; ObjectType type=ObjectType::UNKNOWN; MotionState motion_state=MotionState::UNKNOWN; double x=0,y=0,yaw=0,vx=0,vy=0,speed=0,accel=0,length=4.5,width=1.8; bool velocity_unavailable=false; std::string classification, camera_class; };
 struct PerceptionObjects { std::vector<TrackedObject> vehicles,pedestrians,obstacles; };
 }
