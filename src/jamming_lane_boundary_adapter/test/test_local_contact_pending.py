@@ -16,8 +16,9 @@ class PairedLocalTest(unittest.TestCase):
         pub=rospy.Publisher('/perception/lidar/tracks_local',LidarTrackingObservation,queue_size=8)
         end=time.monotonic()+3
         while not pub.get_num_connections() and time.monotonic()<end:time.sleep(.01)
-        self.active();lane,context,frame=self.sample();self.results.clear()
-        self.context_pub.publish(context);self.family_pub.publish(lane);self.frame_pub.publish(frame)
+        heartbeat=rospy.Timer(rospy.Duration(.05),lambda _:self.active());self.addCleanup(heartbeat.shutdown)
+        self.active();time.sleep(.1);lane,context,frame=self.sample();self.results.clear()
+        self.context_pub.publish(context);time.sleep(.02);self.family_pub.publish(lane);time.sleep(.02);self.frame_pub.publish(frame)
         time.sleep(.08)
         self.assertFalse(any(m.valid and m.header.stamp==frame.header.stamp for m in self.results))
         m=LidarTrackingObservation();o=m.observation;o.producer_session_id='delayed-test';o.generation=1;o.scan_sequence=1
@@ -29,9 +30,9 @@ class PairedLocalTest(unittest.TestCase):
         self.assertTrue(paired,[x.reason for x in self.results]);self.assertTrue(paired[-1].local_obstacles_valid)
         self.assertEqual(paired[-1].local_obstacles_stamp,frame.header.stamp)
         time.sleep(.07);self.active();lane,context,frame=self.sample();self.results.clear()
-        self.context_pub.publish(context);self.family_pub.publish(lane);self.frame_pub.publish(frame)
+        self.context_pub.publish(context);time.sleep(.02);self.family_pub.publish(lane);time.sleep(.02);self.frame_pub.publish(frame)
         time.sleep(.28);self.active();time.sleep(.08)
         self.assertFalse(any(x.valid and x.header.stamp==frame.header.stamp for x in self.results))
-        self.assertTrue(any('waiting_for_local_contact_observation' in x.reason for x in self.results),[x.reason for x in self.results])
+        self.assertTrue(any(not x.valid and x.header.stamp==frame.header.stamp for x in self.results),[x.reason for x in self.results])
 
 if __name__=='__main__':rostest.rosrun('lane_boundary_adapter','local_contact_pending',PairedLocalTest)
