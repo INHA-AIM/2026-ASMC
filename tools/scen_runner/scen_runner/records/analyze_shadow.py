@@ -85,11 +85,13 @@ def parse_selector(value):
     return dict(token.split('=', 1) for token in value.split() if '=' in token)
 
 
-def completed_bags(directory):
+def completed_bags(directory,allow_incomplete=False):
     """Never report only the finalized first split while recording is active."""
     directory=Path(directory)
     manifest=json.loads((directory/'ros/manifest.json').read_text())
-    if manifest.get('status')!='complete' or list((directory/'ros').glob('*.active')):
+    accepted=manifest.get('status')=='complete'
+    closed_failure=allow_incomplete and manifest.get('status')=='incomplete' and bool(manifest.get('ended_unix'))
+    if not (accepted or closed_failure) or list((directory/'ros').glob('*.active')):
         raise ValueError('recording must be closed and complete before analysis')
     bags=sorted((directory/'ros').glob('*.bag'))
     expected={f['file']:f['bytes'] for f in manifest.get('files',[])}
@@ -98,13 +100,14 @@ def completed_bags(directory):
     return bags
 
 
-def analyze(directory, output_name='analysis'):
+def analyze(directory, output_name='analysis',allow_incomplete=False):
     import rosbag
     from scen_runner.records.sensor_recording import REQUIRED_TOPICS, write_json
     directory = Path(directory)
     if Path(output_name).name != output_name or output_name in ('.','..'):
         raise ValueError('analysis output must be a new subdirectory name')
-    bags=completed_bags(directory)
+    bags=completed_bags(directory,allow_incomplete)
+    recording=json.loads((directory/'ros/manifest.json').read_text())
     output = directory/output_name
     output.mkdir(exist_ok=False)
     stats, reasons, box_reasons, selectors = {}, Counter(), Counter(), Counter()
@@ -222,7 +225,8 @@ def analyze(directory, output_name='analysis'):
                     elif topic == '/rosout_agg' and msg.level >= 4:
                         emit(stream, dict(receipt=t, topic=topic, node=msg.name, message=msg.msg))
 
-    summary = dict(schema='asmc.shadow_trial_analysis.v1', input_bags=[dict(file=p.name,bytes=p.stat().st_size) for p in bags], topics={k:v.summary() for k,v in stats.items()},
+    summary = dict(schema='asmc.shadow_trial_analysis.v1', recording_status=recording['status'],
+                   recording_errors=recording.get('errors',[]),recording_missing_topics=recording.get('missing_required_topics',[]), input_bags=[dict(file=p.name,bytes=p.stat().st_size) for p in bags], topics={k:v.summary() for k,v in stats.items()},
                    missing_required=[k for k in REQUIRED_TOPICS if k not in stats],
                    follower_reason_samples=dict(reasons), bbox_reason_samples=dict(box_reasons),
                    selector_samples=dict(selectors), gallery_cases=cases,
@@ -251,7 +255,7 @@ def analyze(directory, output_name='analysis'):
     (output/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>Shadow trial evidence</title>'
         '<style>body{background:#161b22;color:#eee;font:16px sans-serif;margin:24px}svg{width:100%;max-width:1280px}'
         'pre{white-space:pre-wrap}article{border-top:1px solid #555;padding:16px 0}</style>'
-        '<h1>음영구간 판단 기록</h1><p>동일 stamp의 원본 영상과 실제 bbox 판정입니다. '
+        '<h1>음영구간 판단 기록</h1><p>Recording: '+html.escape(recording['status'])+' — '+html.escape(', '.join(recording.get('missing_required_topics',[])))+'</p><p>동일 stamp의 원본 영상과 실제 bbox 판정입니다. '
         '시나리오 재현은 동일 센서 프레임의 재생을 보장하지 않습니다.</p><a href="summary.json">요약 JSON</a>'+cards,
         encoding='utf-8')
     return summary
@@ -261,8 +265,9 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('run_directory', type=Path)
     parser.add_argument('--output-name', default='analysis', help='new run subdirectory; never overwrites earlier analysis')
+    parser.add_argument('--allow-incomplete',action='store_true',help='inspect a finalized failed recording; retains failure status and missing topics')
     args=parser.parse_args()
-    result=analyze(args.run_directory,args.output_name)
+    result=analyze(args.run_directory,args.output_name,args.allow_incomplete)
     print(json.dumps({k:result[k] for k in ('missing_required','follower_reason_samples','bbox_reason_samples')},ensure_ascii=False,indent=2))
 
 
