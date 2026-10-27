@@ -23,6 +23,17 @@ TEST(LocalSupport,FreshnessSkewAndReset){
  auto invalid=scan(10.2,"two");invalid->observation.objects.status=3;c.accept(invalid,ros::Time(10.2),ros::SteadyTime(20.2));
  EXPECT_FALSE(c.select(ros::Time(10.1),ros::Time(10.2),ros::SteadyTime(20.2)));
 }
+TEST(LocalSupport,OldProducerAndSameGenerationIdentityMutationAreNotAccepted){
+ Support c;auto first=scan();c.accept(first,ros::Time(10.),ros::SteadyTime(20.));
+ auto second=scan(10.1,"two");c.accept(second,ros::Time(10.1),ros::SteadyTime(20.1));
+ auto delayed=scan(10.2,"one");c.accept(delayed,ros::Time(10.2),ros::SteadyTime(20.2));
+ EXPECT_FALSE(c.select(ros::Time(10.2),ros::Time(10.2),ros::SteadyTime(20.2)));
+ auto mutation=scan(10.21,"two");mutation->observation.config_id="changed-without-reset";
+ c.accept(mutation,ros::Time(10.21),ros::SteadyTime(20.21));
+ EXPECT_FALSE(c.select(ros::Time(10.21),ros::Time(10.21),ros::SteadyTime(20.21)));
+ mutation->observation.generation=2;c.accept(mutation,ros::Time(10.21),ros::SteadyTime(20.21));
+ EXPECT_TRUE(c.select(ros::Time(10.21),ros::Time(10.21),ros::SteadyTime(20.21)));
+}
 TEST(LocalSupport,UniqueBothWaysAndEmptyIsNotMatched){
  const cv::Matx33d K(100,0,100,0,100,100,0,0,1),R=cv::Matx33d::eye();const cv::Vec3d t(0,0,0);
  auto m=scan();m->observation.objects.objects.push_back(object());lane_boundary_adapter::CameraBBox b;
