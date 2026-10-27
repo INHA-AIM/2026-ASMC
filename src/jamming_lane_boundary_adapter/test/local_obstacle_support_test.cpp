@@ -39,3 +39,5 @@ TEST(LocalSupport,PredictionAndMalformedGeometryCannotSupport){
  o=object();o.obb_corners[0].z=NAN;EXPECT_FALSE(Support::footprint(o,p));
  o=object();o.source_point_count=2;EXPECT_FALSE(Support::footprint(o,p));
 }
+
+int main(int argc,char** argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}
