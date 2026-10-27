@@ -29,6 +29,10 @@ int main(int argc,char**argv){
  }
  double horizon=bbox->contact_support_x_max_m;
  for(const auto& lane:change_state.lanes) horizon=std::min({horizon,lane.left_boundary.back().x,lane.right_boundary.back().x});
+ std::vector<lane_boundary_adapter::clearance::Point> reference;
+ for(const auto& lane:change_state.lanes)if(lane.lane_index==1)for(const auto& p:lane.left_boundary)reference.push_back({p.x,p.y});
+ std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
+ if(!lane_boundary_adapter::clearance::contactOccupancy(contacts,reference,horizon,occupied))return 4;
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
  for(const auto& original:change_state.lanes)for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5})for(double length:{12.,10.,8.,6.}){
   auto lane=original;for(auto&p:lane.centerline)p.y+=offset;
@@ -37,7 +41,7 @@ int main(int argc,char**argv){
   while(!path.empty() && path.back().x>end)path.pop_back();
   const bool road=path.size()>1 && path.back().x>=params.lookahead_distance && pathInsideRoad(path);
   std::vector<lane_boundary_adapter::clearance::Point> pts;for(const auto&p:path)pts.push_back({p.x,p.y});
-  const bool clear=lane_boundary_adapter::clearance::pathClear(pts,contacts,shape,horizon,params.path_sample_step);
+  const bool clear=lane_boundary_adapter::clearance::pathClear(pts,occupied,shape,horizon,params.path_sample_step);
   std::cout<<"lane="<<lane.lane_index<<" offset="<<offset<<" length="<<length<<" road="<<road<<" clear="<<clear<<" curvature="<<change_state.maximum_path_curvature<<" path=";
   for(unsigned i=0;i<path.size();i+=8) { std::cout<<path[i].x<<','<<path[i].y<<';'; }
   std::cout<<'\n';

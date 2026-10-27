@@ -1537,6 +1537,13 @@ std::string updateContactPathPlan() {
     }
     if(!std::isfinite(horizon) || horizon<params.lookahead_distance+params.vehicle_front+params.obstacle_longitudinal_margin+2*params.path_sample_step)
         return fail("contact_swept_horizon_missing");
+    std::vector<lane_boundary_adapter::clearance::Point> road_reference;
+    const auto* reference_lane=getPlanningLane(1,geometry);
+    if(!reference_lane)return fail("contact_road_reference_missing");
+    for(const auto& p:reference_lane->left_boundary)road_reference.push_back({p.x,p.y});
+    std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
+    if(!lane_boundary_adapter::clearance::contactOccupancy(contacts,road_reference,horizon,occupied))
+        return fail("contact_occlusion_geometry_invalid");
     const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
     change_state.decision_sequence=change_state.bbox_sequence;
     if(change_state.entry_lane<0)change_state.entry_lane=follower_state.locked_lane;
@@ -1561,7 +1568,7 @@ std::string updateContactPathPlan() {
             if(path.empty() || path.back().x<params.lookahead_distance || !pathInsideRoad(path,geometry)){++contact_road_rejected;continue;}
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
             for(const auto& p:path)points.push_back({p.x,p.y});
-            if(!lane_boundary_adapter::clearance::pathClear(points,contacts,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
+            if(!lane_boundary_adapter::clearance::pathClear(points,occupied,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
             found={std::move(lane),std::move(path),offset};return true;
         }
         return false;
