@@ -22,7 +22,7 @@ LiDAR·판제·수집은 outer workspace만 빌드합니다. 주행 중 containe
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
-./scripts/build_ws.sh -j2
+./scripts/build_ws.sh -j2 -l2 -DCMAKE_BUILD_TYPE=Release
 source devel/setup.bash
 ```
 
