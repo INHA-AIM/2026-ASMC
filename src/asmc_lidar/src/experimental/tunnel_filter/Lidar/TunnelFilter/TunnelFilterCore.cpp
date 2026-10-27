@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <map>
 
 namespace tunnel_filter {
 namespace {
@@ -339,6 +340,14 @@ Plane TransformPlaneToCurrent(const Plane& previous, const EgoMotion& motion) {
     return plane;
 }
 
+void WallTrack::Reanchor(const std::vector<WallSegment>& verified,const Params& params) {
+    state_.planes.clear();
+    for(const auto& segment:verified)if(segment.valid)state_.planes.push_back(segment.plane);
+    state_.has=!state_.planes.empty();state_.miss=0;
+    state_.persist=std::max(state_.persist+1,std::max(1,params.wall_min_persist_frames));
+    state_.confirmed=state_.has;
+}
+
 bool WallTrack::Update(const std::vector<WallSegment>& segments,
                        const Params& params, const EgoMotion* motion) {
     // 저장된 평면은 항상 직전 처리 프레임 좌표계다: 먼저 현재 좌표계로 옮긴다
@@ -488,6 +497,16 @@ ObbStructureFlags ClassifyObb(const Obb& obb, float z_min_road,
     return flags;
 }
 
+bool IsPreGpsStructuralObb(float horizontal_a_m, float horizontal_b_m,
+                           float vertical_height_m, const Params& params) {
+    if (!params.pre_gps_structural_obb_filter_enable) return false;
+    const float long_side = std::max(horizontal_a_m, horizontal_b_m);
+    const float short_side = std::min(horizontal_a_m, horizontal_b_m);
+    return long_side >= params.pre_gps_structural_obb_min_length_m &&
+           short_side >= params.pre_gps_structural_obb_min_width_m &&
+           vertical_height_m >= params.pre_gps_structural_obb_min_height_m;
+}
+
 void WallEndpoint(const WallSegment& segment, float s, float z, float* x,
                   float* y) {
     const Plane& plane = segment.plane;
@@ -593,6 +612,8 @@ const FrameResult& TunnelPipeline::Process(
     r.pitch_rad = pitch_rad;
     r.protection_available = protection_available;
     r.protected_points = 0;
+    r.exterior_surface_removed = 0;
+    r.residual_decisions.clear();
     if (protect_class != nullptr) {
         for (const auto value : *protect_class) {
             if (value != kProtectNone) ++r.protected_points;
@@ -623,6 +644,7 @@ const FrameResult& TunnelPipeline::Process(
     r.timings.ground_remove_ms = ElapsedMs(stage_start);
 
     ProcessWalls(protect_class, ambiguous, protection_available);
+    RemoveResidualWalls(protect_class, ambiguous, protection_available);
     ClusterAndFilter(protect_class);
 
     r.timings.total_ms = ElapsedMs(total_start);
@@ -1240,9 +1262,88 @@ void TunnelPipeline::ProcessWalls(
             }
         }
         result.fit_valid = !result.segments.empty();
-        result.removal_allowed =
-            wall_tracks_[side].Update(result.segments, params_, &r.motion);
-        result.track = wall_tracks_[side].State();
+    }
+    // A single long run is not required when several separated CURRENT runs
+    // independently lie on one plane opposite a previously confirmed wall.
+    // Retain the measured intervals: never fill their visibility gaps.
+    if(params_.residual_wall_surface_enable)for(std::size_t side=0;side<2;++side) {
+        auto& w=r.walls[side];const auto& other=r.walls[1-side];
+        if(w.fit_valid || !other.fit_valid || !wall_tracks_[1-side].State().confirmed)continue;
+        WallSegment seg=w.first_attempt;
+        if(seg.reject_reason!="short_span" && seg.reject_reason!="few_bins")continue;
+        float total=0;int runs=0;
+        for(const auto& interval:seg.intervals)if(interval.second-interval.first>=4.f) {
+            total+=interval.second-interval.first;++runs;
+        }
+        if(runs<3 || total<20.f || seg.s_max-seg.s_min<30.f)continue;
+        if(!ValidateWallSegment(&seg,params_,-1.f,6.f,3))continue;
+        const auto& opposite=other.segments.front();
+        const float norm=std::hypot(seg.plane.a,seg.plane.b);
+        const float other_norm=std::hypot(opposite.plane.a,opposite.plane.b);
+        const float dot=(seg.plane.a*opposite.plane.a+seg.plane.b*opposite.plane.b)/(norm*other_norm);
+        const float width=seg.plane.d/norm+opposite.plane.d/other_norm;
+        if(dot>-std::cos(DegToRad(10.f)) || width<4.f || width>20.f)continue;
+        const float foot_y=-seg.plane.d*seg.plane.b;
+        if((side==0 && foot_y<=0) || (side==1 && foot_y>=0))continue;
+        seg.reject_reason="fragmented_current_support";
+        w.segments.push_back(seg);w.fit_valid=true;
+    }
+    if(params_.residual_wall_surface_enable)for(std::size_t side=0;side<2;++side) {
+        auto& w=r.walls[side];const auto& other=r.walls[1-side];
+        const auto& history=wall_tracks_[side].State();
+        if(w.fit_valid || !history.has || !other.fit_valid ||
+           !wall_tracks_[1-side].State().confirmed || !r.motion.valid || !r.motion.reliable)continue;
+        auto seg=w.first_attempt;
+        if(seg.reject_reason!="short_span" && seg.reject_reason!="few_bins")continue;
+        if(!ValidateWallSegment(&seg,params_,-1.f,6.f,3))continue;
+        bool matched=false;
+        for(const auto& previous:history.planes) {
+            const auto current=TransformPlaneToCurrent(previous,r.motion);
+            if(HorizontalAngleBetweenNormalsDeg(seg.plane,current)<=params_.wall_track_max_angle_deg &&
+               std::fabs(seg.plane.d-current.d)<=params_.wall_track_max_offset_m)matched=true;
+        }
+        if(!matched)continue;
+        seg.reject_reason="current_short_support_matches_verified_wall";
+        w.segments.push_back(seg);w.fit_valid=true;
+    }
+    // Reacquire ONLY an already-confirmed pair after uncertain integrated motion.
+    // Both CURRENT walls must independently pass every original structural gate.
+    // No previous plane is used to erase a point that lacks a current wall fit.
+    bool reanchor=false;
+    if(params_.wall_gap_reanchor_enable && r.motion.valid && r.motion.integrated &&
+       !r.motion.reliable && r.motion.integration_steps>=3 && r.motion.dt_s>.20f && r.motion.dt_s<=1.f &&
+       r.walls[0].fit_valid && r.walls[1].fit_valid &&
+       wall_tracks_[0].State().confirmed && wall_tracks_[1].State().confirmed &&
+       wall_tracks_[0].State().miss==0 && wall_tracks_[1].State().miss==0) {
+        const auto& left=r.walls[0].segments.front().plane;
+        const auto& right=r.walls[1].segments.front().plane;
+        auto horizontal=[](const Plane& p){return std::hypot(p.a,p.b);};
+        auto opposite=[&](const Plane& a,const Plane& b) {
+            return -(a.a*b.a+a.b*b.b)/(horizontal(a)*horizontal(b))>=std::cos(DegToRad(3.f));
+        };
+        if(opposite(left,right)) {
+            for(const auto& stored_left:wall_tracks_[0].State().planes)for(const auto& stored_right:wall_tracks_[1].State().planes) {
+                const auto old_left=TransformPlaneToCurrent(stored_left,r.motion);
+                const auto old_right=TransformPlaneToCurrent(stored_right,r.motion);
+                if(!opposite(old_left,old_right))continue;
+                const float angle_l=HorizontalAngleBetweenNormalsDeg(left,old_left);
+                const float angle_r=HorizontalAngleBetweenNormalsDeg(right,old_right);
+                const float dl=left.d/horizontal(left)-old_left.d/horizontal(old_left);
+                const float dr=right.d/horizontal(right)-old_right.d/horizontal(old_right);
+                // A translation shifts opposite walls in opposite directions;
+                // stable corridor width rejects unrelated one-sided surfaces.
+                if(angle_l<=1.f && angle_r<=1.f && std::abs(dl+dr)<=.35f &&
+                   std::max(std::abs(dl),std::abs(dr))<=1.5f)reanchor=true;
+            }
+        }
+    }
+    for(std::size_t side=0;side<2;++side) {
+        auto& result=r.walls[side];
+        if(reanchor) {
+            wall_tracks_[side].Reanchor(result.segments,params_);
+            result.removal_allowed=true;result.gap_reanchored=true;
+        } else result.removal_allowed=wall_tracks_[side].Update(result.segments,params_,&r.motion);
+        result.track=wall_tracks_[side].State();
     }
     r.timings.wall_fit_ms = ElapsedMs(fit_start);
 
@@ -1287,6 +1388,189 @@ void TunnelPipeline::ProcessWalls(
         }
     }
     r.timings.wall_remove_ms = ElapsedMs(remove_start);
+}
+
+// Only current verified walls can justify this additional removal.
+// A short component needs its own vertical support, rather than a lifetime
+// threshold. Once verified as residual wall, its low tail is wall support too.
+void TunnelPipeline::RemoveResidualWalls(
+    const std::vector<std::uint8_t>* protect_class,
+    const std::vector<std::uint8_t>* ambiguous, bool protection_available) {
+    if (!params_.residual_wall_surface_enable) return;
+    auto start = Clock::now();
+    auto& r = result_;
+    pcl::IndicesPtr kept(new std::vector<int>());
+    for (std::size_t i=0;i<r.labels.size();++i)
+        if (r.labels[i]==kKept) kept->push_back(static_cast<int>(i));
+    if (kept->empty()) return;
+    pcl::search::KdTree<pcl::PointXYZI>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZI>());
+    pcl::EuclideanClusterExtraction<pcl::PointXYZI> extraction;
+    extraction.setClusterTolerance(params_.cluster_tolerance_m);
+    extraction.setMinClusterSize(std::max(10,params_.cluster_min_points));
+    extraction.setMaxClusterSize(params_.cluster_max_points);
+    extraction.setInputCloud(r.leveled); extraction.setIndices(kept);
+    extraction.setSearchMethod(tree);
+    std::vector<pcl::PointIndices> clusters; extraction.extract(clusters);
+    std::vector<Obb> obbs;
+    if (!clusters.empty()) obb_function_(r.leveled,clusters,&obbs);
+    for (std::size_t c=0;c<clusters.size() && c<obbs.size();++c) {
+        const auto& obb=obbs[c];
+        r.residual_decisions.emplace_back(obb,"shape_or_support_not_proven");
+        auto& decision=r.residual_decisions.back().second;
+        // A compact object with camera evidence is preserved as a whole.
+        bool protected_cluster=false,ambiguous_cluster=false;
+        for (int i:clusters[c].indices) {
+            if(protect_class && (*protect_class)[i]!=kProtectNone)protected_cluster=true;
+            if(!protection_available && ambiguous && (*ambiguous)[i])ambiguous_cluster=true;
+        }
+        if (protected_cluster) {decision="camera_class_protected";continue;}
+        // Low elongated surfaces entirely BEHIND a currently confirmed tunnel wall
+        // are outside the corridor. Require ego inside BOTH current walls and
+        // each removed point inside the excluding wall's measured interval,
+        // with a 2m end guard. The opposite wall may have a different visible end.
+        // This proves exclusion geometrically without enlarging ground height.
+        if(obb.z_max-obb.z_min<=.30f && obb.length>=1.4f && obb.width>0.f &&
+           obb.length/obb.width>=3.f &&
+           r.walls[0].removal_allowed && r.walls[1].removal_allowed) {
+            bool covered=true;
+            for(const auto& side:r.walls) {
+                auto has_support=[&](float x,float y) {
+                    for(const auto& seg:side.segments)
+                        if(seg.valid && seg.InIntervals(seg.AlongWall(x,y),-2.f))return true;
+                    return false;
+                };
+                if(!has_support(0,0)){covered=false;break;}
+            }
+            bool removed_any=false;int bounded_removed=0;
+            if(covered)for(int i:clusters[c].indices) {
+                if(r.labels[i]!=kKept)continue;
+                const auto& q=r.leveled->at(i);int outside_side=-1;
+                for(std::size_t side=0;side<2;++side)for(const auto& seg:r.walls[side].segments)
+                    if(seg.valid && seg.InIntervals(seg.AlongWall(q.x,q.y),-2.f) &&
+                       seg.plane.SignedDistance(q.x,q.y,q.z)<-.5f)outside_side=side;
+                if(outside_side<0)continue;
+                r.labels[i]=kWall;++r.wall_removed;++r.walls[outside_side].removed;
+                ++r.exterior_surface_removed;removed_any=true;++bounded_removed;
+            }
+            if(removed_any) {
+                decision="bounded_exterior_surface_points_removed";
+                // A connected low tail may cross the support boundary by <=2m.
+                // Extend only when >=60% already has bounded exterior proof,
+                // EVERY point stays behind the same wall, and >=90% lies on
+                // one measured horizontal plane. No inside-corridor point is
+                // erased and a compact/tall entrance obstacle cannot pass this.
+                int tail_side=-1;
+                if(bounded_removed*5>=static_cast<int>(clusters[c].indices.size())*3) {
+                    for(std::size_t side=0;side<2;++side) {
+                        bool same_exterior=true;
+                        for(int i:clusters[c].indices) {
+                            const auto& q=r.leveled->at(i);bool supported=false;
+                            for(const auto& seg:r.walls[side].segments)
+                                if(seg.valid && seg.InIntervals(seg.AlongWall(q.x,q.y),2.f) &&
+                                   seg.plane.SignedDistance(q.x,q.y,q.z)<-.5f)supported=true;
+                            if(!supported){same_exterior=false;break;}
+                        }
+                        if(same_exterior)tail_side=side;
+                    }
+                }
+                if(tail_side>=0) {
+                    pcl::IndicesPtr pool(new std::vector<int>(clusters[c].indices));
+                    pcl::SACSegmentation<pcl::PointXYZI> fit;
+                    fit.setOptimizeCoefficients(true);fit.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+                    fit.setMethodType(pcl::SAC_RANSAC);fit.setAxis(Eigen::Vector3f(0,0,1));
+                    fit.setEpsAngle(DegToRad(10.f));fit.setMaxIterations(100);fit.setDistanceThreshold(.05f);
+                    fit.setInputCloud(r.leveled);fit.setIndices(pool);
+                    pcl::PointIndices inliers;pcl::ModelCoefficients coeff;Plane local;
+                    fit.segment(inliers,coeff);
+                    if(inliers.indices.size()>=.9f*pool->size() && ToPlane(coeff,&local) &&
+                       std::fabs(local.c)>=std::cos(DegToRad(10.f))) {
+                        for(int i:clusters[c].indices)if(r.labels[i]==kKept) {
+                            r.labels[i]=kWall;++r.wall_removed;++r.walls[tail_side].removed;
+                            ++r.exterior_surface_removed;
+                        }
+                        decision="connected_planar_exterior_tail_removed";
+                    }
+                }
+                // Keep the unsupported tail and all corridor-side points. The
+                // subsequent clustering rebuilds objects from real kept points.
+                continue;
+            }
+        }
+        if (ambiguous_cluster) {decision="camera_unavailable_ambiguous";continue;}
+        if (obb.z_max-obb.z_min<2.f || obb.width>.8f || obb.length<1.5f) continue;
+
+        decision="tall_candidate_wall_not_proven";
+        bool already_attached=false;
+        for(const auto& wall:r.walls)if(wall.removal_allowed)for(const auto& seg:wall.segments) {
+            if(std::fabs(seg.plane.SignedDistance(obb.cx,obb.cy,obb.cz))<=params_.obb_wall_attach_distance_m &&
+               std::fabs(std::cos(obb.yaw)*seg.tangent_y-std::sin(obb.yaw)*seg.tangent_x)<=
+                   std::sin(DegToRad(params_.obb_wall_attach_max_angle_deg)) &&
+               seg.InIntervals(seg.AlongWall(obb.cx,obb.cy),params_.wall_remove_margin_m))already_attached=true;
+        }
+        const float original_ground=GroundHeightAt(obb.cx,obb.cy);
+        if(ClassifyObb(obb,obb.z_min-original_ground,obb.z_max-original_ground,
+                       false,already_attached,params_).removed){decision="handled_by_obb_filter";continue;}
+        for (auto& wall:r.walls) {
+            if (!wall.removal_allowed) continue;
+            for (const auto& seg:wall.segments) {
+                if (std::fabs(std::cos(obb.yaw)*seg.tangent_y-
+                              std::sin(obb.yaw)*seg.tangent_x)>
+                    std::sin(DegToRad(10.f))) continue;
+                if (std::fabs(seg.plane.SignedDistance(obb.cx,obb.cy,obb.cz))>1.5f) continue;
+                struct Bin { float lo=1e9f,hi=-1e9f; std::vector<int> points; };
+                std::map<int,Bin> bins;
+                for (int i:clusters[c].indices) {
+                    const auto& pt=r.leveled->points[i];
+                    const float along=seg.AlongWall(pt.x,pt.y);
+                    if (r.labels[i]!=kKept ||
+                        std::fabs(seg.plane.SignedDistance(pt.x,pt.y,pt.z))>1.5f) continue;
+                    auto& b=bins[static_cast<int>(std::floor(along/1.f))];
+                    b.lo=std::min(b.lo,pt.z);b.hi=std::max(b.hi,pt.z);b.points.push_back(i);
+                }
+                // The original wall interval can end at a visibility gap.
+                // Require tall support in this residual component itself. Do
+                // not keep its low tail as a newly detected obstacle afterward.
+                bool tall_support=false;
+                for(const auto& entry:bins) if(entry.second.points.size()>=3 &&
+                    entry.second.hi-entry.second.lo>=2.5f)tall_support=true;
+                if(!tall_support) {
+                    // Some upper-wall strips have only 2.0--2.5m height, or
+                    // angled scan rows fail the per-bin vertical-span test.
+                    // Accept them only with their own vertical RANSAC plane,
+                    // >=80% support, and orientation matching the verified wall.
+                    pcl::IndicesPtr pool(new std::vector<int>(clusters[c].indices));
+                    pcl::SACSegmentation<pcl::PointXYZI> fit;
+                    fit.setOptimizeCoefficients(true);
+                    fit.setModelType(pcl::SACMODEL_PARALLEL_PLANE);
+                    fit.setMethodType(pcl::SAC_RANSAC);
+                    fit.setAxis(Eigen::Vector3f(0,0,1));
+                    fit.setEpsAngle(DegToRad(params_.wall_max_tilt_deg));
+                    fit.setMaxIterations(std::max(1,params_.wall_ransac_max_iterations));
+                    fit.setDistanceThreshold(params_.wall_fit_distance_m);
+                    fit.setInputCloud(r.leveled);fit.setIndices(pool);
+                    pcl::PointIndices inliers;pcl::ModelCoefficients coeff;Plane local;
+                    fit.segment(inliers,coeff);
+                    if(inliers.indices.size()<10 || inliers.indices.size()<.8f*pool->size() ||
+                       !ToPlane(coeff,&local) ||
+                       std::fabs(local.c)>std::sin(DegToRad(params_.wall_max_tilt_deg)) ||
+                       HorizontalAngleBetweenNormalsDeg(local,seg.plane)>10.f)continue;
+                    float lo=1e9f,hi=-1e9f,slo=1e9f,shi=-1e9f;
+                    for(int i:inliers.indices) {
+                        const auto& pt=r.leveled->at(i);const float a=seg.AlongWall(pt.x,pt.y);
+                        lo=std::min(lo,pt.z);hi=std::max(hi,pt.z);
+                        slo=std::min(slo,a);shi=std::max(shi,a);
+                    }
+                    if(hi-lo<2.f || shi-slo<1.5f)continue;
+                }
+                decision="local_wall_surface_removed";
+                for(int i:clusters[c].indices) {
+                    if(r.labels[i]!=kKept)continue;
+                    r.labels[i]=kWall;++r.wall_removed;++wall.removed;
+                }
+            }
+        }
+    }
+    r.timings.wall_remove_ms+=ElapsedMs(start);
 }
 
 void TunnelPipeline::ClusterAndFilter(

@@ -25,6 +25,9 @@
 #include <asmc_lidar/ros/ros_inputs.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
 #include <asmc_lidar/core/processing_epoch.hpp>
+#include <asmc_lidar/pipeline/stage_observer.hpp>
+#include <sstream>
+#include <iomanip>
 
 #include <asmc_msgs/CameraObjectObservation.h>
 #include <asmc_msgs/InferenceStatus.h>
@@ -62,7 +65,8 @@ constexpr char kUsage[] =
     "  [--gps-mode normal|invalid|missing --gps-begin S --gps-end S]\n"
     "  [--points-topic /velodyne_points --imu-topic /imu --can-topic /Ego_topic --gps-topic /gps]\n"
     "  [--camera-observations-topic T --camera-status-topic S] (default: camera disabled)\n"
-    "  [--tunnel-filter on|off] [--capture-debug] [--planning-output NEW.bag]\n";
+    "  [--tunnel-filter on|off] [--capture-debug] [--planning-output NEW.bag]\n"
+    "  [--dump-stage-dir NEW_DIR --dump-stage-stamps NS,NS] (offline points)\n";
 
 struct UsageError : std::runtime_error {
   using std::runtime_error::runtime_error;
@@ -71,6 +75,7 @@ struct UsageError : std::runtime_error {
 struct Options {
   std::string bag, output, config, package_share, camera_calibration;
   std::string planning_output;
+  std::string dump_stage_dir, dump_stage_stamps;
   std::string profile;  // empty: keep the configured leveling
   std::string gps_mode = "normal";
   double gps_begin = 0., gps_end = 0.;
@@ -86,6 +91,8 @@ Options Parse(int argc, char** argv) {
       {"--bag", &o.bag},
       {"--output", &o.output},
       {"--planning-output", &o.planning_output},
+      {"--dump-stage-dir", &o.dump_stage_dir},
+      {"--dump-stage-stamps", &o.dump_stage_stamps},
       {"--config", &o.config},
       {"--package-share", &o.package_share},
       {"--camera-calibration", &o.camera_calibration},
@@ -177,6 +184,40 @@ boost::shared_ptr<Message> Instantiate(const rosbag::MessageInstance& m) {
   return message;
 }
 
+// Offline evidence only: selected original stage points, without changing inference.
+class StageDump final : public pipeline::StageObserver {
+ public:
+  explicit StageDump(const Options& o):directory_(o.dump_stage_dir) {
+    if(directory_.empty()!=o.dump_stage_stamps.empty())
+      throw UsageError("--dump-stage-dir and --dump-stage-stamps go together");
+    if(directory_.empty())return;
+    std::istringstream input(o.dump_stage_stamps);std::string token;
+    while(std::getline(input,token,',')) {
+      std::size_t used=0;const auto stamp=std::stoll(token,&used);
+      if(used!=token.size() || stamp<=0)throw UsageError("invalid stage stamp");
+      stamps_.insert(stamp);
+    }
+    std::filesystem::create_directories(directory_);
+  }
+  bool Begin(std::int64_t stamp) override {return stamps_.count(stamp);}
+  void OnScan(const pipeline::StageView& v) override {
+    const auto path=std::filesystem::path(directory_)/(std::to_string(v.result.stamp_ns)+".csv");
+    if(std::filesystem::exists(path))throw std::runtime_error("stage dump already exists: "+path.string());
+    std::ofstream f(path);if(!f)throw std::runtime_error("cannot create stage dump");
+    f<<"x,y,z,kept,cluster\n"<<std::setprecision(9);
+    std::vector<int> kept(v.leveled.size(),0),cluster(v.leveled.size(),-1);
+    for(int i:v.cluster_input_indices)kept.at(i)=1;
+    for(std::size_t c=0;c<v.clusters.size();++c)for(int i:v.clusters[c].indices)
+      cluster.at(v.cluster_input_indices.at(i))=static_cast<int>(c);
+    for(std::size_t i=0;i<v.leveled.size();++i) {
+      const auto& q=v.leveled[i];f<<q.x<<','<<q.y<<','<<q.z<<','<<kept[i]<<','<<cluster[i]<<'\n';
+    }
+    if(!f)throw std::runtime_error("stage dump write failed");
+  }
+ private:
+  std::string directory_;std::set<std::int64_t> stamps_;
+};
+
 // Ported from Main test/lidar_continuous_replay.cpp:52-149 (record-order loop, logical clock,
 // GPS injection) (8f93c22e); every message goes through the LidarRuntime node path.
 int Replay(const Options& opt) {
@@ -187,6 +228,8 @@ int Replay(const Options& opt) {
   if (!opt.profile.empty()) config.pipeline.use_roll = opt.profile == "roll_pitch";
   if (!opt.tunnel_filter.empty()) config.pipeline.tunnel.enabled = opt.tunnel_filter == "on";
   config.pipeline.capture_debug = opt.capture_debug;
+  StageDump stage_dump(opt);
+  if(!opt.dump_stage_dir.empty())config.pipeline.observer=&stage_dump;
 
   const bool camera_enabled = !opt.camera_observations_topic.empty();
   camera::Calibrations calibrations;
