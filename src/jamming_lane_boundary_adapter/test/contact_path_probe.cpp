@@ -45,7 +45,7 @@ int main(int argc,char**argv){
  for(const auto& p:bbox->local_obstacle_footprints){lane_boundary_adapter::clearance::Polygon o;for(unsigned i=0;i<4;++i)o[i]={p.points[i].x,p.points[i].y};local_occupied.push_back(o);}
  occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
- for(const auto& original:change_state.lanes)for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5})for(double length:{3.,4.,5.,6.,8.,10.,12.}){
+ for(const auto& original:change_state.lanes)for(double offset:{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5})for(double length:{3.,4.,5.,6.,8.,10.,12.}){
   auto lane=original;for(auto&p:lane.centerline)p.y+=offset;
   std::vector<FamilyPoint2d> path;if(!buildPath(lane,true,path,1.,length,true))continue;
   const double end=horizon-std::hypot(shape.front+shape.longitudinal_margin+params.path_sample_step,shape.half_width+shape.lateral_margin)-.1;
