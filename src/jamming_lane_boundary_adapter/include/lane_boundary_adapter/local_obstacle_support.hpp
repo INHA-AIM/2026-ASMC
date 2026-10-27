@@ -73,7 +73,8 @@ class LocalObstacleSupport {
            !projectedBox(objects[j],K,R,t,projected)||iou(boxes[i],projected)<.25)continue;
         result[i]=int(j);++count;++uses[j];}
       if(count!=1)result[i]=-1;}
-    for(int& j:result)if(j>=0&&uses[j]!=1)j=-1;return result;
+    for(int& j:result)if(j>=0&&uses[j]!=1)j=-1;
+    return result;
   }
  private:
   std::deque<Entry> entries_;ros::Time last_stamp_;std::string session_,config_,calibration_;uint64_t generation_=0;

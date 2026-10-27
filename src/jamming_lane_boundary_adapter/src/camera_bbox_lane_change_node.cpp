@@ -1304,7 +1304,7 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
              (message->box_reasons[i].find("local_lidar_supported:")==0 && message->local_obstacles_valid &&
               message->ground_contact_sources.size()==message->boxes.size() &&
               message->ground_contact_sources[i]=="lidar_observed" &&
-              std::abs((message->header.stamp-message->local_obstacles_stamp).toSec())<=.050000001)));
+              std::abs((message->header.stamp-message->local_obstacles_stamp).toSec())<=.050000001));
     // classifier timeout/UNKNOWN은 같은 stamp여도 즉시 거부한다.
     if (!message->valid && !contact_resolvable) {
         // 원인은 보존한다. 변경 중 제동 제외 여부는 제어 단계에서 결정한다.

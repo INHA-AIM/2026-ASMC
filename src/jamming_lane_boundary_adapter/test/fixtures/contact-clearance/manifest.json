@@ -6,5 +6,10 @@
     "family-probe.rosbin": "64e20d01838562282dbf0cd54fe22604d7b4a0c5ad2ed010da5cff573693f794",
     "bbox-probe.rosbin": "3dfe8a37eb2f8ca162177d25f4ee1a2490e994e22060f83f834221922e97b588",
     "probe-input.json": "cc5b17307dfcd1b20b323150d671ac8ac47b025d3a9274d857163259dd2ff160"
+  },
+  "transport_fixture_v2": {
+    "source": "bbox-probe.rosbin",
+    "conversion": "Append empty local-support fields (37 zero bytes); geometry and original bytes preserved.",
+    "sha256": "d5c975a41b574323b66050ae36b4e754a7f77a7170b68ddfed5c3c9b3cd66a6a"
   }
 }
