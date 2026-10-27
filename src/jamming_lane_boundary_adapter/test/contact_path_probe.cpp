@@ -41,7 +41,7 @@ int main(int argc,char**argv){
   while(!path.empty() && path.back().x>end)path.pop_back();
   const bool road=path.size()>1 && path.back().x>=params.lookahead_distance && pathInsideRoad(path);
   std::vector<lane_boundary_adapter::clearance::Point> pts;for(const auto&p:path)pts.push_back({p.x,p.y});
-  const bool clear=lane_boundary_adapter::clearance::pathClear(pts,occupied,shape,horizon,params.path_sample_step);
+  const bool clear=lane_boundary_adapter::clearance::pathClearOfPolygons(pts,occupied,shape,horizon,params.path_sample_step);
   std::cout<<"lane="<<lane.lane_index<<" offset="<<offset<<" length="<<length<<" road="<<road<<" clear="<<clear<<" curvature="<<change_state.maximum_path_curvature<<" path=";
   for(unsigned i=0;i<path.size();i+=8) { std::cout<<path[i].x<<','<<path[i].y<<';'; }
   std::cout<<'\n';

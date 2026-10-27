@@ -65,7 +65,7 @@ inline bool contactOccupancy(const std::vector<Bounds>& contacts,const std::vect
   }
   return true;
 }
-inline bool pathClear(const std::vector<Point>& path,const std::vector<Polygon>& occupied,
+inline bool pathClearOfPolygons(const std::vector<Point>& path,const std::vector<Polygon>& occupied,
                       const Vehicle& v,double supported_horizon,double sample_padding=.25) {
   if(path.size()<2||!std::isfinite(supported_horizon)||supported_horizon<=0)return false;
   for(std::size_t i=0;i<path.size();++i){
@@ -98,6 +98,6 @@ inline bool pathClear(const std::vector<Point>& path,const std::vector<Bounds>& 
                       const Vehicle& v,double horizon,double sample_padding=.25) {
   std::vector<Polygon> occupied;
   return contactOccupancy(contacts,{{0.,0.},{horizon,0.}},horizon,occupied) &&
-         pathClear(path,occupied,v,horizon,sample_padding);
+         pathClearOfPolygons(path,occupied,v,horizon,sample_padding);
 }
 } // namespace lane_boundary_adapter::clearance
