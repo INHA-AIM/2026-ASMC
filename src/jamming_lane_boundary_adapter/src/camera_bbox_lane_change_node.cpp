@@ -1568,7 +1568,7 @@ std::string updateContactPathPlan() {
             if(path.empty() || path.back().x<params.lookahead_distance || !pathInsideRoad(path,geometry)){++contact_road_rejected;continue;}
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
             for(const auto& p:path)points.push_back({p.x,p.y});
-            if(!lane_boundary_adapter::clearance::pathClear(points,occupied,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
+            if(!lane_boundary_adapter::clearance::pathClearOfPolygons(points,occupied,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
             found={std::move(lane),std::move(path),offset};return true;
         }
         return false;
