@@ -1428,7 +1428,12 @@ bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>&
             // 횡이동량만 줄인다. 도로 방향 정렬까지 줄이면 변경 중 차체가 비스듬한
             // 상태에서 모든 후보의 앞 모서리가 바깥 경계를 넘어 영구 정지할 수 있다.
             y -= origin.center.y * (1.0 - blend * lateral_gain);
-            y -= origin_heading * x * (1.0 - blend);
+            // Experimental complete shifts preserve endpoint heading with the
+            // quintic Hermite slope basis. Legacy partial-shift output stays
+            // unchanged for recovery and numerical comparison.
+            y -= origin_heading * (full_shift ?
+                (change_length>0?change_length:params.lane_change_length)*
+                    lane_boundary_adapter::clearance::startSlopeBasis(ratio) : x*(1.0-blend));
         }
         path.push_back({x, y});
     }

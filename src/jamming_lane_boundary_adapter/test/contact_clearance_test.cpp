@@ -34,4 +34,13 @@ TEST(ContactClearance, OcclusionFollowsRoadInsteadOfTurningEgoHeading) {
  EXPECT_NEAR(occupied.back()[2].y,-4.5,1e-8);
  EXPECT_FALSE(contactOccupancy({{8.,9.,-2.,-1.5}},{{0.,0.},{10.,-3.}},15.,occupied));
 }
+TEST(ContactClearance, HeadingCorrectionSatisfiesEndpointConditions) {
+ const double h=1e-4;
+ EXPECT_DOUBLE_EQ(startSlopeBasis(0),0.);
+ EXPECT_DOUBLE_EQ(startSlopeBasis(1),0.);
+ EXPECT_NEAR((startSlopeBasis(h)-startSlopeBasis(0))/h,1.,1e-6);
+ EXPECT_NEAR((startSlopeBasis(1)-startSlopeBasis(1-h))/h,0.,1e-6);
+ EXPECT_NEAR((startSlopeBasis(2*h)-2*startSlopeBasis(h))/h/h,0.,.004);
+ EXPECT_NEAR((startSlopeBasis(1-2*h)-2*startSlopeBasis(1-h))/h/h,0.,.004);
+}
 int main(int argc,char** argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}
