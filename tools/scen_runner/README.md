@@ -1,6 +1,6 @@
 # scen_runner — 전체 씬·단일 구간 검증
 
-카메라 실행은 `asmc_camera/camera.launch`, LiDAR 실행은 `asmc_lidar/lidar.launch`를 사용한다. 카메라는 공용 관측을 발행하고 LiDAR가 전방 matching/fusion을 담당한다. 카메라 설정은 카메라 패키지가 소유하며 [LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다.
+카메라 실행은 `asmc_camera/camera.launch`, LiDAR 실행은 `asmc_lidar/lidar.launch`를 사용한다. 카메라는 공용 관측을 발행하고 LiDAR가 3뷰 matching/fusion을 담당한다. 카메라 설정은 카메라 패키지가 소유하며 [LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다.
 
 MORAI에 객체·환경을 배치하고 ego의 준비 정지, 충돌/도착/정체에 따른 다음 주행과 최종 시작점 복귀를 처리한다. `run_validation.sh`는 기존처럼 키보드 또는 외부 제어기를 사용한다. `run_scenario.sh`는 별도 판제 실행기와 연동하여 리스폰마다 판제·MPC를 재시작하고 준비를 확인한다. 시나리오 자체는 `/ctrl_cmd`를 발행하지 않는다.
 
@@ -148,6 +148,10 @@ ROS 노드·MORAI 주행을 시작하지 않고 구성과 실행 파일만 검�
 각 터미널의 Ctrl+C는 그 실행기가 소유한 프로세스만 종료한다. 판제/브릿지 종료나 MORAI 연결 단절 시에도 시나리오의 종료 요청은 우선 처리한다. 실제 MORAI의 리스폰 후 자동 주행은 오프라인 시험과 별도로 검증한다.
 
 ## 실행
+
+음영구간의 센서·판단 동시 기록과 모델별 반복은
+[등록 run 녹화 안내](docs/shadow-recording.md)를 따른다. 일반 시나리오 실행은 기존과 같으며,
+`--recording-spec`을 지정할 때만 ROS bag을 추가로 저장한다.
 
 WSL에서 기존 컨테이너를 시작하고 들어간다.
 
