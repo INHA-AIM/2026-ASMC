@@ -19,6 +19,16 @@ class AnalysisTest(unittest.TestCase):
         self.assertEqual(value['duplicate_source_stamps'],1)
         self.assertEqual(value['regressing_source_stamps'],1)
 
+    def test_three_views_and_restarts_do_not_invent_source_regressions(self):
+        stat=TopicStats()
+        for receipt,source,stream in [(10.,9.9,'front'),(10.1,9.8,'left'),(10.2,9.9,'left'),(10.3,9.85,'front')]:
+            stat.observe(receipt,source,stream)
+        self.assertEqual(stat.summary()['regressing_source_stamps'],1)
+        self.assertEqual(stat.summary()['duplicate_source_stamps'],0)
+        for i in range(150):stat.observe(11+i,10+i,'session'+str(i))
+        self.assertEqual(stat.summary()['source_stream_count'],128)
+        self.assertGreater(stat.summary()['untracked_source_stream_samples'],0)
+
     def test_active_or_incomplete_split_inventory_is_rejected(self):
         with tempfile.TemporaryDirectory() as root:
             r=Path(root);(r/'ros').mkdir();(r/'ros/a.bag').write_bytes(b'one')

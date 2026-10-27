@@ -12,7 +12,8 @@ template<class T> boost::shared_ptr<T> read(const char* file){
  auto m=boost::make_shared<T>();ros::serialization::IStream s(b.data(),b.size());ros::serialization::deserialize(s,*m);return m;
 }
 int main(int argc,char**argv){
- if(argc!=3)return 2;
+ if(argc!=3 && argc!=5)return 2;
+ if(argc==5){adapter_config.consumer_x_max_m=std::stod(argv[3]);params.consumer_x_max=std::stod(argv[3]);params.path_horizon=std::stod(argv[4]);}
  ros::Time::init();
  auto family=read<asmc_msgs::LaneBoundaryFamily>(argv[1]);
  auto bbox=read<BboxResult>(argv[2]);
@@ -44,7 +45,7 @@ int main(int argc,char**argv){
  for(const auto& p:bbox->local_obstacle_footprints){lane_boundary_adapter::clearance::Polygon o;for(unsigned i=0;i<4;++i)o[i]={p.points[i].x,p.points[i].y};local_occupied.push_back(o);}
  occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
- for(const auto& original:change_state.lanes)for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5})for(double length:{6.,8.,10.,12.}){
+ for(const auto& original:change_state.lanes)for(double offset:{0.,-.1,.1,-.2,.2,-.3,.3,-.4,.4,-.5,.5})for(double length:{3.,4.,5.,6.,8.,10.,12.}){
   auto lane=original;for(auto&p:lane.centerline)p.y+=offset;
   std::vector<FamilyPoint2d> path;if(!buildPath(lane,true,path,1.,length,true))continue;
   const double end=horizon-std::hypot(shape.front+shape.longitudinal_margin+params.path_sample_step,shape.half_width+shape.lateral_margin)-.1;

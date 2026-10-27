@@ -15,10 +15,12 @@ from pathlib import Path
 class TopicStats:
     def __init__(self):
         self.count = self.regressions = self.duplicate_stamps = 0
-        self.first = self.last = self.stamp = None
+        self.first = self.last = None
+        self.stamps = {}
+        self.untracked_stream_samples = 0
         self.maximum_gap_s = 0.
 
-    def observe(self, receipt, stamp=None):
+    def observe(self, receipt, stamp=None, stream="default"):
         self.count += 1
         if self.first is None:
             self.first = receipt
@@ -26,16 +28,23 @@ class TopicStats:
             self.maximum_gap_s = max(self.maximum_gap_s, receipt-self.last)
         self.last = receipt
         if stamp is not None and stamp > 0:
-            if self.stamp is not None:
-                self.duplicate_stamps += stamp == self.stamp
-                self.regressions += stamp < self.stamp
-            self.stamp = stamp
+            # Three views interleave on one topic. Compare source order only
+            # within a view/session/generation, never left against front.
+            if stream not in self.stamps and len(self.stamps)>=128:
+                self.untracked_stream_samples+=1
+                return
+            previous=self.stamps.get(stream)
+            if previous is not None:
+                self.duplicate_stamps += stamp == previous
+                self.regressions += stamp < previous
+            self.stamps[stream] = stamp
 
     def summary(self):
         elapsed = (self.last-self.first) if self.count > 1 else 0.
         return dict(count=self.count, receipt_hz=(self.count-1)/elapsed if elapsed > 0 else None,
                     maximum_receipt_gap_s=self.maximum_gap_s,
-                    duplicate_source_stamps=self.duplicate_stamps, regressing_source_stamps=self.regressions)
+                    duplicate_source_stamps=self.duplicate_stamps, regressing_source_stamps=self.regressions, source_stream_count=len(self.stamps),
+                    untracked_source_stream_samples=self.untracked_stream_samples)
 
 
 def parse_selector(value):
@@ -108,8 +117,14 @@ def analyze(directory, output_name='analysis'):
             with rosbag.Bag(str(path)) as bag:
                 for topic, msg, receipt in bag.read_messages():
                     t = receipt.to_sec()
-                    stamp = msg.header.stamp if hasattr(msg, 'header') else None
-                    stats.setdefault(topic, TopicStats()).observe(t, stamp.to_sec() if stamp else None)
+                    header=getattr(msg,'header',None)
+                    identity=msg
+                    if hasattr(msg,'detections'):header=msg.detections.header
+                    if hasattr(msg,'observation'):
+                        identity=msg.observation;header=identity.objects.header
+                    stamp=header.stamp if header else None
+                    stream_id=(header.frame_id if header else '',getattr(identity,'producer_session_id',''),getattr(identity,'generation',0))
+                    stats.setdefault(topic, TopicStats()).observe(t, stamp.to_sec() if stamp else None,stream_id)
                     if topic == '/Ego_topic':
                         latest_ego = dict(receipt=t, x=msg.position.x, y=msg.position.y,
                             heading_deg=msg.heading, velocity_xyz_mps=[msg.velocity.x,msg.velocity.y,msg.velocity.z])
