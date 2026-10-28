@@ -97,6 +97,11 @@ lidar:
 
 # Main ~ground_* (main.launch values = code defaults).
 ground:
+  # LOCAL-2D: fit the plane with a narrow consensus band, then retain the
+  # existing near/far point-removal bands. Latest-main 117scan barrier replay
+  # and floor failure fixture passed; full tunnel/closed-loop acceptance pending.
+  # Internal rollback: remove this key (legacy fit follows the far band).
+  fit_distance_threshold_m: 0.10
   ground_distance_threshold_near_m: 0.30
   ground_distance_threshold_far_m: 0.40
   ground_threshold_far_range_m: 50.0
