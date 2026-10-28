@@ -406,6 +406,27 @@ FusionReport FrontCameraFusion::Process(std::int64_t decision_ns, std::int64_t s
   }
 
   // Admission (Main FusionCamera.cpp:749-765 + BufferFusionYoloFrame :209-243).
+  // Geometry-supported instances have already been associated at point level
+  // BEFORE tracking. Reuse that exact image/box evidence for classification;
+  // sparse barricade returns need not fill the whole detector rectangle.
+  // Current receiver records and the existing class-confirmation/epoch rules
+  // remain mandatory. Repeated LiDAR scans cannot reconfirm one image.
+  for(auto& object:live) {
+    const auto& support=object.detection.camera_point_support;
+    if(object.tracking.s32_MissCount>0||support.box_index<0||fusion_class::IsGroundNoise(object))continue;
+    const auto found=std::find_if(snapshot.frames.begin(),snapshot.frames.end(),[&](const auto& f) {
+      return f.identity==support.identity&&f.stamp_ns==support.stamp_ns;
+    });
+    if(found==snapshot.frames.end()||!camera.Current(*found,ros_now_ns,steady_now_ns))continue;
+    const auto boxes=fusion_adapter::ConvertBoxes(found->boxes,allowed_,config_.confidence_threshold);
+    const auto box=std::find_if(boxes.begin(),boxes.end(),[&](const auto& b){return b.source_index==support.box_index;});
+    if(box==boxes.end()||!fusion_class::BeginObservation(object,support.stamp_ns,consumer_epoch_))continue;
+    fusion_class::Observe(object,fusion_class::Normalize(box->str_class,config_.mission_profile),
+        box->str_raw_class,config_.initial_confirmations,config_.change_confirmations,config_.mission_profile);
+  }
+  if(history)fusion_state::Persist(live,*history);
+
+  // Admission (Main FusionCamera.cpp:749-765 + BufferFusionYoloFrame :209-243).
   // The source keeps the frames, so yolo_history is rebuilt every call from
   // the returned frames minus unique-consumed and pruned ones. Boxes pass the
   // adapter filter, so a frame whose boxes are all filtered is a normal empty frame.

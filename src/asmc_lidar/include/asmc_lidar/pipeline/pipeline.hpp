@@ -9,6 +9,7 @@
 // The Main motion decision runs on copies at full scan rate; raw tracker is unchanged.
 
 #include <asmc_lidar/detection/clustering.hpp>
+#include <asmc_lidar/detection/camera_point_refinement.hpp>
 #include <asmc_lidar/pipeline/stage_observer.hpp>
 #include <asmc_lidar/preprocessing/ground.hpp>
 #include <asmc_lidar/preprocessing/preprocessing.hpp>
@@ -27,6 +28,7 @@ namespace lidar {
 namespace pipeline {
 
 struct PipelineConfig {
+  CameraPointRefinementConfig camera_point_refinement;
   RangeConfig range;
   RoiConfig roi;
   HeightRoiConfig height_roi;
@@ -87,6 +89,7 @@ struct ScanInput {
 // When !processed only stamp_ns, previous_stamp_ns and reason are set (the
 // scan context was still Prepare()d, see Pipeline::frame()).
 struct ScanResult {
+  CameraPointRefinementReport camera_point_refinement;
   bool processed = false;
   std::string reason;  // set when !processed: "duplicate_or_regressing_stamp", "empty_scan"
   std::int64_t stamp_ns = 0;

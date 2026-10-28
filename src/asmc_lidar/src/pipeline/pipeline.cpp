@@ -77,6 +77,7 @@ Pipeline::Pipeline(const PipelineConfig& config)
     throw std::invalid_argument("pipeline calibration_id must be non-empty");
   frame_.Configure(config_.vehicle, config_.calibration_id);
   ValidateTunnelNoise(config_.tunnel_noise);
+  ValidateCameraPointRefinement(config_.camera_point_refinement);
   // Construct only when enabled; shipped YAML enables GPS-denied routing.
   if (config_.tunnel.enabled) {
     if (config_.tunnel_route.original_pipeline) tunnel_route_ = std::make_unique<TunnelRoute>(config_.tunnel_route);
@@ -162,6 +163,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
 
   std::vector<int> height_kept_indices, ground_kept_indices, pre_tunnel_kept_indices;
   std::vector<std::string> tunnel_classes;
+  std::vector<LowObstacleCue> low_obstacle_cues;
   GroundPlaneSnapshot effective_ground_plane;
   if(original_tunnel) {
     begin=Clock::now();
@@ -174,6 +176,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     centroid_cloud=migrated.centroids;
     all_cluster_indices=std::move(migrated.clusters);
     tunnel_classes=std::move(migrated.protected_classes);
+    low_obstacle_cues=std::move(migrated.low_obstacle_cues);
     effective_ground_plane=migrated.plane;
     result.tunnel=migrated.report;
     timings.tunnel_ms=Ms(begin,Clock::now());
@@ -243,12 +246,104 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     effective_ground_plane=ground_.CurrentPlane();
   }
 
+  // Refine CURRENT-scan measurements before OBB fitting or tracker association.
+  // Keep unclassified residuals; delete only confirmed wall support belonging
+  // to a cluster from which an object was successfully extracted.
+  auto refinement=RefineCameraPoints(ground_cloud,all_cluster_indices,frame_.Current(),
+      scan.tunnel_camera.get(),result.tunnel.wall_evidence,config_.camera_point_refinement);
+  // A brief missing camera result must not repeatedly split the measured
+  // object and reset fragment acquisition. Continue ONLY current LiDAR pairs
+  // matching the previous measured support; never republish predicted geometry.
+  const double steel_dt=SourceDeltaSeconds(raw,previous_stamp_ns_);
+  if(config_.camera_point_refinement.steel_fragment_merge&&steel_dt>0&&steel_dt<=.2&&
+      std::isfinite(local.st_CAN.f32_CurrentVel_MPS)&&std::abs(local.st_CAN.f32_CurrentVel_MPS)<=.1f) {
+    const auto base=base_from_input(frame_.Current());
+    if(base) {
+      const Vec travel=base->linear().transpose()*frame_.Current().ego_linear_base*steel_dt;
+      if(travel.norm()<=.8) {
+        std::vector<SteelFragmentHistory> history;
+        if(const auto* previous_frame=tracker_.LastFrame())for(const auto& previous:*previous_frame) {
+          const auto& support=previous.detection.camera_point_support;
+          if(previous.tracking.s32_MissCount!=0||support.source_class!="steel_barricade"||
+              support.stamp_ns<=0||raw-support.stamp_ns>750000000LL||
+              previous.detection.pcl_ClusterPoints.size()<6||previous.detection.pcl_ClusterPoints.size()>96)continue;
+          if(history.size()>=8){history.clear();break;}
+          const auto transform=frame_.PreviousTrackingTransform(previous,local.st_IMU.f32_Yaw_rad);
+          if(!transform)continue;
+          SteelFragmentHistory h;h.support=support;h.points.reset(new Cloud);
+          for(const auto& p:previous.detection.pcl_ClusterPoints){const Vec q=(*transform)*Vec(p.x,p.y,p.z)-travel;pcl::PointXYZI v=p;v.x=q.x();v.y=q.y();v.z=q.z();h.points->push_back(v);}
+          history.push_back(std::move(h));
+        }
+        const bool had_refinement=refinement.report.applied;
+        auto continued=ContinueMeasuredSteelFragments(ground_cloud,had_refinement?refinement.clusters:all_cluster_indices,history,
+            frame_.Current(),scan.tunnel_camera.get(),result.tunnel.wall_evidence,config_.camera_point_refinement,
+            had_refinement?&refinement.support:nullptr);
+        if(continued.report.applied) {
+          if(had_refinement) {
+            for(std::size_t i=0;i<continued.parent_clusters.size();++i) {
+              const int p=continued.parent_clusters[i];
+              if(p>=0){continued.support[i]=refinement.support[p];continued.parent_clusters[i]=refinement.parent_clusters[p];}
+            }
+            continued.removed_wall_indices=std::move(refinement.removed_wall_indices);
+            refinement.report.decisions.insert(refinement.report.decisions.end(),continued.report.decisions.begin(),continued.report.decisions.end());
+            refinement.report.extracted_objects+=continued.report.extracted_objects;
+            refinement.report.ms+=continued.report.ms;refinement.report.reason="applied_with_steel_continuation";
+            continued.report=std::move(refinement.report);
+          }
+          refinement=std::move(continued);
+        }
+      }
+    }
+  }
+  result.camera_point_refinement=refinement.report;
+  std::vector<CameraPointSupport> camera_support;
+  if(refinement.report.applied) {
+    std::vector<std::string> classes;std::vector<LowObstacleCue> cues;
+    for(std::size_t i=0;i<refinement.parent_clusters.size();++i) {
+      const int parent=refinement.parent_clusters[i];const auto& support=refinement.support[i];
+      const bool extracted=support.box_index>=0;
+      classes.push_back(!extracted&&parent>=0&&static_cast<std::size_t>(parent)<tunnel_classes.size()?tunnel_classes[parent]:"unknown");
+      LowObstacleCue cue=parent>=0&&static_cast<std::size_t>(parent)<low_obstacle_cues.size()?low_obstacle_cues[parent]:LowObstacleCue{};
+      if(extracted&&!cue.source_class.empty()&&cue.source_class!=support.source_class)cue=LowObstacleCue{};
+      cues.push_back(std::move(cue));
+    }
+    tunnel_classes=std::move(classes);low_obstacle_cues=std::move(cues);
+    all_cluster_indices=std::move(refinement.clusters);camera_support=std::move(refinement.support);
+    if(!refinement.removed_wall_indices.empty()) {
+      std::vector<bool> removed(ground_cloud->size(),false);
+      for(int i:refinement.removed_wall_indices)removed.at(i)=true;
+      std::vector<int> remap(ground_cloud->size(),-1),kept;
+      CloudPtr compact(new Cloud);compact->header=ground_cloud->header;
+      for(std::size_t i=0;i<ground_cloud->size();++i)if(!removed[i]) {
+        remap[i]=compact->size();compact->push_back(ground_cloud->at(i));
+        // The common clusterer appends one sentinel without a voxel identity.
+        if(i<ground_kept_indices.size())kept.push_back(ground_kept_indices[i]);
+      }
+      for(auto& cluster:all_cluster_indices)for(auto& i:cluster.indices)i=remap.at(i);
+      ground_cloud=compact;ground_kept_indices=std::move(kept);
+      counts.tunnel_removed_points+=refinement.removed_wall_indices.size();
+      counts.cluster_input_points=ground_cloud->size();
+      if(debug)result.digests.ground_kept=CloudDigest(*ground_cloud);
+    }
+    centroid_cloud.reset(new Cloud);
+    for(const auto& cluster:all_cluster_indices) {
+      pcl::PointXYZI center{};
+      for(int i:cluster.indices){const auto& p=ground_cloud->at(i);center.x+=p.x;center.y+=p.y;center.z+=p.z;}
+      const float size=cluster.indices.size();center.x/=size;center.y/=size;center.z/=size;
+      centroid_cloud->push_back(center);
+    }
+    counts.clusters=all_cluster_indices.size();counts.centroids=centroid_cloud->size();
+  }
+
   // Main Objectinfo_for_km (LidarProcess.cpp:257-259) on the mutated cloud.
   begin = Clock::now();
   BuildDetections(object, ground_cloud, centroid_cloud, all_cluster_indices);
   end = Clock::now();
   timings.detection_ms = Ms(begin, end);
+  for(std::size_t i=0;i<object.size()&&i<camera_support.size();++i)
+    object[i].detection.camera_point_support=std::move(camera_support[i]);
   if(original_tunnel) {
+    for(std::size_t i=0;i<object.size()&&i<low_obstacle_cues.size();++i)object[i].detection.low_obstacle_cue=low_obstacle_cues[i];
     for(std::size_t i=0;i<object.size()&&i<tunnel_classes.size();++i)if(tunnel_classes[i]!="unknown") {
       if(!config_.tunnel_route.protection.multiview) {
         object[i].camera.str_ObjectClass=tunnel_classes[i];object[i].camera.str_YoloClass=tunnel_classes[i];
@@ -340,7 +435,16 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     const auto sensor_from_level=result.context.applied_leveling.transpose().eval();
     object.erase(std::remove_if(object.begin(),object.end(),[&](const auto& o) {
       const auto z=(sensor_from_level*asmc::lidar::Vec(o.detection.f32_CoreX,o.detection.f32_CoreY,o.detection.f32_CoreZ)).z();
-      if(o.tracking.s32_MissCount>0 && z < config_.tunnel_route.cluster_z.min_sensor_z_m) {
+      const auto& cue=o.detection.low_obstacle_cue;
+      // A camera-confirmed LOW detection may use the EXISTING tracker for a
+      // short dropout. This is a prediction, never a new measurement, class
+      // confirmation or point restoration. Predictions never renew this lease.
+      const bool short_cue_prediction=config_.tunnel_route.low_obstacle_evidence &&
+          cue.stamp_ns>0 && !cue.source_class.empty() && cue.camera_epoch!=0 &&
+          raw>=cue.stamp_ns && raw-cue.stamp_ns<=200000000LL && o.tracking.s32_MissCount<=2 &&
+          scan.tunnel_camera && scan.tunnel_camera->source_active && scan.tunnel_camera->camera_epoch==cue.camera_epoch &&
+          scan.tunnel_camera->source_current && scan.tunnel_camera->source_current();
+      if(o.tracking.s32_MissCount>0 && z < config_.tunnel_route.cluster_z.min_sensor_z_m && !short_cue_prediction) {
         ++result.tunnel.cluster_z_removed_tracks;return true;
       }
       return false;

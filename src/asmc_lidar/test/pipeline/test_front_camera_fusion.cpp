@@ -201,6 +201,29 @@ struct TrackerSim {
   }
 };
 
+TEST(FrontCameraPointSupport, UsesExactValidatedImageBoxWithoutIouAndCountsEachImageOnce) {
+  FusionConfig cfg;cfg.initial_confirmations=2;
+  FrontCameraFusion fusion(cfg,FrontCalibration());FakeSource source;TrackerSim tracker;
+  // Deliberately disjoint from the projected cluster rectangle: point-level
+  // association is authoritative only for the exact retained observation.
+  camera::Box b;b.xmin=20;b.xmax=100;b.ymin=20;b.ymax=100;
+  b.class_name="vehicle";b.source_class_name="truck";b.confidence=.95;b.confidence_valid=true;
+  auto first=MakeFrame(kT0,{b});source.Set({first});
+  tracker.prototype.detection.camera_point_support={kT0,1,0,first.identity,"truck"};
+  tracker.Scan(fusion,source,kT0,kT0);
+  EXPECT_EQ(1,tracker.live[0].camera.continuity_counter);
+  tracker.Scan(fusion,source,kT0+10*kMs,kT0+10*kMs);
+  EXPECT_EQ(1,tracker.live[0].camera.continuity_counter);
+  auto next=MakeFrame(kT0+100*kMs,{b});source.Set({next});
+  tracker.prototype.detection.camera_point_support={next.stamp_ns,1,0,next.identity,"truck"};
+  tracker.Scan(fusion,source,next.stamp_ns,next.stamp_ns);
+  EXPECT_EQ("truck",tracker.live[0].camera.str_YoloClass);
+  EXPECT_EQ("vehicle",tracker.live[0].camera.str_ObjectClass);
+  source.current=false;auto before=StateOf(tracker.live[0]);
+  tracker.Scan(fusion,source,next.stamp_ns+10*kMs,next.stamp_ns+10*kMs);
+  EXPECT_EQ(before,StateOf(tracker.live[0]));
+}
+
 camera::Box TruckBox() { return CameraBox(ProjectedBox(MakeCar(7, 10.f)), "truck", "vehicle"); }
 camera::Box PersonBox() { return CameraBox(ProjectedBox(MakeCar(7, 10.f)), "person", "dynamic_obstacle"); }
 
@@ -1375,4 +1398,76 @@ TEST(MultiCameraFusion, DelayedThreeViewObservationUsesStoredScanProjection) {
     EXPECT_EQ(d.scan_sequence,static_cast<std::uint64_t>(kT0));
   }
   ExpectSameGeometry(before,r.objects.front());
+}
+
+namespace {
+void SparseSteelEvidence(MultiRig& r,Ns stamp) {
+  ThreeFrames(r.source,stamp,{"empty","empty","empty"});
+  auto& f=r.source.snapshot.by_view["camera_front"].front();
+  const auto projection=ProjectedBox(r.objects.front());
+  auto b=CameraBox(projection,"steel_barricade","static_obstacle");
+  // The detector covers the complete physical object; sparse measured surfaces
+  // occupy less than the normal IoU threshold.
+  b.xmin=1;b.ymin=1;b.xmax=1278;b.ymax=718;f.boxes={b};
+  r.objects[0].detection.camera_point_support={stamp,f.epoch,0,f.identity,"steel_barricade"};
+}
+}
+TEST(MultiCameraPointSupport, SparseSupportConfirmsOnlyFiveDistinctImagesAndKeepsGeometry) {
+  MultiRig r;const auto before=r.objects.front();
+  for(int i=0;i<5;++i) {
+    const auto stamp=kT0+i*100*kMs;SparseSteelEvidence(r,stamp);r.Run(stamp);
+    EXPECT_EQ(r.objects[0].camera.continuity_counter,i<4?i+1:0);
+    if(i<4)EXPECT_EQ(r.objects[0].camera.str_ObjectClass,"unknown");
+    r.Run(stamp+10*kMs);EXPECT_EQ(r.objects[0].camera.continuity_counter,i<4?i+1:0);
+  }
+  EXPECT_EQ(r.objects[0].camera.str_ObjectClass,"static_obstacle");
+  EXPECT_EQ(r.objects[0].camera.str_YoloClass,"steel_barricade");
+  ExpectSameGeometry(before,r.objects.front());
+}
+TEST(MultiCameraPointSupport, WrongIdentityEpochClassOrBoxCannotBypassIou) {
+  for(int mode=0;mode<4;++mode) {
+    MultiRig r;
+    for(int i=0;i<6;++i) {
+      const auto stamp=kT0+i*100*kMs;SparseSteelEvidence(r,stamp);
+      auto& s=r.objects[0].detection.camera_point_support;
+      if(mode==0)s.identity+="-wrong";
+      if(mode==1)++s.epoch;
+      if(mode==2)s.source_class="box";
+      if(mode==3)++s.box_index;
+      r.Run(stamp);
+    }
+    EXPECT_EQ(r.objects[0].camera.str_ObjectClass,"unknown");
+    EXPECT_EQ(r.fusion.counters().observations,0u);
+  }
+}
+TEST(MultiCameraPointSupport, ConflictingSideViewStillVetoesSteelConfirmation) {
+  MultiRig r;
+  for(int i=0;i<6;++i) {
+    const auto stamp=kT0+i*100*kMs;SparseSteelEvidence(r,stamp);
+    r.source.snapshot.by_view["camera_left"].front().boxes={CameraBox(ProjectedBox(r.objects[0]),"car","vehicle")};
+    r.Run(stamp);
+    EXPECT_TRUE(r.objects[0].camera.group_conflict);
+    EXPECT_EQ(r.objects[0].camera.str_ObjectClass,"unknown");
+  }
+}
+
+TEST(MultiCameraPointSupport, Mission15StillRejectsConeAndPredictedSupport) {
+  for(const bool predicted:{false,true}) {
+    FusionConfig cfg;cfg.allowed_names=fusion_adapter::MissionNames();
+    cfg.allowed_names.erase(std::remove(cfg.allowed_names.begin(),cfg.allowed_names.end(),"traffic_cone"),cfg.allowed_names.end());
+    MultiCameraFusion fusion(cfg,OverlapCameras());FakeSource source;
+    auto objects=std::vector<TrackedObject>{MakeCar(7,10)};
+    for(int i=0;i<6;++i) {
+      const auto stamp=kT0+i*100*kMs;ThreeFrames(source,stamp,{"empty","empty","empty"});
+      auto& f=source.snapshot.by_view["camera_front"].front();
+      const std::string label=predicted?"steel_barricade":"traffic_cone";
+      auto box=CameraBox(ProjectedBox(MakeCar(7,10)),label,"static_obstacle");
+      box.xmin=1;box.ymin=1;box.xmax=1278;box.ymax=718;f.boxes={box};
+      objects[0].detection.camera_point_support={stamp,f.epoch,0,f.identity,label};
+      objects[0].tracking.s32_MissCount=predicted?1:0;
+      fusion.Process(stamp,stamp,LeveledContext(stamp),objects,nullptr,source,stamp,stamp);
+    }
+    EXPECT_EQ(objects[0].camera.str_ObjectClass,"unknown");
+    EXPECT_EQ(fusion.counters().observations,0u);
+  }
 }

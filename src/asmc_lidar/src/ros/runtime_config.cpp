@@ -150,6 +150,32 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
       Fail(file,"invalid gravity-aligned height ROI");
   }
   auto& cl = p.clustering;
+  const auto refine=root["camera_point_refinement"];
+  if(refine) {
+    auto& c=p.camera_point_refinement;
+    if(refine["enabled"])c.enabled=refine["enabled"].as<bool>();
+    if(refine["steel_fragment_merge"])c.steel_fragment_merge=refine["steel_fragment_merge"].as<bool>();
+    if(refine["steel_minimum_confidence"])c.steel_minimum_confidence=refine["steel_minimum_confidence"].as<float>();
+    if(refine["steel_maximum_gap_m"])c.steel_maximum_gap_m=refine["steel_maximum_gap_m"].as<float>();
+    if(refine["steel_minimum_ownership"])c.steel_minimum_ownership=refine["steel_minimum_ownership"].as<float>();
+    if(refine["minimum_confidence"])c.minimum_confidence=refine["minimum_confidence"].as<float>();
+    if(refine["max_age_s"])c.max_age_s=refine["max_age_s"].as<float>();
+    if(refine["connection_m"])c.connection_m=refine["connection_m"].as<float>();
+    if(refine["angular_connection"])c.angular_connection=refine["angular_connection"].as<float>();
+    if(refine["maximum_connection_m"])c.maximum_connection_m=refine["maximum_connection_m"].as<float>();
+    if(refine["ambiguity_depth_m"])c.ambiguity_depth_m=refine["ambiguity_depth_m"].as<float>();
+    if(refine["fragment_connection_m"])c.fragment_connection_m=refine["fragment_connection_m"].as<float>();
+    if(refine["vehicle_scanline_grouping"])c.vehicle_scanline_grouping=refine["vehicle_scanline_grouping"].as<bool>();
+    if(refine["independent_wall_cleanup"])c.independent_wall_cleanup=refine["independent_wall_cleanup"].as<bool>();
+    if(refine["detached_wall_cleanup"])c.detached_wall_cleanup=refine["detached_wall_cleanup"].as<bool>();
+    if(refine["scanline_gap_slope"])c.scanline_gap_slope=refine["scanline_gap_slope"].as<float>();
+    if(refine["scanline_max_gap_m"])c.scanline_max_gap_m=refine["scanline_max_gap_m"].as<float>();
+    if(refine["wall_band_m"])c.wall_band_m=refine["wall_band_m"].as<float>();
+    if(refine["minimum_points"])c.minimum_points=refine["minimum_points"].as<int>();
+    if(refine["maximum_box_points"])c.maximum_box_points=refine["maximum_box_points"].as<int>();
+    if(refine["maximum_boxes"])c.maximum_boxes=refine["maximum_boxes"].as<int>();
+  }
+  pipeline::ValidateCameraPointRefinement(p.camera_point_refinement);
   cl.b_Enabled = r.Get<bool>("lidar.Clustering.Enabled");
   cl.f32_Eps = r.Get<float>("lidar.Clustering.Eps");
   cl.s32_MinPoints = r.Get<pipeline::int32>("lidar.Clustering.MinPoints");
@@ -183,6 +209,8 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   g.seed_max_z_m = r.Get<double>("ground.ground_seed_max_z_m");
   g.maximum_iterations = r.Get<int>("ground.ground_ransac_maximum_iterations");
   g.minimum_seed_points = r.Get<int>("ground.ground_minimum_seed_points");
+  if (root["ground"]["ground_remove_below_plane"])
+    g.remove_below_plane = root["ground"]["ground_remove_below_plane"].as<bool>();
 
   p.tunnel.enabled = r.Get<bool>("experimental.tunnel_filter.enabled");
   p.tunnel.suppress_ceiling = r.Get<bool>("experimental.tunnel_filter.suppress_ceiling");
@@ -190,6 +218,7 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   const auto tunnel=root["experimental"]["tunnel_filter"];
   if(tunnel["original_pipeline"])p.tunnel_route.original_pipeline=tunnel["original_pipeline"].as<bool>();
   const auto cluster_z=tunnel["cluster_z"];
+  if(tunnel["low_obstacle_evidence"])p.tunnel_route.low_obstacle_evidence=tunnel["low_obstacle_evidence"].as<bool>();
   if(cluster_z) {
     if(cluster_z["enabled"])p.tunnel_route.cluster_z.enabled=cluster_z["enabled"].as<bool>();
     if(cluster_z["min_sensor_z_m"])p.tunnel_route.cluster_z.min_sensor_z_m=cluster_z["min_sensor_z_m"].as<float>();
@@ -314,6 +343,7 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   if(protection) {
     if(protection["enabled"])p.tunnel_route.protection.enabled=protection["enabled"].as<bool>();
     if(protection["max_time_offset_s"])p.tunnel_route.protection.max_time_offset_s=protection["max_time_offset_s"].as<double>();
+    if(protection["motion_compensated_fallback"])p.tunnel_route.protection.motion_compensated_fallback=protection["motion_compensated_fallback"].as<bool>();
     if(protection["box_margin_ratio"])p.tunnel_route.protection.box_margin_ratio=protection["box_margin_ratio"].as<float>();
     if(protection["box_margin_px"])p.tunnel_route.protection.box_margin_px=protection["box_margin_px"].as<float>();
     if(protection["depth_vehicle_m"])p.tunnel_route.protection.depth_vehicle_m=protection["depth_vehicle_m"].as<float>();
@@ -488,6 +518,7 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
             << config.pipeline.use_roll << ',' << config.enable_camera_fusion << ','
             << config.pipeline.tunnel.enabled << ',' << config.pipeline.capture_debug << '\n';
   effective << config.hd_map_audit_mode << '\n' << config.hd_map_manifest_sha256 << '\n';
+  effective << "normal-ground-signed-halfspace-v1," << config.pipeline.ground.remove_below_plane << '\n';
   effective << config.pipeline.height_roi.enabled << ',' << config.pipeline.height_roi.max_height_above_ground_m
             << ',' << config.pipeline.height_roi.nominal_base_height_m << '\n';
   if (config.hd_map_audit) effective << config.hd_map_audit->bundle_sha256() << '\n'
@@ -614,6 +645,17 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << ',' << config.pipeline.tunnel_route.protection.ambiguous_max_range_m;
   effective << ",tunnel-cluster-z-v1," << config.pipeline.tunnel_route.cluster_z.enabled
             << ',' << config.pipeline.tunnel_route.cluster_z.min_sensor_z_m;
+  effective << ",low-obstacle-evidence-v1," << config.pipeline.tunnel_route.low_obstacle_evidence;
+  const auto& cr=config.pipeline.camera_point_refinement;
+  effective << ",camera-point-refinement-v4,optical-tunnel-protection-v3," << cr.enabled << ',' << cr.minimum_confidence
+    << ',' << cr.max_age_s << ',' << cr.connection_m << ',' << cr.angular_connection
+    << ',' << cr.maximum_connection_m << ',' << cr.ambiguity_depth_m << ',' << cr.fragment_connection_m << ',' << cr.wall_band_m
+    << ',' << cr.minimum_points << ',' << cr.maximum_box_points << ',' << cr.maximum_boxes
+    << ",steel-fragment-merge-v5-measured750ms," << cr.steel_fragment_merge << ',' << cr.steel_minimum_confidence
+    << ',' << cr.steel_maximum_gap_m << ',' << cr.steel_minimum_ownership;
+  effective << ',' << cr.vehicle_scanline_grouping << ',' << cr.independent_wall_cleanup
+    << ',' << cr.scanline_gap_slope << ',' << cr.scanline_max_gap_m
+    << ',' << cr.detached_wall_cleanup << ',' << config.pipeline.tunnel_route.protection.motion_compensated_fallback;
   config.config_id = hash(effective.str());
 }
 

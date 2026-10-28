@@ -157,10 +157,11 @@ void GroundFilter::Filter(const CloudPtr& input, const CloudPtr& output,
     if (!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z)) {
       continue;
     }
-    // Absolute distance and a strict test: below-plane returns beyond the band are
-    // kept, a point exactly on the band is ground.
-    const double distance =
-        std::abs(plane[0] * point.x + plane[1] * point.y + plane[2] * point.z + plane[3]);
+    // The normal points upward. In signed mode only returns above the upper
+    // ground band survive; do not widen that band and erase elevated obstacles.
+    const double signed_distance =
+        plane[0] * point.x + plane[1] * point.y + plane[2] * point.z + plane[3];
+    const double distance = config_.remove_below_plane ? signed_distance : std::abs(signed_distance);
     if (distance > RangeAdaptiveThreshold(point.x, point.y, config_)) {
       output->points.push_back(point);
       if (kept_indices) kept_indices->push_back(static_cast<int>(i));

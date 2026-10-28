@@ -140,6 +140,11 @@ void ConsolidateCurrentDetections(std::vector<TrackedObject>& now_object, const 
       for (std::size_t right_index = left_index + 1; right_index < now_object.size(); ++right_index) {
         TrackedObject& left = now_object[left_index];
         TrackedObject& right = now_object[right_index];
+        // Never undo camera instance separation during same-scan consolidation.
+        const auto& lc=left.detection.camera_point_support;
+        const auto& rc=right.detection.camera_point_support;
+        if((lc.box_index>=0)!=(rc.box_index>=0))continue;
+        if(lc.box_index>=0&&(lc.identity!=rc.identity||lc.box_index!=rc.box_index))continue;
         // OBB centres compare the same occupancy more directly than cluster
         // means, which move with the visible face.
         const float center_distance =

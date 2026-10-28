@@ -152,6 +152,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/preprocessing/leveling.cpp
     src/preprocessing/ground_filter.cpp
     src/detection/clustering.cpp
+    src/detection/camera_point_refinement.cpp
     src/detection/obb.cpp
     src/detection/euclidean_components.cpp
     src/geometry/scan_frame.cpp
@@ -165,6 +166,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     src/pipeline/pipeline.cpp
     src/experimental/tunnel_filter_stage.cpp
     src/experimental/tunnel_route.cpp
+    src/experimental/low_obstacle_evidence.cpp
     src/experimental/tunnel_filter/Lidar/TunnelFilter/TunnelFilterCore.cpp
     src/fusion/multi_camera_fusion.cpp
     src/fusion/front_camera_fusion.cpp
@@ -232,6 +234,8 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
 
   if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
+    add_test(NAME asmc_lidar_refinement_profile_test
+      COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/refinement_profile_test.py)
     add_test(NAME asmc_lidar_runtime_build_identity
       COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/runtime_build_identity_test.py
         $<TARGET_FILE:lidar_pipeline_node> ${CMAKE_CURRENT_SOURCE_DIR})
@@ -260,6 +264,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     lidar_pipeline_gtest(asmc_lidar_test_front_camera_fusion test/pipeline/test_front_camera_fusion.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_tunnel_filter_stage test/pipeline/test_tunnel_filter_stage.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_tunnel_route test/pipeline/test_tunnel_route.cpp)
+    lidar_pipeline_gtest(asmc_lidar_test_camera_point_refinement test/pipeline/test_camera_point_refinement.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_tunnel_runtime test/runtime/test_tunnel_runtime.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_source_time test/pipeline/test_source_time.cpp)
     lidar_pipeline_gtest(asmc_lidar_test_pipeline test/pipeline/test_pipeline.cpp)

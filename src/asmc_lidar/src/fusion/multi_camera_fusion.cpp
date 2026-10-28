@@ -8,7 +8,7 @@ namespace asmc::lidar::pipeline::fusion {
 namespace {
 bool Protected(const std::string& s){return s=="vehicle"||s=="dynamic_obstacle";}
 bool Available(const std::string& s){return s=="ok"||s=="empty"||s=="no_time_match"||s=="missing";}
-struct Pair {double iou;std::size_t box,projection;};
+struct Pair {double iou;std::size_t box,projection;bool measured_support=false;};
 }
 MultiCameraFusion::MultiCameraFusion(const FusionConfig& c,const camera::Calibrations& cameras)
     :config_(c),calibrations_(cameras) {
@@ -124,7 +124,13 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
   for(auto i=latest_evidence_.begin();i!=latest_evidence_.end();)if(!alive.count(i->first))i=latest_evidence_.erase(i);else ++i;
   if(stamp>last_scan_) {
     Scan s;s.stamp=stamp;s.queued=decision;s.sequence=context.scan_sequence;
-    for(const auto& o:live)s.ids.push_back(o.tracking.s32_Id);
+    for(const auto& o:live) {
+      s.ids.push_back(o.tracking.s32_Id);
+      const auto& support=o.detection.camera_point_support;
+      if(!o.tracking.s32_MissCount&&support.box_index>=0&&support.epoch&&support.stamp_ns>0&&
+         support.stamp_ns<=stamp&&!support.identity.empty()&&!support.source_class.empty())
+        s.point_support.emplace(o.tracking.s32_Id,support);
+    }
     for(const auto& c:calibrations_) {
       auto& v=s.views[c.first];
       v.projection_valid=LidarToImage(live,context,c.second,config_,&v.projection);
@@ -159,10 +165,15 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
       std::vector<Pair> pairs;
       for(std::size_t b=0;b<boxes.size();++b)for(std::size_t j=0;j<v.projection.size();++j) {
         const double iou=ProjectionIoU(boxes[b],v.projection[j]);
-        if(iou>config_.iou_threshold)pairs.push_back({iou,b,j});
+        const auto support=s.point_support.find(s.ids.at(v.projection[j].c_idx));
+        const bool measured=support!=s.point_support.end()&&
+          support->second.identity==f.identity&&support->second.stamp_ns==f.stamp_ns&&
+          support->second.epoch==f.epoch&&support->second.box_index==int(boxes[b].source_index)&&
+          support->second.source_class==fusion_class::RawLabel(boxes[b].str_raw_class);
+        if(iou>config_.iou_threshold||measured)pairs.push_back({iou,b,j,measured});
       }
       // Equal scores are deterministic: source box then projected object order.
-      std::sort(pairs.begin(),pairs.end(),[](const Pair& a,const Pair& b){return std::make_tuple(-a.iou,a.box,a.projection)<std::make_tuple(-b.iou,b.box,b.projection);});
+      std::sort(pairs.begin(),pairs.end(),[](const Pair& a,const Pair& b){return std::make_tuple(!a.measured_support,-a.iou,a.box,a.projection)<std::make_tuple(!b.measured_support,-b.iou,b.box,b.projection);});
       if(!camera.Current(f,ros,steady)){++counters_.not_current;record(s,view.first,"wait","observation_changed_during_projection");continue;}
       auto* d=record(s,view.first,"match","matched");
       if(d) {
@@ -187,7 +198,7 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
         e.positive=true;e.group=fusion_class::Normalize(box.str_class,config_.mission_profile);e.raw=fusion_class::RawLabel(box.str_raw_class);
         if(d&&d->associations.size()<128) {
           AssociationDiagnostic a;a.track_id=id;a.source_box_index=box.source_index;a.projected=true;
-          a.iou=p.iou;a.group=e.group;a.raw_class=e.raw;a.reason="view_evidence";
+          a.iou=p.iou;a.group=e.group;a.raw_class=e.raw;a.reason=p.measured_support?"measured_point_support":"view_evidence";
           a.projected_box={projected.min_x,projected.min_y,projected.max_x,projected.max_y};
           a.camera_box={box.min_x,box.min_y,box.max_x,box.max_y};d->associations.push_back(std::move(a));
         } else if(d)++d->associations_omitted;
@@ -203,7 +214,7 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
       if(start!=s.start.end())a.class_before=start->second.str_ObjectClass;
       if(o)a.class_after=o->camera.str_ObjectClass;
       a.applied=o&&applied_scan_[a.track_id]==s.stamp&&!o->camera.group_conflict;
-      a.reason=applied_scan_[a.track_id]>s.stamp?"older_scan_sealed":o&&o->camera.group_conflict?"group_conflict":a.applied?"aggregated_once_per_scan":"not_current";
+      a.reason=applied_scan_[a.track_id]>s.stamp?"older_scan_sealed":o&&o->camera.group_conflict?"group_conflict":a.applied?(a.reason=="measured_point_support"?"aggregated_measured_support_once_per_scan":"aggregated_once_per_scan"):"not_current";
     }
   }
   // A failed view cannot clear another current view. Once every contributing
