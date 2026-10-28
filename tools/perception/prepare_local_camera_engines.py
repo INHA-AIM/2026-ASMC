@@ -14,6 +14,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT/'tools/scen_runner'
@@ -26,6 +27,24 @@ def sha(path):
 
 def write_json(path, value):
     path.write_text(json.dumps(value, indent=2)+'\n')
+
+
+def select_profile_atomically(target, profile):
+    # Engine artifacts may live on D while the checkout/pointer stays on WSL.
+    # rename/replace is atomic only inside the destination filesystem.
+    fd, name = tempfile.mkstemp(prefix='.'+target.name+'-', dir=str(target.parent))
+    temporary = Path(name)
+    try:
+        # This pointer contains model paths/hashes, not credentials. Keep the
+        # previous write_json readability when a root container builds it.
+        os.fchmod(fd, 0o644)
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(profile, stream, indent=2)
+            stream.write('\n')
+        os.replace(temporary, target)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 
 def nested_params(flat):
@@ -194,9 +213,8 @@ def main():
     target = RUNTIME/'camera_runtime.json'
     if target.exists():
         shutil.copy2(target, directory/'previous-camera_runtime.json')
-    temporary = directory/'camera_runtime.json'
-    write_json(temporary, profile)
-    os.replace(temporary, target)
+    write_json(directory/'camera_runtime.json', profile)
+    select_profile_atomically(target, profile)
     print('READY: local object + lane engines selected. Run run_perception.sh.')
     print('Basic inference passed. Real camera accuracy, rate and LiDAR validity still require verification.')
 

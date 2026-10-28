@@ -17,6 +17,6 @@ E3 engine은 RTX4060·TensorRT10.13.0.35 CUDA11용이며, 기존 E8/사전학습
 `src/lidar+sensorfusion/src/Main/YOLOWeight/yolo11m.pt`.
 SHA-256: `d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95`.
 
-The original two Main weights remain in place. This copy preserves the existing
-YOLO11m COCO inference path; it does not introduce a trained model or new classes.
+The old Main path records the copy's provenance; that package is retired. The
+package-local file preserves the YOLO11m COCO reference path and introduces no new classes.
 Upstream model: https://docs.ultralytics.com/models/yolo11/

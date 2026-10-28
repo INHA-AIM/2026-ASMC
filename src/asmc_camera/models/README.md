@@ -25,7 +25,9 @@ E3 `.pt`는 선택된3에포크 EMA의1092개 tensor를 dtype까지 보존한53.
 optimizer·scaler·중복 training_model·scheduler_state를 제거하므로 학습 재개에는 원본
 316MB checkpoint를 사용합니다. 사전학습 `.pt`는 COCO80 구조와 원본 바이트를 유지합니다.
 
-ROS는 패키지 안의 SHA 고정 `.engine`을 사용합니다. 각 engine은 생성본과 바이트가 같으며
+ROS는 기본적으로 패키지 안의 SHA 고정 `.engine`을 사용합니다. 같은 모델의 검증된 개인 GPU 엔진은
+[로컬 선택](../../../docs/operations/local-lane-engine.md)으로 사용할 수 있으며 배포 파일을 덮어쓰지 않습니다.
+각 배포 engine은 생성본과 바이트가 같으며
 dynamic profile이 전방544×960·좌우480×640과 batch1/2/3을 지원합니다.
 내부 FP16 계산과 engine I/O dtype은 구분하며 실제 binding dtype을 따릅니다.
 E3 배포 engine의 생성 환경은 Linux x86_64·RTX4060 8GB·TensorRT10.13.0.35 CUDA11·`asmc-ros-noetic`입니다.

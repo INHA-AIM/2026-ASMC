@@ -1,12 +1,40 @@
 import unittest
 import hashlib
 import tempfile
+import json
+from unittest.mock import patch
 from pathlib import Path
 
-from prepare_local_camera_engines import nested_params, object_source
+from prepare_local_camera_engines import nested_params, object_source, select_profile_atomically
 
 
 class CameraLaunchParametersTest(unittest.TestCase):
+    def test_atomic_selection_tempfile_is_on_destination_filesystem(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)/'camera_runtime.json'
+            target.write_text('{"old": true}')
+            import os
+            original = os.replace
+            def replace(source, destination):
+                self.assertEqual(Path(source).parent, target.parent)
+                self.assertEqual(destination, target)
+                original(source, destination)
+            with patch('prepare_local_camera_engines.os.replace', side_effect=replace):
+                select_profile_atomically(target, {'validated': True})
+            self.assertEqual(json.loads(target.read_text()), {'validated': True})
+            self.assertEqual(target.stat().st_mode & 0o777, 0o644)
+            self.assertEqual(list(target.parent.iterdir()), [target])
+
+    def test_failed_selection_keeps_old_profile_and_cleans_only_temporary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)/'camera_runtime.json'
+            target.write_text('{"old": true}')
+            with patch('prepare_local_camera_engines.os.replace', side_effect=OSError('failure')):
+                with self.assertRaises(OSError):
+                    select_profile_atomically(target, {'validated': True})
+            self.assertEqual(json.loads(target.read_text()), {'old': True})
+            self.assertEqual(list(target.parent.iterdir()), [target])
+
     def test_roslaunch_view_shape_reaches_backend_as_dictionary(self):
         params = nested_params({'input_hw': [480, 640],
                                 'input_hw_by_view/front': [544, 960],

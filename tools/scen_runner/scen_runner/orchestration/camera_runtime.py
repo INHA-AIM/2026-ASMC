@@ -39,6 +39,13 @@ def lane_override(profile, launch, tool_root):
 def configure_camera_runtime(config, launch, tool_root=TOOL_ROOT):
     choice = config.get('camera_runtime', 'auto')
     if choice in (None, False, 'off'):
+        # BatchedYoloDetector also discovers local profiles in direct roslaunch.
+        # Propagate the explicit opt-out so it cannot undo this stack setting.
+        for node in launch.nodes:
+            if node.type in ('object_detection_node.py', 'camera_runtime_node.py'):
+                env = dict(node.env_args)
+                env['ASMC_CAMERA_RUNTIME_PROFILE'] = 'off'
+                node.env_args = list(env.items())
         return
     tool_root = Path(tool_root)
     path = tool_root/'.runtime/camera_runtime.json' if choice == 'auto' else Path(choice)
@@ -80,6 +87,7 @@ def configure_camera_runtime(config, launch, tool_root=TOOL_ROOT):
     params[prefix+'weights'].value = str(engine)
     params[prefix+'expected_sha256'].value = engine_sha
     env = dict(node.env_args)
+    env['ASMC_CAMERA_RUNTIME_PROFILE'] = str(path.resolve())
     existing = env.get('PYTHONPATH', os.environ.get('PYTHONPATH', ''))
     env['PYTHONPATH'] = str(dependencies)+(os.pathsep+existing if existing else '')
     env['YOLO_AUTOINSTALL'] = 'false'

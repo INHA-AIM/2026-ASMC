@@ -2,7 +2,7 @@
 
 YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 소유합니다.
 실행은 `camera.launch`, 시각화는 `view.launch`를 사용합니다.
-기본 객체 모델은 YOLO26l v11 E8, 사전학습 YOLO26l도 실행 시 선택할 수 있습니다.
+기본 객체 모델은 **YOLO26l collect v5 E3·15종**입니다. 이전 v11 E8·16종과 사전학습 YOLO26l은 명시적으로 선택하는 비교·복구용입니다.
 현재 정본 목표는 YOLO15Hz·TwinLite15Hz·ResNet10Hz이며 confidence0.40·NMS IoU0.50입니다.
 현재 기본 tensor는 두 모델 모두 전방544×960·좌우480×640입니다. 모델별 독립 프로세스를 사용하며 입력 tensor를 공유하지 않습니다.
 TwinLite 기본 모델은 **Large v7 E8·TensorRT FP16**입니다.
@@ -28,6 +28,11 @@ roslaunch asmc_camera camera.launch mode:=active models:=objects
 # 기존 실행을 종료한 뒤 사전학습 모델 대조
 roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
 ```
+
+배포 E3 객체 엔진은 RTX4060, Large E8 차선 엔진은 RTX4060Ti에서 생성했습니다.
+다른 GPU에서는 동일 checkpoint로 로컬 엔진을 생성·검증합니다. 직접 `camera.launch`도
+검증된 로컬 객체 엔진을 선택하며 배포 가중치·체크섬을 수정할 필요가 없습니다.
+[GPU별 생성·선택·복구](../../docs/operations/local-lane-engine.md)를 따르세요.
 
 별도 터미널:
 
@@ -56,7 +61,7 @@ BBox lane 어댑터도 같은 영상의 평면 metadata를 재사용합니다.
 정차 지면 채택 근거와 표시 부하의 남은 제한을 기록합니다.
 
 [실행·모드·관측 계약](../../docs/contracts/camera-runtime-v1.md)에 공개 옵션과
-새 제어 경로·기존 alias·원본16종/세 그룹·관측 freshness를 정리했습니다.
+새 제어 경로·기존 alias·프로필별 원본 클래스/세 그룹·관측 freshness를 정리했습니다.
 [모델 설치와 소비 규칙](../../docs/operations/camera-deployment.md),
 [실측·후처리 선정](../../docs/records/camera/camera-runtime-structure-validation.md)을 함께 확인하세요.
 [15Hz·confidence 후속 검증](../../docs/records/camera/camera-rate-confidence-followup.md)에 최신 결정과 이전 실패를 정리했습니다.
@@ -95,4 +100,5 @@ LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)와
 2026-10-18 완료된8epoch 중E8을 선정하고 품질·TensorRT·정차 통합 시험을 완료했다.
 FOGGY 전체 GUI10분은 통과했으나 교차12회 중 Large SUNNY1회에서 readiness 저하3건이 남았다.
 후속 사용자 결정으로 `lane_runtime.yaml`을 Large E8 기본으로 전환했다.
-`lane_runtime_large.yaml`은 같은 모델의 명시적 선택이며 `lane_runtime_medium.yaml`은 복구 설정이다. PR 병합은 하지 않았다.
+`lane_runtime_large.yaml`은 같은 모델의 명시적 선택이며 `lane_runtime_medium.yaml`은 복구 설정이다.
+위 학습·선정 당시의 병합 전 기록과 달리 현재 main에는 Large E8 기본 설정이 반영되어 있다.

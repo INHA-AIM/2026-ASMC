@@ -43,15 +43,26 @@ class CameraRuntimeTest(unittest.TestCase):
         self.assertEqual(after['/camera_object_detector/weights'], str(self.root/'engine'))
         self.assertEqual(dict(self.node.env_args)['PYTHONPATH'], str(self.root/'python')+':/existing/ros')
         self.assertEqual(dict(self.node.env_args)['KEEP'], 'yes')
+        self.assertEqual(dict(self.node.env_args)['ASMC_CAMERA_RUNTIME_PROFILE'],
+                         str(self.root/'.runtime/camera_runtime.json'))
         self.assertEqual(self.other.env_args, [])
 
-    def test_other_hosts_and_explicit_off_keep_upstream_configuration(self):
+    def test_other_hosts_keep_upstream_configuration(self):
         before = copy.deepcopy(self.launch)
         configure_camera_runtime({}, self.launch, self.root)
         self.assertEqual(self.launch, before)
+
+    def test_explicit_off_keeps_upstream_weights_and_disables_backend_autoselection(self):
         self.write_profile()
-        configure_camera_runtime({'camera_runtime': 'off'}, self.launch, self.root)
-        self.assertEqual(self.launch, before)
+        for choice in ('off', None, False):
+            with self.subTest(choice=choice):
+                launch = copy.deepcopy(self.launch)
+                before = copy.deepcopy(launch.params)
+                configure_camera_runtime({'camera_runtime': choice}, launch, self.root)
+                self.assertEqual(launch.params, before)
+                self.assertEqual(dict(launch.nodes[0].env_args)['ASMC_CAMERA_RUNTIME_PROFILE'], 'off')
+                self.assertEqual(dict(launch.nodes[0].env_args)['KEEP'], 'yes')
+                self.assertEqual(launch.nodes[1].env_args, [])
 
     def test_new_team_model_cannot_silently_run_the_old_local_engine(self):
         self.write_profile()

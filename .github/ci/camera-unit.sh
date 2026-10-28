@@ -76,3 +76,7 @@ python3 -m unittest discover -s tools/perception -p 'test_camera_runtime_measure
 python3 -m unittest discover -s tools/perception -p 'test_imu_runtime_metrics.py'
 python3 -m unittest discover -s tools/perception -p 'test_imu_width_acceptance.py'
 python3 -m unittest discover -s tools/perception -p 'test_shadow_family_validation.py'
+python3 -m unittest discover -s tools/perception -p 'test_lane_engine_selection.py'
+python3 -m unittest discover -s tools/perception -p 'test_object_engine_selection.py'
+python3 -m unittest discover -s tools/perception -p 'test_prepare_local_camera_engines.py'
+python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_camera_runtime.py'

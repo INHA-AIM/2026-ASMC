@@ -28,9 +28,11 @@ YOLO 소비 경계는 2026-10-28 main `56433579`을 포함한 PR #122 작업 기
 |---|---|---|
 | `vehicle` | car, bus, truck | vehicle은 차종 묶음. 실제 이동·정지·추종 가능 여부는 위치·추적 근거와 별도 |
 | `dynamic_obstacle` | person, dog, deer, bicycle, stroller | 이동 가능한 대회 에셋. 매 관측이 이동 중이라는 뜻은 아님 |
-| `static_obstacle` | motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier, traffic_cone | SportBike 정적 에셋이라는 사용자 확인 반영. 분류 오류를 실제 운동 정답으로 승격하지 않음 |
+| `static_obstacle` | motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier | SportBike 정적 에셋이라는 사용자 확인 반영. 분류 오류를 실제 운동 정답으로 승격하지 않음 |
 
-`source_class_name`은 원본16종, `class_name`은 위 그룹이다. MORAI actor/API 에셋명은
+현재 E3의 `source_class_name`은 원본15종, `class_name`은 위 그룹이다.
+이전 E8은 `traffic_cone`을 포함한16종이며, 복구 시 카메라·LiDAR·시각화 프로필을 함께 맞춘다.
+MORAI actor/API 에셋명은
 검출만으로 확인되지 않는다. 자세한 학습 ID·하위 종류는 [에셋/라벨](../competition/obstacle-assets-and-labels.md)을 따른다.
 
 | 연결 경계 | 현재 전달·제한 | 판제가 확인할 것 |
@@ -57,7 +59,7 @@ YOLO 소비 경계는 2026-10-28 main `56433579`을 포함한 PR #122 작업 기
 원본 `person`의 파생 구분으로 남긴다.** 세 그룹으로 기존 enum을 단순 교체하면
 사람 전용 대응과 이미 조정한 추종·회피 분기가 바뀐다. 다음 세 축을 독립적으로 소비한다.
 
-- 무엇인가: `vehicle / dynamic_obstacle / static_obstacle`과 원본16종 이름.
+- 무엇인가: `vehicle / dynamic_obstacle / static_obstacle`과 선택 프로필의 원본 이름(E3 15종, E8 16종).
 - 실제로 어떻게 움직이는가: `motion_state`, 속도와 속도 유효성.
 - 어떻게 대응할 것인가: 경로 점유·미션·시각·불확실성에 따른 판제 행동.
 
@@ -74,7 +76,7 @@ YOLO 소비 경계는 2026-10-28 main `56433579`을 포함한 PR #122 작업 기
 | dog, deer, bicycle, stroller | dynamic_obstacle | UNKNOWN=0 |
 | motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier, traffic_cone | static_obstacle | UNKNOWN=0 |
 
-즉 원본16종 중12종은 숫자 타입만으로 구별되지 않는다.
+즉 E3 원본15종 중11종(E8은16종 중12종)은 숫자 타입만으로 구별되지 않는다.
 이는 LiDAR가 해당 객체를 버린다는 뜻이 아니다.
 `planning_observations_map.observation.objects.objects[]`에는 그룹
 `classification`과 원본 `camera_class`가 함께 있지만,
@@ -97,7 +99,7 @@ Behavior/Frenet 내부까지 보존하며, 별도 tracks_map을 시각으로 다
   도로 밖 객체가 진입하는 경우에는 이 조건과 공유 충돌 예측을 함께 검증해야 한다.
   현재 분기를 제거하거나 실제 놓침이 재현됐다고 결론 낸 것은 아니다.
 - 음영의 [전방 bbox 입력](../../src/jamming_lane_boundary_adapter/scripts/camera_bbox_frame_bridge.py)은
-  원본16종을 모두 받되 전방만 사용하고, 별도 confidence 기본0.7을 적용한다
+  선택 프로필의 원본 종류를 받되 전방만 사용하고, 별도 confidence 기본0.7을 적용한다
   (카메라 생산자0.40과 다름). 라벨은 유지하지만 차로 점유·회피는 주로 기하를 사용한다.
   일반 map 판제 경로와 동일한 클래스별 정책이 완성된 것으로 간주하지 않는다.
 - LiDAR의 semantic 정적 보조는 현재 `semantic_static_enabled: false`다.

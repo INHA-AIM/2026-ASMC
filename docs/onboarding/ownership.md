@@ -43,7 +43,7 @@
 | `asmc_hd_map` | 2단계 완료. 운영 map과 global/local topic 사용 |
 | `asmc_bridge` | P3-G local closeout 완료. 실제 두 PC LAN2LAN은 6단계 현장 리허설에서 검증 |
 | `asmc_camera`(구 `asmc_perception`) | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 LiDAR는 카메라 공용 관측을 직접 소비함. LiDAR는 정본화 후 M0–M5 공동 개선을 따름 |
-| `asmc_camera` 현재 | rename·3뷰 YOLO 단일화·TensorRT·family 최적화 병합. 원본16종/소비3그룹 계약 제공. YOLO detect 추가학습은 장원태 진행, 새 모델 운영 인수는 별도 |
+| `asmc_camera` 현재 | rename·3뷰 YOLO 단일화·TensorRT·family 최적화 병합. 기본 E3 원본15종/소비3그룹, 이전 E8은16종 복구 프로필. YOLO detect 추가학습은 장원태 진행, 새 모델 운영 인수는 별도 |
 | `asmc_lidar` | B4 정본화·구 패키지 폐기, C0/F1 병합 완료. 다음은 [3뷰·터널·OBB·추적 M0–M5](../../src/asmc_lidar/docs/improvement-milestones.md). 운영은 asmc_lidar 정본·판제 공용 입력 단일화 |
 | `learning*` 정리 | 완료. LBC teacher/debug 필요 기능만 `tools/research/lbc_teacher_bev` 이관 |
 | 실행·시각화 | P5-A~E 완료 기록 유지. bridge 별도 실행. LiDAR는 lidar.launch·RViz 선택 옵션, 웹은 구독 전용 view.launch |
