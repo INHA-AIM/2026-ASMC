@@ -235,6 +235,33 @@ bool CheckSweep(const Scene &s, const Config &c, const Pose &a, const Pose &b,
   }
   return true;
 }
+// A common distance integral for analytic, lattice and rechecked paths.
+// Goal heuristics guide search only; they cannot bias final cross-method rank.
+double SegmentQualityCost(const Scene &s, const Config &c, const Pose &a,
+                          const Pose &b, unsigned soft_cells) {
+  const double distance = std::hypot(b.x-a.x, b.y-a.y);
+  if (distance < 1e-8) return 0.;
+  auto previous_y = [&](double x, double fallback) {
+    for (size_t i=1; i<s.previous.size(); ++i) {
+      const auto &p=s.previous[i-1], &q=s.previous[i];
+      if (x >= p.x && x <= q.x && q.x > p.x)
+        return p.y + (q.y-p.y)*(x-p.x)/(q.x-p.x);
+    }
+    // No previous support at this x is not evidence to hold its endpoint.
+    return fallback;
+  };
+  auto density = [&](double t) {
+    const double x=a.x+t*(b.x-a.x), y=a.y+t*(b.y-a.y), k=a.k+t*(b.k-a.k);
+    return .04*std::pow(y-homeAt(s,x),2) + .2*k*k +
+           .20*std::pow(y-previous_y(x,y),2);
+  };
+  const int samples = 1 + std::max(1, int(std::ceil(
+      (distance+std::abs(b.yaw-a.yaw)*c.length)/(.5*s.grid.resolution))));
+  // Soft margin is a mean sample density, not a raw count dependent on
+  // segment length. Curvature change is squared derivative per metre.
+  return distance*(density(0)+4*density(.5)+density(1))/6. +
+         std::pow(b.k-a.k,2)/distance + .002*distance*soft_cells/samples;
+}
 namespace {
 // Simulation recovery requested for LOCAL-1: fresh semantic evidence continues
 // to guide a short 3km/h path even if a conservative swept-footprint gate
@@ -407,6 +434,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
     bool assisted = false;
     size_t goal = 0;
     unsigned soft_margin_cells = 0;
+    double quality = 0; // final distance-normalized ranking, no goal heuristic
   };
   Pose origin;
   origin.k =
@@ -509,19 +537,10 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
           break;
         candidate.assisted |= check.assisted;
         out.remembered_cells += check.remembered_cells;
+        candidate.quality += SegmentQualityCost(s,c,a,b,check.soft_margin_cells-soft_before);
         candidate.path.push_back(b);
-        double target = homeAt(s, x);
-        candidate.cost +=
-            distance * (.04 * (y - target) * (y - target) + .2 * b.k * b.k);
-        candidate.cost += .0001 * (check.soft_margin_cells - soft_before);
+        candidate.cost = candidate.quality;
         candidate.soft_margin_cells = check.soft_margin_cells;
-        if (!s.previous.empty()) {
-          auto old = std::min_element(
-              s.previous.begin(), s.previous.end(), [&](auto &p, auto &q) {
-                return std::abs(p.x - x) < std::abs(q.x - x);
-              });
-          candidate.cost += distance * .20 * (y - old->y) * (y - old->y);
-        }
       }
       if (out.candidates.size() < 12) {
         Result::Candidate example;
@@ -618,6 +637,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         Node candidate = node;
         candidate.path.push_back(b);
         candidate.cost = cost;
+        candidate.quality += SegmentQualityCost(s,c,a,b,check.soft_margin_cells);
         candidate.assisted |= check.assisted;
         candidate.soft_margin_cells += check.soft_margin_cells;
         next.push_back(std::move(candidate));
@@ -633,14 +653,16 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       if (per_goal[node.goal]++ < quota)
         diverse.push_back(std::move(node));
     next = std::move(diverse);
-    best = next.front();
+    best = *std::min_element(next.begin(), next.end(), [](const auto &a, const auto &b) {
+      return a.quality < b.quality;
+    });
     beam = std::move(next);
     if (out.budget_exhausted)
       break;
   }
   if (analytic_best.path.back().x > best.path.back().x + .1 ||
       (analytic_best.path.back().x >= best.path.back().x - .1 &&
-       analytic_best.cost < best.cost))
+       analytic_best.quality < best.quality))
     best = std::move(analytic_best);
   out.path = best.path;
   out.assisted = best.assisted;
@@ -658,6 +680,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         });
     std::vector<Pose> prefix{origin};
     Result check;
+    double old_cost = 0.;
     if (std::hypot(nearest->x, nearest->y) < .20 &&
         std::abs(nearest->yaw) < .08) {
       for (auto it = nearest; it != s.previous.end(); ++it) {
@@ -666,21 +689,20 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
           continue;
         const auto &a = prefix.back();
         double ds = std::hypot(p.x - a.x, p.y - a.y), turn = p.yaw - a.yaw;
-        if (ds > .80 || p.x > horizon || std::abs(turn) > c.max_k * ds + .015 ||
-            !CheckSweep(s, c, a, p, check))
+        const auto soft_before = check.soft_margin_cells;
+        const double steering_change = std::abs(std::atan(c.wheelbase*p.k/c.gain)-
+                                                std::atan(c.wheelbase*a.k/c.gain));
+        if (ds > .80 || p.x > horizon || std::abs(p.k)>c.max_k ||
+            steering_change > c.max_steer_rate*ds/std::max(1.,s.speed) ||
+            std::abs(turn) > c.max_k * ds + .015 || !CheckSweep(s, c, a, p, check))
           break;
         p.s = a.s + ds;
+        old_cost += SegmentQualityCost(s,c,a,p,check.soft_margin_cells-soft_before);
         prefix.push_back(p);
-      }
-      double old_cost = .0001 * check.soft_margin_cells;
-      for (size_t k = 1; k < prefix.size(); ++k) {
-        const auto &q = prefix[k];
-        old_cost += (q.s - prefix[k - 1].s) *
-                    (.04 * std::pow(q.y - homeAt(s, q.x), 2) + .2 * q.k * q.k);
       }
       const bool similar = prefix.size() > 1 &&
                            prefix.back().x >= out.path.back().x - .2 &&
-                           old_cost <= best.cost * 1.1 + .005;
+                           old_cost <= best.quality * 1.1 + .005;
       if (prefix.size() > 1 &&
           (prefix.back().x > out.path.back().x + .5 || similar)) {
         out.path_source = "rechecked_previous";

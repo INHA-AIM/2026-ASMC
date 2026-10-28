@@ -26,6 +26,23 @@ Scene empty() {
 }
 int main() {
   try {
+    { // Equal geometry must not rank differently due to analytic/lattice spacing.
+      auto scene=empty(); Config config;
+      scene.previous={{0,.3,0,0,0},{10,.3,0,0,10}};
+      auto cost=[&](double step) { double value=0.; Pose a{0,.2,0,0,0};
+        for(double x=step;x<10.+1e-6;x+=step) {
+          Pose b{x,.2+.01*x,0,.001*x,x};
+          value+=SegmentQualityCost(scene,config,a,b,0); a=b;
+        } return value; };
+      expect(std::abs(cost(.2)-cost(.5))<1e-8,"common final path cost independent of segmentation");
+      auto previous_plan=Plan(scene,config);
+      expect(previous_plan.valid,"previous test base plan");
+      scene.previous=previous_plan.path;
+      scene.obstacles.push_back({77,{{6,-2},{7,-2},{7,2},{6,2}}});
+      auto obstructed=Plan(scene,config);
+      for(const auto &p:obstructed.path) {Result check;
+        expect(CheckFootprint(scene,config,p,check),"reused path obeys new current OBB");}
+    }
     // Tiny overspeed must converge, not become a full-brake trough. The old
     // scalar-cap + average-acceleration loop created an unnecessary trough.
     for (double initial_a : {-1., 0., 1.}) {

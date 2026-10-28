@@ -86,6 +86,8 @@ struct Result {
   double recovery_cost = 0;
   unsigned recovery_obb_overlap = 0;
 };
+// Distance-normalized final score; does not certify collision validity.
+double SegmentQualityCost(const Scene &, const Config &, const Pose &, const Pose &, unsigned soft_cells);
 Result Plan(const Scene &, const Config &);
 bool CheckFootprint(const Scene &, const Config &, const Pose &, Result &);
 std::array<double, 3> Rotate(const std::array<double, 9> &, double, double,
