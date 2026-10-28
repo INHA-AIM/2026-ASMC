@@ -42,6 +42,7 @@ class ManeuverExecution {
     return *this;
   }
   void bind(ManeuverState& state) { bound_ = &state; }
+  void detach() { owned_=*writable();bound_=nullptr; }
   const ManeuverState* operator->() const { return writable(); }
   bool canCommitAvoid(const CommitFacts& facts) const {
     return facts.candidate_valid && writable()->avoid.active &&

@@ -1,0 +1,5 @@
+<launch>
+  <!-- No simulator, bridge, MPC or /ctrl_cmd publisher is launched. -->
+  <test test-name="highway_runtime" pkg="asmc_planner"
+        type="highway_runtime_test" time-limit="120"/>
+</launch>

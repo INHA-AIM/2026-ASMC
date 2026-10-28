@@ -1,6 +1,7 @@
 #include "Frenet/Math/FrenetConverter.hpp"
 
 #include <cmath>
+#include <algorithm>
 
 namespace {
 
@@ -163,9 +164,21 @@ CartesianPath ConvertToCartesianPath(const FrenetPath& path, const RefLine& ref,
 
     constexpr double kMinSpeedForAnalytic = 0.1;  // [m/s]
 
-    GeometricPath geo = ComputeGeometricPath(path.s, path.d, ref);
+    GeometricPath geo;
+    if(!path.spatial_lateral.enabled)geo=ComputeGeometricPath(path.s,path.d,ref);
 
     for (size_t i = 0; i < n; i++) {
+        if(path.spatial_lateral.enabled) {
+            const auto& geometry=path.spatial_lateral;
+            const double q=std::clamp(path.s[i]-geometry.origin_s,0.0,geometry.length);
+            const auto cs=FrenetToCartesian(Interpolate(ref,path.s[i]),path.s[i],
+                path.s_d[i],path.s_dd[i],EvalPos(geometry.polynomial,q),
+                EvalVel(geometry.polynomial,q),EvalAcc(geometry.polynomial,q));
+            result.x.push_back(cs.x);result.y.push_back(cs.y);
+            result.yaw.push_back(cs.yaw);result.kappa.push_back(cs.kappa);
+            result.v.push_back(cs.v);result.a.push_back(cs.a);
+            continue;
+        }
         if (std::abs(path.s_d[i]) < kMinSpeedForAnalytic) {
             result.x.push_back(geo.x[i]);
             result.y.push_back(geo.y[i]);

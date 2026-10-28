@@ -1,5 +1,6 @@
 #pragma once
 #include "Frenet/Common/ObjectTypes.hpp"
+#include "Frenet/Geometry/ObservationContinuity.hpp"
 #include <algorithm>
 #include <cmath>
 #include <deque>
@@ -17,8 +18,9 @@ class RoundaboutPrediction {
     struct Track {
         std::deque<Sample> samples;
         double stamp=-1, rate=0, x=0, y=0, vx=0, vy=0, speed=0, last_motion=-1;
-        bool moving=false, reliable=false, complete=false;
+        bool moving=false, reliable=false, complete=false, motion_bounded=false;
         std::deque<BodySample> bodies;
+        TrackedObject last{};
         double body_stamp=-1, body_x=0, body_y=0;
         double half_length=0, half_width=0;
     };
@@ -97,7 +99,9 @@ public:
         stamp_=stamp;
         for(const auto& object:objects) {
             auto& track=tracks_[object.id];
-            if(track.stamp>=0&&stamp-track.stamp>.5)track=Track{};
+            if(track.stamp>=0&&!ObservationContinuous(track.last,object,stamp-track.stamp))
+                track=Track{};
+            track.last=object;
             // Advect the last full-body centre with fresh measured velocity.
             // A fragment's centre can move across the body as visibility changes.
             if(track.body_stamp>=0&&track.stamp>=0) {
@@ -112,7 +116,7 @@ public:
                 object.motion_state==ObjectMotionState::DYNAMIC_PENDING;
             if(track.moving)track.last_motion=stamp;
             else track.moving=stamp-track.last_motion<=1;
-            track.reliable=track.complete=false;
+            track.reliable=track.complete=track.motion_bounded=false;
             if(!std::isfinite(speed)||speed<.5) {
                 track.samples.clear();track.rate=0;continue;
             }
@@ -141,6 +145,7 @@ public:
                 residual<=.20&&std::fabs(fit)<=clamp&&
                 std::isfinite(speed_measurement_error)&&speed_measurement_error>0&&
                 max_speed-min_speed<=2*speed_measurement_error;
+            track.motion_bounded=track.reliable;
             double position_vx=0,position_vy=0;
             if(DisputedVelocity(track,position_vx,position_vy))track.reliable=false;
             // Fresh whole-body observations establish a conservative size.
@@ -189,7 +194,21 @@ public:
         for(auto& object:bounded) {
             const double speed=std::hypot(object.vx,object.vy);
             if(object.motion_state==ObjectMotionState::LOW_THREAT||speed<.5)continue;
-            const auto range=ObservedSpeedRange(object.id,speed);
+            auto range=ObservedSpeedRange(object.id,speed);
+            const auto it=tracks_.find(object.id);double vx=0,vy=0,error=0;
+            // A supported speed disagreement enlarges the departure interval;
+            // it must not disappear when the binary confidence veto is waived.
+            double disputed_vx=0,disputed_vy=0;
+            if(it!=tracks_.end()&&DisputedVelocity(it->second,disputed_vx,disputed_vy)&&
+               BoundedDisagreement(it->second,vx,vy,error)) {
+                const double position_speed=std::hypot(vx,vy);
+                range.first=std::min(range.first,std::max(0.0,position_speed-error));
+                range.second=std::max(range.second,position_speed+error);
+            }
+            if(std::isfinite(object.prediction_min_speed))
+                range.first=std::min(range.first,std::max(0.0,object.prediction_min_speed));
+            if(std::isfinite(object.prediction_max_speed))
+                range.second=std::max(range.second,object.prediction_max_speed);
             object.prediction_min_speed=range.first;object.prediction_max_speed=range.second;
         }
         return bounded;
@@ -225,6 +244,74 @@ public:
         double error=0;
         return PositionVelocity(track,vx,vy,error)&&std::hypot(vx,vy)>track.speed+error&&
             std::hypot(vx-track.vx,vy-track.vy)>error;
+    }
+    bool BoundedDisagreement(const Track& track,double& vx,double& vy,double& error) const {
+        if(!track.motion_bounded||!PositionVelocity(track,vx,vy,error))return false;
+        const double position_speed=std::hypot(vx,vy);
+        // Both estimates must describe the same direction. A position fit
+        // contradicting a spurious tight turn still has no departure authority.
+        return position_speed>.5&&track.speed>=.5&&
+            (vx*track.vx+vy*track.vy)/(position_speed*track.speed)>=std::cos(.20);
+    }
+    // Extra occupancies, never replacements for measured corners. A caller may
+    // waive this ID's confidence veto ONLY if these bounds also participate in
+    // the complete candidate's final collision and temporal-gap checks.
+    std::vector<TrackedObject> DepartureOccupancies(
+        const std::vector<TrackedObject>& objects,
+        const std::function<bool(double,double)>& on_circulating_lane,
+        double partial_length,double partial_width) const {
+        auto result=ConservativeOccupancies(objects);
+        if(!std::isfinite(partial_length)||partial_length<=0||
+           !std::isfinite(partial_width)||partial_width<=0)return result;
+        for(const auto& object:objects) {
+            const auto it=tracks_.find(object.id);if(it==tracks_.end())continue;
+            const auto& track=it->second;
+            if(track.complete||object.motion_state==ObjectMotionState::LOW_THREAT||
+               stamp_-track.stamp>1e-6||!track.moving||
+               !track.motion_bounded||!GeometryUsable(object))continue;
+            double vx=0,vy=0,error=0;
+            if(!BoundedDisagreement(track,vx,vy,error))continue;
+            const bool remembered=BodyContainsObservation(track,object,stamp_);
+            // Partial-only support requires actual displacement and mapped
+            // circulating-lane observations. A stationary roadside false
+            // velocity, an unsupported route or a new ID cannot qualify.
+            bool mapped=false;
+            if(on_circulating_lane)for(const auto& sample:track.samples)
+                mapped|=on_circulating_lane(sample.x,sample.y);
+            if(!remembered&&!mapped)continue;
+            auto bound=object;
+            bound.heading=std::atan2(track.vy,track.vx);bound.yaw_rate=track.rate;
+            double hl,hw;
+            if(remembered) {
+                bound.x=track.body_x;bound.y=track.body_y;
+                const double age=stamp_-track.body_stamp;
+                const double growth=.25+(.5+std::hypot(vx-track.vx,vy-track.vy)+error)*age;
+                hl=track.half_length+growth;hw=track.half_width+growth;
+            } else {
+                // The fragment is NOT a whole body and its centre is NOT a
+                // vehicle centre. If a body touches the measured fragment,
+                // its centre can be displaced by half a body in either
+                // direction. Full dimensions as radii bound that uncertainty.
+                hl=partial_length+.25;hw=partial_width+.25;
+            }
+            const double c=std::cos(bound.heading),s=std::sin(bound.heading);
+            for(const auto& p:object.corners) {
+                const double dx=p.x-bound.x,dy=p.y-bound.y;
+                hl=std::max(hl,std::fabs(dx*c+dy*s)+.25);
+                hw=std::max(hw,std::fabs(-dx*s+dy*c)+.25);
+            }
+            bound.length=2*hl;bound.width=2*hw;bound.geometry_valid=true;bound.z_valid=false;
+            const auto speeds=ObservedSpeedRange(object.id,track.speed);
+            const double position_speed=std::hypot(vx,vy);
+            bound.prediction_min_speed=std::min(speeds.first,std::max(0.0,position_speed-error));
+            bound.prediction_max_speed=std::max(speeds.second,position_speed+error);
+            for(int i=0;i<8;++i) {
+                const double dx=(i%4==0||i%4==3)?-hl:hl,dy=i%4<2?-hw:hw;
+                bound.corners[i]={bound.x+dx*c-dy*s,bound.y+dx*s+dy*c,object.z};
+            }
+            result.push_back(std::move(bound));
+        }
+        return result;
     }
     // PREPARE checks both position-supported translation and a short sensor
     // velocity/turn hypothesis. A disputed fit cannot extrapolate a tight loop

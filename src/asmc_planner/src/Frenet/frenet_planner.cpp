@@ -12,6 +12,8 @@
 
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Maneuver/KeepCruise.hpp"
+#include "Frenet/Maneuver/Merge/HighwayPrediction.hpp"
+#include "Frenet/Geometry/HighwayLaneMotion.hpp"
 #include "Frenet/Maneuver/Merge/MergeGapEvaluator.hpp"
 #include "Frenet/Math/Utils.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
@@ -37,8 +39,31 @@ bool PathObeysCurvatureLimit(const CartesianPath& path, double limit) {
 
 }  // namespace
 
+bool FrenetPlanner::SetPreparedReference(const RefLine& reference) {
+    if(highway_route_)return false; // mission stations cannot follow a reference swap
+    if (!ref_loaded_ || has_last_s_ || reference.closed_loop || reference.points.size()<3 ||
+        !std::isfinite(reference.length) || reference.length<=0 ||
+        std::abs(reference.points.front().s)>1e-9 ||
+        std::abs(reference.points.back().s-reference.length)>1e-6) return false;
+    for (std::size_t i=0;i<reference.points.size();++i) {
+        const auto& p=reference.points[i];
+        if (!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.theta)||
+            !std::isfinite(p.s)||!std::isfinite(p.kappa)||!std::isfinite(p.d_kappa)||std::abs(p.kappa)>limits_.max_curvature+1e-9 ||
+            (i&&p.s<=reference.points[i-1].s)) return false;
+    }
+    ref_=reference;
+    ResetHighwayMerge(); // prior confirmation/READY belongs to the old reference
+    debug_writer_.reset(); // an isolated probe must not overwrite production debug files
+    // These mission stations belong to the original reference. A local trial
+    // cannot reuse a roundabout zone, exit prediction or projection hint.
+    ResetRoundaboutMerge(); roundabout_merge_cfg_.enabled=false;
+    roundabout_zone_=RoundaboutMergeZone{};
+    return true;
+}
+
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     ref_loaded_ = false;
+    highway_route_.reset();highway_prediction_map_.reset();highway_owned_lanes_.clear();highway_areas_path_.clear();ResetHighwayMerge();
     solid_paint_contact_active_ = false;
     solid_paint_contact_elapsed_s_ = 0.0;
     highway_merge_checkpoint_s_ = -1.0;
@@ -72,6 +97,7 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
                 std::fprintf(stderr,"[FrenetPlanner] HD map init failed: %s\n",error.c_str());
                 return false;
             }
+            highway_areas_path_=root+"drivable.json";
         }
     } catch(const std::exception& error) { std::fprintf(stderr,"%s\n",error.what()); return false; }
     std::string waypoint_file;
@@ -160,8 +186,11 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
             roundabout_merge_cfg_.enabled = true;
             roundabout_merge_cfg_.speed_cap = merge["speed_cap_mps"].as<double>(25.0/3.6);
             roundabout_merge_cfg_.max_horizon = merge["max_horizon_s"].as<double>(10.0);
+            roundabout_merge_cfg_.min_front_time_gap = merge["min_front_time_gap_s"].as<double>(merge_cfg_.min_front_time_gap);
             roundabout_merge_cfg_.preview_distance = merge["preview_distance_m"].as<double>(45.0);
             roundabout_merge_cfg_.speed_measurement_error = merge["speed_measurement_error_mps"].as<double>(5.0);
+            roundabout_merge_cfg_.partial_vehicle_length = merge["partial_vehicle_length_m"].as<double>(6.0);
+            roundabout_merge_cfg_.partial_vehicle_width = merge["partial_vehicle_width_m"].as<double>(3.0);
             roundabout_merge_cfg_.source_link = merge["source_link"].as<std::string>(roundabout_merge_cfg_.source_link);
             roundabout_merge_cfg_.target_link = merge["target_link"].as<std::string>(roundabout_merge_cfg_.target_link);
             roundabout_merge_cfg_.stop_node = merge["stop_node"].as<std::string>(roundabout_merge_cfg_.stop_node);
@@ -169,7 +198,10 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
             if (!std::isfinite(roundabout_merge_cfg_.speed_cap) || roundabout_merge_cfg_.speed_cap <= 0 ||
                 !std::isfinite(roundabout_merge_cfg_.max_horizon) || roundabout_merge_cfg_.max_horizon < path_cfg_.time_horizon.max ||
                 roundabout_merge_cfg_.max_horizon > 10 || roundabout_merge_cfg_.conflict_links.empty() ||
+                !std::isfinite(roundabout_merge_cfg_.min_front_time_gap) || roundabout_merge_cfg_.min_front_time_gap < 0 ||
                 !std::isfinite(roundabout_merge_cfg_.speed_measurement_error) || roundabout_merge_cfg_.speed_measurement_error <= 0 ||
+                !std::isfinite(roundabout_merge_cfg_.partial_vehicle_length) || roundabout_merge_cfg_.partial_vehicle_length <= 0 ||
+                !std::isfinite(roundabout_merge_cfg_.partial_vehicle_width) || roundabout_merge_cfg_.partial_vehicle_width <= 0 ||
                 !std::isfinite(roundabout_merge_cfg_.preview_distance) || roundabout_merge_cfg_.preview_distance <= 0)
                 throw std::runtime_error("invalid roundabout merge configuration");
             if (!avoid_road_map_.enabled()) throw std::runtime_error("roundabout MERGE requires the HD map");
@@ -513,10 +545,28 @@ double FrenetPlanner::LowSpeedLateralTransitionDistance(
             std::sqrt(lateral_distance / usable_curvature));
 }
 
+bool FrenetPlanner::HighwayCruiseFor(const PlannerCommand& command) const {
+    if((command.mode==LANE_KEEPING||command.mode==FOLLOWING)&&
+       std::find(highway_owned_lanes_.begin(),highway_owned_lanes_.end(),
+                 "lane:"+command.source_link_id)!=highway_owned_lanes_.end())return true;
+    const auto map=highway_prediction_map_?highway_prediction_map_:
+        (highway_route_?highway_route_->map:nullptr);
+    return IsHighwayCruiseCommand(highway_merge_cfg_,map.get(),command);
+}
+
+CurveSpeedConfig FrenetPlanner::CurveSpeedFor(const PlannerCommand& command) const {
+    return ResolveHighwayCurveSpeed(curve_speed_cfg_,highway_merge_cfg_,
+        highway_merge_enabled()||bool(highway_prediction_map_),command,HighwayCruiseFor(command));
+}
+
 PlannerConfigBundle FrenetPlanner::MakePipelineConfigBundle() const {
+    return MakePipelineConfigBundle(curve_speed_cfg_);
+}
+
+PlannerConfigBundle FrenetPlanner::MakePipelineConfigBundle(const CurveSpeedConfig& curve) const {
     return PlannerConfigBundle{
         path_cfg_, limits_, cost_weights_, keep_cruise_cfg_, vehicle_shape_, collision_cfg_,
-        stop_cfg_, merge_cfg_, avoid_cfg_, following_cfg_, curve_speed_cfg_,
+        stop_cfg_, merge_cfg_, avoid_cfg_, following_cfg_, curve,
         lane_width_};
 }
 
@@ -878,14 +928,22 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
         object_tracks_.clear();v2_following_=FollowingContext{};execution_.resetFollow();
     }
     object_motion_time_ = observation_time;
+    const bool highway_normal=(external_command.mode==LANE_KEEPING||external_command.mode==FOLLOWING)&&
+        (highway_prediction_map_ || (highway_route_&&HighwayApproachAt(*highway_route_,ego,&ctx.s).valid));
+    const bool highway_observation=highway_normal||(external_command.mode==MERGE&&
+        external_command.merge_type==MergeType::HIGHWAY);
     std::unordered_map<int, double> object_yaw_rates;
     for (auto& item : object_tracks_) ++item.second.missing_cycles;
     for (const auto& obj : obstacles) {
         auto& track = object_tracks_[obj.id];
         track.Observe(obj, observation_time, object_tracking_cfg_.yaw_rate_clamp_rad_s,
-            object_tracking_cfg_.min_motion_direction_change_rad);
+            object_tracking_cfg_.min_motion_direction_change_rad,
+            highway_observation?12:6,highway_observation?.8:.5);
         track.missing_cycles = 0;
         object_yaw_rates[obj.id] = track.yaw_rate;
+        if(track.continuity_reset&&execution_->follow.leader_id==obj.id) {
+            v2_following_=FollowingContext{};execution_.resetFollow();
+        }
     }
     for (auto it = object_tracks_.begin(); it != object_tracks_.end();) {
         if (it->second.missing_cycles > object_tracking_cfg_.missing_cycles_eviction)
@@ -900,6 +958,20 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
     for (auto& obj : ctx.predicted_obstacles) {
         const auto it = object_yaw_rates.find(obj.id);
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
+        if(highway_normal) {
+            const auto& map=highway_prediction_map_?highway_prediction_map_:highway_route_->map;
+            const auto heading=map->laneHeading(obj.x,obj.y,obj.vx,obj.vy);
+            const auto track=object_tracks_.find(obj.id);
+            obj=PrepareHighwayObjectPrediction(obj,track==object_tracks_.end()?nullptr:&track->second,
+                highway_merge_cfg_,nullptr,heading.value_or(NAN),
+                object_tracking_cfg_.min_motion_direction_change_rad);
+            obj=PrepareHighwayLaneMotion(obj,track==object_tracks_.end()?nullptr:&track->second,
+                highway_traffic_lanes_,highway_merge_cfg_.motion_fit_min_span_s,
+                highway_merge_cfg_.min_heading_alignment);
+            // Ordinary KEEP/FOLLOW keeps its existing collision margin. The
+            // departure-only longitudinal swept interval is not imported.
+            obj.prediction_min_speed=obj.prediction_max_speed=NAN;
+        }
     }
 
     if(roundabout_exit_prediction_active_&&external_command.mode==LANE_KEEPING) {
@@ -929,7 +1001,8 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
     target_speed_input.has_external_max_speed = external_command.has_max_speed;
     target_speed_input.external_max_speed = external_command.max_speed;
     ctx.resolved_target_speed = ResolveTargetSpeed(
-        ref_, target_speed_input, curve_speed_cfg_,
+        ref_, target_speed_input,
+        CurveSpeedFor(external_command),
         ResolveKeepCruiseLimits(external_command, keep_cruise_cfg_, limits_));
 
     last_d_ = ctx.d;
@@ -1223,65 +1296,9 @@ bool FrenetPlanner::PlanInternal(
     d_dot = start.d_d;
     d_ddot = start.d_dd;
 
-    // The route already supplies the highway lateral shape. Before its first
-    // conflict frontier, require a current, full-body checked entry gap. A
-    // delayed future gap is not permission to enter at the present speed.
-    // This is a longitudinal KEEP safety constraint, not an unsupported
-    // external MERGE command or an unchecked object exemption.
-    if(highway_merge_cfg_.enabled && external_command->mode==LANE_KEEPING &&
-       !external_command->recovery_clear) {
-        const HighwayMergeCheckpoint* next=nullptr;
-        const HighwayMergeZone* next_zone=nullptr;
-        for(const auto& zone:highway_merge_cfg_.zones) {
-            if(s<zone.start_s-highway_merge_cfg_.approach_distance ||
-               s>=zone.completion_s) continue;
-            for(const auto& checkpoint:zone.checkpoints) {
-                // Zone 1's earlier wait point must retain its unsafe-gap stop
-                // until the conflict. Other zones keep their prior frontier.
-                const double release_frontier = zone.hold_unsafe_gap_until_conflict
-                    ? checkpoint.conflict_s
-                    : checkpoint.conflict_s-zone.stop_buffer;
-                if(s<release_frontier) {
-                    next=&checkpoint;next_zone=&zone;break;
-                }
-            }
-            if(next)break;
-        }
-        if(next) {
-            if(std::fabs(highway_merge_checkpoint_s_-next->conflict_s)>1e-6) {
-                highway_merge_checkpoint_s_=next->conflict_s;
-                highway_merge_safe_count_=0;
-            }
-            const auto gap=FindHighwayMergeGap(ref_,start,predicted_obstacles,
-                highway_merge_cfg_,*next,vehicle_shape_,collision_cfg_,
-                std::max(0.1,resolved_target_speed),limits_.max_longitudinal_accel);
-            const double distance=next->conflict_s-s;
-            const bool immediate=gap.safe && gap.entry_time<=
-                distance/std::max(4.0,ego.v)+0.5;
-            if(gap.confirmed && immediate)
-                highway_merge_safe_count_=std::min(highway_merge_safe_count_+1,
-                    highway_merge_cfg_.safe_confirm_cycles);
-            else highway_merge_safe_count_=0;
-            if(gap.confirmed && highway_merge_safe_count_<
-                                   highway_merge_cfg_.safe_confirm_cycles) {
-                PlannerCommand wait=*external_command;
-                wait.mode=STOP;
-                // STOP's existing 0.5 m endpoint buffer is applied once by
-                // its generator. Keep the rear axle at the selected zone's
-                // wait point to reserve front overhang and map error.
-                wait.stop_position=next->conflict_s-
-                    next_zone->stop_buffer+stop_cfg_.stop_buffer;
-                const bool ok=StopProcess(ego,start,s,d,s_dot,s_ddot,d_dot,d_ddot,
-                    obstacles,predicted_obstacles,resolved_target_speed,wait,out_path);
-                if(!ok && last_failure_reason_==PlanFailureReason::NONE)
-                    last_failure_reason_=PlanFailureReason::COLLISION_BLOCKED;
-                return ok;
-            }
-        } else {
-            highway_merge_checkpoint_s_=-1.0;
-            highway_merge_safe_count_=0;
-        }
-    }
+    // Highway admission/continuation belongs to PlanHighwayTransitionImpl.
+    // Its actual candidate already checks source approach, target occupancy
+    // and rear response; KEEP must not run a second legacy gap/STOP selector.
 
     // =====================================================================
     // AVOID PREPARE: 후보 평가와 유지 궤적을 한 사이클에서 만든다 (D6-2b)

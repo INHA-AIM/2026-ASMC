@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <fstream>
+#include <sstream>
 
 namespace {
 std::uint64_t BinKey(int x,int y) { return (std::uint64_t(std::uint32_t(x))<<32)|std::uint32_t(y); }
@@ -95,6 +96,19 @@ bool AvoidRoadMap::Load(const std::string& areas, const std::string& lines,
     }
     const auto slash=areas.find_last_of("/\\");
     std::ifstream grid(areas.substr(0,slash+1)+"drivable_grid.rle");
+    // All modes share this reader. Refuse a v6 vector paired with the older
+    // same-sized raster; dimensions alone cannot identify the road product.
+    if(grid.peek()=='#') {
+      std::string header;std::getline(grid,header);
+      std::istringstream metadata(header);std::string marker,format,product_sha,grid_sha,extra;
+      if(!(metadata>>marker>>format>>product_sha>>grid_sha)||metadata>>extra||
+         format!="asmc.drivable_grid/v1"||
+         product_sha!=product["product_sha256"].as<std::string>("")||
+         grid_sha!=product["grid"]["sha256"].as<std::string>(""))
+        throw std::runtime_error("HD map vector/raster identity mismatch");
+    } else if(product["schema_version"].as<std::string>("")=="asmc.hd_map.compact_drivable/v6") {
+      throw std::runtime_error("v6 HD map requires its matching raster identity header");
+    }
     if(!(grid>>grid_width_>>grid_height_>>grid_resolution_>>grid_x_>>grid_y_) ||
        grid_width_!=3085 || grid_height_!=7232 || grid_resolution_!=.2 ||
        std::fabs(grid_x_-product["grid"]["origin_x"].as<double>())>.001 ||

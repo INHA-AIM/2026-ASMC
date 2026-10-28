@@ -13,6 +13,7 @@
 #define FRENET_EVALUATION_KINEMATIC_FILTER_HPP
 
 #include <vector>
+#include <limits>
 
 #include "Frenet/Geometry/FrenetTypes.hpp"
 #include "Frenet/Math/FrenetConverter.hpp"
@@ -71,6 +72,9 @@ struct KinematicLimits {
     // 가속/감속"인지 "유지"인지 가르는 불감대. 이 폭 안의 속도차는 s_ddot
     // 경계조건에 반영하지 않는다(ResolveVelocityKeepingBoundaryAcceleration).
     double accel_intent_deadband_mps;
+    // Optional achievable positive response, independent of service braking.
+    // Highway cores opt in; ordinary STOP/AVOID retain their existing limits.
+    double max_forward_accel = std::numeric_limits<double>::infinity();
     SteeringProfileLimits steering;
 };
 

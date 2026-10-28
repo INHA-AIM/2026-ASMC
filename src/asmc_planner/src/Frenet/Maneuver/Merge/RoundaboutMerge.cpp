@@ -62,6 +62,21 @@ bool RoundaboutMergeZone::Overlaps(const CartesianState& pose,
     for(const auto& area:conflict_areas)if(Overlap(footprint,area))return true;
     return false;
 }
+bool RoundaboutMergeZone::SupportsCirculatingObservation(double x,double y) const {
+    if(!valid||!std::isfinite(x)||!std::isfinite(y))return false;
+    // The same two-metre observation guard as the UNKNOWN confidence query.
+    // This identifies traffic evidence only; it grants no ego road clearance.
+    for(const auto& area:circulating_areas) {
+        if(Inside({x,y},area))return true;
+        for(std::size_t i=0;i<area.size();++i) {
+            const auto a=area[i],b=area[(i+1)%area.size()];
+            const double dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy;
+            const double u=length2>0?std::clamp(((x-a.x)*dx+(y-a.y)*dy)/length2,0.0,1.0):0;
+            if(std::hypot(x-a.x-u*dx,y-a.y-u*dy)<=2)return true;
+        }
+    }
+    return false;
+}
 bool RoundaboutMergeZone::Load(const std::string& areas_path,
     const std::string& lines_path,const RefLine& ref,const VehicleShape& shape,
     const RoundaboutMergeConfig& config,double margin,std::string& error) {
@@ -97,6 +112,12 @@ bool RoundaboutMergeZone::Load(const std::string& areas_path,
             }
             if(!found)throw std::runtime_error("missing conflict link: "+id);
         }
+        // Read the SAME compact product as all ego modes. An ego exit link
+        // (A151) is not the circulating actor's successor. Do not invent an
+        // actor route by following the route-compact successor list.
+        for(const auto& lane:areas["lanes"])
+            if(lane["drivable_group"].as<std::string>("")=="roundabout_maneuver")
+                circulating_areas.push_back(ReadPolygon(lane["polygon"]));
         if(!found_source||!found_target||!found_stop||scan_end<=stop_s)
             throw std::runtime_error("roundabout topology/stopline is missing");
         valid=true;

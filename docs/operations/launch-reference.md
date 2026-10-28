@@ -238,6 +238,10 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
+| `highway_merge` | `false` | — |
+| `dashboard` | `true` | — |
+| `dashboard_port` | `8088` | — |
+| `open_dashboard` | `false` | — |
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
@@ -252,6 +256,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
+| `highway_merge` | `false` | — |
 | `state_topic` | `/vehicle/state` | — |
 | `behavior_objects_topic` | `/Object_topic` | — |
 | `objects_input_type` | `morai` | — |
@@ -505,3 +510,15 @@
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
 | — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
+
+## Controlled reference handover trial
+
+[소스](../../src/asmc_planner/launch/reference_handover_trial.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `enable_control` | `false` | — |
+| `data_root` | `/data` | — |
+| `state_topic` | `/planning/vehicle/state` | — |
+| `objects_topic` | `/planning/objects` | — |
+| `config` | `$(find asmc_planner)/config/reference_handover_trial.yaml` | — |

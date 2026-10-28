@@ -282,6 +282,8 @@ struct HighwayMergeZone {
     double stop_buffer;          // [m] 이 구간의 conflict 전 안전 대기 거리
     bool hold_unsafe_gap_until_conflict = false;
     std::vector<HighwayMergeCheckpoint> checkpoints;
+    std::string source_link;
+    std::vector<std::string> target_lanes;
 };
 
 struct HighwayMergeConfig {
@@ -309,6 +311,43 @@ struct HighwayMergeConfig {
     double min_travel_speed;
     // [m/s^2] MinimumTravelTime의 최소 가속도 가정.
     double min_travel_accel;
+    // The legacy enabled flag describes available geometry, not permission
+    // for automatic driving. Production activation is an explicit launch arg.
+    double speed_cap_mps = 13.8888888889;
+    // Measured highway response, not the symmetric service-braking limit.
+    double forward_accel_mps2 = 1.5;
+    // Preserve the validated highway envelope when ordinary-road tuning changes.
+    double curve_lateral_accel_safety_factor = .8;
+    double curve_comfortable_decel_factor = .5;
+    double max_horizon_s = 15.0;
+    double post_merge_horizon_s = 2.0;
+    double source_max_age_s = .3;
+    double confirmation_gap_s = .3;
+    // Retained spatial curves are used only while tightly tracked. Every
+    // current observation still retimes and recertifies the complete output.
+    double transition_tracking_position_m = .05;
+    double transition_tracking_heading_rad = .02;
+    double transition_tracking_curvature_inv_m = .03;
+    // Initial model prior for a new track, not a certified sensor-error bound.
+    // Coflow histories replace it with observed scatter and fit disagreement.
+    double speed_error_mps = 1.0;
+    // Stable position histories can resolve the instantaneous sensor error.
+    // Keep a nonzero residual-speed floor over the entire checked trajectory.
+    double speed_error_floor_mps = .25;
+    // Kept as a compatible configuration key; only the provisional lateral
+    // hypothesis uses this duration. Longitudinal error does not decay in time.
+    double speed_error_correlation_s = .3;
+    double motion_fit_min_span_s = .2;
+    // Maximum small transverse observation eligible for a provisional model;
+    // independent of longitudinal velocity uncertainty.
+    double provisional_lateral_speed_mps = .25;
+    double max_rear_decel_mps2 = 3.0;
+    double completion_settle_s = .5;
+    double completion_heading_rad = .12;
+    double completion_lateral_m = .5;
+    double collision_max_step_m = .25;
+    int max_collision_samples = 12000;
+    double planning_budget_ms = 30.0;
 };
 
 #endif  // PLANNER_CONFIG_FRENET_CONFIG_HPP

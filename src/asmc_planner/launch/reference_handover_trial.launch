@@ -1,0 +1,33 @@
+<launch>
+  <!-- Replace autonomy_no_bridges_v2.launch with this controlled trial.
+       Bridge, camera and asmc_lidar stay external. Preview is the default. -->
+  <arg name="enable_control" default="false"/>
+  <arg name="data_root" default="/data"/>
+  <arg name="state_topic" default="/planning/vehicle/state"/>
+  <arg name="objects_topic" default="/planning/objects"/>
+  <arg name="config" default="$(find asmc_planner)/config/reference_handover_trial.yaml"/>
+  <include file="$(find asmc_hd_map)/launch/competition_map.launch">
+    <arg name="rviz" value="false"/>
+    <arg name="data_root" value="$(arg data_root)"/>
+  </include>
+  <include file="$(find planning_inputs)/launch/vehicle_state.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
+  </include>
+  <include file="$(find planning_inputs)/launch/objects.launch">
+    <arg name="input_topic" value="/perception/lidar/planning_observations_map"/>
+    <arg name="output_topic" value="$(arg objects_topic)"/>
+  </include>
+  <node pkg="asmc_planner" type="reference_handover_trial" name="reference_handover_trial" output="screen" required="true">
+    <param name="enable_control" value="$(arg enable_control)"/>
+    <param name="state_topic" value="$(arg state_topic)"/>
+    <param name="objects_topic" value="$(arg objects_topic)"/>
+    <param name="config" value="$(arg config)"/>
+    <param name="planner_config" value="$(find asmc_planner)/config/frenet/params.yaml"/>
+  </node>
+  <group if="$(arg enable_control)">
+    <include file="$(find asmc_controller)/launch/controller.launch">
+      <arg name="state_topic" value="$(arg state_topic)"/>
+    </include>
+    <node pkg="asmc_planner" type="asmc_control_selector_node" name="asmc_control_selector" output="screen" required="true"/>
+  </group>
+</launch>

@@ -1,9 +1,37 @@
 #include "Frenet/Generator/LateralGenerator.hpp"
 
 #include <cmath>
+#include <algorithm>
 
 #include "Frenet/Generator/SamplingUtils.hpp"
 #include "Frenet/Math/Polynomial.hpp"
+#include "Frenet/Math/FrenetConverter.hpp"
+
+FrenetPath SampleSpatialLateralMotion(const FrenetPath& motion,
+                                    const SpatialLateralProfile& geometry) {
+    FrenetPath path=motion;
+    path.spatial_lateral=geometry;
+    path.d.clear();path.d_d.clear();path.d_dd.clear();path.jerk_cost_lat=0;
+    if(!geometry.enabled||!std::isfinite(geometry.length)||geometry.length<=0||
+       motion.s.size()!=motion.t.size()||motion.s_d.size()!=motion.s.size()||
+       motion.s_dd.size()!=motion.s.size()) {path.valid=false;return path;}
+    for(std::size_t i=0;i<motion.s.size();++i) {
+        const double q=std::clamp(motion.s[i]-geometry.origin_s,0.0,geometry.length);
+        const double first=EvalVel(geometry.polynomial,q);
+        const double second=EvalAcc(geometry.polynomial,q);
+        double velocity,acceleration;
+        ArcDerivToTimeDeriv(motion.s_d[i],motion.s_dd[i],first,second,velocity,acceleration);
+        path.d.push_back(EvalPos(geometry.polynomial,q));
+        path.d_d.push_back(velocity);path.d_dd.push_back(acceleration);
+        if(i) {
+            const double dt=motion.t[i]-motion.t[i-1];
+            if(dt<=0){path.valid=false;return path;}
+            const double jerk=(path.d_dd[i]-path.d_dd[i-1])/dt;
+            path.jerk_cost_lat+=jerk*jerk*dt;
+        }
+    }
+    return path;
+}
 
 // 횡방향 quintic 하나를 시간 샘플에 맞춰 FrenetPath로 변환 (d, d_d, d_dd만 채움)
 FrenetPath SampleLateralQuintic(const QuinticPolynomial& poly, const std::vector<double>& times) {

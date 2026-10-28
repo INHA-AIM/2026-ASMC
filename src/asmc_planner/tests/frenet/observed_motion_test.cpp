@@ -21,6 +21,14 @@ o.motion_state=ObjectMotionState::LOW_THREAT;turn.Observe(o,201,1);
 check(turn.yaw_rate==0&&turn.samples.empty(),"confirmed stationary object clears turn history");
 o.motion_state=ObjectMotionState::DYNAMIC;turn.Observe(o,202,1);
 check(turn.yaw_rate==0&&turn.samples.size()==1,"long observation gap needs fresh turn evidence");
+ObservedObjectMotion identity;o.length=.4;o.width=.2;o.vx=0;o.vy=2;
+for(int i=0;i<5;++i){o.x=0;o.y=.2*i;identity.Observe(o,400+i*.1,1);}
+check(identity.samples.size()==5,"continuous compact moving object retains its history");
+o.x=2.5;o.vx=5;identity.Observe(o,400.5,1);
+check(identity.continuity_reset&&identity.samples.size()==1&&identity.yaw_rate==0,
+      "same ID at a different occupancy cannot inherit turn history");
+check(identity.last.corners[0].x==o.corners[0].x&&identity.last.x==o.x,
+      "history reset preserves the current authoritative footprint");
 // Recorded counterexample: impossible acceleration target must not make
 // the FOLLOW longitudinal search empty when a slower safe approach exists.
 FrenetState start{};start.s=100;start.s_d=3.39;start.s_dd=-.26;
