@@ -108,6 +108,13 @@ TEST(DrivableClearance, NearBlindAssistanceNeverClearsObservedHolesOrDistantUnkn
  ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,false));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
  ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,true));const auto result=grid.check(straight(),Vehicle{});
  EXPECT_TRUE(result.clear);EXPECT_GT(result.assisted,0u);
+ // Calibrated mask wing is not the central FOV gap. It can support a
+ // turning footprint only in this explicit candidate, never raw unknown.
+ c[at(5.8,1.7)]=128;p[at(5.8,1.7)]=0;
+ ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,true));EXPECT_TRUE(grid.check(straight(.5),Vehicle{}).clear);
+ c[at(5.8,1.7)]=0;
+ ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,true));EXPECT_FALSE(grid.check(straight(.5),Vehicle{}).clear);
+ c[at(5.8,1.7)]=255;p[at(5.8,1.7)]=255;
  c[at(4.4,.7)]=255; // same cell observed non-road: never a blindness exemption
  ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,true));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
  c[at(4.4,.7)]=128;p[at(4.4,.7)]=0;c[at(8.,0.)]=0;
