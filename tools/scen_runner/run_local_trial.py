@@ -17,6 +17,14 @@ import subprocess
 import time
 
 
+def collision_objects(message):
+    # MORAI's repeated (-1,0) entry denotes no collision. Preserve actual
+    # nonnegative object types independently of10Hz native polling so a brief
+    # contact cannot fall between SDK samples. Evaluation only, never planning.
+    return [dict(type=int(o.type),id=int(o.unique_id))
+            for o in message.collision_object if o.type>=0]
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("root", type=Path)
@@ -67,7 +75,7 @@ def main():
     import rospy
     import rosgraph
     from std_msgs.msg import Bool, UInt8, String
-    from morai_msgs.msg import CtrlCmd
+    from morai_msgs.msg import CtrlCmd, CollisionData
     from asmc_msgs.msg import LocalTrajectory, FrenetFeedback
     from google.protobuf.json_format import MessageToDict
     from scen_runner.config import load_config
@@ -114,6 +122,7 @@ def main():
         files.append(args.lidar_config)
     if args.planner_config:
         files.append(args.planner_config)
+    files.append(Path(__file__).resolve())
     (root / "runtime-provenance.json").write_text(
         json.dumps(
             dict(
@@ -208,6 +217,7 @@ def main():
     fixture = StaticFixture(link, emit)
     mode = None
     latest = {}
+    collision_events = []
     control_rows = (root / "control.jsonl").open("x")
     handles.append(control_rows)
 
@@ -223,7 +233,17 @@ def main():
                 steering=m.steering, accel=m.accel, brake=m.brake)) + "\n")
         return rospy.Subscriber(topic, CtrlCmd, write, queue_size=100)
 
+    def collision(message):
+        objects=collision_objects(message)
+        if objects:
+            now=time.monotonic()
+            collision_events.append((now,objects))
+            del collision_events[:-100]
+            emit(dict(event='udp_collision',objects=objects,
+                      source_stamp=message.header.stamp.to_sec()))
+
     subscriptions = [
+        rospy.Subscriber('/CollisionData',CollisionData,collision,queue_size=100),
         rospy.Subscriber('/planning/frenet_feedback_v2', FrenetFeedback,
                          lambda m: latest.update(normal_feedback=m), queue_size=1),
         commands("/ctrl_cmd", "wire.jsonl"),
@@ -504,6 +524,8 @@ def main():
             native = [
                 x for x in state.get("native_contacts", []) if x and x != link.ego_id
             ]
+            udp = [f"udp:{o['type']}:{o['id']}" for received,objects in collision_events
+                   if received>=started for o in objects]
             point = (state["pose"]["x"], state["pose"]["y"])
             if last is not None:
                 travel += math.dist(point, last)
@@ -521,9 +543,9 @@ def main():
                     owned=section.owned(),
                 )
             )
-            if native:
-                contacts += native
-                reason = "native_contact"
+            if native or udp:
+                contacts += native+udp
+                reason = "native_contact" if native else "udp_contact"
                 break
             if state["speed_kmh"] > 0.36:
                 stationary = time.monotonic()

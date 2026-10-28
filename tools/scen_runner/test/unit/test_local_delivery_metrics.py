@@ -28,6 +28,15 @@ def check_delivery_clock_and_marked_drive_window(tmp_path):
 
 
 class DeliveryMetricsTest(unittest.TestCase):
+    def test_collision_sentinel_is_not_contact_but_brief_real_entries_survive(self):
+        from types import SimpleNamespace
+        from run_local_trial import collision_objects
+        def message(values):return SimpleNamespace(collision_object=[
+            SimpleNamespace(type=kind,unique_id=identity) for kind,identity in values])
+        self.assertEqual(collision_objects(message([(-1,0)])),[])
+        self.assertEqual(collision_objects(message([(-1,0),(3,42),(0,7)])),
+                         [dict(type=3,id=42),dict(type=0,id=7)])
+
     def test_full_delivery_clock_and_marked_drive_window(self):
         with tempfile.TemporaryDirectory() as root:
             check_delivery_clock_and_marked_drive_window(Path(root))
