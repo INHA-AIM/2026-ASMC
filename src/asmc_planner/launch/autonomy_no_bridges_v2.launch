@@ -10,6 +10,7 @@
   <arg name="local_speed_cap_kph" default="10" doc="LOCAL 목표 상한. 첫 수동 확인은 10 권장; 관측·곡률·회복 제한은 유지"/>
   <arg name="local_run_id" default="local-autonomy"/>
   <arg name="local_journal_path" default=""/>
+  <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
   <arg name="local_semantic_input" default="true" doc="LOCAL 노면 투영 입력 시작. 같은 semantic_space_trial이 이미 실행 중이면 false"/>
   <!-- Integrated planner, input adapters and controller. Bridges and asmc_lidar
        remain separately managed. This wrapper currently supports LiDAR input. -->
@@ -144,6 +145,7 @@
     <arg name="speed_cap_kph" value="$(arg local_speed_cap_kph)"/>
     <arg name="run_id" value="$(arg local_run_id)"/>
     <arg name="journal_path" value="$(arg local_journal_path)"/>
+    <arg name="planner_config" value="$(arg local_planner_config)"/>
   </include>
   <include if="$(arg dashboard)" file="$(find asmc_planner)/launch/dashboard.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>

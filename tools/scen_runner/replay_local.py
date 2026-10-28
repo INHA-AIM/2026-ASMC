@@ -25,6 +25,7 @@ def main():
     parser.add_argument("--cap", type=float, default=25.0)
     parser.add_argument("--recovery", action="store_true")
     parser.add_argument("--detail", choices=("on", "off"), default="on")
+    parser.add_argument("--planner-config", type=Path)
     parser.add_argument("--near-blind-assist", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=False, exist_ok=False)
@@ -112,6 +113,7 @@ def main():
                 "journal_path:=" + (str(args.output / "decisions.jsonl") if args.detail == "on" else ""),
                 "recovery:=" + str(args.recovery).lower(),
                 "near_blind_assist:=" + str(args.near_blind_assist).lower(),
+                "planner_config:=" + str(args.planner_config or Path(__file__).resolve().parents[2]/'src/asmc_planner/config/local_planner.yaml'),
             ],
             "local",
         )

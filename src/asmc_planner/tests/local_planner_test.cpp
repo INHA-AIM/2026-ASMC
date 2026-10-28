@@ -2,6 +2,7 @@
 #include "local/motion.hpp"
 #include "local/planner.hpp"
 #include "local/road_memory.hpp"
+#include "local/semantic_reference.hpp"
 #include <cmath>
 #include <cstdio>
 #include <iostream>
@@ -25,6 +26,25 @@ Scene empty() {
   return s;
 }
 int main() {
+  {
+    auto s=empty();Config c;
+    for(int row=0;row<250;++row) for(int col=0;col<160;++col) {
+      const double y=8.-col*.1;
+      if(y < -2 || y>5) s.grid.probability[row*160+col]=0;
+    }
+    const auto original=s.grid.probability;
+    auto reference=SemanticReference(s.grid,c);
+    expect(!reference.empty() && std::abs(reference[5][1]+.25)<.11,
+           "semantic-only cue prefers right-side road without lane selection");
+    expect(s.grid.probability==original,"semantic reference cannot fill or edit road");
+    for(int col=0;col<160;++col) s.grid.probability[100*160+col]=0;
+    s.home=SemanticReference(s.grid,c);
+    Result blocked;
+    expect(!s.home.empty() && !CheckFootprint(s,c,Pose{10.,0.,0.,0.,0.},blocked),
+           "soft reference across a mask gap cannot grant collision clearance");
+    s.grid.coverage.assign(40000,128);
+    expect(SemanticReference(s.grid,c).empty(),"unknown semantic area cannot create a reference");
+  }
   try {
     { // Equal geometry must not rank differently due to analytic/lattice spacing.
       auto scene=empty(); Config config;

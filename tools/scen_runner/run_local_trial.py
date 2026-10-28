@@ -30,6 +30,7 @@ def main():
     p.add_argument("--near-blind-assist", action="store_true")
     p.add_argument("--empty", action="store_true")
     p.add_argument("--lidar-config", type=Path)
+    p.add_argument("--planner-config", type=Path)
     p.add_argument(
         "--start-perception",
         action="store_true", default=True,
@@ -108,6 +109,8 @@ def main():
     ]
     if args.lidar_config:
         files.append(args.lidar_config)
+    if args.planner_config:
+        files.append(args.planner_config)
     (root / "runtime-provenance.json").write_text(
         json.dumps(
             dict(
@@ -116,6 +119,7 @@ def main():
                     root=str(root),
                     scene=str(args.scene),
                     lidar_config=str(args.lidar_config) if args.lidar_config else None,
+                    planner_config=str(args.planner_config) if args.planner_config else None,
                 ),
                 sha256={
                     (
@@ -400,10 +404,12 @@ def main():
             "record",
         )
         if args.integrated:
-            start(["roslaunch", "asmc_planner", "autonomy_no_bridges_v2.launch",
+            command=["roslaunch", "asmc_planner", "autonomy_no_bridges_v2.launch",
                    "jamming_planner:=local", "dashboard:=false",
                    "local_speed_cap_kph:=" + str(args.cap), "local_run_id:=" + run_id,
-                   "local_journal_path:=" + str(root / "decisions.jsonl")], "autonomy")
+                   "local_journal_path:=" + str(root / "decisions.jsonl")]
+            if args.planner_config: command.append('local_planner_config:='+str(args.planner_config))
+            start(command,"autonomy")
         else:
             # Start only the final command router, never autonomy/map planning or
             # the old BBox lane follower. Local MPC owns its historical JAMMING slot.
@@ -427,6 +433,7 @@ def main():
                     "journal_path:=" + str(root / "decisions.jsonl"),
                     "speed_cap_kph:=" + str(args.cap),
                     "near_blind_assist:=" + str(args.near_blind_assist).lower(),
+                    "planner_config:=" + str(args.planner_config or workspace/'src/asmc_planner/config/local_planner.yaml'),
                 ],
                 "local",
             )

@@ -2,6 +2,7 @@
 #include "local/motion.hpp"
 #include "local/planner.hpp"
 #include "local/road_memory.hpp"
+#include "local/semantic_reference.hpp"
 #include <asmc_msgs/CameraGroundProjection.h>
 #include <asmc_msgs/LaneBoundaryFamily.h>
 #include <asmc_msgs/LidarTrackingObservation.h>
@@ -45,6 +46,7 @@ class Node {
   MotionHistory motion;
   RoadMemory road_memory;
   bool use_road_memory = true;
+  bool semantic_reference_fallback = false;
   bool active_in_jamming_only = false, jamming_selected = false;
   uint64_t mode_generation = 0, scene_generation = 0, calculated_generation = ~uint64_t(0);
   bool preparing = false;
@@ -538,7 +540,7 @@ class Node {
     const auto family = families.at(selected);
     if (!ctx->imu_corrected ||
         ctx->plane_coefficients.size() != 3 * ctx->views.size() ||
-        ctx->views.empty() || !family->valid) {
+        ctx->views.empty() || (!family->valid && !semantic_reference_fallback)) {
       invalid("family_plane_invalid");
       return;
     }
@@ -546,7 +548,7 @@ class Node {
     // This explicitly selected experiment owns its separate control gate.
     if (family->header.frame_id != "base_link" ||
         family->operating_domain != "shadow_two_way_v1" ||
-        family->boundaries.size() != 3 || family->config_sha256.empty() ||
+        (family->valid && family->boundaries.size() != 3) || family->config_sha256.empty() ||
         family->config_sha256 != ctx->config_id ||
         family->algorithm_id !=
             "twinlite_v6_shadow_boundary_family_candidate_v3" ||
@@ -664,6 +666,7 @@ class Node {
                         camera_origin->yaw - origin->yaw};
     const double cy = std::cos(g.source_in_plan[2]),
                  sy = std::sin(g.source_in_plan[2]);
+    bool semantic_reference = !family->valid;
     std::map<int, std::vector<std::array<double, 2>>> bounds;
     for (const auto &bound : family->boundaries) {
       // Only centre/right define LOCAL's home reference. A folded inferred
@@ -693,6 +696,7 @@ class Node {
         auto &line = bounds[bound.role];
         if (!line.empty() && q[0] <= line.back()[0]) {
           if (bound.role == 1) { optional_invalid = true; break; }
+          if (semantic_reference_fallback) { semantic_reference=true;break; }
           invalid("family_not_monotonic");
           return;
         }
@@ -702,8 +706,11 @@ class Node {
       if (optional_invalid) bounds.erase(1);
     }
     if (bounds[2].size() < 2 || bounds[3].size() < 2) {
+      if (semantic_reference_fallback) semantic_reference=true;
+      else {
       invalid("family_support");
       return;
+      }
     }
     // Rotated family members have different x samples. Interpolate in common
     // support, not by array index, and never bridge an invalid-support gap.
@@ -716,9 +723,11 @@ class Node {
         }
       return line.back()[1];
     };
-    double begin = std::max(bounds[2].front()[0], bounds[3].front()[0]);
-    double end = std::min(bounds[2].back()[0], bounds[3].back()[0]);
+    double begin = semantic_reference ? 0. : std::max(bounds[2].front()[0], bounds[3].front()[0]);
+    double end = semantic_reference ? 0. : std::min(bounds[2].back()[0], bounds[3].back()[0]);
     if (begin > config.length - config.rear || end <= begin) {
+      if (semantic_reference_fallback) semantic_reference=true;
+      else {
       // Preserve the exact rejection evidence in input diagnostics, including
       // during body-motion cases where one role loses its near support.
       if (detail) join_debug.insert(join_debug.size() - 1,
@@ -726,6 +735,7 @@ class Node {
                             ",\"family_support_end_m\":" + std::to_string(end));
       invalid("family_disconnected_support");
       return;
+      }
     }
     // LOCAL-1's explicit tunnel mission is right-strip travel (centre/right
     // outer). The producer's roles are geometric, not universal road policy.
@@ -735,11 +745,17 @@ class Node {
     // LOCAL-2B: left paint support no longer shortens right-home navigation.
     // Painted support never replaces the physical semantic/OBB sweep.
     home_role = 2;
-    for (double x = begin; x <= end; x += .25) {
+    if (semantic_reference) {
+      scene.home=SemanticReference(g,config);
+      if (scene.home.empty()) { invalid("semantic_reference_unavailable");return; }
+    } else for (double x = begin; x <= end; x += .25) {
       scene.corridor.push_back(
           {x, bounds[1].empty() ? 0. : at(1, x), at(3, x)});
       scene.home.push_back({x, .5 * (at(home_role, x) + at(home_role + 1, x))});
     }
+    if (detail) join_debug.insert(join_debug.size()-1,
+        std::string(",\"reference_source\":\"")+(semantic_reference?"semantic_right_offset_trial":"family")+
+        "\",\"family_input_valid\":"+(family->valid?"true":"false"));
     for (const auto &o : array.objects) {
       if (o.observation_state != o.OBSERVED)
         continue;
@@ -889,6 +905,7 @@ class Node {
                         ? scheduled + .1
                         : std::max(next_plan_due + .1, scheduled);
     Config frame_config = config;
+    if (semantic_reference) frame_config.speed_cap=std::min(frame_config.speed_cap,5./3.6);
     frame_budget_ms = std::min(config.budget_ms,
         (.30 - (ros::Time::now().toSec()-t))*1000.);
     if (frame_budget_ms < 5.) {
@@ -905,6 +922,8 @@ class Node {
       result.reason = "reverse_control_not_supported";
     else
       result = Plan(std::move(scene), frame_config);
+      if (semantic_reference && result.speed_reason=="requested_cap")
+        result.speed_reason="semantic_reference_trial_5kph";
     lock.lock();
     if (expected_mode != mode_generation || expected_epoch != this->motion.epoch || expected_camera != this->camera_epoch ||
         expected_lidar != this->lidar_epoch || expected_scene_generation != scene_generation) {
@@ -1007,6 +1026,7 @@ public:
     config.speed_cap /= 3.6;
     p.param("near_blind_assist", config.blind_assist, false);
     p.param("causal_road_memory", use_road_memory, true);
+    p.param("semantic_reference_fallback", semantic_reference_fallback, false);
     p.param("active_in_jamming_only", active_in_jamming_only, false);
     p.param("recovery", config.recovery, true);
     p.param("vehicle_width", config.width, 2.160835);

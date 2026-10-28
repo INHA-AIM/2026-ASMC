@@ -17,3 +17,6 @@ near_blind_assist: false
 causal_road_memory: true
 # Match the local solver bound; NORMAL's2m/s^2 configuration stays unchanged.
 acceleration_limit_mps2: 1.0
+# Candidate for a missing/folded home reference. Current raster/OBB collision
+# checks remain authoritative; unvalidated candidate stays OFF in this profile.
+semantic_reference_fallback: false
