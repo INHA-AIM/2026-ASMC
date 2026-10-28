@@ -684,6 +684,27 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(status['locked_lane'],'1')
         self.assertLess(self.target.point.y,-0.3)  # Heading back right towards line 4.
 
+    def test_return_widened_entry_lane_obstacle_moves_further_left(self):
+        self.feed()
+        # Entry-lane obstacle: avoid onto line 2.25 in the left lane.
+        self.feed(spans=[(-1.2,1.2,14.)],speed=0.,duration=.8)
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,2.25)
+        # Closer views widen the remembered obstacle (y up to 2.3): 2.25 is blocked. Line 1.75 is
+        # 3.94 m from the entry lane centre but 0.44 m from the current (left) lane centre.
+        self.feed(spans=[(-2.0,2.3,14.)],speed=0.,duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,1.75)
+        self.assertEqual(status['locked_lane'],'0')
+        # Passed and clear: back to the entry lane across 2.25 lines.
+        self.feed(shift=-3.9375,speed=8.,duration=1.0)
+        self.feed(shift=-3.9375,speed=8.,duration=2.5)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,4.0)
+        self.assertEqual(status['locked_lane'],'1')
+
     def test_return_gps_return_skips_pass_margin(self):
         self.feed()
         self.feed(spans=[(-1.2,1.2,14.)],speed=0.,duration=.8)

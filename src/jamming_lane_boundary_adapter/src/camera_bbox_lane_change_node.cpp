@@ -349,6 +349,7 @@ struct LineObstacle {
 struct LineState {
     double target = 0.0;                  // 따라가는 선(1~5 좌표). 0이면 아직 정하지 않음.
     double home = 0.0;                    // 복귀할 차로 중앙(2 또는 4).
+    double lane_home = 0.0;               // 지금 선에서 가까운 차로 중앙. 횡이동 상한(avoid_max_offset)의 기준.
     // return_to_entry_lane: 진입 차로 중앙(2 또는 4). 회피로 옆 차로에 가도 지난 뒤 여기로 돌아와
     // 재밍 종료 시 일반 플래너 기준 경로(lateral 범위) 안에서 넘겨준다. 0이면 사용 안 함.
     double return_home = 0.0;
@@ -2736,10 +2737,15 @@ bool pathClearOfLineObstacles(const std::vector<FamilyPoint2d>& path) {
 }
 
 // 선 단위 사전 검사: 내 차로 중앙 기준 횡이동 상한, 각 장애물과 판단 여유, 주행 영역.
+// 횡이동 상한은 지금 차로 중앙 기준이다. 진입 차로 복귀 중에는 진입 차로 중앙 기준도 허용한다.
+// (진입 차로를 기준으로만 재면 진입 차로를 막은 장애물을 옆 차로로 피하는 선이 모두 거부된다.)
 bool lineAllowed(double line) {
     LineFrame near;
-    if (!lineFrameAt(params.planning_start_x, near) ||
-        std::abs(lineY(near, line) - lineY(near, line_state.home)) > params.avoid_max_offset + params.epsilon) return false;
+    if (!lineFrameAt(params.planning_start_x, near)) return false;
+    const auto within = [&](double home) {
+        return home > 0.0 && std::abs(lineY(near, line) - lineY(near, home)) <= params.avoid_max_offset + params.epsilon;
+    };
+    if (!within(line_state.lane_home) && !within(line_state.return_home)) return false;
     const double edge = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
     const double clear = params.vehicle_width / 2.0 + params.avoid_clearance + params.avoid_plan_margin;
     for (const auto& obstacle : line_state.obstacles) {
@@ -2809,10 +2815,10 @@ std::string updateLinePlan(bool new_scan) {
             line_state.target = vehicle_home;
         }
     }
-    // 복귀할 차로 중앙: 지금 선에서 가까운 2 또는 4(중앙선 위면 현재 내 차선).
-    line_state.home = line_state.return_home > 0.0 ? line_state.return_home :
-        std::abs(line_state.target - 3.0) < params.epsilon ? own_home :
+    // 복귀할 차로 중앙: 지금 선에서 가까운 2 또는 4(중앙선 위면 현재 내 차선). 진입 차로 복귀면 진입 차로.
+    line_state.lane_home = std::abs(line_state.target - 3.0) < params.epsilon ? own_home :
         (line_state.target < 3.0 ? 2.0 : 4.0);
+    line_state.home = line_state.return_home > 0.0 ? line_state.return_home : line_state.lane_home;
     double cover_left = std::numeric_limits<double>::infinity(), cover_right = -cover_left;
     bool ahead = false;
     for (const auto& obstacle : line_state.obstacles) {
