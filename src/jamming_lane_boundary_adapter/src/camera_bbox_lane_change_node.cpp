@@ -2,6 +2,9 @@
 // 이 파일에 파라미터, ROS callback, 주행 함수, main을 함께 둔다.
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
 #include "lane_boundary_adapter/contact_clearance.hpp"
+#include "lane_boundary_adapter/drivable_clearance.hpp"
+#include <sensor_msgs/Image.h>
+#include <memory>
 
 #include <ros/ros.h>
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
@@ -40,6 +43,7 @@ struct Parameters {
     // Internal trial profile. Legacy lane-occupancy policy is the recovery path.
     bool contact_clearance_enabled = false;
     bool contact_local_required = false;
+    std::string bev_mode="off"; // off / audit / guard; internal experiment only
     double contact_speed_kph = 5.0;
     double contact_max_skew = 0.15; // no ego-motion alignment is claimed
 
@@ -248,6 +252,46 @@ void contactSpeedCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& m) {
     contact_speed_stamp=m->header.stamp;contact_speed_receipt=ros::SteadyTime::now();
 }
 
+struct BevEntry {
+    ros::Time stamp;ros::SteadyTime received;
+    std::shared_ptr<lane_boundary_adapter::clearance::DrivableClearance> grid;
+};
+std::deque<sensor_msgs::Image::ConstPtr> bev_probability,bev_coverage;
+std::deque<BevEntry> bev_frames;
+lane_boundary_adapter::clearance::GridSpec bev_spec;
+ros::Time bev_last_stamp;
+std::string bev_status="off";
+unsigned bev_rejected=0,bev_invalid=0;
+double bev_pair_skew=0.;
+void clearBev(){bev_probability.clear();bev_coverage.clear();bev_frames.clear();bev_last_stamp=ros::Time();}
+void bevInput(const sensor_msgs::Image::ConstPtr& m,bool probability) {
+    const auto now=ros::Time::now();const double age=(now-m->header.stamp).toSec();
+    if(m->header.stamp.isZero() || age<-.05 || age>.35 || m->header.frame_id!="base_link" || m->encoding!="mono8" ||
+       m->width!=unsigned(bev_spec.cols)||m->height!=unsigned(bev_spec.rows)||m->step<m->width||m->data.size()!=size_t(m->height)*m->step){++bev_invalid;return;}
+    if(!bev_last_stamp.isZero() && m->header.stamp<bev_last_stamp){clearBev();++bev_invalid;return;}
+    if(m->header.stamp==bev_last_stamp)return;
+    auto& queue=probability?bev_probability:bev_coverage;queue.push_back(m);while(queue.size()>4)queue.pop_front();
+    for(const auto& p:bev_probability)for(const auto& c:bev_coverage)if(p->header.stamp==c->header.stamp){
+        if(p->header.stamp<=bev_last_stamp)continue;
+        std::vector<uint8_t> a,b;a.reserve(p->width*p->height);b.reserve(a.capacity());
+        for(unsigned r=0;r<p->height;++r){a.insert(a.end(),p->data.begin()+r*p->step,p->data.begin()+r*p->step+p->width);
+            b.insert(b.end(),c->data.begin()+r*c->step,c->data.begin()+r*c->step+c->width);}
+        auto grid=std::make_shared<lane_boundary_adapter::clearance::DrivableClearance>();
+        const lane_boundary_adapter::clearance::Vehicle vehicle{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,
+            params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
+        if(!grid->prepare(bev_spec,a,b,vehicle)){++bev_invalid;return;}
+        bev_frames.push_back({p->header.stamp,ros::SteadyTime::now(),grid});while(bev_frames.size()>8)bev_frames.pop_front();
+        bev_last_stamp=p->header.stamp;
+    }
+}
+std::shared_ptr<lane_boundary_adapter::clearance::DrivableClearance> selectBev(ros::Time image,ros::Time lane) {
+    std::shared_ptr<lane_boundary_adapter::clearance::DrivableClearance> best;double distance=.050000001;
+    for(const auto& e:bev_frames){double age=(ros::Time::now()-e.stamp).toSec();
+        if(age<-.05||age>.35||(ros::SteadyTime::now()-e.received).toSec()>.35||std::abs((lane-e.stamp).toSec())>.050000001)continue;
+        double d=std::abs((image-e.stamp).toSec());if(d<distance){distance=d;best=e.grid;}}
+    bev_pair_skew=best?distance:-1.;return best;
+}
+
 ros::Subscriber bbox_subscriber;
 ros::Subscriber mode_subscriber;
 ros::Publisher reference_lane_publisher;
@@ -429,6 +473,7 @@ void modeCallback(const std_msgs::UInt8::ConstPtr& message) {
     }
     if (next_active == mode_active) return;
     mode_active = next_active;
+    clearBev();
     if (mode_active) {
         resetActuationLifecycle();
     } else {
@@ -1103,6 +1148,11 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "uses_obstacle_distance", params.contact_clearance_enabled?"image_contact_and_observed_local_footprint":"false");
     addDiagnosticValue(status, "contact_clearance_enabled", params.contact_clearance_enabled?"true":"false");
     addDiagnosticValue(status, "contact_decision", contact_decision);
+    addDiagnosticValue(status,"bev_mode",params.bev_mode);
+    addDiagnosticValue(status,"bev_status",bev_status);
+    addDiagnosticValue(status,"bev_rejected",std::to_string(bev_rejected));
+    addDiagnosticValue(status,"bev_invalid",std::to_string(bev_invalid));
+    addDiagnosticValue(status,"bev_pair_skew_s",std::to_string(bev_pair_skew));
     addDiagnosticValue(status,"contact_plan_evaluated",contact_plan_evaluated?"true":"false");
     addDiagnosticValue(status, "contact_plan_wall_ms",std::to_string(contact_plan_wall_ms));
     addDiagnosticValue(status, "contact_actual_speed_mps",std::isfinite(contact_actual_speed)?std::to_string(contact_actual_speed):"unavailable");
@@ -1145,6 +1195,26 @@ void initializeRosInterface(ros::NodeHandle& nh) {
         throw std::runtime_error("control_topic and preview_topic must differ");
     }
 
+    private_nh.param<std::string>("bev_mode",params.bev_mode,"off");
+    if(params.bev_mode!="off" && params.bev_mode!="audit" && params.bev_mode!="guard")throw std::runtime_error("invalid bev_mode");
+    if(params.bev_mode!="off") {
+        if(!params.contact_clearance_enabled || !params.contact_local_required)throw std::runtime_error("BEV trial requires measured local clearance");
+        double xmin,ymin;std::string frame;
+        if(!nh.getParam("/camera_bev/x_max_m",bev_spec.x_max)||!nh.getParam("/camera_bev/y_max_m",bev_spec.y_max)||
+           !nh.getParam("/camera_bev/x_min_m",xmin)||!nh.getParam("/camera_bev/y_min_m",ymin)||
+           !nh.getParam("/camera_bev/resolution_m",bev_spec.resolution)||!nh.getParam("/camera_bev/frame_id",frame)||
+           frame!="base_link"||!std::isfinite(bev_spec.resolution)||bev_spec.resolution<=0.||
+           !std::isfinite(xmin)||!std::isfinite(ymin)||!std::isfinite(bev_spec.x_max)||!std::isfinite(bev_spec.y_max))
+            throw std::runtime_error("canonical camera BEV grid unavailable");
+        bev_spec.rows=std::lround((bev_spec.x_max-xmin)/bev_spec.resolution);
+        bev_spec.cols=std::lround((bev_spec.y_max-ymin)/bev_spec.resolution);
+        if(bev_spec.rows<1||bev_spec.rows>1000||bev_spec.cols<1||bev_spec.cols>1000)throw std::runtime_error("invalid camera BEV grid dimensions");
+        static ros::Subscriber probability,coverage;
+        probability=nh.subscribe<sensor_msgs::Image>("/perception/bev/camera/drivable_probability",1,
+            [](const sensor_msgs::Image::ConstPtr& m){bevInput(m,true);});
+        coverage=nh.subscribe<sensor_msgs::Image>("/perception/bev/camera/coverage",1,
+            [](const sensor_msgs::Image::ConstPtr& m){bevInput(m,false);});
+    }
     bbox_subscriber = nh.subscribe(params.bbox_topic, 1, bboxCallback);
     reference_lane_publisher = nh.advertise<std_msgs::Int8>(params.reference_lane_topic, 1);
     follower_state.locked_lane = params.lane_index;
@@ -1587,7 +1657,7 @@ void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>&
 // checks, controller and selector. It never uses a semantic class to skip an
 // obstacle. Lane overlap and vehicle-corridor collision are separate facts.
 std::string updateContactPathPlan() {
-    contact_candidates=contact_road_rejected=contact_collision_rejected=0; contact_geometry_ready=false;
+    contact_candidates=contact_road_rejected=contact_collision_rejected=bev_rejected=0; contact_geometry_ready=false;
     auto fail=[](const std::string& reason){contact_decision=reason;return reason;};
     if(!contact_result || !contact_result->contact_projection_valid) return fail("contact_projection_unavailable");
     if(std::abs((contact_result->lane_stamp-contact_result->header.stamp).toSec())>params.contact_max_skew)
@@ -1596,6 +1666,9 @@ std::string updateContactPathPlan() {
     for(const auto& frame:contact_lane_history)
         if(frame.stamp==contact_result->lane_stamp){geometry=&frame.lanes;break;}
     if(!geometry)return fail("contact_exact_lane_context_missing");
+    auto bev=params.bev_mode=="off"?nullptr:selectBev(contact_result->header.stamp,contact_result->lane_stamp);
+    bev_status=params.bev_mode=="off"?"off":(bev?"paired":"unavailable_or_time_skew");
+    if(params.bev_mode=="guard" && !bev)return fail("bev_unavailable_or_time_skew");
     if(contact_result->ground_contacts.size()!=contact_result->boxes.size() ||
        contact_result->ground_contact_valid.size()!=contact_result->boxes.size()) return fail("contact_contract_invalid");
     std::vector<lane_boundary_adapter::clearance::Polygon> contacts;
@@ -1645,7 +1718,11 @@ std::string updateContactPathPlan() {
     if(!reference_lane)return fail("contact_road_reference_missing");
     for(const auto& p:reference_lane->left_boundary)road_reference.push_back({p.x,p.y});
     std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
-    if(!lane_boundary_adapter::clearance::projectedContactOccupancy(contacts,road_reference,horizon,occupied))
+    // Guard uses measured semantic NEW swept space instead of inventing the
+    // unseen length of image contacts. Visible polygons and all local OBBs
+    // remain hard obstacles. Audit leaves every existing decision unchanged.
+    if(params.bev_mode=="guard")occupied=contacts;
+    else if(!lane_boundary_adapter::clearance::projectedContactOccupancy(contacts,road_reference,horizon,occupied))
         return fail("contact_occlusion_geometry_invalid");
     occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
     const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
@@ -1689,6 +1766,10 @@ std::string updateContactPathPlan() {
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
             for(const auto& p:path)points.push_back({p.x,p.y});
             if(!lane_boundary_adapter::clearance::pathClearOfPolygons(points,occupied,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
+            if(params.bev_mode=="guard"){
+                auto report=bev->check(points,shape,params.path_sample_step);bev_status=report.reason;
+                if(!report.clear){++bev_rejected;continue;}
+            }
             found={std::move(lane),std::move(path),offset,length};return true;
         }
         return false;
@@ -1737,6 +1818,11 @@ std::string updateContactPathPlan() {
     // The legacy8m target lies beyond a3m residual maneuver and cuts its
     // curvature. This only selects a target ON the checked path; it does not
     // relax the vehicle/road/obstacle guards or add another controller.
+    if(params.bev_mode=="audit" && bev){
+        std::vector<lane_boundary_adapter::clearance::Point> points;for(const auto& p:candidate.path)points.push_back({p.x,p.y});
+        const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
+        bev_status=bev->check(points,shape,params.path_sample_step).reason;
+    }
     contact_maneuver_length=candidate.length;
     contact_pursuit_x=std::clamp(candidate.length*.5,1.5,4.0);
     storePlannedTarget(candidate.lane,candidate.path);
