@@ -5,14 +5,47 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
-  planning_inputs asmc_msgs morai_msgs roscpp std_msgs geometry_msgs
+  planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs geometry_msgs
   sensor_msgs visualization_msgs)
 find_package(yaml-cpp REQUIRED)
+find_package(Boost REQUIRED)
 catkin_package(INCLUDE_DIRS src
-  LIBRARIES asmc_signal_policy_core asmc_planner_frenet_core asmc_planner_behavior_core
+  LIBRARIES asmc_signal_policy_core asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_core
     asmc_planner_execution_core asmc_planner_behavior_module asmc_planner_ros_adapters
-  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs
+  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs
     geometry_msgs sensor_msgs visualization_msgs)
+
+# Shared reference preparation/execution. Production uses the existing highway
+# launch gate; the separate empty-road trial remains available.
+add_library(asmc_planner_lane_reference_core
+  src/Execution/HighwayReferenceExecution.cpp
+  src/Execution/ReferenceHandover.cpp
+  src/Execution/LaneReferenceExecution.cpp)
+target_include_directories(asmc_planner_lane_reference_core PUBLIC src)
+target_include_directories(asmc_planner_lane_reference_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+target_compile_options(asmc_planner_lane_reference_core PRIVATE -O2 -Wall -Wextra)
+set_target_properties(asmc_planner_lane_reference_core PROPERTIES CXX_EXTENSIONS OFF)
+
+# Reference.cpp stays owned by the existing Frenet target, with its old flags.
+add_executable(highway_merge_shadow tools/frenet/highway_merge_shadow.cpp)
+target_link_libraries(highway_merge_shadow asmc_planner_lane_reference_core)
+install(TARGETS highway_merge_shadow RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+add_executable(highway_merge_preflight tools/highway_merge_preflight.cpp)
+target_link_libraries(highway_merge_preflight asmc_planner_lane_reference_core)
+install(TARGETS highway_merge_preflight RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+add_executable(lane_reference_audit tools/lane_reference_audit.cpp)
+target_include_directories(lane_reference_audit PRIVATE src)
+target_include_directories(lane_reference_audit SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+target_compile_options(lane_reference_audit PRIVATE -O2)
+target_link_libraries(lane_reference_audit asmc_planner_lane_reference_core)
+install(TARGETS asmc_planner_lane_reference_core lane_reference_audit
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(DIRECTORY src/Map/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}/Map
+  FILES_MATCHING PATTERN "*.hpp")
 
 add_library(asmc_planner_execution_core
   src/Execution/Acceptance/CommandExecutionManager.cpp
@@ -43,12 +76,18 @@ target_compile_options(asmc_planner_behavior_core PRIVATE -Wall -Wextra)
 target_link_libraries(asmc_planner_behavior_core asmc_signal_policy_core)
 
 add_library(asmc_planner_frenet_core
+  src/Frenet/Maneuver/Merge/HighwayTransitionPath.cpp
+  src/Map/HdLaneMap.cpp
+  src/Map/HighwayMergeRoute.cpp
+  src/Frenet/Maneuver/Merge/HighwayExecution.cpp
   src/Frenet/Config/ConfigLoader.cpp
   src/Frenet/Config/ConfigValidator.cpp
   src/Frenet/Evaluation/CollisionChecker.cpp
+  src/Frenet/Evaluation/StoppingSafety.cpp
   src/Frenet/Evaluation/Cost.cpp
   src/Frenet/Evaluation/KinematicFilter.cpp
   src/Frenet/Generator/BoundaryConditionPolicy.cpp
+  src/Frenet/Generator/CartesianRetimer.cpp
   src/Frenet/Generator/SpatialStop.cpp
   src/Frenet/Generator/CandidateCombiner.cpp
   src/Frenet/Generator/LateralGenerator.cpp
@@ -74,6 +113,9 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Math/FrenetConverter.cpp
   src/Frenet/Math/Polynomial.cpp
   src/Frenet/Pipeline/TrajectoryPipeline.cpp
+  # Geometry preparation/projection is also consumed by highway prediction.
+  # Keep it below reference execution to avoid a reverse library dependency.
+  src/Frenet/Reference/LaneReference.cpp
   src/Frenet/Reference/Reference.cpp
   src/Frenet/Speed/CurveSpeed.cpp
   src/Frenet/Speed/SpeedProfiler.cpp
@@ -88,6 +130,15 @@ target_compile_options(asmc_planner_frenet_core PRIVATE -O2)
 target_compile_definitions(asmc_planner_frenet_core PRIVATE
   FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(asmc_planner_frenet_core yaml-cpp asmc_signal_policy_core)
+target_include_directories(asmc_planner_frenet_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+target_link_libraries(asmc_planner_lane_reference_core PUBLIC asmc_planner_frenet_core)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  # Fail at the library boundary, even when an executable also happens to
+  # link another library that could hide an undeclared reverse dependency.
+  foreach(core asmc_planner_frenet_core asmc_planner_lane_reference_core)
+    set_property(TARGET ${core} APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--no-undefined")
+  endforeach()
+endif()
 
 # Phase 1 executable remains inert while pure Frenet calculations are linked
 # through the separate library above.
@@ -130,7 +181,7 @@ target_include_directories(asmc_planner_behavior_module PUBLIC src ${catkin_INCL
 add_dependencies(asmc_planner_behavior_module ${catkin_EXPORTED_TARGETS})
 target_compile_options(asmc_planner_behavior_module PRIVATE -Wall -Wextra)
 target_link_libraries(asmc_planner_behavior_module
-  asmc_planner_behavior_core asmc_planner_execution_core asmc_planner_frenet_core yaml-cpp ${catkin_LIBRARIES})
+  asmc_planner_behavior_core asmc_planner_execution_core asmc_planner_lane_reference_core asmc_planner_frenet_core yaml-cpp ${catkin_LIBRARIES})
 
 add_library(asmc_planner_ros_adapters
   src/Signal/SignalShadow.cpp
@@ -138,6 +189,7 @@ add_library(asmc_planner_ros_adapters
   src/Output/PlanningFeedback.cpp
   src/Output/PlanningOutput.cpp
   src/Parser/BehaviorCommandAdapter.cpp
+  src/Parser/HdMapLaneInput.cpp
   src/Parser/BehaviorInput.cpp
   src/Parser/DetectedObjects.cpp
   src/Parser/MoraiObjects.cpp
@@ -147,6 +199,7 @@ add_library(asmc_planner_ros_adapters
   src/Parser/Traffic/ros_traffic_light_provider.cpp
   src/Planning/LegacyCycleCompatibility.cpp
   src/Planning/PlanningPort.cpp
+  src/Planning/HighwayReferencePort.cpp
   src/Planning/ProductionRuntime.cpp
   src/Planning/GpsModeSource.cpp
   src/Planning/TargetProjection.cpp
@@ -155,7 +208,7 @@ add_library(asmc_planner_ros_adapters
 target_include_directories(asmc_planner_ros_adapters PUBLIC src ${catkin_INCLUDE_DIRS})
 add_dependencies(asmc_planner_ros_adapters ${catkin_EXPORTED_TARGETS})
 target_link_libraries(asmc_planner_ros_adapters
-  asmc_planner_frenet_core asmc_planner_behavior_module
+  asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_module
   asmc_planner_execution_core yaml-cpp ${catkin_LIBRARIES})
 set_source_files_properties(
   src/Output/PlanningFeedback.cpp
@@ -169,6 +222,10 @@ set_source_files_properties(
   src/Planning/TargetProjection.cpp
   src/Visualization/PlanningMarkers.cpp PROPERTIES COMPILE_OPTIONS "-O2")
 add_executable(asmc_planner_node src/Planning/production_main.cpp)
+add_executable(reference_handover_trial tools/reference_handover_trial.cpp)
+add_dependencies(reference_handover_trial ${catkin_EXPORTED_TARGETS})
+target_link_libraries(reference_handover_trial asmc_planner_ros_adapters)
+install(TARGETS reference_handover_trial RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 add_dependencies(asmc_planner_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(asmc_planner_node asmc_planner_ros_adapters)
 add_executable(asmc_control_selector_node
@@ -193,6 +250,65 @@ install(DIRECTORY src/Parser src/Output src/Visualization
 install(DIRECTORY config launch web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  foreach(clock_test object_prediction_clock_test stop_generation_options_test)
+    add_executable(${clock_test} tests/frenet/${clock_test}.cpp)
+    target_link_libraries(${clock_test} asmc_planner_frenet_core)
+    add_test(NAME ${clock_test} COMMAND ${clock_test})
+  endforeach()
+
+  foreach(regression highway_prediction_reuse_test reference_projection_window_test highway_cruise_policy_test follow_gap_recovery_test initial_state_recovery_test highway_reference_sampling_test highway_lane_change_execution_test highway_lane_motion_test highway_readiness_test highway_lane_change_recovery_test)
+    add_executable(${regression} tests/frenet/${regression}.cpp)
+    target_compile_definitions(${regression} PRIVATE
+      FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+    target_link_libraries(${regression} asmc_planner_lane_reference_core yaml-cpp)
+    add_test(NAME ${regression} COMMAND ${regression})
+  endforeach()
+  add_executable(hd_lane_map_product_test tests/frenet/hd_lane_map_product_test.cpp)
+  target_include_directories(hd_lane_map_product_test SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+  target_link_libraries(hd_lane_map_product_test asmc_planner_lane_reference_core yaml-cpp)
+  target_compile_definitions(hd_lane_map_product_test PRIVATE
+    HD_LANE_MAP_PRODUCT="${CMAKE_CURRENT_SOURCE_DIR}/../asmc_hd_map/config/kcity2025_compact_drivable_map.json"
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  add_test(NAME hd_lane_map_product_test COMMAND hd_lane_map_product_test)
+  add_executable(lane_reference_execution_test tests/frenet/lane_reference_execution_test.cpp)
+  target_link_libraries(lane_reference_execution_test asmc_planner_lane_reference_core yaml-cpp)
+  add_executable(highway_reference_execution_test tests/frenet/highway_reference_execution_test.cpp)
+  target_compile_definitions(highway_reference_execution_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  target_link_libraries(highway_reference_execution_test asmc_planner_lane_reference_core yaml-cpp)
+  add_test(NAME highway_reference_execution_test COMMAND highway_reference_execution_test)
+  add_executable(highway_source_approach_test tests/frenet/highway_source_approach_test.cpp)
+  target_compile_definitions(highway_source_approach_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  target_link_libraries(highway_source_approach_test asmc_planner_lane_reference_core yaml-cpp)
+  add_test(NAME highway_source_approach_test COMMAND highway_source_approach_test)
+  add_executable(highway_transition_recovery_test tests/frenet/highway_transition_recovery_test.cpp)
+  target_compile_definitions(highway_transition_recovery_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  target_link_libraries(highway_transition_recovery_test asmc_planner_lane_reference_core yaml-cpp)
+  add_test(NAME highway_transition_recovery_test COMMAND highway_transition_recovery_test)
+  add_executable(highway_lane_change_policy_test tests/behavior/highway_lane_change_policy_test.cpp)
+  target_compile_definitions(highway_lane_change_policy_test PRIVATE BEHAVIOR_PLANNER_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  add_dependencies(highway_lane_change_policy_test ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(highway_lane_change_policy_test asmc_planner_behavior_module asmc_planner_lane_reference_core)
+  add_test(NAME highway_lane_change_policy_test COMMAND highway_lane_change_policy_test)
+  add_executable(highway_reference_feature_test tests/behavior/highway_reference_feature_test.cpp)
+  target_compile_definitions(highway_reference_feature_test PRIVATE
+    BEHAVIOR_PLANNER_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(highway_reference_feature_test asmc_planner_behavior_module asmc_planner_lane_reference_core)
+  add_test(NAME highway_reference_feature_test COMMAND highway_reference_feature_test)
+  target_compile_definitions(lane_reference_execution_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  add_test(NAME lane_reference_execution_test COMMAND lane_reference_execution_test)
+  add_executable(lane_reference_test tests/frenet/lane_reference_test.cpp)
+  target_include_directories(lane_reference_test PRIVATE src)
+  target_link_libraries(lane_reference_test asmc_planner_lane_reference_core)
+  add_test(NAME lane_reference_test COMMAND lane_reference_test)
+  add_executable(hd_map_lane_input_test tests/frenet/hd_map_lane_input_test.cpp src/Parser/HdMapLaneInput.cpp)
+  target_include_directories(hd_map_lane_input_test PRIVATE src ${catkin_INCLUDE_DIRS})
+  add_dependencies(hd_map_lane_input_test ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(hd_map_lane_input_test asmc_planner_lane_reference_core ${catkin_LIBRARIES})
+  add_test(NAME hd_map_lane_input_test COMMAND hd_map_lane_input_test)
   catkin_add_gtest(asmc_mode_detector_test tests/mode_detector_test.cpp)
   if(TARGET asmc_mode_detector_test)
     target_include_directories(asmc_mode_detector_test PRIVATE src ${catkin_INCLUDE_DIRS})
@@ -209,6 +325,14 @@ if(CATKIN_ENABLE_TESTING)
   add_dependencies(gps_mode_source_test_node ${catkin_EXPORTED_TARGETS})
   target_link_libraries(gps_mode_source_test_node ${catkin_LIBRARIES})
   add_rostest(tests/gps_mode_source.test DEPENDENCIES gps_mode_source_test_node)
+
+  add_executable(highway_runtime_test tests/behavior/highway_runtime_test.cpp)
+  target_include_directories(highway_runtime_test PRIVATE src ${catkin_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS})
+  add_dependencies(highway_runtime_test ${catkin_EXPORTED_TARGETS})
+  target_compile_definitions(highway_runtime_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  target_link_libraries(highway_runtime_test asmc_planner_ros_adapters ${catkin_LIBRARIES} gtest)
+  add_rostest(tests/highway_runtime.test DEPENDENCIES highway_runtime_test)
   # Explicit offline gate; preserve the existing registered regression set.
   add_executable(asmc_internal_flow_equivalence tests/internal_flow_equivalence.cpp)
   add_dependencies(asmc_internal_flow_equivalence ${catkin_EXPORTED_TARGETS})
@@ -352,6 +476,17 @@ if(CATKIN_ENABLE_TESTING)
     asmc_planner_frenet_core
   )
   add_test(NAME polygon_collision_test COMMAND polygon_collision_test)
+
+  add_executable(following_rear_collision_test tests/frenet/following_rear_collision_test.cpp)
+  target_compile_definitions(following_rear_collision_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  target_link_libraries(following_rear_collision_test asmc_planner_frenet_core)
+  add_test(NAME following_rear_collision_test COMMAND following_rear_collision_test)
+  add_executable(stopping_continuation_test tests/frenet/stopping_continuation_test.cpp)
+  target_compile_definitions(stopping_continuation_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  target_link_libraries(stopping_continuation_test asmc_planner_frenet_core)
+  add_test(NAME stopping_continuation_test COMMAND stopping_continuation_test)
 
   add_executable(message_converter_test
     tests/frenet/message_converter_test.cpp
@@ -531,6 +666,10 @@ if(CATKIN_ENABLE_TESTING)
   add_executable(roundabout_merge_shadow tools/frenet/roundabout_merge_shadow.cpp)
   target_link_libraries(roundabout_merge_shadow asmc_planner_frenet_core yaml-cpp)
 
+  add_executable(merge_motion_recovery_test tests/frenet/merge_motion_recovery_test.cpp)
+  target_include_directories(merge_motion_recovery_test PRIVATE src)
+  target_link_libraries(merge_motion_recovery_test asmc_planner_frenet_core)
+  add_test(NAME merge_motion_recovery_test COMMAND merge_motion_recovery_test)
   add_executable(observed_motion_test tests/frenet/observed_motion_test.cpp)
   target_include_directories(observed_motion_test PRIVATE src)
   target_link_libraries(observed_motion_test asmc_planner_frenet_core)
@@ -560,7 +699,7 @@ if(CATKIN_ENABLE_TESTING)
     ASMC_DEPARTURE_ROAD_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
   add_test(NAME keep_departure_road_test COMMAND keep_departure_road_test)
 
-  foreach(merge_test roundabout_candidate_test roundabout_execution_test roundabout_prediction_test)
+  foreach(merge_test roundabout_candidate_test roundabout_execution_test roundabout_prediction_test roundabout_departure_bounds_test hd_map_bundle_test)
     add_executable(${merge_test} tests/frenet/${merge_test}.cpp)
     target_link_libraries(${merge_test} asmc_planner_frenet_core yaml-cpp)
     target_compile_definitions(${merge_test} PRIVATE
@@ -728,6 +867,23 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME closed_loop_reference_test COMMAND closed_loop_reference_test)
 
+  add_executable(highway_execution_test tests/frenet/highway_execution_test.cpp)
+  target_link_libraries(highway_execution_test asmc_planner_frenet_core)
+  target_compile_definitions(highway_execution_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
+  add_test(NAME highway_execution_test COMMAND highway_execution_test)
+  add_executable(highway_speed_policy_test tests/behavior/highway_speed_policy_test.cpp)
+  target_link_libraries(highway_speed_policy_test asmc_planner_behavior_module)
+  add_dependencies(highway_speed_policy_test ${catkin_EXPORTED_TARGETS})
+  add_test(NAME highway_speed_policy_test COMMAND highway_speed_policy_test)
+  add_test(NAME highway_native_preflight_test COMMAND ${CMAKE_COMMAND} -E env
+    ASMC_HIGHWAY_PREFLIGHT=$<TARGET_FILE:highway_merge_preflight>
+    ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/planning/test_highway_merge_native.py)
+  add_test(NAME highway_asset_gate_test COMMAND ${PYTHON_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/planning/test_check_highway_merge.py)
+  add_test(NAME planner_hd_map_bundle_test COMMAND ${PYTHON_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/planning/test_sync_hd_map.py)
+
   # MERGE gap/TTC 순수 계산 회귀. legacy_behavior_regression_test 삭제로
   # 없어진 MERGE 안전망을 대체한다 - behavior auto-selection이 아니라
   # FindRoundaboutGap/FindHighwayMergeGap 자체의 gap/TTC 판단만 검증한다.
@@ -744,7 +900,6 @@ endif()
 
 catkin_install_python(PROGRAMS
   scripts/behavior_dashboard_server.py
-  scripts/morai_objects_adapter.py
   scripts/open_dashboard.py
   scripts/pedal_calibration_node.py
   scripts/steering_calibration_node.py

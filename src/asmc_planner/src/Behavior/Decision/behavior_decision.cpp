@@ -48,6 +48,12 @@ BehaviorContextData BehaviorDecision::decide(
     context.hard.force_stop = true;
     if (!raw_emergency) context.debug.hard_rule_reason += "emergency_latched;";
   }
+  if(feature.lane_change.network&&driving_epoch_!=feature.lane_change.reference_epoch) {
+    // A grace-period leader belongs to its old driving reference. Do not
+    // inherit it as a new-lane FOLLOW target after an atomic handover.
+    fsm_.updateFollowTarget(false,-1,NAN);
+    driving_epoch_=feature.lane_change.reference_epoch;
+  }
   const int32_t follow_target_id = fsm_.updateFollowTarget(
       feature.surrounding.has_front_vehicle,
       feature.surrounding.has_front_vehicle
@@ -205,16 +211,39 @@ BehaviorContextData BehaviorDecision::decide(
       !context.hard.planned_stop && !context.hard.force_stop && !context.hard.emergency_stop) {
     best = {0.0, BehaviorType::MERGE, true};
   }
+  if (feature.highway.valid && feature.highway.approach && !feature.roundabout.approach &&
+      !context.hard.planned_stop && !context.hard.force_stop && !context.hard.emergency_stop &&
+      best.behavior != BehaviorType::AVOID) {
+    best = {0.0, BehaviorType::MERGE, true};
+  }
+  updateHighwayLaneChange(feature,planner_feedback,active_command_id,context,best.behavior);
+  const bool merge_left_preparation=best.behavior==BehaviorType::LEFT_CHANGE&&
+      feature.highway.approach&&feature.lane_change.network&&
+      asmc_planner::lane_reference::HighwayLeftChangeSupportsMerge(*feature.lane_change.network,
+          feature.lane_change.left.source_link,feature.lane_change.left.target_link);
   const Fsm::ManeuverOutput fsm_output = fsm_.updateManeuver(
       best.behavior, planner_feedback, active_command_id,
       stop_preempts_avoid, cancel_reclassified_avoid,
-      follow_owns_avoid_target);
+      follow_owns_avoid_target,merge_left_preparation);
+  if(fsm_output.behavior==BehaviorType::MERGE&&best.behavior==BehaviorType::LEFT_CHANGE) {
+    // A committed mandatory merge retains ownership. Do not freeze an
+    // unpublished optional offer against that merge's subsequent feedback.
+    lc_active_=lc_committed_=false;lc_since_=-1;
+  }
   context.selected_behavior = fsm_output.behavior;
   context.state = fsm_output.state;
   context.maneuver_phase = fsm_output.phase;
 
   switch (context.selected_behavior) {
     case BehaviorType::MERGE:
+      if(feature.highway.valid) {
+        context.target.current_link_id=feature.highway.source_link;
+        context.target.target_link_id=feature.highway.target_link;
+        context.target.desired_speed=std::min(context.hard.max_speed,feature.highway.speed_cap_mps);
+        context.target.has_target_pose=false;
+        context.extra_flags["highway_merge"]=true;
+        break;
+      }
       context.target.current_link_id = feature.roundabout.source_link_id;
       context.target.target_link_id = feature.roundabout.target_link_id;
       context.target.desired_speed = 25.0/3.6;
@@ -227,6 +256,13 @@ BehaviorContextData BehaviorDecision::decide(
       // cycle-by-cycle FOLLOW speed and trajectory calculation.
       break;
     case BehaviorType::LEFT_CHANGE:
+      if(lc_active_) {
+        context.target.current_link_id=lc_offer_.source_link;
+        context.target.target_link_id=lc_offer_.target_link;context.target.has_target_pose=true;
+        context.target.target_x=lc_offer_.x;context.target.target_y=lc_offer_.y;context.target.target_yaw=lc_offer_.yaw;
+        context.target.desired_speed=std::min(feature.highway.speed_cap_mps,context.hard.max_speed);
+        context.extra_flags["highway_lane_change"]=true;break;
+      }
       context.target.target_link_id = feature.route.left_target_link_id;
       context.target.has_target_pose = feature.route.left_target_pose_valid;
       context.target.target_x = feature.route.left_target_x;
@@ -234,6 +270,13 @@ BehaviorContextData BehaviorDecision::decide(
       context.target.target_yaw = feature.route.left_target_yaw;
       break;
     case BehaviorType::RIGHT_CHANGE:
+      if(lc_active_) {
+        context.target.current_link_id=lc_offer_.source_link;
+        context.target.target_link_id=lc_offer_.target_link;context.target.has_target_pose=true;
+        context.target.target_x=lc_offer_.x;context.target.target_y=lc_offer_.y;context.target.target_yaw=lc_offer_.yaw;
+        context.target.desired_speed=std::min(feature.highway.speed_cap_mps,context.hard.max_speed);
+        context.extra_flags["highway_lane_change"]=true;break;
+      }
       context.target.target_link_id = feature.route.right_target_link_id;
       context.target.has_target_pose = feature.route.right_target_pose_valid;
       context.target.target_x = feature.route.right_target_x;
@@ -257,6 +300,11 @@ BehaviorContextData BehaviorDecision::decide(
   // Apply after FSM arbitration so committed avoidance/follow/merge cannot
   // inherit the ordinary cruise request. Every cycle starts from the original
   // map constraints above; leaving KEEP immediately restores those constraints.
+  if(feature.highway.cruising &&
+     (context.selected_behavior==BehaviorType::KEEP || context.selected_behavior==BehaviorType::FOLLOW)) {
+    context.target.desired_speed=std::min(feature.highway.speed_cap_mps,context.hard.max_speed);
+    context.extra_flags["highway_cruise_active"]=true;
+  }
   const bool roundabout_zone = feature.roundabout.enabled &&
       (feature.roundabout.approach ||
        feature.route.current_link_id == feature.roundabout.source_link_id ||
@@ -267,6 +315,7 @@ BehaviorContextData BehaviorDecision::decide(
   const bool ordinary_cruise = normal_cruise_.enabled &&
       feature.ego.valid && feature.route.current_link_valid &&
       context.selected_behavior == BehaviorType::KEEP &&
+      !feature.highway.cruising &&
       !context.hard.intersection_approach_active &&
       !context.hard.planned_stop && !context.hard.force_stop &&
       !context.hard.emergency_stop && !roundabout_zone &&
@@ -297,9 +346,16 @@ BehaviorContextData BehaviorDecision::decide(
   }
   // Final arbitration cap covers KEEP/FOLLOW/AVOID/MERGE and lane changes.
   // Initial-state continuity and all lower signal/obstacle limits remain.
-  context.hard.max_speed=std::min(context.hard.max_speed,absolute_speed_limit_);
+  const bool highway_speed_policy=feature.highway.cruising ||
+      context.extra_flags["highway_merge"] ||
+      context.extra_flags["highway_lane_change"];
+  const double selected_ceiling=highway_speed_policy?feature.highway.speed_cap_mps:absolute_speed_limit_;
+  context.hard.max_speed=std::min(context.hard.max_speed,selected_ceiling);
   context.target.desired_speed=std::min(context.target.desired_speed,context.hard.max_speed);
-  if (follow_owns_avoid_target &&
+  if((context.selected_behavior==BehaviorType::LEFT_CHANGE||context.selected_behavior==BehaviorType::RIGHT_CHANGE)&&
+      context.extra_flags["highway_lane_change"]) {
+    context.debug.selected_reason="slow_leader_highway_lane_change";
+  } else if (follow_owns_avoid_target &&
       context.selected_behavior == BehaviorType::FOLLOW) {
     context.debug.selected_reason = "fsm_follow_owns_same_target";
   } else if (stop_preempts_avoid) {
@@ -322,6 +378,133 @@ BehaviorContextData BehaviorDecision::decide(
       {"emergency_stop", context.score.emergency_stop},
   };
   return context;
+}
+
+namespace {
+// Same endpoint and achievable speed response for both alternatives. Both
+// alternatives move during the change; its duration is not subtracted twice.
+double travelTime(double distance,double initial,double target,double accel,double decel) {
+  if(distance<=0)return 0;
+  if(target<=.1)return 1e9;
+  const double a=initial<=target?accel:-decel;
+  const double time=(target-initial)/a;
+  const double response_distance=(initial+target)*time*.5;
+  if(distance<=response_distance)
+    return 2*distance/(initial+std::sqrt(std::max(0.0,initial*initial+2*a*distance)));
+  return time+(distance-response_distance)/target;
+}
+}
+void BehaviorDecision::updateHighwayLaneChange(const UrbanFeature& f,
+    const PlannerFeedbackData& feedback,uint32_t active_id,BehaviorContextData& c,BehaviorType& best) {
+  const auto network=f.lane_change.network;
+  if(!network||!network->policy.enabled)return;
+  const auto& policy=network->policy;
+  const double now=f.lane_change.evaluation_stamp>0?f.lane_change.evaluation_stamp:f.timestamp;
+  const auto interrupted=f.extra_flags.find("highway_transition_interrupted");
+  if(c.hard.emergency_stop||(interrupted!=f.extra_flags.end()&&interrupted->second)) {
+    // Emergency clears the FSM lifecycle too. Its old frozen source/target
+    // must not become a new transaction when the emergency is released.
+    lc_active_=lc_committed_=false;lc_since_=-1;lc_last_lead_observation_=-1;
+    c.enable.left_change=c.enable.right_change=false;return;
+  }
+  c.extra_flags["lane_change_inputs_fresh"]=f.lane_change.fresh;
+  c.extra_values["lane_change_observation_age_s"]=f.lane_change.observation_stamp>0?
+      now-f.lane_change.observation_stamp:-1;
+  c.enable.left_change=f.lane_change.left.available&&!c.hard.forbid_left_change;
+  c.enable.right_change=f.lane_change.right.available&&!c.hard.forbid_right_change;
+  const bool matches=lc_active_&&active_id&&feedback.valid&&feedback.command_id==active_id;
+  if(matches&&(feedback.execution_state==PlannerExecutionState::COMMITTED||
+               feedback.execution_state==PlannerExecutionState::EXECUTING))lc_committed_=true;
+  if(matches&&(feedback.execution_state==PlannerExecutionState::COMPLETED||
+               feedback.execution_state==PlannerExecutionState::FAILED)) {
+    const bool executed=lc_committed_;
+    lc_active_=lc_committed_=false;lc_since_=-1;
+    if(executed)lc_cooldown_until_=now+policy.cooldown_s;
+  }
+  if(lc_active_&&lc_committed_) {
+    // FSM owns committed maneuver precedence. Keep its frozen pose available
+    // even if the leader disappears or the target is now physically occupied by ego.
+    if(best!=BehaviorType::EMERGENCY_STOP)best=lc_direction_;
+    return;
+  }
+  const auto& lead=f.surrounding.front_vehicle;
+  const double free=std::min(f.lane_change.free_speed,c.hard.max_speed);
+  const double lead_speed=std::hypot(lead.vx,lead.vy);
+  const bool left_supports_merge=f.lane_change.left.available&&
+      asmc_planner::lane_reference::HighwayLeftChangeSupportsMerge(*network,
+          f.lane_change.left.source_link,f.lane_change.left.target_link);
+  const bool merge_left=f.highway.approach&&left_supports_merge;
+  const bool driving_allowed=(best==BehaviorType::KEEP||best==BehaviorType::FOLLOW||
+      (best==BehaviorType::MERGE&&merge_left))&&
+      f.ego.valid&&f.highway.cruising&&(!f.highway.approach||merge_left)&&
+      f.lane_change.fresh&&!c.hard.planned_stop&&!c.hard.force_stop&&
+      !c.hard.emergency_stop&&!f.risk.static_obstacle_ahead&&
+      !f.risk.pedestrian_risk&&now>=lc_cooldown_until_;
+  const bool observed_lead=f.surrounding.has_front_vehicle&&lead.valid;
+  const bool lead_benefit=observed_lead&&lead.gap>0&&lead.gap<60&&
+      std::isfinite(lead_speed)&&free-lead_speed>=policy.deficit_mps;
+  // Preserve an EXISTING preparation through one short detection loss. This
+  // does not create a request on an empty road or preserve a safety approval:
+  // the offer/epoch/freshness checks below and Frenet's current certificate
+  // still apply. A real new observation can withdraw the benefit immediately.
+  const bool lead_grace=lc_active_&&!observed_lead&&
+      lc_last_lead_observation_>0&&now>=lc_last_lead_observation_&&
+      now-lc_last_lead_observation_<=std::min(.3,network->source_max_age);
+  const bool eligible=driving_allowed&&(lead_benefit||lead_grace);
+  if(driving_allowed&&lead_benefit)
+    lc_last_lead_observation_=f.lane_change.observation_stamp;
+  c.extra_flags["lane_change_lead_observation_grace"]=eligible&&lead_grace;
+  const HighwayLaneChangeOffer* selected=nullptr;
+  BehaviorType direction=BehaviorType::KEEP;
+  if(eligible) {
+    if(f.lane_change.left.available&&!c.hard.forbid_left_change&&
+       std::min(free,f.lane_change.left.free_speed)>lead_speed) {
+      selected=&f.lane_change.left;direction=BehaviorType::LEFT_CHANGE;
+    } else if(!f.highway.approach&&f.lane_change.right.available&&!c.hard.forbid_right_change&&
+       std::min(free,f.lane_change.right.free_speed)>lead_speed) {
+      selected=&f.lane_change.right;direction=BehaviorType::RIGHT_CHANGE;
+    }
+  }
+  if(lc_active_) {
+    selected=lc_direction_==BehaviorType::LEFT_CHANGE?&f.lane_change.left:&f.lane_change.right;
+    if(!eligible||!selected->available||(f.highway.approach&&lc_direction_!=BehaviorType::LEFT_CHANGE)||
+       network->indexForLink(selected->source_link)!=network->indexForLink(lc_offer_.source_link)||
+       network->indexForLink(selected->target_link)!=network->indexForLink(lc_offer_.target_link)||
+       f.lane_change.reference_epoch!=lc_epoch_) {
+      // No lateral maneuver was executed. Reconfirm the request instead of
+      // applying the post-change cooldown to a refused preparation.
+      lc_active_=false;lc_since_=-1;return;
+    }
+    best=lc_direction_;return;
+  }
+  if(!selected){lc_since_=-1;lc_leader_=-1;return;}
+  const double acceleration=network->forward_accel;
+  const double target_speed=std::min(free,selected->free_speed);
+  const double change_distance=std::max(3.0*f.ego.speed,
+      std::sqrt(6*selected->lateral_distance*std::max(free*free,f.ego.speed*f.ego.speed)/
+          network->lanes.front()->options().max_lateral_accel));
+  const double reserve=asmc_planner::lane_reference::HighwayLaneChangeReserve(*network,f.ego.speed,
+      network->lanes.front()->options().vehicle.front_m+network->lanes.front()->options().vehicle.rear_m,
+      direction==BehaviorType::LEFT_CHANGE&&left_supports_merge);
+  const double useful=std::max(0.0,f.lane_change.remaining_m-reserve);
+  const double gain=travelTime(useful,f.ego.speed,lead_speed,acceleration,network->comfortable_decel)-
+      travelTime(useful,f.ego.speed,target_speed,acceleration,network->comfortable_decel);
+  c.extra_values["lane_change_estimated_gain_s"]=gain;
+  c.extra_values["lane_change_remaining_m"]=f.lane_change.remaining_m;
+  if(useful<change_distance||gain<policy.min_gain_s){lc_since_=-1;return;}
+  const bool new_observation=f.lane_change.observation_stamp>lc_observation_;
+  if(f.lane_change.observation_stamp<lc_observation_||
+     f.lane_change.observation_stamp-lc_observation_>network->source_max_age||
+     lc_leader_!=lead.id||lc_epoch_!=f.lane_change.reference_epoch)lc_since_=-1;
+  if(!new_observation)return;
+  lc_observation_=f.lane_change.observation_stamp;lc_leader_=lead.id;lc_epoch_=f.lane_change.reference_epoch;
+  if(lc_since_<0)lc_since_=lc_observation_;
+  if(lc_observation_-lc_since_+1e-9<policy.confirmation_s)return;
+  lc_offer_=*selected;lc_direction_=direction;lc_active_=true;lc_committed_=false;
+  best=direction;
+  if(direction==BehaviorType::LEFT_CHANGE)c.score.left_change=c.score.follow+gain;
+  else c.score.right_change=c.score.follow+gain;
+  c.debug.flags["optional_highway_lane_change"]=true;
 }
 
 }  // namespace behavior_planner

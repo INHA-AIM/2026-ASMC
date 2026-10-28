@@ -1,4 +1,8 @@
 <launch>
+  <arg name="highway_merge" default="false"/>
+  <arg name="dashboard" default="true"/>
+  <arg name="dashboard_port" default="8088"/>
+  <arg name="open_dashboard" default="false"/>
   <!-- Integrated planner, input adapters and controller. Bridges and asmc_lidar
        remain separately managed. This wrapper currently supports LiDAR input. -->
   <arg name="state_source" default="competition" doc="competition, gps_imu or external"/>
@@ -74,6 +78,7 @@
   </include>
 
   <include file="$(find asmc_planner)/launch/planner_v2.launch">
+    <arg name="highway_merge" value="$(arg highway_merge)"/>
     <arg name="state_topic" value="$(arg state_topic)"/>
     <arg name="objects_input_type" value="detected"/>
     <arg name="behavior_objects_topic" value="$(arg canonical_objects_topic)"/>
@@ -89,6 +94,7 @@
        (별도 YOLO 변환 어댑터 없음, 소비 cutoff는 bbox_conf_thres 0.7). -->
   <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
     <arg name="enable_control" value="true"/>
+    <!-- PR127 recovery is intentional; PR128 highway/dashboard ownership above stays unchanged. -->
     <arg name="return_to_entry_lane" value="true"/>
     <arg name="control_topic" value="/ctrl_cmd/jamming"/>
     <arg name="expected_config_sha256" value="$(arg expected_config_sha256)"/>
@@ -115,5 +121,11 @@
     <arg name="speed_ki" value="0.1"/>
     <arg name="max_accel_pedal" value="0.5"/>
     <arg name="max_brake_pedal" value="0.5"/>
+  </include>
+  <include if="$(arg dashboard)" file="$(find asmc_planner)/launch/dashboard.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
+    <arg name="dashboard_port" value="$(arg dashboard_port)"/>
+    <arg name="open_dashboard" value="$(arg open_dashboard)"/>
+    <arg name="dashboard_lidar_objects_topic" value="$(arg canonical_objects_topic)"/>
   </include>
 </launch>

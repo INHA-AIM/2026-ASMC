@@ -112,3 +112,7 @@ src/link_node/out/*
 # Generated GitHub Actions caches and isolated regression logs
 .ci-cache/
 .ci-results/
+
+# GPU-specific reproducible lane engines
+/diagnostics/camera_models/lane_engines/
+

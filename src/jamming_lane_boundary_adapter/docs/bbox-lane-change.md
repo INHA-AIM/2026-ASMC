@@ -2,8 +2,8 @@
 
 ## PR #127 통합·시험 경계 — 2026-10-28
 
-- `CameraBBoxLaneResult`에 `contact_x/contact_y_min/contact_y_max` 배열이 추가되어 ROS1 MD5가
-  바뀐다. classifier와 follower 및 외부 소비자는 같은 checkout에서 함께 재빌드한다.
+- `CameraBBoxLaneResult`의 `contact_x/contact_y_min/contact_y_max` 배열은 최신 main(PR #128)과
+  같은 계약을 유지한다. 그 이전 checkout은 MD5가 다르므로 producer·consumer를 함께 재빌드한다.
   실행 중인 다른 worktree의 `build/devel`을 재사용하거나 덮어쓰지 않는다.
 - LOCAL 실험 제어기와 이 통합 launch를 같은 master에서 동시에 제어 출력자로 띄우지 않는다.
   먼저 별도 ROS master에서 합성 입력으로 검사한다. 실제 시뮬 시험은 기존 제어 생산자를
@@ -18,6 +18,10 @@
   standalone의 creep 기본값 0 및 clearance 기본값과 통합 launch override를 구분한다.
 - `shadow_zone_start_m`의 30m 전진은 planner 전환 정책이며 HD맵의 공식 미션 경계나
   geometry를 변경한 것이 아니다. NORMAL→JAMMING→복귀와 LiDAR pause/resume을 함께 확인한다.
+
+2026-10-27: PR #128에서 1024의 접지점·5개 주행선·속도/IMU 유지 경로를 통합했다.
+PR #127은 그 위에 GPS 판정·복귀·LiDAR 기억·creep 개선을 적용한다. 양서준의 고주로/대시보드
+연결과 `/Ego_topic/velocity.x` 종방향 속도 계약은 유지한다.
 
 2026-10-26: 공용 카메라 결과를 기존 frame bridge가 직접 소비한다. 구 Main CPU 변환과
 `camera_bbox_detector.launch`는 제거했고 Main/Msg가 필요 없다. cutoff0.7과 판정/주행 계산은 유지하며

@@ -84,11 +84,27 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
         // 역방향으로 움직이는 객체만 거부한다 - 마주 오는 차량을 추종하면
         // gap이 음수로 발산한다.
         const bool same_direction = object_s_dot >= 0.0;
-        const bool same_lane = std::fabs(object_d) <= lane_width_ * 0.5;
+        const bool already_bound=execution_->follow.active&&
+            execution_->follow.leader_id==target_object_id;
+        bool same_lane = std::fabs(object_d) <= lane_width_ * 0.5;
+        if(!same_lane&&already_bound&&it->geometry_valid) {
+            // Retain an existing target while its physical OBB still occupies
+            // our lane. A two-centimetre center crossing is not a disappeared
+            // leader. Acquisition remains the original center-based contract.
+            const auto reference=Interpolate(ref_,object_s);
+            double left=INFINITY,right=-INFINITY;
+            for(const auto& corner:it->corners) {
+                const double lateral=-(corner.x-reference.x)*std::sin(reference.theta)+
+                    (corner.y-reference.y)*std::cos(reference.theta);
+                left=std::min(left,lateral);right=std::max(right,lateral);
+            }
+            same_lane=left<=lane_width_*.5&&right>=-lane_width_*.5;
+        }
         const bool in_range = gap > 0.0 && gap <= search_limit;
 
         if (same_direction && same_lane && in_range) {
             context.recent_binding = false;
+            context.release_pending=false;context.release_since=-1;
             execution_.observeFollowTarget(target_object_id);
             context.leader_s = ego_s + gap;
             context.leader_d = object_d;
@@ -98,11 +114,30 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
             return FollowTargetStatus::VALID;
         }
 
+        if(already_bound&&same_direction&&in_range&&!same_lane) {
+            if(context.release_since<0)context.release_since=object_motion_time_;
+            if(object_motion_time_-context.release_since<=
+               following_cfg_.dropout_grace_cycles*replanning_period_s_) {
+                context.release_pending=true;
+                return FollowTargetStatus::RELEASED;
+            }
+        }
+
         // 관측되었지만 쓸 수 없는 상태다. dropout이 아니므로 유예를 주지
         // 않는다 - 예측으로 메꿀 대상이 아니라 조건 자체가 틀렸다
         // (계약 8.2절).
         context = FollowingContext{};
         execution_.resetFollow();
+        return FollowTargetStatus::LOST;
+    }
+
+    // A departed target can also miss one frame during the Behavior handoff.
+    // Do not re-enter ordinary FOLLOW acceleration from that stale binding.
+    if(context.release_pending) {
+        if(object_motion_time_-context.release_since<=
+           following_cfg_.dropout_grace_cycles*replanning_period_s_)
+            return FollowTargetStatus::RELEASED;
+        context=FollowingContext{};execution_.resetFollow();
         return FollowTargetStatus::LOST;
     }
 
@@ -169,6 +204,17 @@ bool FrenetPlanner::FollowProcess(
     PlannerCommand cmd = external_command;
     const FollowTargetStatus status = ResolveExternalFollowTarget(
         s, cmd.target_object_id, obstacles, v2_following_);
+    if(status==FollowTargetStatus::RELEASED) {
+        // This is maintenance under the outstanding FOLLOW request, not a new
+        // behavior selection. Do not acquire another leader or accelerate into
+        // a vacated gap. Behavior owns the eventual KEEP/FOLLOW command.
+        cmd.mode=LANE_KEEPING;cmd.has_max_speed=true;
+        cmd.max_speed=std::min(resolved_target_speed,std::max(0.0,ego.v));
+        const bool ok=ExecuteManeuverPipeline(ego,start,s,d,s_dot,s_ddot,d_dot,d_ddot,
+            obstacles,predicted_obstacles,cmd.max_speed,cmd,out_path);
+        last_mode_=FOLLOWING;
+        return ok;
+    }
     if (status == FollowTargetStatus::LOST) {
         // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
         // 행동은 FSM이 새 command_id로 결정한다(계약 12.5절 D5).

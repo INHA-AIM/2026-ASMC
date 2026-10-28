@@ -14,6 +14,7 @@
 
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/StoppingLateralGeometry.hpp"
+#include "Frenet/Generator/BrakingProfile.hpp"
 
 #include <algorithm>
 #include <array>
@@ -32,39 +33,24 @@ bool FrenetPlanner::PlanCollisionBrakingPath(
     const CartesianState& ego, double s, double d,
     const std::vector<TrackedObject>& obstacles, CartesianPath& out_path,
     double service_decel, double target_d, double lateral_distance) const {
+    return PlanCollisionBrakingPath(ego,s,d,obstacles,out_path,service_decel,
+                                   target_d,lateral_distance,false);
+}
+
+bool FrenetPlanner::PlanCollisionBrakingPath(
+    const CartesianState& ego, double s, double d,
+    const std::vector<TrackedObject>& obstacles, CartesianPath& out_path,
+    double service_decel, double target_d, double lateral_distance,
+    bool recover_initial_state) const {
     const double dt = path_cfg_.dt;
     const double accel = std::max(limits_.max_longitudinal_accel, service_decel);
     const double jerk = limits_.max_longitudinal_jerk;
-    if (!std::isfinite(ego.v) || !std::isfinite(ego.a) || ego.v <= .1 ||
-        accel <= 0 || jerk <= 0 || dt <= 0 || std::fabs(ego.a) > accel)
-        return false;
-
-    // Exact three-stage jerk-limited stop: ramp to negative acceleration,
-    // hold it if needed, then ramp back to zero at zero velocity.
-    const double peak = std::min(accel, std::sqrt(jerk*ego.v + .5*ego.a*ego.a));
-    const double down = (ego.a + peak)/jerk;
-    const double v1 = ego.v + (ego.a*ego.a - peak*peak)/(2*jerk);
-    const double raw_hold = (v1 - peak*peak/(2*jerk))/peak;
-    if (down < 0 || raw_hold < -1e-8) return false;
-    const double hold = std::max(0.0, raw_hold);
-    const double up = peak/jerk;
-    const double end = down + hold + up;
-    const double d1 = ego.v*down + .5*ego.a*down*down - jerk*down*down*down/6;
-    const double d2 = d1 + v1*hold - .5*peak*hold*hold;
-    const double v2 = v1 - peak*hold;
-    const double stop_distance = d2 + v2*up - .5*peak*up*up + jerk*up*up*up/6;
-    const auto motion = [&](double t) -> std::array<double,3> {
-        if (t < down)
-            return {ego.v*t + .5*ego.a*t*t - jerk*t*t*t/6,
-                    ego.v + ego.a*t - .5*jerk*t*t, ego.a - jerk*t};
-        t -= down;
-        if (t < hold) return {d1 + v1*t - .5*peak*t*t, v1 - peak*t, -peak};
-        t -= hold;
-        if (t < up)
-            return {d2 + v2*t - .5*peak*t*t + jerk*t*t*t/6,
-                    v2 - peak*t + .5*jerk*t*t, -peak + jerk*t};
-        return {stop_distance, 0.0, 0.0};
-    };
+    if (dt <= 0 || !std::isfinite(ego.kappa)) return false;
+    const bool lateral_recovery=recover_initial_state &&
+        ego.v*ego.v*std::fabs(ego.kappa)>limits_.max_lateral_accel;
+    if (recover_initial_state && !lateral_recovery && ego.a>=-accel) return false;
+    const auto brake=MakeBrakingProfile(ego.v,ego.a,accel,jerk,recover_initial_state);
+    if (!brake.valid) return false;
 
     const auto rp0 = Interpolate(ref_, s);
     const double slope = (1-rp0.kappa*d)*
@@ -74,7 +60,7 @@ bool FrenetPlanner::PlanCollisionBrakingPath(
     const double settle = lateral_distance > 0.0 ? lateral_distance
         : std::max(10.0, std::min(25.0, ego.v*2.5));
     double initial_second = 0.0;
-    if (service_decel > 0.0) {
+    if (service_decel > 0.0 || recover_initial_state) {
         double ps, pv, pa, pd, dp, dpp;
         CartesianToFrenet(ref_, ego, ps, pv, pa, pd, dp, dpp,
                          &s, ref_config_.ego_projection_search_window);
@@ -83,13 +69,13 @@ bool FrenetPlanner::PlanCollisionBrakingPath(
     if (!std::isfinite(initial_second)) return false;
     const auto lateral = MakeQuintic(d, slope, initial_second,
                                      target_d, 0, 0, settle);
-    const double duration = std::max(end+dt, collision_cfg_.reactive_lookahead);
+    const double duration = std::max(brake.duration+dt, collision_cfg_.reactive_lookahead);
     if (!std::isfinite(duration) || duration/dt > 1000) return false;
     const int count = static_cast<int>(std::ceil(duration/dt));
     CartesianPath path;
     double u = 0, previous_distance = 0, previous_metric = 1;
     for (int n=0; n<=count; ++n) {
-        const auto state = motion(n*dt);
+        const auto state = brake.sample(n*dt);
         if (n) u += (state[0]-previous_distance)/previous_metric;
         previous_distance = state[0];
         const auto rp = Interpolate(ref_, s+u);
@@ -101,12 +87,30 @@ bool FrenetPlanner::PlanCollisionBrakingPath(
         previous_metric = metric;
         const double v = std::max(0.0,state[1]), a = state[2];
         const auto point = FrenetToCartesian(rp,s+u,v/metric,a/metric,offset,prime,second);
-        if (!std::isfinite(point.kappa) || std::fabs(point.kappa)>limits_.max_curvature ||
-            v*v*std::fabs(point.kappa)>limits_.max_lateral_accel) return false;
+        if (!std::isfinite(point.kappa) || std::fabs(point.kappa)>limits_.max_curvature)
+            return false;
+        const double lateral=v*v*std::fabs(point.kappa);
+        if(!lateral_recovery&&lateral>limits_.max_lateral_accel) return false;
+        // An initially exceeded lateral planning bound cannot be repaired by
+        // replacing the first sample. Only this full-braking corridor fallback
+        // may carry that unavoidable transient. Recovery is certified against
+        // the complete corridor curvature below, not one locally flatter point.
         path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
         path.kappa.push_back(point.kappa);path.v.push_back(v);path.a.push_back(a);
     }
     path.x[0]=ego.x;path.y[0]=ego.y;path.yaw[0]=ego.yaw;path.kappa[0]=ego.kappa;
+    if(lateral_recovery) {
+        double maximum_curvature=0;
+        for(double k:path.kappa)maximum_curvature=std::max(maximum_curvature,std::abs(k));
+        const double recovered_speed=std::sqrt(limits_.max_lateral_accel/maximum_curvature);
+        bool recovered=false;
+        for(std::size_t i=0;i<path.v.size();++i) {
+            if(path.v[i]<=recovered_speed&&path.a[i]<=0)recovered=true;
+            if(recovered&&path.v[i]*path.v[i]*std::abs(path.kappa[i])>
+                limits_.max_lateral_accel+1e-9)return false;
+        }
+        if(!recovered)return false;
+    }
     const bool road_clear =
         avoid_road_map_.EvaluateRecoveryPath(path,vehicle_shape_,dt).drivable;
     const auto collision = EvaluateCartesianTrajectorySafety(
@@ -363,7 +367,8 @@ void FrenetPlanner::AppendExternalStopSpatialCandidates(
         longitudinal = request.stop.spatial_profile
             ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
                 request.stop.cruise_speed, request.stop.comfortable_decel,
-                generator, limits, request.stop.acceleration_limit,request.stop.braking_only)
+                generator, limits, request.stop.acceleration_limit,
+                SpatialStopOptions{request.stop.braking_only,request.stop.allow_partial_horizons})
             : GenerateStoppingCandidates(start, request.stop.stop_s, generator);
     } else {
         longitudinal = GenerateVelocityKeepingCandidates(start, request.target_speed, generator);

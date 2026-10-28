@@ -15,6 +15,8 @@ ProductionRuntime::ProductionRuntime()
       handle("", behavior_queue_), handle("/behavior_planner", behavior_queue_),
       [this](const RequestedIntent& request) { planning_->receiveIntent(request); },
       planning_->dynamicEnvironment()));
+  behavior_->setHighwayRoute(planning_->highwayRoute());
+  behavior_->setHighwayReferenceSource([this]{return planning_->highwayReferenceStatus();});
   mode_source_.reset(new GpsModeSource(handle("", planning_queue_)));
 }
 ProductionRuntime::~ProductionRuntime() {

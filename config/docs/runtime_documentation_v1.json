@@ -135,6 +135,11 @@
       "title": "Scenario planning composition",
       "path": "tools/scen_runner/launch/planning.launch",
       "internal_args": []
+    },
+    {
+      "title": "Controlled reference handover trial",
+      "path": "src/asmc_planner/launch/reference_handover_trial.launch",
+      "internal_args": []
     }
   ],
   "command_guides": [
@@ -155,6 +160,7 @@
     "src/asmc_lidar/docs/pipeline.md",
     "src/asmc_camera/docs/bdd-pretrained-experiment.md",
     "src/asmc_lidar/docs/web-monitor.md",
-    "src/asmc_lidar/docs/planning-runtime.md"
+    "src/asmc_lidar/docs/planning-runtime.md",
+    "src/asmc_planner/docs/main-integration-20261026.md"
   ]
 }

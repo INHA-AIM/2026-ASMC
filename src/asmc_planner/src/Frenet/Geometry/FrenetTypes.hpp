@@ -4,6 +4,7 @@
 #define PLANNER_COMMON_FRENET_TYPES_HPP
 
 #include <vector>
+#include "Frenet/Math/Polynomial.hpp"
 
 // =========================================================
 // Ego 차량의 현재 Frenet 상태
@@ -28,6 +29,15 @@ enum class RejectionReason {
     CURVATURE,
     COLLISION,
     ROAD_BOUNDARY,
+};
+
+// Optional distance-native lateral geometry. A braking certificate follows the
+// SAME spatial curve as the executable prefix, including at zero speed.
+struct SpatialLateralProfile {
+    bool enabled = false;
+    double origin_s = 0.0;
+    double length = 0.0;
+    QuinticPolynomial polynomial{};
 };
 
 // =========================================================
@@ -78,6 +88,7 @@ struct FrenetPath {
     // 현재 pose가 이미 AVOID target의 확장 margin 안에 있어, 실제 OBB
     // 비충돌 + 이격 개선 규칙으로 margin을 빠져나간 후보인지 표시한다.
     bool margin_recovery_used = false;
+    SpatialLateralProfile spatial_lateral{};
 };
 
 #endif  // PLANNER_COMMON_FRENET_TYPES_HPP

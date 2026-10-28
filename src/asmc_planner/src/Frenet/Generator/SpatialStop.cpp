@@ -168,7 +168,9 @@ State Sample(const Profile& p,double time) {
 std::vector<FrenetPath> GenerateSpatialStoppingCandidates(
     const FrenetState& start,double stop_s,double cruise_speed,
     double comfortable_decel,const PathGeneratorConfig& cfg,
-    const KinematicLimits& limits, double acceleration_limit, bool braking_only) {
+    const KinematicLimits& limits, double acceleration_limit,
+    SpatialStopOptions options) {
+    const bool allow_partial_horizons=options.allow_partial_horizons;
     if(!std::isfinite(start.s) || !std::isfinite(start.s_d) ||
        !std::isfinite(start.s_dd) || !std::isfinite(stop_s) ||
        !std::isfinite(cruise_speed) || !std::isfinite(comfortable_decel) ||
@@ -191,16 +193,16 @@ std::vector<FrenetPath> GenerateSpatialStoppingCandidates(
         Profile profile;
         if(!BuildProfile({start.s,start.s_d,start.s_dd},stop_s+offset,
                          cruise_speed,comfortable,max_decel,jerk,
-                         acceleration_limit > 0 ? std::min(acceleration_limit,max_decel) : comfortable,
-                         profile,braking_only))continue;
+                         std::min(limits.max_forward_accel,
+                             acceleration_limit > 0 ? std::min(acceleration_limit,max_decel) : comfortable),profile,options.braking_only))continue;
         for(double horizon:SampleRange(cfg.time_horizon)) {
             if(horizon<=0)continue;
             // If the stop fits in the planning horizon, publish it through
             // zero speed. Otherwise use the full approach horizon, not a short
             // fragment that hides the upcoming stop from the controller.
-            if(profile.duration<=cfg.time_horizon.max+1e-9) {
+            if(!allow_partial_horizons && profile.duration<=cfg.time_horizon.max+1e-9) {
                 if(horizon+1e-9<profile.duration)continue;
-            } else if(horizon+1e-9<cfg.time_horizon.max)continue;
+            } else if(!allow_partial_horizons&&horizon+1e-9<cfg.time_horizon.max)continue;
             FrenetPath path{};
             path.valid=true;path.t=SampleTimes(horizon,cfg.dt);path.delta_s=offset;
             State previous=profile.initial;
@@ -219,4 +221,27 @@ std::vector<FrenetPath> GenerateSpatialStoppingCandidates(
         }
     }
     return paths;
+}
+
+FrenetPath GenerateBrakingContinuation(const FrenetState& start,double decel,
+    double jerk,double dt,double min_duration) {
+    FrenetPath path{};path.valid=false;
+    if(!std::isfinite(start.s)||!std::isfinite(start.s_d)||!std::isfinite(start.s_dd)||
+       !std::isfinite(decel)||!std::isfinite(jerk)||!std::isfinite(dt)||
+       !std::isfinite(min_duration)||start.s_d<0||decel<=0||jerk<=0||dt<=0||
+       std::fabs(start.s_dd)>decel+1e-8)return path;
+    auto profile=At({start.s,start.s_d,start.s_dd});
+    if(!Brake(profile,decel,jerk)||profile.duration>60)return path;
+    path.valid=true;
+    const double duration=std::max({dt,min_duration,std::ceil(profile.duration/dt)*dt});
+    path.t=SampleTimes(duration,dt);
+    State previous=profile.initial;
+    for(double t:path.t) {
+        const auto value=Sample(profile,t);
+        path.s.push_back(value.s);path.s_d.push_back(std::max(0.0,value.v));
+        path.s_dd.push_back(value.a);
+        path.s_ddd.push_back(t>0?(value.a-previous.a)/dt:0);
+        previous=value;
+    }
+    return path;
 }

@@ -648,7 +648,9 @@ void modeCallback(const std_msgs::UInt8::ConstPtr& message) {
 
 void egoCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& message) {
     if (!message) return;
-    const double speed = std::hypot(message->velocity.x, message->velocity.y);
+    // Integration PR128/PR127: CompetitionInfo supplies longitudinal x only.
+    // Keep the validated main contract; do not integrate absent/lateral y into odometry or pedal control.
+    const double speed = std::fabs(message->velocity.x);
     if (!std::isfinite(speed)) return;
     ego_speed.speed = speed;
     ego_speed.received_at = ros::SteadyTime::now();

@@ -242,6 +242,61 @@ int main() {
         Expect(!path.x.empty(), "FOLLOW produces a trajectory");
     }
 
+    // An established target crossing the center-only lane threshold must not
+    // terminally fail while its body is still in our lane. Once fully clear,
+    // only a checked, speed-capped continuation is allowed until Behavior's
+    // next command; a new off-lane target still cannot be acquired.
+    {
+        FrenetPlanner planner;if(!planner.Init(config))return 1;
+        auto leader=MakeVehicle(waypoints,15,kEgoS+40,8);
+        CartesianPath path;
+        planner.SetObjectObservationTime(100);
+        Expect(planner.Plan(ego,{leader},MakeFollowCommand(15),path),"release fixture binds the explicit leader");
+        auto shifted=[&](double d) {
+            auto moved=leader;double s=0,old_d=0,sd=0;
+            ProjectObjectToFrenet(planner.reference(),leader,s,old_d,sd,30);
+            const auto p=Interpolate(planner.reference(),s);
+            const double dx=-(d-old_d)*std::sin(p.theta),dy=(d-old_d)*std::cos(p.theta);
+            moved.x+=dx;moved.y+=dy;
+            for(auto& corner:moved.corners){corner.x+=dx;corner.y+=dy;}
+            return moved;
+        };
+        planner.SetObjectObservationTime(100.1);
+        const auto edge=shifted(1.80);
+        Expect(planner.Plan(ego,{edge},MakeFollowCommand(15),path)&&
+               !planner.follow_release_pending()&&planner.active_leader_id()==15,
+               "center crossing retains a leader whose physical OBB still occupies our lane");
+        planner.SetObjectObservationTime(100.2);
+        const auto departed=shifted(3.2);
+        Expect(planner.Plan(ego,{departed},MakeFollowCommand(15),path)&&
+               planner.follow_release_pending()&&planner.last_mode()==FOLLOWING,
+               "visible departed leader uses checked maintenance without selecting a new behavior");
+        Expect(!path.v.empty()&&*std::max_element(path.v.begin(),path.v.end())<=ego.v+.05,
+               "release maintenance cannot accelerate into the vacated gap");
+        planner.SetObjectObservationTime(100.225);
+        Expect(planner.Plan(ego,{},MakeFollowCommand(15),path)&&planner.follow_release_pending()&&
+               !path.v.empty()&&*std::max_element(path.v.begin(),path.v.end())<=ego.v+.05,
+               "one missing frame during handoff cannot restore ordinary FOLLOW acceleration");
+        planner.SetObjectObservationTime(100.25);
+        const auto blocker=MakeVehicle(waypoints,99,kEgoS,0);
+        Expect(!planner.Plan(ego,{departed,blocker},MakeFollowCommand(15),path)&&
+               planner.last_failure_reason()==Reason::COLLISION_BLOCKED,
+               "release handoff never overrides an actual physical blocker");
+        planner.SetObjectObservationTime(100.3);
+        Expect(planner.Plan(ego,{leader},MakeFollowCommand(15),path)&&
+               !planner.follow_release_pending(),"same command can recover before a Behavior handoff");
+        planner.SetObjectObservationTime(100.4);
+        planner.Plan(ego,{departed},MakeFollowCommand(15),path);
+        planner.SetObjectObservationTime(101);
+        Expect(!planner.Plan(ego,{departed},MakeFollowCommand(15),path)&&
+               planner.last_failure_reason()==Reason::TARGET_OBJECT_LOST,
+               "handoff maintenance is bounded if Behavior never releases the request");
+        FrenetPlanner fresh;if(!fresh.Init(config))return 1;
+        Expect(!fresh.Plan(ego,{departed},MakeFollowCommand(15),path)&&
+               fresh.last_failure_reason()==Reason::TARGET_OBJECT_LOST,
+               "a newly designated off-lane object still fails acquisition");
+    }
+
     // --- 핵심: 더 가까운 차량이 있어도 지정 대상을 유지한다 ---------------
     // 가장 가까운 차량을 자동으로 고르는 정책을 타면 active_leader_id가
     // 17이 되어 FSM은 15를 추종 중이라고 오인한다.

@@ -111,7 +111,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // Pipeline/TrajectoryPipeline 분리(R3 1/4단계)를 위한 선행 작업 - 이
     // pipeline이 참조하는 config를 번들 하나로 묶어 그 필드를 통해서만
     // 읽는다. 값/동작은 기존과 완전히 동일하다(순수 구조 이동).
-    const auto base = MakePipelineConfigBundle();
+    const CurveSpeedConfig curve_policy=CurveSpeedFor(command);
+    const auto base = MakePipelineConfigBundle(curve_policy);
     auto scoped_path=base.path;
     if(command.mode==LANE_KEEPING && !command.recovery_clear &&
        std::isfinite(ego.v) && ego.v<7.0) {
@@ -267,6 +268,9 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const bool external_keep_candidates = external_command->mode == LANE_KEEPING;
     KinematicLimits maneuver_limits = ResolveKeepCruiseLimits(
         *external_command, cfg.keep_cruise, cfg.limits);
+    if(HighwayCruiseFor(command))
+        maneuver_limits.max_forward_accel=std::min(maneuver_limits.max_forward_accel,
+            highway_merge_cfg_.forward_accel_mps2);
     const CostWeights maneuver_costs = ResolveKeepCruiseCosts(
         *external_command, cfg.keep_cruise, cfg.cost_weights);
     if (external_stop_mode) {
@@ -310,6 +314,16 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const bool is_stop_approach = external_stop_mode && cmd.mode == LANE_KEEPING;
     const bool is_stop_braking = external_stop_mode && cmd.mode == STOP;
     TrajectoryRequest request;
+    request.collision.reuse_object_predictions = HighwayCruiseFor(command);
+    // Maneuvers may delegate an internal KEEP during handoff. They retain
+    // their existing policy; a real new KEEP resets these execution contexts
+    // before reaching this pipeline.
+    if(is_true_external_keep&&!execution_->merge.committed&&!execution_->follow.active)
+        request.collision.stopping={maneuver_limits.max_longitudinal_accel,
+            maneuver_limits.max_longitudinal_jerk,maneuver_limits.max_curvature,
+            maneuver_limits.max_lateral_accel,true};
+    if (!external_stop_mode && (is_true_external_keep || is_follow))
+        request.collision.following_lane_half_width = cfg.lane_width * 0.5;
     request.lateral.target_d =
         cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0;
     // legacy ResolveManeuver의 lateral tolerance 규칙(CandidateCombiner.cpp
@@ -742,6 +756,21 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             return PlanExternalStopBrakingFallback(ego, s, d, stop_distance,
                 lateral_cost_target, planning_collision_obstacles, out_path,
                 spatial_stop);
+        }
+
+        // Both directions of highway reference handover have the same achieved
+        // state. Recover it only after nominal planning failed, using the same
+        // checked corridor brake as MERGE approach. Healthy plans are retained.
+        if (HighwayCruiseFor(command) &&
+            PlanCollisionBrakingPath(ego,s,d,predicted_obstacles,out_path,
+                                     0.0,d,0.0,true)) {
+            speed_profiler_.Reset();
+            last_profiled_acceleration_=0.0;
+            last_target_speed_=0.0;
+            last_failure_reason_=PlanFailureReason::NONE;
+            last_candidate_paths_.push_back(out_path);
+            last_candidate_validity_.push_back(true);
+            return true;
         }
 
         // 외부 KEEP의 low-speed boundary candidate starvation

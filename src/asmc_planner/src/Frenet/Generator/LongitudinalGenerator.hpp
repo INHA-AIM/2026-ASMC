@@ -49,6 +49,15 @@ std::vector<FrenetPath> GenerateFollowingCandidates(const FrenetState& start,
                                                      double gap_gain,
                                                      const PathGeneratorConfig& cfg);
 
+// Only after all exact-gap candidates fail kinematics: recover a short gap
+// with the existing jerk-limited velocity integrator instead of requiring
+// the complete desired time gap and leader velocity at one finite endpoint.
+// Desired gap is retained as terminal cost; common safety filters still apply.
+std::vector<FrenetPath> GenerateFollowingRecoveryCandidates(const FrenetState& start,
+    double leader_s,double leader_speed,double leader_accel,double time_gap,
+    double min_gap,double cruise_target_speed,double gap_gain,
+    const PathGeneratorConfig& cfg,const KinematicLimits& limits);
+
 // =========================================================
 // [Sec.V-A] Stopping — 정지선/정지점 s_stop에서 정지
 //

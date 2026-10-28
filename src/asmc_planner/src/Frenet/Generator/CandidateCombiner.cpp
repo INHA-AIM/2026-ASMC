@@ -6,6 +6,7 @@
 #include "Frenet/Generator/LateralGenerator.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
 #include "Frenet/Generator/SpatialStop.hpp"
+#include "Frenet/Generator/SamplingUtils.hpp"
 
 namespace {
 // Keep the normal search unchanged. Only when every longitudinal candidate
@@ -25,11 +26,17 @@ std::vector<FrenetPath> FeasibleFollow(
         return std::any_of(paths.begin(),paths.end(),[](const auto& p){return p.valid;});
     };
     auto paths=generate(target_speed);
-    if(usable(paths)||target_speed<=start.s_d)return paths;
-    for(double fraction:{.75,.5,.25}) {
-        auto reduced=generate(start.s_d+fraction*(target_speed-start.s_d));
-        if(usable(reduced))return reduced;
+    if(usable(paths))return paths;
+    if(target_speed>start.s_d) {
+        for(double fraction:{.75,.5,.25}) {
+            auto reduced=generate(start.s_d+fraction*(target_speed-start.s_d));
+            if(usable(reduced))return reduced;
+        }
     }
+    auto recovery=GenerateFollowingRecoveryCandidates(start,leader_s,leader_speed,
+        leader_accel,time_gap,min_gap,target_speed,gap_gain,cfg,limits);
+    FilterLongitudinalByKinematicLimits(recovery,limits);
+    if(usable(recovery))return recovery;
     return paths;
 }
 }
@@ -116,7 +123,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     lateral_cfg.lateral_d1.max = d_offset + lateral_tolerance;
 
     std::vector<FrenetPath> lateral_set =
-        GenerateLateralCandidates(start, lateral_cfg, limits.low_speed_fallback_v);
+        GenerateLateralCandidates(start,lateral_cfg,limits.low_speed_fallback_v);
     FilterLateralByAcceleration(lateral_set, limits);
     if (stats) {
         stats->lateral_total = lateral_set.size();
@@ -289,8 +296,9 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
     lateral_cfg.lateral_d1.max =
         request.lateral.target_d + request.lateral.search_tolerance;
 
-    std::vector<FrenetPath> lateral_set =
-        GenerateLateralCandidates(start, lateral_cfg, limits.low_speed_fallback_v);
+    std::vector<FrenetPath> lateral_set;
+    if(request.lateral.settle_distance<=0)
+        lateral_set=GenerateLateralCandidates(start,lateral_cfg,limits.low_speed_fallback_v);
     FilterLateralByAcceleration(lateral_set, limits);
     if (stats) {
         stats->lateral_total = lateral_set.size();
@@ -319,7 +327,11 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
             longitudinal_set = request.stop.spatial_profile
                 ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
                     request.stop.cruise_speed, request.stop.comfortable_decel,
-                    stop_delta_cfg, limits, request.stop.acceleration_limit,request.stop.braking_only)
+                    stop_delta_cfg, limits,
+                    request.stop.allow_partial_horizons?
+                        request.stop.acceleration_limit*limits.boundary_condition_accel_fraction:
+                        request.stop.acceleration_limit,
+                    SpatialStopOptions{request.stop.braking_only,request.stop.allow_partial_horizons})
                 : GenerateStoppingCandidates(start, request.stop.stop_s, stop_delta_cfg);
             break;
         }
@@ -340,9 +352,33 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
     }
 
     // 3. 결합 + 사후 곡률 필터링
-    std::vector<FrenetPath> combined = CombineLateralLongitudinal(lateral_set, longitudinal_set);
+    std::vector<FrenetPath> combined;
+    if(request.lateral.settle_distance>0) {
+        for(double target:SampleRange(lateral_cfg.lateral_d1)) {
+            const SpatialLateralProfile geometry{true,start.s,request.lateral.settle_distance,
+                MakeQuintic(start.d,request.lateral.initial_slope,request.lateral.initial_second,
+                    target,0,0,request.lateral.settle_distance)};
+            for(const auto& motion:longitudinal_set)
+                combined.push_back(SampleSpatialLateralMotion(motion,geometry));
+        }
+        FilterLateralByAcceleration(combined,limits);
+    } else combined=CombineLateralLongitudinal(lateral_set,longitudinal_set);
     if (stats) stats->combined_total = combined.size();
     FilterByCurvature(combined, ref, limits, geometry_mode);
+    if(request.lateral.settle_distance>0) {
+        FilterByCartesianLateralAcceleration(combined,ref,limits.max_lateral_accel);
+        for(auto& path:combined) {
+            if(!path.valid)continue;
+            const auto cart=ConvertToCartesianPath(path,ref);
+            if(std::any_of(cart.a.begin(),cart.a.end(),[&](double a){
+                const double forward_limit=request.stop.acceleration_limit>0?
+                    request.stop.acceleration_limit:limits.max_longitudinal_accel;
+                return !std::isfinite(a)||a < -limits.max_longitudinal_accel-1e-6||
+                    a>forward_limit+1e-6;})) {
+                path.valid=false;path.rejection_reason=RejectionReason::CURVATURE;
+            }
+        }
+    }
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_curvature++;
     }
@@ -354,7 +390,10 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
     if (!obstacles.empty()) {
         FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
                           request.collision.coast_exempt_object_id,
-                          request.collision.margin_recovery_object_id);
+                          request.collision.margin_recovery_object_id,
+                          request.collision.following_lane_half_width,
+                          request.collision.stopping.decel>0?&request.collision.stopping:nullptr,
+                          request.collision.reuse_object_predictions);
     }
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_collision++;

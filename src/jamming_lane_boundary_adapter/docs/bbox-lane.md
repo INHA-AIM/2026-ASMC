@@ -8,7 +8,9 @@
 새 IMU 조회나 픽셀 왜곡을 추가하지 않는다. SHA·보정 ID·영상 원본 header가 모두 맞아야 한다.
 [판제 인수 체크리스트](../../../docs/handoffs/camera-to-planning.md#71-판제-담당의-별도-인수-작업)의 폐루프 시험은 별도다.
 
-거리 추정 없이 기존 전방 YOLO BBOX와 camera boundary family를 사용한다.
+기존 전방 YOLO BBOX와 camera boundary family를 사용한다. 2026-10-27부터는 1024의
+동일 영상 시점 평면 투영으로 `contact_x/contact_y_min/contact_y_max`도 출력한다.
+이 값은 BBOX 하단 접지점 추정이며 독립 거리 센서의 정답이 아니다.
 `src/camera_bbox_lane_node.cpp`에 인자 기본값·주석·main·판정 함수를 둔다.
 이 노드는 관측/표시 전용이다. 자동 차선변경과 `/ctrl_cmd` 발행은 하지 않는다.
 기존 LiDAR, YOLO, 카메라 차선 모듈의 소스는 수정하지 않는다.

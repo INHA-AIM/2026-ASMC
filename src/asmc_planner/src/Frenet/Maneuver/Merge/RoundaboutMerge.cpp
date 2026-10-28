@@ -62,6 +62,21 @@ bool RoundaboutMergeZone::Overlaps(const CartesianState& pose,
     for(const auto& area:conflict_areas)if(Overlap(footprint,area))return true;
     return false;
 }
+bool RoundaboutMergeZone::SupportsCirculatingObservation(double x,double y) const {
+    if(!valid||!std::isfinite(x)||!std::isfinite(y))return false;
+    // The same two-metre observation guard as the UNKNOWN confidence query.
+    // This identifies traffic evidence only; it grants no ego road clearance.
+    for(const auto& area:circulating_areas) {
+        if(Inside({x,y},area))return true;
+        for(std::size_t i=0;i<area.size();++i) {
+            const auto a=area[i],b=area[(i+1)%area.size()];
+            const double dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy;
+            const double u=length2>0?std::clamp(((x-a.x)*dx+(y-a.y)*dy)/length2,0.0,1.0):0;
+            if(std::hypot(x-a.x-u*dx,y-a.y-u*dy)<=2)return true;
+        }
+    }
+    return false;
+}
 bool RoundaboutMergeZone::Load(const std::string& areas_path,
     const std::string& lines_path,const RefLine& ref,const VehicleShape& shape,
     const RoundaboutMergeConfig& config,double margin,std::string& error) {
@@ -96,6 +111,33 @@ bool RoundaboutMergeZone::Load(const std::string& areas_path,
                 if(match){conflict_areas.push_back(ReadPolygon(area["polygon"]));found=true;}
             }
             if(!found)throw std::runtime_error("missing conflict link: "+id);
+        }
+        // Read the SAME compact product as all ego modes. An ego exit link
+        // (A151) is not the circulating actor's successor. Do not invent an
+        // actor route by following the route-compact successor list.
+        for(const auto& lane:areas["lanes"]) {
+            if(lane["drivable_group"].as<std::string>("")!="roundabout_maneuver")continue;
+            circulating_areas.push_back(ReadPolygon(lane["polygon"]));
+            auto line=std::make_shared<RefLine>();
+            for(const auto& p:lane["centerline"]) {
+                const double x=p[0].as<double>(),y=p[1].as<double>();
+                if(!std::isfinite(x)||!std::isfinite(y))throw std::runtime_error("invalid circulating centerline");
+                const double ds=line->points.empty()?0:std::hypot(x-line->points.back().x,y-line->points.back().y);
+                if(!line->points.empty()&&ds<1e-5)continue;
+                line->length+=ds;line->points.push_back({x,y,line->length,0,0,0});
+            }
+            if(line->points.size()<3)continue;
+            for(size_t i=0;i<line->points.size();++i) {
+                const auto& a=line->points[i?i-1:0];
+                const auto& b=line->points[std::min(i+1,line->points.size()-1)];
+                line->points[i].theta=std::atan2(b.y-a.y,b.x-a.x);
+            }
+            for(size_t i=0;i<line->points.size();++i) {
+                const auto& a=line->points[i?i-1:0];
+                const auto& b=line->points[std::min(i+1,line->points.size()-1)];
+                line->points[i].kappa=std::remainder(b.theta-a.theta,2*M_PI)/(b.s-a.s);
+            }
+            circulating_references.push_back(std::move(line));
         }
         if(!found_source||!found_target||!found_stop||scan_end<=stop_s)
             throw std::runtime_error("roundabout topology/stopline is missing");

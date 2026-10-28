@@ -7,6 +7,7 @@
 #include <pcl/PointIndices.h>
 
 #include <vector>
+#include <limits>
 
 namespace asmc {
 namespace lidar {
@@ -23,9 +24,12 @@ struct ClusteringConfig {
   float32 f32_AdaptiveFarRange = 50.f;
   float32 f32_AdaptiveNearEps = 0.55f;
   float32 f32_AdaptiveFarEps = 0.85f;
+  // Missing rear settings inherit the configured front profile.
+  float32 f32_AdaptiveRearNearEps = std::numeric_limits<float32>::quiet_NaN();
+  float32 f32_AdaptiveRearFarEps = std::numeric_limits<float32>::quiet_NaN();
 };
 
-float AdaptiveClusterTolerance(float horizontal_range_m, const ClusteringConfig& config);
+float AdaptiveClusterTolerance(float horizontal_range_m, const ClusteringConfig& config, float local_x = 0.f);
 
 // Main Clustering(). input is the non-ground leveled cloud. Like Main it MUTATES
 // input: a single (0,0,0) point is pushed when input is empty or no cluster is

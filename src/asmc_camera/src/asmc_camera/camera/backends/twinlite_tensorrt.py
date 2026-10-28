@@ -50,6 +50,11 @@ class TwinLiteTensorRTBackend(SemanticBackend):
         if self._device.type != 'cuda' or not torch.cuda.is_available():
             raise RuntimeError('TwinLite TensorRT requires CUDA')
         shapes = {v: tuple(s) for v, s in (input_hw_by_view or {}).items()}
+        from .engine_selection import select_engine_manifest
+        engine_manifest = select_engine_manifest(engine_manifest,
+            torch.cuda.get_device_name(self._device), trt.__version__)
+        self.engine_manifest_path = str(engine_manifest)
+        print('[TwinLite] selected TensorRT manifest: {}'.format(engine_manifest), flush=True)
         manifest, directory = load_manifest(engine_manifest, checkpoint, input_hw, shapes, model_config)
         if weights not in ('auto', manifest['weights']):
             raise ValueError('requested weights differ from exported weights')
@@ -151,3 +156,4 @@ class TwinLiteTensorRTBackend(SemanticBackend):
         return {'drivable': host['drivable'].numpy().copy(),
                 'road_marking': CategoricalOutput(host['class_ids'].numpy().copy(),
                                                   host['confidence'].numpy().copy())}
+

@@ -26,8 +26,8 @@ void PlanningPort::publishDebugMarkers(
 
     {
         int candidate_id = 0;
-        const auto& candidate_paths = planner_.last_candidate_paths();
-        const auto& candidate_validity = planner_.last_candidate_validity();
+        const auto& candidate_paths = planner().last_candidate_paths();
+        const auto& candidate_validity = planner().last_candidate_validity();
         for (std::size_t candidate_index = 0;
              candidate_index < candidate_paths.size(); ++candidate_index) {
             const CartesianPath& candidate = candidate_paths[candidate_index];

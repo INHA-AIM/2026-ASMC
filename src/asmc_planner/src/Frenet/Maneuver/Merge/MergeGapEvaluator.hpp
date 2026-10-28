@@ -14,10 +14,8 @@
 // 만 답한다 - MERGE를 자동 활성화할지, 언제 COMMIT할지는 이 파일의 책임이
 // 아니다(FSM이 지정한 MERGE 실행을 다루는 별도 호출자의 책임).
 //
-// R6-F3: 파일명을 Merge.hpp -> MergeGapEvaluator.hpp로 바꿨다(순수 rename,
-// 로직/시그니처 변경 없음) - 이 파일의 실제 역할이 gap/TTC 계산뿐이라는
-// 것을 이름에 그대로 반영한다. MERGE production 실행(활성화/COMMIT)은
-// 여전히 이 파일의 책임이 아니고, 여전히 어디에도 구현되어 있지 않다.
+// 회전교차로의 기존 gap API는 유지한다. 고주로는 HighwayMerge.hpp의
+// 실제 후보 평가 API를 사용한다. 활성화와 COMMIT은 Behavior/Execution이 소유한다.
 
 struct RoundaboutGap {
     bool safe = false;
@@ -40,17 +38,6 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
                                 double max_ego_accel,
                                 const std::unordered_map<int, double>* yaw_rates = nullptr);
 
-// Global Path가 램프에서 본선으로 이어지는 고주로 합류용. 목표 corridor에 투영된
-// 차량의 합류 완료시점 앞/뒤 거리와 TTC를 함께 만족하는 첫 진입시간을 찾는다.
-// objects의 각 TrackedObject는 motion 예측(gap/TTC)과 collision 재검사
-// (CheckObstacleOverlap) 양쪽에 그대로 쓰인다 - 같은 객체를 두 개의 병렬
-// vector로 나눠 받지 않는다(authoritative corners를 이미 갖고 있으므로).
-RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
-                                  const std::vector<TrackedObject>& objects,
-                                  const HighwayMergeConfig& cfg,
-                                  const HighwayMergeCheckpoint& checkpoint,
-                                  const VehicleShape& ego_shape,
-                                  const CollisionCheckConfig& collision_cfg,
-                                  double desired_speed, double max_ego_accel);
+// Highway candidate evaluation is declared in HighwayMerge.hpp.
 
 #endif  // FRENET_MANEUVER_MERGE_GAP_EVALUATOR_HPP

@@ -7,6 +7,7 @@
 #include <memory>
 #include <functional>
 #include <mutex>
+#include <stdexcept>
 #include "Execution/RequestedIntent.hpp"
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/BehaviorCommand.h>
@@ -38,6 +39,23 @@ class BehaviorInput {
   BehaviorInput(ros::NodeHandle, ros::NodeHandle, IntentSink, DynamicEnvironment);
   void receiveFeedback(const asmc_msgs::FrenetFeedback&);
   void spin();
+  void setHighwayReferenceSource(std::function<asmc_planner::lane_reference::HighwayReferenceStatus()> source) {
+    highway_reference_source_=std::move(source);
+  }
+  void setHighwayRoute(std::shared_ptr<const HighwayMergeRoute> route) {
+    if(route&&(!map_loaded_||!route_loaded_||!use_v2_interface_))
+      throw std::runtime_error("highway requires a valid Behavior map, route and v2 interface");
+    if(route) for(const auto& zone:route->zones) {
+      if(!map_.links().count(zone.config.source_link))
+        throw std::runtime_error("highway source missing from Behavior map: "+zone.config.source_link);
+      for(const auto& id:zone.config.target_lanes) {
+        const auto* lane=route->map->lane(id);
+        if(!lane||!map_.links().count(lane->link_id))
+          throw std::runtime_error("highway target missing from Behavior map: "+id);
+      }
+    }
+    builder_.setHighwayRoute(std::move(route));
+  }
 
  private:
   void runOnce();
@@ -76,6 +94,7 @@ class BehaviorInput {
   asmc_planner::signal::ExecutionRecovery execution_recovery_;
   ros::SteadyTimer update_timer_;
   IntentSink intent_sink_;
+  std::function<asmc_planner::lane_reference::HighwayReferenceStatus()> highway_reference_source_;
   std::mutex feedback_mutex_;
   MGeoLoader map_;
   RouteManager route_;
@@ -104,6 +123,7 @@ class BehaviorInput {
   uint32_t current_command_id_ = 0;
   bool has_last_command_ = false;
   bool ego_received_ = false;
+  bool map_loaded_=false,route_loaded_=false;
   bool use_v2_interface_ = false;
   bool feedback_v2_received_ = false;
   bool objects_received_ = false;

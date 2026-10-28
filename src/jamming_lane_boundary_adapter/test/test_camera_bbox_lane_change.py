@@ -99,12 +99,12 @@ class LaneChangeTest(unittest.TestCase):
         self.assertIsNotNone(self.diag)
         return self.diag.status[0].message,{v.key:v.value for v in self.diag.status[0].values}
 
-    def feed(self, ys=(),shift=0.,duration=.55,camera=True,bbox=True,stamp=None,gap=False,source_gap=False,target_gap=False,far=False,slope=0.,box_x=10.,raw_boxes=None,spans=(),speed=None,lidar=None,imu=None,label='car'):
+    def feed(self, ys=(),shift=0.,duration=.55,camera=True,bbox=True,stamp=None,gap=False,source_gap=False,target_gap=False,far=False,slope=0.,box_x=10.,raw_boxes=None,spans=(),speed=None,lidar=None,imu=None,label='car',ego_y=0.):
         end=time.monotonic()+duration
         while time.monotonic()<end:
             source=rospy.Time.now() if stamp is None else stamp
             if speed is not None:
-                ego=EgoVehicleStatus();ego.velocity.x=speed
+                ego=EgoVehicleStatus();ego.velocity.x=speed;ego.velocity.y=ego_y
                 self.ego_pub.publish(ego)
             if imu is not None:
                 message=Imu();message.angular_velocity.z=imu
@@ -902,6 +902,16 @@ class LaneChangeTest(unittest.TestCase):
         self.feed(duration=.6)
         self.assertEqual(self.command.longlCmdType,2)
         self.assertAlmostEqual(self.command.velocity,20.,delta=.1)
+
+    def test_pedal_ignores_non_longitudinal_velocity_components(self):
+        # Preserve PR128's CompetitionInfo contract while adding PR127 recovery/creep.
+        # y is not a provided forward-speed signal, including when it is non-finite.
+        self.feed()
+        for lateral in (100.,float('nan')):
+            self.feed(speed=0.,ego_y=lateral,duration=.6)
+            self.assertEqual(self.command.longlCmdType,1,self.status())
+            self.assertGreater(self.command.accel,0.,self.status())
+            self.assertEqual(self.command.brake,0.,self.status())
 
     def test_straddle_without_ego_speed_keeps_legacy_stop(self):
         self.feed()
