@@ -1,0 +1,75 @@
+{
+  "schema": "asmc.camera.local_engine_selection.v1",
+  "review_date": "2026-10-29",
+  "main_base": "be20138a5c8bfd797a1989827b50ce264477b241",
+  "reviewed_code_revision": "4d3bd82d6aa2b68f7b6cde57535ccb737bf9cfe0",
+  "model_profile": "collect_e3",
+  "packaged_engine_unchanged": true,
+  "topics_messages_geometry_unchanged": true,
+  "local_engine": {
+    "source_engine_sha256": "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00",
+    "engine_sha256": "96694250e0f358f1b0d5ebfdd136b86fecf13761d2f995bbabd49fc371e17e73",
+    "gpu_name": "NVIDIA GeForce RTX 4060 Ti",
+    "tensorrt": "10.13.0.35"
+  },
+  "current_validation": {
+    "engine_object_tests": 11,
+    "lane_engine_tests": 10,
+    "engine_builder_tests": 5,
+    "scenario_profile_tests": 7,
+    "detection_tests": 90,
+    "runtime_tests": 124,
+    "camera_test_total": 247,
+    "ci_harness_tests": 8,
+    "documentation_tests": 17,
+    "current_real_cache_readonly_validation": true,
+    "documentation_migration_check": "passed",
+    "runtime_documentation_check": "passed",
+    "ci_coverage_check": "145 former checks retained"
+  },
+  "previous_live_smoke": {
+    "code_revision": "51c9672aece163173d635d097466836331cb6d5f",
+    "completed_at_utc": "2026-10-28T15:01:54.809169+00:00",
+    "original_report_sha256": "a787426f0ec27b69308e2b9d49790fc19f5f5337334f4835e0b8b2e145b5506d",
+    "control_udp_isolated": true,
+    "actual_lidar_15hz_load_verified": false,
+    "full_route_acceptance": false,
+    "phases": {
+      "shadow": {
+        "camera_objects_all_views_hz": 42.89,
+        "lane_family_hz": 14.986,
+        "lidar_local_hz": 11.936,
+        "trajectory_hz": 20.0,
+        "control_hz": 20.0,
+        "map_vehicle_state_valid": false,
+        "lidar_local_frame": "base_link"
+      },
+      "general": {
+        "camera_objects_all_views_hz": 43.524,
+        "lane_family_hz": 15.076,
+        "lidar_local_hz": 12.139,
+        "trajectory_hz": 19.999,
+        "control_hz": 20.145,
+        "map_vehicle_state_valid": true,
+        "lidar_local_frame": "base_link"
+      },
+      "restored-shadow": {
+        "camera_objects_all_views_hz": 43.3,
+        "lane_family_hz": 15.056,
+        "lidar_local_hz": 12.022,
+        "trajectory_hz": 20.0,
+        "control_hz": 20.0,
+        "map_vehicle_state_valid": false,
+        "lidar_local_frame": "base_link"
+      }
+    },
+    "limitations": [
+      "Stationary launch/wiring smoke with teleport, not full course closed-loop acceptance.",
+      "Observed LiDAR rate about 12Hz, not a 15Hz load acceptance.",
+      "30 cumulative invalid LiDAR results across two teleports; stable observations recovered valid.",
+      "Unknown LiDAR velocity remains marked unproven_moving_sensor_derivative.",
+      "Packaged matching lane engines reused; redundant lane export interrupted and retained separately."
+    ]
+  },
+  "scope_note": "Read-only real-cache validation and CPU regression after profile policy changes; previous stationary/teleport live smoke is separate evidence. Private logs, cache, engines, personal paths and unrelated work are excluded."
+}

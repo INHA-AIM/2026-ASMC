@@ -97,12 +97,17 @@ GUI의 `선택 모드로 시작`과 `다음 반복 · 다시 준비`도 같은 �
 
 인지 실행기는 `asmc_camera/camera.launch`와 `asmc_lidar/lidar.launch`를 한 세트씩 포함한다. 판제는 `/perception/lidar/planning_observations_map`의 KF 품질 관측을 직접 소비한다. 카메라 세 모델의 GPU Python은 이미지의 `ASMC_YOLO_PYTHON`으로 선택한다. CPU 후처리·LiDAR는 기존 실행 파일을 사용한다. 음영 BBox는 공용 카메라 검출을 frame bridge에서 직접 소비하며 구 정수 wire나 nested 메시지 overlay를 사용하지 않는다.
 
-`config/stack.yaml`의 `camera_runtime: auto`는 로컬에 `.runtime/camera_runtime.json`이 있으면 검증된 GPU용 엔진을 선택한다. RTX 5070용 E8 모델은 같은 학습 체크포인트로 변환한 `/data/models/camera_mission16_v11_e8_rtx5070/yolo26l.engine`을 사용하고, TensorRT·Ultralytics 의존성은 `.runtime/inference_rtx50/python`에서 객체 인식 노드에만 추가한다. 팀 launch의 엔진 경로와 검증 SHA만 바꾸며 클래스·임계값·배치·해상도 설정은 그대로 읽는다. 실행 시 `[카메라 엔진]`에 선택 경로와 SHA가 표시된다.
+`config/stack.yaml`의 `camera_runtime: auto`는 로컬에 `.runtime/camera_runtime.json`이 있으면 검증된 GPU용 엔진을 선택한다. 현재 기본 모델은 `camera.launch`의 YOLO26l collect v5 E3·15종이다. 팀 launch의 엔진 경로와 검증 SHA만 바꾸며 클래스·임계값·배치·해상도 설정은 그대로 읽는다. 실행 시 `[카메라 엔진]`에 선택 경로와 SHA가 표시되며 backend에서도 GPU·TensorRT·head를 다시 확인한다. 직접 `camera.launch`의 로컬 객체 선택도 [같은 규칙](../../docs/operations/local-lane-engine.md)을 따른다.
 
-로컬 프로필과 의존성은 Git에 포함되지 않는다. 프로필이 없는 PC는 팀 기본 엔진을 사용하며, GPU가 다른 PC는 해당 GPU에서 같은 체크포인트를 변환·검증한 뒤 프로필을 준비해야 한다. 프로필에는 원본 배포 엔진 SHA, 변환 엔진 SHA, 통과한 추론 검증 기록이 필요하다. 팀 모델이 바뀌어 원본 SHA가 달라지면 예전 로컬 엔진을 계속 쓰지 않고 시작 오류로 알린다. `camera_runtime: off`로 팀 기본 엔진 선택으로 되돌릴 수 있지만, RTX 4060 Ti용 배포 엔진은 RTX 5070에서 사용할 수 없다.
+과거 RTX5070 E8의 `/data/models/camera_mission16_v11_e8_rtx5070/yolo26l.engine`과
+`.runtime/inference_rtx50/python`은 E8 재현용 경로이며 현재 E3로 대신 사용할 수 없다.
+실행 의존성 경로는 프로필의 `runtime_pythonpath`로 객체 노드에만 전달한다.
 
-RTX 4060처럼 배포 엔진의 GPU와 다른 PC에서는 MORAI와 카메라·판제 실행을 종료한 뒤,
-같은 컨테이너에서 아래 명령으로 현재 E8 객체·Large E8 차선 모델을 다시 변환할 수 있다.
+로컬 프로필과 의존성은 Git에 포함되지 않는다. 프로필이 없는 PC는 팀 기본 엔진을 사용하며, GPU가 다른 PC는 해당 GPU에서 같은 체크포인트를 변환·검증한 뒤 프로필을 준비해야 한다. 프로필에는 원본 배포 엔진 SHA, 변환 엔진 SHA, 통과한 추론 검증 기록이 필요하다. 팀 모델이 바뀌어 원본 SHA가 달라지면 예전 로컬 엔진을 계속 쓰지 않고 시작 오류로 알린다. `camera_runtime: off`는 객체 backend의 자동 선택까지 해제한다. 배포 객체 엔진으로 되돌릴 때도 GPU 호환성을 확인하며, TwinLite의 독립 GPU 캐시 선택은 유지된다.
+
+배포 객체 엔진은 RTX4060, 차선 엔진은 RTX4060Ti에서 생성됐다. GPU가 다른 PC에서는
+MORAI와 카메라·판제 실행을 종료한 뒤 같은 컨테이너에서 아래 명령으로
+현재 E3 객체·Large E8 차선 모델을 다시 변환할 수 있다.
 
 ```bash
 cd /root/ws
@@ -114,7 +119,9 @@ bash tools/scen_runner/prepare_camera_engines.sh
 원본 `.pt`와 공용 `.engine`을 보존한 채 `.runtime/camera_engines/`에 새 파일을 만든다.
 객체·차선의 기본 추론 검사가 모두 성공하면 `.runtime/camera_runtime.json`을 원자적으로
 갱신한다. 기존 프로필은 새 산출물 폴더에 백업한다. `READY` 출력 후 기존
-`run_perception.sh`가 두 새 엔진을 선택한다. 중간 실패 시 실행 프로필은 유지된다.
+`run_perception.sh`가 두 새 엔진을 선택한다. 직접 `camera.launch`도 새 객체 엔진을 선택한다.
+직접 실행의 차선은 호환되는 배포 manifest를 우선한다. 중간 실패 시 실행 프로필은 유지된다.
+엔진 폴더를 다른 드라이브로 연결해도 프로필 교체는 대상 파일시스템에서 원자적으로 수행한다.
 이는 GPU 로딩·기본 추론 검사이며 실제 영상 인식 정확도·처리 속도·주행 검증을 대신하지 않는다.
 이 명령은 ROS 노드나 차량 제어를 시작하지 않는다.
 엔진 생성은 끝났지만 마지막 검사에서 실패했다면 처음부터 생성하지 않고

@@ -25,18 +25,23 @@
 roslaunch asmc_camera camera.launch models:=objects detector:=e3
 ```
 
-위 명령은 패키지의 **RTX4060용 E3 engine**을 직접 읽는다. 다른 GPU에서는 같은 E3 `.pt`로
+로컬 선택 프로필이 없으면 위 명령은 패키지의 **RTX4060용 E3 engine**을 읽는다. 다른 GPU에서는 같은 E3 `.pt`로
 해당 GPU·TensorRT 환경에 맞는 engine을 생성·검증해야 한다. 실행 시 자동 생성되지는 않는다.
 로컬 생성·선택 도구인 `tools/scen_runner/prepare_camera_engines.sh`는 **YOLO와 차선을 함께**
-생성하며, 선택 결과는 `tools/scen_runner/run_perception.sh`에서 적용된다.
-직접 `roslaunch` 실행에는 이 로컬 선택이 적용되지 않는다. YOLO만 변환할 때는
+생성하며, 검증된 로컬 객체 엔진은 **직접 `camera.launch`와 시나리오 실행기 모두**에 적용된다.
+원본 배포 SHA·로컬 엔진 SHA·GPU·TensorRT·head·합성 검사 결과를 확인하며,
+실제 선택 엔진의 SHA는 공용 관측의 `model_id`에 반영한다.
+선택 규칙·명시적 해제·D/WSL 저장 안내는 [GPU별 엔진](local-lane-engine.md)을 따른다.
+직접 실행의 TwinLite는 호환되는 배포 manifest를 우선하며, 다른 환경에서는 별도의
+동일 checkpoint/GPU/runtime 캐시를 확인한다. 시나리오 실행기는 검증 프로필의 차선 manifest도 지정한다.
+YOLO만 수동 변환할 때는
 [E3 변환 명령](../records/camera/2026-10-28-mission15-e3-deployment.md)의
 `prepare_coco7_models.py --head-profile mission15_one2one_nms`를 사용하고
 실행할 engine 경로와 `expected_sha256`을 생성본에 맞춘다.
 
-현재 저장소는 모델을 일반 Git 파일로 배포하므로 **이번 PR에는 E3 `.pt`·교체한 `.engine`,
-모델 YAML의 SHA, 배포 목록 v3, 검증 기록을 함께 포함한다.** 이미 브랜치에 커밋된 E3 `.pt`는
-그대로 유지한다. engine만 제외하면 새 SHA와 기존 engine이 불일치한다.
+현재 저장소는 모델을 일반 Git 파일로 배포한다. **팀 배포 모델을 교체하는 PR에는 `.pt`·`.engine`,
+모델 YAML의 SHA, 배포 목록 v3, 검증 기록을 함께 포함한다.** engine만 제외하면 새 SHA와 기존 engine이 불일치한다.
+같은 모델의 개인 GPU용 로컬 선택 수정은 배포 파일·체크섬을 바꾸지 않는다.
 개인 GPU용 생성물과 `.runtime/` 캐시는 PR에 추가하지 않는다.
 
 | 공개 `detector` 선택 | 가중치 | 지원 원본 이름 | 비고 |

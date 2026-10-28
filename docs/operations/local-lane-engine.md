@@ -1,4 +1,4 @@
-# GPU별 TwinLite 차선 엔진
+# GPU별 카메라 엔진
 
 `camera.launch`의 기본 차선 모델은 TwinLite Large v7 E8이다. 저장소의
 RTX 4060 Ti용 TensorRT 엔진은 RTX 4060용 엔진과 구분한다. GPU 이름이나
@@ -62,10 +62,39 @@ roslaunch asmc_camera camera.launch
 사용한다. 원본 배포 엔진 SHA, 로컬 엔진 SHA, GPU, TensorRT, head와 검사 결과가 맞아야 한다.
 객체 노드의 시작 정보 `source_weights`, `weights`, `weights_sha256`으로 실제 선택을 확인한다.
 E8 또는 pretrained를 명시적으로 선택하면 E3 로컬 엔진으로 대체하지 않는다.
-별도 프로필 위치는 `ASMC_CAMERA_RUNTIME_PROFILE`로 지정할 수 있다.
+이미 시나리오 실행기가 선택한 로컬 엔진도 backend에서 GPU·TensorRT·head를 다시 검사한다.
+공용 관측의 `model_id`는 실제 선택 엔진 SHA다. launch의 `expected_sha256`은 원본 배포
+파일 검증값으로 남을 수 있으므로 실제 엔진 판독에 이 파라미터만 사용하지 않는다.
+
+| 실행 | 객체 로컬 선택 | 차선 선택 |
+|---|---|---|
+| `camera.launch` | 같은 원본 SHA의 검증 프로필 자동 선택 | 호환 배포 manifest 우선, 불일치 시 checkpoint/GPU/runtime 캐시 |
+| `run_perception.sh` | 설정의 `camera_runtime` 프로필 선택 후 backend 재검사 | 프로필에 검증된 lane 항목이 있으면 그 manifest 지정 |
+
+별도 객체 프로필은 `ASMC_CAMERA_RUNTIME_PROFILE`로 지정한다. `auto`가 기본이며
+`tools/scen_runner/.runtime/camera_runtime.json`을 찾는다. 명시한 파일이 없으면 오류다.
+상대 프로필 경로와 프로필 내부 상대 engine 경로는 `tools/scen_runner/` 기준이다.
+생성 도구는 기본 프로필을 갱신하며 이 환경변수는 실행 시 선택에 사용한다.
+시나리오 실행기는 설정의 프로필 경로를 객체 노드에 전달한다.
+
+```bash
+# 객체 로컬 선택만 해제: 카메라 모델 추론을 끄는 mode:=off와 다름
+ASMC_CAMERA_RUNTIME_PROFILE=off roslaunch asmc_camera camera.launch
+```
+
+시나리오 설정의 `camera_runtime: off`도 객체 backend의 자동 선택을 해제한다.
+이 옵션은 배포 엔진의 GPU 호환성을 보장하지 않으며 TwinLite의 독립 GPU 캐시를 끄지 않는다.
+직접 실행에서 다른 원본 SHA용 프로필은 선택하지 않는다. 시나리오 실행기는 팀 원본 SHA가
+프로필과 달라지면 오래된 엔진을 쓰지 않고 오류로 알린다.
 
 기존 배포 파일과 체크섬은 수정하지 않는다. 새 엔진은 개인 캐시이며 Git에 추가하지 않는다.
 대용량 생성 경로 `.runtime/camera_engines`는 로컬 저장 규약에 맞게 데이터 드라이브로
 연결할 수 있다. 컨테이너에서도 같은 링크 대상이 보여야 한다.
+실행 프로필은 대상 디렉터리에서 임시 파일을 만든 뒤 원자적으로 교체하므로, 엔진과
+프로필이 서로 다른 파일시스템에 있어도 마지막 등록이 실패하지 않는다. 교체 실패 시 이전
+프로필을 유지한다. 팀원은 D 드라이브 없이 기본 checkout 캐시를 그대로 사용할 수 있다.
 다른 모델·GPU·TensorRT로 바뀌면 다시 생성한다. 생성 도구의 합성 검사 통과는 실제
 영상의 정확도·전 구간 주행 수락을 의미하지 않는다.
+
+[2026-10-29 선택·등록 검증](../records/camera/2026-10-29-local-engine-selection.md)에
+실제 캐시·기동 근거, 현재 회귀와 미검증 범위를 구분했다.

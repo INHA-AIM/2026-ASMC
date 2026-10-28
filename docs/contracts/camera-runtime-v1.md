@@ -44,6 +44,9 @@ ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다
 `lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
 YOLO26l E3·E8·사전학습의 배포 checkpoint3개·engine3개는 패키지 models의 실제 Git 파일이다.
 [모델 배포 안내](../../src/asmc_camera/models/README.md)의 지원 GPU/runtime과 SHA를 따른다.
+검증된 로컬 객체 엔진은 직접 `camera.launch`와 시나리오 실행기 모두에서 선택할 수 있다.
+원본 배포 파일 검증과 실제 선택 엔진 검증을 분리하며 공용 관측의 `model_id`는 실제 엔진 SHA다.
+생성·선택·명시적 해제와 차선 캐시의 차이는 [GPU별 엔진 안내](../operations/local-lane-engine.md)를 따른다.
 TwinLite Large v7 E8 checkpoint·전용 engine과 기존 Medium v6 복구본을 패키지에 포함한다. 2026-10-18 사용자 결정으로 기본 모델을 Large v7 E8로 전환했다. SUNNY freshness·공급 지연 제한과 자동 수락 실패는 보존한다.
 기본 backend는 `lane_runtime.yaml`의 TensorRT
 FP16이다. 같은 입력의 PyTorch 복구는 내부 `_runtime.launch`의 `lane_runtime_config`로

@@ -1,7 +1,8 @@
 # 카메라 데이터 준비
 
 원본을 보존하고 종류 확인·검수 기록을 거쳐 별도 학습 버전으로 export합니다.
-현재 배포 모델은 **v11의 완전한8epoch(E8)**이며 현재 운영 모델과 다음 데이터 준비 버전을 혼동하지 않습니다.
+현재 객체 배포 모델은 **collect v5의 완전한3epoch(E3)·15종**입니다.
+아래 v11/E8 데이터 준비 기록은 과거 모델의 재현 근거이며 현재 운영 모델과 혼동하지 않습니다.
 Git에는 도구·규칙·요약·배포 모델을, 원본 이미지/ZIP·대형 manifest·학습 재개 checkpoint는 로컬에 둡니다.
 
 ## 저장·버전
@@ -136,7 +137,8 @@ PR #94에서 수행한 당시 호스트·읽기 전용 컨테이너의 검증 �
 | heldout |116|445|721|
 
 이전 v7 채택본23,264장과 v8/v9/v10의 중간 수량은 [확보·Teacher·채택 이력](../records/camera/data-preparation-through-v7.md)에 보존합니다.
-배포 E8의 가중치 출처·SHA는 [모델 manifest](../../config/models/camera_object_models_v2.json)가 정본입니다.
+과거 E8의 가중치 출처·SHA는 [v2 manifest](../../config/models/camera_object_models_v2.json)에 보존합니다.
+현재 E3·복구 모델의 배포 목록은 [v3 manifest](../../config/models/camera_object_models_v3.json)를 따릅니다.
 preparation metadata의 `training_started=false`는 생성 시점 값이며 현재 학습이 안됐다는 상태 조회가 아닙니다.
 selection/heldout은 과거 개발 평가 노출 이력이 있어 새로운 비공개 시험으로 설명하지 않습니다.
 
