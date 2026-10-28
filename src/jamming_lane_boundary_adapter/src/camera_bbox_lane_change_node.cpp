@@ -151,6 +151,10 @@ struct Parameters {
     double ego_speed_timeout = 0.3;         // [s] 속도 미수신 상한. 회피 중 초과하면 정지.
     double avoid_clearance = 0.5;           // [m] 차체 측면과 장애물 하단 가장자리 사이 최소 간격.
     double avoid_speed_kph = 8.0;           // [km/h] 회피 중 속도 상한.
+    // 인식·판단 정지(차선 끊김, 지날 선 없음 등) 대신 마지막 조향을 유지하고 이 속도로 기어간다. 0이면 기존처럼 정지.
+    // 비상정지·입력 timeout·사람 정지·차속 없음, 그리고 앞 creep_clear_distance 안의 경로 장애물은 그대로 정지한다.
+    double creep_speed_kph = 0.0;
+    double creep_clear_distance = 2.0;      // [m] 앞 범퍼부터 이 거리까지 지금 조향의 경로에 장애물이 없어야 기어간다.
     double avoid_obstacle_length = 6.0;     // [m] 보이지 않는 장애물 전후 길이 가정. 하단 접점부터 전방으로 적용.
     double avoid_pass_margin = 2.0;         // [m] 장애물 끝 + 차량 후방을 지난 뒤 추가 이동 거리.
     double avoid_lane_tie = 0.10;           // [m] 두 차로 offset 차이가 이 값 이하면 내 차로 유지.
@@ -461,6 +465,7 @@ std::string startLaneChange(int adjacent_index, const LaneChain& adjacent,
 std::string updateLinePlan(bool new_scan);
 bool lineObstacleArea(const LineObstacle& obstacle, std::array<FamilyPoint2d, 4>& area);
 bool lineObstacleConfirmed(const LineObstacle& obstacle);
+double lineObstacleX(const LineObstacle& obstacle);
 
 
 struct RosInterface {
@@ -490,6 +495,9 @@ double calculateSteering(double curvature, double dt);
 double calculateTargetSpeed(double curvature);
 morai_msgs::CtrlCmd makeStopCommand();
 morai_msgs::CtrlCmd makeFollowingCommand(double dt);
+morai_msgs::CtrlCmd makeCreepCommand(double dt);
+bool hardStopReason(const std::string& reason);
+bool creepPathBlocked();
 void publishControlCommand(const morai_msgs::CtrlCmd& command);
 void publishShutdownStop();
 
@@ -937,13 +945,21 @@ void cameraLaneFollowingProcess() {
     }
     if (!stop_reason.empty()) change_state.completion_hits = 0;
     const bool tracking = stop_reason.empty() && follower_state.target_ready;
-    if (!tracking) speed_integral = 0.0;
+    // 인식·판단 정지면 앞 경로가 비어 있는 한 마지막 조향으로 기어간다(creep_speed_kph).
+    const bool creep = !tracking && !stop_reason.empty() && params.creep_speed_kph > params.epsilon &&
+        mode_active && !hardStopReason(stop_reason) && !creepPathBlocked();
+    if (!tracking && !creep) speed_integral = 0.0;
     morai_msgs::CtrlCmd command = makeStopCommand();
 
     // 3. 유효한 목표점이 있을 때만 조향 / 속도를 계산.
     if (tracking) {
         command = makeFollowingCommand(dt);
         publishTargetPoint();
+    } else if (creep) {
+        ROS_WARN_THROTTLE(2.0, "Camera lane follower CREEP %.1f km/h instead of stop: %s",
+                          params.creep_speed_kph, stop_reason.c_str());
+        command = makeCreepCommand(dt);
+        stop_reason = "creep:" + stop_reason;
     }
 
     change_state.last_command_driving = change_state.changing && tracking &&
@@ -1048,6 +1064,63 @@ morai_msgs::CtrlCmd makeStopCommand() {
     return command;
 }
 
+// 목표 속도[km/h]를 페달 PI(차속 있을 때) 또는 MORAI 내장 속도 제어로 명령에 넣는다.
+void applySpeedControl(morai_msgs::CtrlCmd& command, double target_speed, double dt) {
+    command.velocity = target_speed;  // [km/h] 페달 제어에서도 진단용으로 목표를 남긴다.
+    if (params.pedal_speed_control && egoSpeedFresh()) {
+        // 페달 PI: 목표보다 느리면 가속, 빠르면 브레이크. 둘을 동시에 밟지 않는다.
+        command.longlCmdType = 1;
+        const double error = target_speed / 3.6 - ego_speed.speed;
+        speed_integral = std::clamp(speed_integral + error * dt,
+                                    -params.speed_integral_limit, params.speed_integral_limit);
+        const double effort = params.speed_kp * error + params.speed_ki * speed_integral;
+        if (effort >= 0.0) command.accel = std::min(effort, params.max_accel_pedal);
+        else command.brake = std::min(-effort, params.max_brake_pedal);
+    } else {
+        command.longlCmdType = 2;  // 속도 입력이 없을 때만 MORAI 내장 속도 제어.
+    }
+}
+
+// 기어가기를 허용하지 않는 정지: 안전 입력·의도된 정지·차속 없음.
+bool hardStopReason(const std::string& reason) {
+    return reason == "emergency_stop" || reason == "inactive_mode" || reason == "person_stop" ||
+        reason.find("timeout") != std::string::npos || reason.find("expired") != std::string::npos ||
+        reason.find("restart_required") != std::string::npos || !egoSpeedFresh();
+}
+
+// 마지막 조향의 원호를 따라 앞 범퍼부터 creep_clear_distance까지 차체 폭 안에 장애물이 있으면 막힘.
+bool creepPathBlocked() {
+    const double curvature = std::tan(follower_state.last_steering) * params.steering_curvature_gain / params.wheelbase;
+    const double half_width = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
+    const double reach = params.vehicle_front + params.creep_clear_distance;
+    const auto hits = [&](double x0, double x1, double y_min, double y_max) {
+        for (double x = 0.0; x <= reach + params.epsilon; x += 0.25) {
+            if (x < x0 || x > x1) continue;
+            const double y = 0.5 * curvature * x * x;
+            if (y_min <= y + half_width && y_max >= y - half_width) return true;
+        }
+        return false;
+    };
+    for (const auto& obstacle : planning_obstacles) {
+        if (hits(obstacle.x, obstacle.x_far, obstacle.y_min, obstacle.y_max)) return true;
+    }
+    LineFrame frame;
+    for (const auto& obstacle : line_state.obstacles) {
+        const double x0 = lineObstacleX(obstacle);
+        if (!lineObstacleConfirmed(obstacle) || !lineFrameAt(std::max(x0, params.planning_start_x), frame)) continue;
+        const double y_left = lineY(frame, obstacle.line_left), y_right = lineY(frame, obstacle.line_right);
+        if (hits(x0, x0 + obstacle.length, std::min(y_left, y_right), std::max(y_left, y_right))) return true;
+    }
+    return false;
+}
+
+morai_msgs::CtrlCmd makeCreepCommand(double dt) {
+    morai_msgs::CtrlCmd command;
+    command.steering = follower_state.last_steering;
+    applySpeedControl(command, params.creep_speed_kph, dt);
+    return command;
+}
+
 morai_msgs::CtrlCmd makeFollowingCommand(double dt) {
     // 목표 속도가 0이면 제동 명령을 유지하고, 조향 계산 상태만 갱신한다.
     morai_msgs::CtrlCmd command = makeStopCommand();
@@ -1057,20 +1130,8 @@ morai_msgs::CtrlCmd makeFollowingCommand(double dt) {
 
     if (target_speed > 0.0) {
         command = morai_msgs::CtrlCmd();
-        command.velocity = target_speed;  // [km/h] 페달 제어에서도 진단용으로 목표를 남긴다.
         command.steering = steering;      // [rad], 기존 MPC / bridge와 동일.
-        if (params.pedal_speed_control && egoSpeedFresh()) {
-            // 페달 PI: 목표보다 느리면 가속, 빠르면 브레이크. 둘을 동시에 밟지 않는다.
-            command.longlCmdType = 1;
-            const double error = target_speed / 3.6 - ego_speed.speed;
-            speed_integral = std::clamp(speed_integral + error * dt,
-                                        -params.speed_integral_limit, params.speed_integral_limit);
-            const double effort = params.speed_kp * error + params.speed_ki * speed_integral;
-            if (effort >= 0.0) command.accel = std::min(effort, params.max_accel_pedal);
-            else command.brake = std::min(-effort, params.max_brake_pedal);
-        } else {
-            command.longlCmdType = 2;  // 속도 입력이 없을 때만 MORAI 내장 속도 제어.
-        }
+        applySpeedControl(command, target_speed, dt);
     }
 
     return command;
@@ -1718,7 +1779,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     diagnostics.status.push_back(status);
     ros_interface.diagnostic_pub.publish(diagnostics);
 
-    if (!tracking) {
+    if (!tracking && reason.rfind("creep:", 0) != 0) {
         ROS_WARN_THROTTLE(2.0, "Camera lane follower STOP: %s (source age=%.3fs)", reason.c_str(), source_age);
     }
 }
@@ -1815,6 +1876,8 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("ego_speed_timeout", params.ego_speed_timeout, params.ego_speed_timeout);
     private_nh.param("avoid_clearance", params.avoid_clearance, params.avoid_clearance);
     private_nh.param("avoid_speed_kph", params.avoid_speed_kph, params.avoid_speed_kph);
+    private_nh.param("creep_speed_kph", params.creep_speed_kph, params.creep_speed_kph);
+    private_nh.param("creep_clear_distance", params.creep_clear_distance, params.creep_clear_distance);
     private_nh.param("avoid_obstacle_length", params.avoid_obstacle_length, params.avoid_obstacle_length);
     private_nh.param("avoid_pass_margin", params.avoid_pass_margin, params.avoid_pass_margin);
     private_nh.param("avoid_lane_tie", params.avoid_lane_tie, params.avoid_lane_tie);

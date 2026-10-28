@@ -71,6 +71,7 @@ class LaneChangeTest(unittest.TestCase):
             *(['path_horizon:=10.0'] if self._testMethodName.startswith('test_straddle_far') else []),
             *(['lane_hold_time:=3.0'] if 'hold' in self._testMethodName else []),
             *(['use_lidar_obstacles:=true'] if 'lidar' in self._testMethodName else []),
+            *(['creep_speed_kph:=3.0'] if 'creep' in self._testMethodName else []),
             *(['avoid_line_overrun:=0.0'] if 'wall' in self._testMethodName else []),
             'lane_change_timeout:='+('10.0' if self._testMethodName.startswith('test_ignore') else '5.0'),
             'return_to_entry_lane:='+('true' if self._testMethodName.startswith('test_return') else 'false'),
@@ -808,6 +809,28 @@ class LaneChangeTest(unittest.TestCase):
         self.feed(speed=0.,lidar=[left,right,far],duration=.8)
         self.following()
         self.assertAlmostEqual(self.line_status()[0],4.0,delta=0.15)
+
+    def test_straddle_lidar_creep_instead_of_no_clear_line_but_stop_close(self):
+        self.feed()
+        # Gap too narrow for any line (2.6 m, needs about 3.0 m) but 6 m ahead: creep at 3 km/h.
+        left,right=(12.,13.,1.3,3.0,1.),(12.,13.,-3.0,-1.3,1.)
+        self.feed(speed=0.,lidar=[left,right],duration=.8)
+        message,status=self.status()
+        self.assertEqual(message,'creep:no_clear_line',status)
+        self.assertEqual(self.command.longlCmdType,1)
+        self.assertGreater(self.command.accel,0.)
+        self.assertAlmostEqual(self.command.velocity,3.0)
+        # An object in the path within creep_clear_distance of the front bumper: hard stop.
+        self.feed(speed=0.,lidar=[(5.,6.,-0.5,0.5,1.)],duration=.8)
+        self.stopped()
+        self.assertNotIn('creep',self.status()[0])
+
+    def test_creep_does_not_override_emergency_stop(self):
+        self.feed()
+        self.stop_pub.publish(Bool(True))
+        self.feed(duration=.5)
+        self.stopped('emergency_stop')
+        self.stop_pub.publish(Bool(False))
 
     def test_straddle_lidar_blocks_adjacent_that_camera_sees_clear(self):
         self.feed()
