@@ -2,6 +2,7 @@
 #include "Planning/RuntimeCycle.hpp"
 
 #include <cmath>
+#include <stdexcept>
 #include <vector>
 #include <utility>
 
@@ -44,6 +45,16 @@ PlanningPort::PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh,
         }
     }
 
+    bool highway_enabled=false;
+    pnh_.param("highway_merge_enabled",highway_enabled,false);
+    if(highway_enabled) {
+        std::string error;
+        if(!planner_initialized_||!planner_.EnableHighwayMerge(error))
+            throw std::runtime_error("highway preflight failed: "+error);
+        highway_reference_=std::make_unique<asmc_planner::lane_reference::HighwayReferenceExecution>(
+            planner_,planner_config_path,command_manager_.maneuvers());
+    }
+
     trajectory_pub_ =
         nh_.advertise<asmc_msgs::Trajectory>(runtime_.trajectory_topic, 1);
     feedback_pub_ =
@@ -72,7 +83,7 @@ PlanningPort::PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh,
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::LANE_CHANGE, true);
     command_manager_.SetImplementedManeuver(
-        asmc_msgs::BehaviorCommand::MERGE, planner_.roundabout_merge_enabled());
+        asmc_msgs::BehaviorCommand::MERGE, planner_.roundabout_merge_enabled()||planner_.highway_merge_enabled());
     marker_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(
         runtime_.markers_topic, 1);
 

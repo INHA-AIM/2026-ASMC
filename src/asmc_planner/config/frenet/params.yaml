@@ -278,29 +278,98 @@ planner:
 
   # --- 고주로/본선 합류 MERGE --------------------------------
   # 실측한 세 합류 구간의 start/conflict/completion_s를 zone별로 사용한다.
-  # Global Path 자체가 본선으로 합류하므로 별도 차선변경 offset은 만들지 않는다.
+  # Behavior의 고주로 요청에서만 HD-map 목표 차로 연결 궤적을 생성한다.
+  # 완료 시 활성 참조선은 인계하되 미션 route_s는 공식 경로를 유지한다.
   highway_merge:
+    # Competition NPC vehicles keep their current highway lane. Planner-only
+    # prediction; raw perception geometry and non-highway modes are unchanged.
+    traffic_lane_keeping: true
     enabled: true
+    # Prepared once at startup. The existing highway_merge launch gate owns
+    # activation; no separate control node or additional launch option.
+    reference_handover:
+      max_join_gap_m: 0.05
+      sample_distance_m: 0.2
+      sample_yaw_rad: 0.02
+      footprint_margin_m: 0.0
+      max_samples: 30000
+      lateral_speed_tolerance_mps: 0.2
+      max_pose_gap_s: 0.21
+      end_guard_s: 3.0
+      continuity:
+        overlap_s: 1.0
+        position_m: 0.35
+        heading_rad: 0.05
+        curvature_inv_m: 0.03
+        speed_mps: 0.5
+        acceleration_mps2: 1.0
+    lane_change:
+      enabled: true
+      # Explicit same-direction paths. Never choose successors.front() at forks.
+      lanes:
+        - [lane:A2256W000409, lane:A2256W000420, lane:A2256W000408, lane:A2256W000445, lane:A2256W000153]
+        - [lane:A2256W000410, lane:A2256W000430, lane:A2256W000434, lane:A2256W000422, lane:A2256W000153]
+        - [lane:A2256W000418, lane:A2256W000431, lane:A2256W000435, lane:A2256W000423, lane:A2256W000153]
+      speed_deficit_kph: 10.0
+      confirmation_s: 1.0
+      cooldown_s: 8.0
+      minimum_gain_s: 1.0
+      settle_reserve_s: 2.0
+      # Validated operating assumptions, not evidence of visibility by themselves.
+      # Actual timed gaps are certified by Frenet; this range is not an empty-lane requirement.
+      observation_front_m: 45.0
+      observation_rear_m: 30.0
+      unseen_speed_mps: 19.4444444444
     zones:
       - name: highway_merge_1
+        source_link: A2256W000411
+        target_lanes: [lane:A2256W000409, lane:A2256W000420, lane:A2256W000408, lane:A2256W000445, lane:A2256W000153]
         start_s: 1113.35
         completion_s: 1274.73
-        stop_buffer: 35.0 # [m] first-ramp wait point before body overlaps the mainline
-        hold_unsafe_gap_until_conflict: true
         checkpoints:
           - { conflict_s: 1237.04, clear_s: 1274.73 }
       - name: highway_merge_2_3
+        source_link: A2256W000445
+        target_lanes: [lane:A2256W000434, lane:A2256W000422, lane:A2256W000153]
         start_s: 1424.45
         completion_s: 1583.76
         checkpoints:
           - { conflict_s: 1524.41, clear_s: 1547.54 }
           - { conflict_s: 1564.72, clear_s: 1583.76 }
-    approach_distance: 50.0 # 향후 속도 기반 start_s 사전 감지에 사용할 여유
-    stop_buffer: 5.0 # [m] default rear axle to conflict; zone 1 overrides for its earlier wait point
+    # Automatic Behavior activation is opt-in: highway_merge:=true at launch.
+    speed_cap_mps: 19.4444444444 # 70 km/h; candidate speed, not forced acceleration
+    forward_accel_mps2: 1.5 # measured achievable highway acceleration; braking limits are independent
+    # The pre-rebase highway profile; ordinary KEEP uses main's common .95/.65.
+    curve_lateral_accel_safety_factor: 0.8
+    curve_comfortable_decel_factor: 0.5
+    max_horizon_s: 15.0
+    post_merge_horizon_s: 2.0
+    source_max_age_s: 0.3
+    confirmation_gap_s: 0.3
+    transition_tracking:
+      position_m: 0.05
+      heading_rad: 0.02
+      curvature_inv_m: 0.03
+    # Tunable prediction priors, not measured worst-case sensor guarantees.
+    # Coflow histories replace the initial prior with robust observed error.
+    speed_error_mps: 1.0
+    speed_error_floor_mps: 0.25
+    speed_error_correlation_s: 0.3
+    motion_fit_min_span_s: 0.2
+    provisional_lateral_speed_mps: 0.25 # only small position-contradicted lateral observations
+    max_rear_decel_mps2: 3.0
+    completion_settle_s: 0.5
+    completion_heading_rad: 0.12
+    completion_lateral_m: 0.5
+    collision_max_step_m: 0.25
+    max_collision_samples: 12000
+    planning_budget_ms: 30.0
+    approach_distance: 50.0 # pre-entry observation and speed planning
+    stop_buffer: 4.0
     target_corridor_half_width: 5.5 # 합류 전 평행한 본선 1개 차로까지 보수적으로 포함
     object_search_distance: 100.0
     min_heading_alignment: 0.5
-    min_front_gap: 8.0
+    min_front_gap: 4.0
     min_rear_gap: 10.0
     min_front_ttc: 2.0
     min_rear_ttc: 3.0
@@ -423,7 +492,8 @@ planner:
 waypoint_file: "../../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
 
 
-# Pinned ahnsh03 main 1ce434d: keep global reference; constrain AVOID only.
+# Shared v7 road product: every mode/reference uses the same vector and raster.
+# Regenerate/check with python3 tools/planning/sync_hd_map.py [--check].
 avoid_hd_map:
   enabled: true
 
@@ -438,7 +508,15 @@ roundabout_merge:
   speed_cap_mps: 6.944444444444445
   preview_distance_m: 45.0
   max_horizon_s: 10.0
+  # Roundabout only; highway/common MERGE headways remain unchanged.
+  min_front_time_gap_s: 0.7
   # [m/s] Preliminary LiDAR error allowance, not a certified 2-D error bound.
   # The history spread gate is twice this value (opposite-signed errors).
   speed_measurement_error_mps: 5.0
+  # Existing passed-vehicle size prior, not a measured sensor-error guarantee.
+  # Partial-only observations use the FULL sizes as radii to include an
+  # unknown fragment-to-body-centre offset. Larger observed extents stay larger.
+  partial_vehicle_length_m: 6.0
+  partial_vehicle_width_m: 3.0
+
 

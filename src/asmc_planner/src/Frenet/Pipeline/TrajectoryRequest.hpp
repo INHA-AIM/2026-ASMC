@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Frenet/Generator/GeneratorConfig.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 
 // R4: PlannerCommand와 TrajectoryRequest의 역할을 분리한다.
 //
@@ -49,6 +50,10 @@ enum class LongitudinalMode {
 struct LateralRequest {
     double target_d = 0.0;
     double search_tolerance = 0.0;
+    // Positive length opts into d(s), using the supplied spatial derivatives.
+    double settle_distance = 0.0;
+    double initial_slope = 0.0;
+    double initial_second = 0.0;
 };
 
 // FOLLOWING 전용 종방향 생성 입력. leader_s/leader_speed/leader_accel은
@@ -82,6 +87,7 @@ struct StopRequest {
     double comfortable_decel = 0.0;
     double cruise_speed = 0.0;
     double acceleration_limit = 0.0; // zero keeps the generator default
+    bool allow_partial_horizons = false;
     // STOP 계열은 정지 목표를 지나치지 않도록 delta_s 범위를 제한한다.
     // R5부터 GenerateRequestedCandidates(CandidateCombiner.cpp)가 이 값을
     // 직접 읽어 종방향 후보를 만든다 - 호출자(Keep.cpp)가
@@ -101,6 +107,15 @@ struct StopRequest {
 struct CollisionRequest {
     int coast_exempt_object_id = -1;
     int margin_recovery_object_id = -1;
+    // Resolved by the maneuver, never inferred from longitudinal_mode. Zero
+    // keeps strict collision checks (STOP, AVOID, MERGE and lane changes).
+    // Positive values identify a lane-following corridor for rear traffic;
+    // current overlap and predicted lane intrusions are still checked.
+    double following_lane_half_width = 0.0;
+    StoppingContinuationPolicy stopping{};
+    // Performance only: share exact object/time predictions within this
+    // immutable candidate batch. No previous observation or path is retained.
+    bool reuse_object_predictions = false;
 };
 
 struct TrajectoryRequest {

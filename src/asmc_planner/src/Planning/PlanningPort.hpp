@@ -5,6 +5,7 @@
 #include <mutex>
 #include <functional>
 #include "Execution/RequestedIntent.hpp"
+#include "Execution/HighwayReferenceExecution.hpp"
 #include "Planning/PlanningResult.hpp"
 #include <string>
 
@@ -22,6 +23,7 @@
 #include "Parser/BehaviorCommandAdapter.hpp"
 #include "Execution/CommandExecutionCompatibility.hpp"
 #include "Parser/RuntimeConfig.hpp"
+#include "Parser/PlanningInput.hpp"
 
 namespace frenet_planner_ros {
 
@@ -31,6 +33,10 @@ class PlanningPort {
     PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh);
     PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh, FeedbackSink);
     void receiveIntent(const asmc_planner::RequestedIntent&);
+    std::shared_ptr<const HighwayMergeRoute> highwayRoute() const { return planner_.highway_route(); }
+    asmc_planner::lane_reference::HighwayReferenceStatus highwayReferenceStatus() const {
+        return highway_reference_?highway_reference_->status():asmc_planner::lane_reference::HighwayReferenceStatus{};
+    }
     // Composition selects the native owner before either spinner starts.
     // Public diagnostic mirrors must never overwrite a newer native request.
     void useNativeControlInput() {
@@ -292,6 +298,31 @@ class PlanningPort {
     int v2_plan_fail_streak_ = 0;
 
     FrenetPlanner planner_;
+    std::unique_ptr<asmc_planner::lane_reference::HighwayReferenceExecution> highway_reference_;
+    bool runInterruptedHighway(const asmc_msgs::BehaviorCommand&,uint32_t,
+        const CommandAcceptance&,const InputSnapshot&,const CartesianState&,
+        const std::vector<TrackedObject>&,double now);
+    FrenetPlanner& planner() { return highway_reference_?highway_reference_->planner():planner_; }
+    const FrenetPlanner& planner() const { return highway_reference_?highway_reference_->planner():planner_; }
+    ConversionStatus convertReferencePath(const CartesianPath& path,double dt,
+        const asmc_msgs::VehicleState& ego,asmc_msgs::Trajectory& out) const {
+        if(highway_reference_&&!highway_reference_->validActivePath(path))return ConversionStatus::INVALID_PATH;
+        return ConvertCartesianPath(path,dt,ego,out);
+    }
+    asmc_planner::lane_reference::ReferenceExecutionInput referenceInput(
+        const InputSnapshot&,const CartesianState&,const std::vector<TrackedObject>&,double now);
+    std::uint64_t reference_input_sequence_=0;
+    // A physically completed optional return keeps fresh source-lane driving
+    // while FAILED is delivered to Behavior. Never replay a failed LC path.
+    std::uint32_t highway_recovered_command_id_=0;
+    bool continueRecoveredHighwayLane(const asmc_msgs::BehaviorCommand&,uint32_t,
+        const CommandAcceptance&,const InputSnapshot&);
+    bool runHighwayMerge(const asmc_msgs::BehaviorCommand&,uint32_t,
+        const CommandAcceptance&,const InputSnapshot&,const CartesianState&,
+        const std::vector<TrackedObject>&,const PlannerCommand&,double now);
+    bool tryMissionReferenceReturn(const InputSnapshot&,const CartesianState&,
+        const std::vector<TrackedObject>&,const PlannerCommand&,CartesianPath&,
+        asmc_msgs::Trajectory&,double now);
     bool planner_initialized_ = false;
 
     mutable std::mutex input_mutex_;

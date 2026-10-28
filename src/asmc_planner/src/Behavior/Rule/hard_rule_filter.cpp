@@ -32,6 +32,12 @@ HardConstraint HardRuleFilter::apply(const UrbanFeature& feature,
       hard.forbid_left_change && hard.forbid_right_change;
   hard.max_speed =
       feature.route.speed_limit > 0.0 ? feature.route.speed_limit : 1e9;
+  // The configured competition-highway policy owns its approach speed.
+  // A source ramp's map nominal speed must not freeze the complete merge at
+  // 40 km/h. Signal/stop constraints below remain authoritative.
+  if ((feature.highway.valid && feature.highway.approach) || feature.highway.cruising) {
+    hard.max_speed = feature.highway.speed_cap_mps;
+  }
 
   // Start the transition from the measured ego speed so a vehicle already
   // travelling slowly is not constrained tens of metres too early. Once the

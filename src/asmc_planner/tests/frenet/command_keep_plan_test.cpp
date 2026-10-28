@@ -348,12 +348,11 @@ int main() {
     CartesianPath braking_path;
     const bool braking_ok = collision_braking.Plan(
         braking_ego,{distant_box},braking_keep,braking_path);
-    Expect(braking_ok && braking_path.v.size()>2 && braking_path.v.back()==0,
-           "coast collision yields a fresh stopping trajectory");
+    Expect(braking_ok && braking_path.v.size()>2,
+           "a speculative coast conflict retains a checked forward/braking alternative");
     bool braking_bounds = braking_ok && !braking_path.v.empty() &&
         std::fabs(braking_path.v.front()-braking_ego.v)<1e-9 &&
-        std::fabs(braking_path.a.front()-braking_ego.a)<1e-9 &&
-        braking_path.a.back()==0;
+        std::fabs(braking_path.a.front()-braking_ego.a)<1e-9;
     const double braking_dt = collision_braking.sample_dt();
     for(std::size_t i=1;i<braking_path.v.size();++i){
         braking_bounds = braking_bounds &&
@@ -361,10 +360,25 @@ int main() {
             std::fabs(braking_path.v[i]-braking_path.v[i-1])/braking_dt<=3.0001 &&
             std::fabs(braking_path.a[i]-braking_path.a[i-1])/braking_dt<=6.0001;
     }
-    Expect(braking_bounds,"collision braking respects measured v/a and accel/jerk limits through standstill");
-    Expect(braking_ok && (braking_path.v.size()-1)*braking_dt>=8.0 &&
-           IsCartesianTrajectoryTimeConsistent(braking_path,braking_dt),
-           "stopped footprint remains predicted through the full safety horizon");
+    Expect(braking_bounds,"accepted collision-safe motion respects measured v/a and accel/jerk limits");
+    FrenetPath prefix{};prefix.valid=true;
+    for(std::size_t i=0;i<braking_path.x.size();++i) {
+        CartesianState c{};c.x=braking_path.x[i];c.y=braking_path.y[i];
+        c.yaw=braking_path.yaw[i];c.v=braking_path.v[i];c.a=braking_path.a[i];
+        c.kappa=braking_path.kappa[i];double ps,pv,pa,pd,dp,dpp;
+        CartesianToFrenet(collision_braking.reference(),c,ps,pv,pa,pd,dp,dpp,nullptr,100.);
+        prefix.t.push_back(i*braking_dt);prefix.s.push_back(ps);prefix.s_d.push_back(pv);
+        prefix.s_dd.push_back(pa);prefix.d.push_back(pd);prefix.d_d.push_back(dp);
+        prefix.d_dd.push_back(dpp);prefix.s_ddd.push_back(0);
+    }
+    FrenetPath witness;
+    const bool witness_ok=BuildStoppingSafetyPath(prefix,collision_braking.reference(),
+        {3.,6.,.23,3.},8.,witness);
+    const auto checked=witness_ok?ConvertToCartesianPath(witness,collision_braking.reference()):CartesianPath{};
+    Expect(witness_ok && witness.s_d.back()==0 &&
+           EvaluateCartesianTrajectorySafety(checked,{distant_box},collision_braking.vehicle_shape(),
+               collision_braking.collision_config(),braking_dt).clear,
+           "accepted moving prefix has a collision-checked stopping continuation");
     AvoidRoadMap braking_map;std::string braking_map_error;
     Expect(braking_map.Load(package_src+"/../config/hd_map/drivable.json",
                            package_src+"/../config/hd_map/lines.json",braking_map_error),
@@ -382,31 +396,9 @@ int main() {
            physically_blocked.last_failure_reason()==FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED,
            "braking fallback cannot override an actual body collision");
 
-    // First highway merge: a vehicle occupying the conflict frontier must
-    // constrain ordinary KEEP before its normal collision horizon reaches it.
-    FrenetPlanner highway;
-    Expect(highway.Init(config), "highway frontier planner initializes");
-    const auto highway_ego=LoadPoseNearArcLength(waypoints,1180.0,10.0);
-    const auto conflict_pose=LoadPoseNearArcLength(waypoints,1237.04,0.0);
-    const auto conflict_vehicle=MakeAuthoritativeBox(901,conflict_pose.x,conflict_pose.y);
-    PlannerCommand highway_keep{};
-    highway_keep.mode=LANE_KEEPING;
-    highway_keep.has_target_speed=true;
-    highway_keep.target_speed=57.5/3.6;
-    CartesianPath highway_path;
-    const bool highway_wait=highway.Plan(highway_ego,{conflict_vehicle},
-                                         highway_keep,highway_path);
-    Expect(highway_wait && highway.last_mode()==STOP,
-           "unsafe first highway gap hands KEEP to a checked stop before conflict");
-    bool highway_release=false;
-    for(int i=0;i<3;++i) {
-        highway_path={};
-        highway_release=highway.Plan(highway_ego,{},highway_keep,highway_path);
-    }
-    Expect(highway_release && highway.last_mode()==LANE_KEEPING &&
-           !highway_path.x.empty(),
-           "three fresh safe gap checks release highway waiting path");
-
+    // Highway gap admission belongs to HighwayExecution, covered by
+    // highway_execution_test. Ordinary KEEP must not run a second fixed-frontier
+    // gap gate or overwrite the executing Behavior command with STOP.
     if (g_failures == 0) {
         std::cout << "All command KEEP plan tests passed\n";
         return 0;

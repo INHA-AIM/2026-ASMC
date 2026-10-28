@@ -65,7 +65,11 @@ asmc_msgs::BehaviorCommand V2CommandManager::makeCandidate(
       break;
     case BehaviorType::MERGE:
       command.maneuver_type = Command::MERGE;
-      command.merge_type = Command::MERGE_ROUNDABOUT;
+      {
+        const auto highway=context.extra_flags.find("highway_merge");
+        command.merge_type=highway!=context.extra_flags.end()&&highway->second
+            ?Command::MERGE_HIGHWAY:Command::MERGE_ROUNDABOUT;
+      }
       command.target_link_id = context.target.target_link_id;
       command.direction = Command::DIRECTION_NONE;
       command.execution_request = context.maneuver_phase == ManeuverPhase::PREPARE

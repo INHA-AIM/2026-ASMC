@@ -7,10 +7,12 @@
 #include <string>
 #include "Global/Global.hpp"
 #include <limits>
+#include <memory>
 
 #include "Frenet/Geometry/GeometryTypes.hpp"
 
 using ObjectMotionState = asmc_planner::MotionState;
+struct RefLine;
 
 // asmc_msgs/DetectedObject.msg 기반 canonical 객체 표현. 스칼라 motion 필드
 // (ObjectInfo)와 authoritative OBB corner geometry(TrackedObstacle)를 하나로
@@ -52,6 +54,22 @@ struct TrackedObject {
     // these internal fields do not change the ROS message/wire contract.
     double prediction_min_speed = std::numeric_limits<double>::quiet_NaN();
     double prediction_max_speed = std::numeric_limits<double>::quiet_NaN();
+
+    // Competition highway traffic keeps its observed lane. The immutable
+    // reference is shared with prepared driving lanes; current corners and
+    // center remain authoritative. Unmatched/crossing actors leave this empty.
+    std::shared_ptr<const RefLine> prediction_lane;
+    double prediction_lane_s = 0.0, prediction_lane_d = 0.0;
+    double prediction_lane_curvature = 0.0;
+    double prediction_lane_end_s = std::numeric_limits<double>::infinity();
+    double prediction_lane_anchor_x = std::numeric_limits<double>::quiet_NaN();
+    double prediction_lane_anchor_y = std::numeric_limits<double>::quiet_NaN();
+    double prediction_lane_heading = std::numeric_limits<double>::quiet_NaN();
+
+    // Derived copies retain their immutable sensor-time prediction model.
+    // Histories always observe the original input, never this aligned view.
+    std::shared_ptr<const TrackedObject> prediction_origin;
+    double prediction_origin_offset_s = 0.0;
 
     // ---- 아래는 충돌검사용 authoritative geometry (구 TrackedObstacle) ----
     geometry::Corners8 corners{};

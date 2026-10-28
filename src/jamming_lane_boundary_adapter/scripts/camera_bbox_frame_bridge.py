@@ -86,10 +86,6 @@ class FrameBridge:
             if (not b.confidence_valid or not math.isfinite(b.confidence) or
                     not 0 <= b.confidence <= 1 or not b.source_class_name):
                 msg.valid = False
-        # Accept all mission16 classes; this front-view occupancy path does not
-        # infer moving/static state from a label. A stationary vehicle, person
-        # or bicycle still occupies a lane. This consumer's confidence cutoff
-        # is independent of the LiDAR fusion and global planner policies.
         msg.boxes = [b for b in msg.boxes if b.source_class_name.lower() in CLASSES and
                      b.confidence_valid and math.isfinite(b.confidence) and b.confidence >= threshold]
         key = msg.header.stamp.to_nsec()

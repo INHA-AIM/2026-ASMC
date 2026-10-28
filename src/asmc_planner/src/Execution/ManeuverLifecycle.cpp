@@ -44,7 +44,7 @@ ManeuverLifecycle::Output ManeuverLifecycle::update(
     BehaviorType candidate, const PlannerFeedbackData& feedback,
     uint32_t active_command_id, bool stop_preempts_committed,
     bool cancel_reclassified_avoid, bool follow_owns_avoid_target,
-    DecisionStability& stability) {
+    DecisionStability& stability,bool allow_merge_left_prepare) {
   // Emergency is the only unconditional maneuver preemption.
   if (candidate == BehaviorType::EMERGENCY_STOP) {
     active_lateral_behavior_ = BehaviorType::KEEP;
@@ -126,7 +126,8 @@ ManeuverLifecycle::Output ManeuverLifecycle::update(
     }
 
     if (!terminal && active_lateral_behavior_ == BehaviorType::MERGE &&
-        candidate != BehaviorType::EMERGENCY_STOP && candidate != BehaviorType::STOP) {
+        candidate != BehaviorType::EMERGENCY_STOP && candidate != BehaviorType::STOP&&
+        !(allow_merge_left_prepare&&maneuver_phase_!=ManeuverPhase::COMMITTED&&candidate==BehaviorType::LEFT_CHANGE)) {
       candidate = BehaviorType::MERGE;
     }
 

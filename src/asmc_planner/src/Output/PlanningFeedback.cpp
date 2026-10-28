@@ -63,8 +63,8 @@ void PlanningPort::publishFeedbackV2(
         : (lane_change_fields ? lane_change_fields->applied_speed_mps : -1.0);
     const FeedbackKinematics kinematics = ResolveFeedbackKinematics(
         trajectory_source, has_maneuver_fields, maneuver_applied_speed_mps,
-        planner_.last_target_speed(), frenet_state_valid, current_s,
-        planner_.last_d());
+        planner().last_target_speed(), frenet_state_valid, current_s,
+        planner().last_d());
     feedback.applied_speed_mps = kinematics.applied_speed_mps;
     feedback.frenet_state_valid = kinematics.frenet_state_valid;
     feedback.current_s = kinematics.current_s;
@@ -78,7 +78,7 @@ void PlanningPort::publishFeedbackV2(
     // 실제로 추종 중인 leader. command.primary_object_id를 그대로 되돌려
     // 보내면 "지정했다"와 "확보했다"를 구분할 수 없어, 확보에 실패한
     // 사이클에도 ID가 나간다(계약 9.2절).
-    feedback.active_leader_id = planner_.active_leader_id();
+    feedback.active_leader_id = planner().active_leader_id();
     feedback.selected_front_object_id = -1;
     feedback.selected_rear_object_id = -1;
     feedback.gap_evaluated = false;
@@ -118,8 +118,34 @@ void PlanningPort::publishFeedbackV2(
         feedback.blocking_object_id = -1;
     }
 
-    if (feedback.active_maneuver == asmc_msgs::BehaviorCommand::MERGE && frenet_state_valid) {
-        const auto& merge = planner_.last_roundabout_result();
+    const bool dynamic_highway=highway_reference_&&highway_reference_->hasLaneTransition(command_manager_.command_id());
+    if (frenet_state_valid&&((feedback.active_maneuver==asmc_msgs::BehaviorCommand::MERGE&&
+        command_manager_.active_command().merge_type==asmc_msgs::BehaviorCommand::MERGE_HIGHWAY)||
+        (feedback.active_maneuver==asmc_msgs::BehaviorCommand::LANE_CHANGE&&dynamic_highway))) {
+        const auto& merge=dynamic_highway?highway_reference_->transitionPlanner().last_highway_result():planner_.last_highway_result();
+        feedback.maneuver_progress=merge.progress;
+        if(feedback.active_maneuver==asmc_msgs::BehaviorCommand::MERGE) {
+            feedback.gap_evaluated=merge.check.evaluated_samples>0;
+            feedback.gap_safe=merge.candidate_valid;
+            feedback.estimated_entry_time_s=merge.check.entry_time_s;
+            feedback.selected_front_object_id=merge.check.front_id;
+            feedback.selected_rear_object_id=merge.check.rear_id;
+        } else if(merge.candidate_valid&&!merge.candidate_path.x.empty()) {
+            // Report LC's selected target in the SAME active basis as s/d.
+            // MERGE-only gap fields retain their documented sentinels.
+            const auto& path=merge.candidate_path;const auto& line=planner().reference();
+            const auto p=Interpolate(line,FindClosestS(line,path.x.back(),path.y.back(),nullptr,100));
+            feedback.target_d_valid=true;
+            feedback.target_d=-(path.x.back()-p.x)*std::sin(p.theta)+(path.y.back()-p.y)*std::cos(p.theta);
+        }
+        feedback.generated_candidate_count=merge.generated;
+        feedback.valid_candidate_count=merge.valid;
+        feedback.blocking_object_id=merge.check.blocking_object_id;
+        feedback.applied_speed_mps=trajectory&&!trajectory->points.empty()
+            ?trajectory->points.back().velocity:-1;
+        feedback.active_leader_id=merge.following_object_id;
+    } else if (feedback.active_maneuver == asmc_msgs::BehaviorCommand::MERGE && frenet_state_valid) {
+        const auto& merge = planner().last_roundabout_result();
         feedback.maneuver_progress = merge.progress;
         feedback.gap_evaluated = true;
         feedback.gap_safe = merge.candidate_valid;

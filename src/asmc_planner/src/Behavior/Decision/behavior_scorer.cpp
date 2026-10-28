@@ -17,8 +17,8 @@ BehaviorScore BehaviorScorer::score(const UrbanFeature& feature,
   // Static obstacles take precedence over KEEP/FOLLOW. Frenet owns the
   // lateral direction and rejects unsafe candidates before COMMIT.
   score.avoid = feature.risk.static_obstacle_ahead ? 90.0 : -1e6;
-  // Temporary FOLLOW/AVOID verification gate: lane-change remains disabled
-  // until its Behavior FSM transitions are implemented.
+  // Generic map-wide changes stay disabled. BehaviorDecision admits only
+  // explicit highway offers with fresh empty-window/benefit evidence.
   score.left_change = -1e6;
   score.right_change = -1e6;
   score.stop = (hard.planned_stop || hard.force_stop) ? 1e5 : -1e6;

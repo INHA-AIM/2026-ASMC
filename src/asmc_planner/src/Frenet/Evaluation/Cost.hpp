@@ -23,6 +23,21 @@ double ComputeTotalCost(double cost_lat, double cost_lon, const CostWeights& w);
 void EvaluateCosts(std::vector<FrenetPath>& candidates, const CostWeights& w,
                    double target_d = 0.0);
 
+// Time-normalized approach objective, separate from the validated STOP/AVOID
+// weights. All candidates must pass safety first. Speed is a preference, not
+// a ceiling; progress and acceleration/jerk are compared over equal units.
+struct ApproachCostWeights {
+    double speed = 1.0;
+    double acceleration = 0.2;
+    double jerk = 0.1;
+    double progress = 0.2;
+    double lateral = 0.2;
+    double horizon = 0.05;
+};
+void EvaluateApproachCosts(std::vector<FrenetPath>& candidates,
+    double preferred_speed, double acceleration_limit, double jerk_limit,
+    double target_d, const ApproachCostWeights& weights = {});
+
 const FrenetPath* SelectBestPath(const std::vector<FrenetPath>& candidates);
 
 // 안전 필터를 통과한 후보 중 기동 완료시간이 가장 짧은 후보를 고른다.

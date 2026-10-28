@@ -1,31 +1,7 @@
-// MERGE gap/TTC 순수 계산 회귀 (Maneuver/Merge/MergeGapEvaluator.hpp).
-//
-// legacy_behavior_regression_test.cpp가 검증하던 "MERGE를 언제 자동
-// 활성화할지"는 이번 refactor에서 완전히 삭제되었다 - 그 권한은 이제
-// FSM에 있다. 이 테스트는 그 대신 "주어진 MERGE 실행 조건에서 이 gap이
-// 실제로 안전한가"만 검증한다: FindRoundaboutGap/FindHighwayMergeGap을
-// 직접 호출해 front/rear gap, TTC, collision feasibility를 확인한다.
-// behavior auto-selection은 검증 대상이 아니다.
-//
-// 이 테스트가 지키는 계약:
-//   TEST 1: 회전교차로 - 진입 경로에 다른 차량이 전혀 없으면 안전하다.
-//   TEST 2: 회전교차로 - 바로 앞에 conflict point를 통과하는 차량이 있으면
-//           그 차량 뒤로 충분한 time gap이 확보될 때까지 entry_time이
-//           밀린다(front gap 위반 시 즉시 진입은 unsafe).
-//   TEST 3: 회전교차로 - ego가 conflict point에서 너무 멀어 예측 시간
-//           범위 밖이면 confirmed=false(안전하다는 뜻이 아니라 아직
-//           판단할 수 없다는 뜻).
-//   TEST 4: 고속도로 합류 - 목표 corridor에 차량이 전혀 없으면 안전하다.
-//   TEST 5: 고속도로 합류 - 목표 지점에 근접한 선행 차량이 있으면
-//           min_front_gap/min_front_ttc를 만족해야만 안전으로 판정된다.
-//   TEST 6: 고속도로 합류 - checkpoint 자체가 비활성(enabled=false)이면
-//           항상 결과가 unsafe/unconfirmed다.
-//
-// 실제 production FindRoundaboutGap/FindHighwayMergeGap
-// (Maneuver/Merge/MergeGapEvaluator.hpp)을 그대로 호출한다 - 로직을
-// 복사하지 않는다.
-
 #include "Frenet/Maneuver/Merge/MergeGapEvaluator.hpp"
+#include "Frenet/Maneuver/Merge/HighwayMerge.hpp"
+#include "Frenet/Maneuver/Merge/HighwayPrediction.hpp"
+#include "Frenet/Maneuver/Merge/HighwayRearResponse.hpp"
 
 #include "Frenet/Geometry/PolygonUtils.hpp"
 
@@ -46,6 +22,7 @@ void Expect(bool condition, const std::string& name) {
 // 사용하므로 곡률 없는 직선으로 충분하다.
 RefLine MakeStraightRefLine(double total_s, double step = 1.0) {
     RefLine ref;
+    ref.length=total_s;
     for (double s = 0.0; s <= total_s + 1e-9; s += step) {
         RefPoint p{};
         p.x = s;
@@ -59,8 +36,8 @@ RefLine MakeStraightRefLine(double total_s, double step = 1.0) {
     return ref;
 }
 
-// authoritative 8-corner OBB를 직접 구성한다. FindHighwayMergeGap의 충돌
-// 재검사(CheckObstacleOverlap)는 geometry_valid인 corners를 요구하므로,
+// 실제 후보 평가가 소비하는 authoritative 8-corner OBB를 직접 구성한다.
+// 충돌 재검사는 geometry_valid인 corners를 요구하므로,
 // production 합성기 없이 이 fixture가 직접 회전된 직사각형을 두 z 층에
 // 채워 넣는다(실제 perception obb_corners 경로와 동일한 authoritative
 // geometry 형태).
@@ -244,145 +221,490 @@ void TestRoundaboutGapUnconfirmedWhenEgoFarAway() {
            "TEST3: ego 도착시각이 예측창 밖이면 confirmed=false다");
 }
 
-// TEST 4 - 고속도로 목표 corridor에 차량이 없으면 안전하다.
-void TestHighwayGapSafeWhenCorridorEmpty() {
-    RefLine ref = MakeStraightRefLine(200.0);
-    const HighwayMergeConfig cfg = MakeHighwayCfg();
-    HighwayMergeCheckpoint checkpoint;
-    checkpoint.conflict_s = 100.0;
-    checkpoint.clear_s = 120.0;
-
-    FrenetState ego{};
-    ego.s = 70.0;
-    ego.s_d = 8.0;
-
-    const RoundaboutGap gap = FindHighwayMergeGap(
-        ref, ego, /*objects=*/{}, cfg,
-        checkpoint, MakeEgoShape(), MakeCollisionCfg(),
-        /*desired_speed=*/8.0, /*max_ego_accel=*/2.0);
-
-    std::cout << "  safe=" << gap.safe << " confirmed=" << gap.confirmed
-              << " entry_time=" << gap.entry_time << '\n';
-    Expect(gap.confirmed, "TEST4: 빈 corridor에서는 gap 판단이 confirmed다");
-    Expect(gap.safe, "TEST4: 빈 corridor에서는 gap이 안전하다");
-}
-
-// TEST 5 - 목표 clear_s 지점에 근접한 선행 차량이 있으면 min_front_gap/
-// min_front_ttc를 만족해야만 안전으로 판정된다.
-void TestHighwayGapRejectsInsufficientFrontGap() {
-    RefLine ref = MakeStraightRefLine(200.0);
-    HighwayMergeConfig cfg = MakeHighwayCfg();
-    cfg.min_front_gap = 8.0;
-    cfg.min_front_ttc = 2.0;
-    HighwayMergeCheckpoint checkpoint;
-    checkpoint.conflict_s = 100.0;
-    checkpoint.clear_s = 110.0;
-
-    FrenetState ego{};
-    ego.s = 70.0;
-    ego.s_d = 8.0;
-
-    // 선행 차량이 clear_s 바로 앞(2m)에서 거의 정지 상태로(0.3 m/s)
-    // 주행한다 - 매우 느려 탐색 구간(entry=earliest..max_wait_time) 전체에서
-    // clear_s 기준 gap이 min_front_gap(8.0)보다 항상 작게 유지된다.
-    const TrackedObject leader =
-        MakeVehicleAt(/*id=*/9, /*x=*/checkpoint.clear_s + 2.0, /*y=*/0.0,
-                     /*heading=*/0.0, /*speed=*/0.3);
-
-    const RoundaboutGap blocked = FindHighwayMergeGap(
-        ref, ego, {leader}, cfg, checkpoint, MakeEgoShape(),
-        MakeCollisionCfg(), /*desired_speed=*/8.0, /*max_ego_accel=*/2.0);
-
-    std::cout << "  blocked: safe=" << blocked.safe
-              << " confirmed=" << blocked.confirmed << '\n';
-    Expect(blocked.confirmed,
-           "TEST5: 근접 선행차가 있어도 gap 판단 자체는 confirmed다");
-    Expect(!blocked.safe,
-           "TEST5: front gap/TTC 여유가 부족하면 안전으로 판정하지 않는다");
-
-    // 같은 차량이 훨씬 멀리(충분한 gap) 있으면 안전으로 판정되어야 한다.
-    const TrackedObject far_leader =
-        MakeVehicleAt(/*id=*/9, /*x=*/200.0, /*y=*/0.0, /*heading=*/0.0,
-                     /*speed=*/8.0);
-    const RoundaboutGap clear = FindHighwayMergeGap(
-        ref, ego, {far_leader}, cfg, checkpoint, MakeEgoShape(),
-        MakeCollisionCfg(), /*desired_speed=*/8.0, /*max_ego_accel=*/2.0);
-    std::cout << "  clear: safe=" << clear.safe
-              << " confirmed=" << clear.confirmed << '\n';
-    Expect(clear.safe,
-           "TEST5: 선행차가 충분히 멀면 gap이 안전으로 판정된다");
-}
-
-// TEST 6 - checkpoint가 비활성(enabled=false)이면 항상 unsafe/unconfirmed다.
-void TestHighwayGapDisabledConfigIsNeverSafe() {
-    RefLine ref = MakeStraightRefLine(200.0);
-    HighwayMergeConfig cfg = MakeHighwayCfg();
-    cfg.enabled = false;
-    HighwayMergeCheckpoint checkpoint;
-    checkpoint.conflict_s = 100.0;
-    checkpoint.clear_s = 110.0;
-
-    FrenetState ego{};
-    ego.s = 70.0;
-    ego.s_d = 8.0;
-
-    const RoundaboutGap gap = FindHighwayMergeGap(
-        ref, ego, /*objects=*/{}, cfg,
-        checkpoint, MakeEgoShape(), MakeCollisionCfg(),
-        /*desired_speed=*/8.0, /*max_ego_accel=*/2.0);
-
-    std::cout << "  disabled: safe=" << gap.safe
-              << " confirmed=" << gap.confirmed << '\n';
-    Expect(!gap.safe, "TEST6: 비활성 checkpoint는 안전으로 판정되지 않는다");
-    Expect(!gap.confirmed,
-           "TEST6: 비활성 checkpoint는 gap 판단이 confirmed되지 않는다");
-}
-
-void TestHighwayGapRejectsFastUnknownVehicleFragment() {
-    const RefLine ref = MakeStraightRefLine(200.0);
-    HighwayMergeConfig cfg = MakeHighwayCfg();
-    cfg.max_wait_time = 3.4;
-    cfg.min_front_gap = cfg.min_rear_gap = 0.0;
-    cfg.min_front_ttc = cfg.min_rear_ttc = 0.0;
-    const HighwayMergeCheckpoint checkpoint{100.0, 135.0};
-    FrenetState ego{};
-    ego.s = 50.0;
-    ego.s_d = 15.0;
-    // The original first-merge bag showed a vehicle-sized actor as a
-    // 0.16 m wide UNKNOWN cluster while it moved near 12 m/s. Its small
-    // authoritative OBB alone misses a side overlap 2.05 m off route.
-    TrackedObject fragment = MakeVehicleAt(1433, 70.0, 2.05, 0.0, 10.0);
-    fragment.type = 0;
-    fragment.motion_state = ObjectMotionState::DYNAMIC;
-    fragment.width = 0.16;
-    fragment.length = 1.6;
-    fragment.height = 0.05;
-    for (int i = 0; i < 4; ++i) {
-        const double dx = i == 0 || i == 3 ? -0.8 : 0.8;
-        const double dy = i < 2 ? -0.08 : 0.08;
-        fragment.corners[i] = {fragment.x + dx, fragment.y + dy, 0.0};
-        fragment.corners[i + 4] = {fragment.x + dx, fragment.y + dy, 0.05};
+// The production highway evaluator now consumes the actual candidate. Keep
+// the original empty/front-gap/disabled-policy intent and add rear/side cases.
+struct HighwayFixture {
+    RefLine ref=MakeStraightRefLine(400);
+    HighwayMergeConfig cfg=MakeHighwayCfg();
+    HighwayMergeRoute::Zone zone;
+    std::shared_ptr<const asmc_planner::lane_reference::HdLaneMap> map;
+    CartesianPath path;
+    HighwayFixture() {
+        using namespace asmc_planner::lane_reference;
+        LaneMapData data;data.identity={"map","test","test",std::string(64,'a')};data.complete=true;
+        LaneData lane;lane.id=lane.link_id="target";lane.traversable=true;
+        lane.centerline={{0,0},{400,0}};lane.polygon={{0,-1.75},{400,-1.75},{400,1.75},{0,1.75}};
+        data.lanes={lane};data.areas={{"road",{{0,-5},{400,-5},{400,5},{0,5}},true}};
+        std::string error;map=HdLaneMap::create(data,error);
+        zone.target_region=map->corridor({"target"},error);zone.target_reference=ref;
+        zone.config.start_s=60;zone.config.completion_s=120;
+        zone.config.checkpoints={{100,120}};zone.entry_s=95;zone.source_stop_s=91;
+        cfg.speed_error_mps=0;cfg.post_merge_horizon_s=2;
+        for(int i=0;i<=100;++i) {
+            path.x.push_back(70+.8*i);path.y.push_back(0);path.yaw.push_back(0);
+            path.kappa.push_back(0);path.v.push_back(8);path.a.push_back(0);
+        }
     }
-    const RoundaboutGap gap = FindHighwayMergeGap(
-        ref, ego, {fragment}, cfg, checkpoint, MakeEgoShape(),
-        MakeCollisionCfg(), 15.0, 2.0);
-    Expect(gap.confirmed && !gap.safe,
-           "TEST7: fast UNKNOWN fragment cannot clear a side-overlapping highway gap");
+    HighwayCandidateCheck evaluate(const std::vector<TrackedObject>& objects) {
+        return EvaluateHighwayMergeCandidate(path,zone,ref,objects,cfg,
+            MakeEgoShape(),MakeCollisionCfg(),.1,true);
+    }
+};
+void TestHighwayActualCandidate() {
+    HighwayFixture f;
+    Expect(f.map->laneHeading(100,0,8,0).value_or(1)==0,
+        "actor axes use the containing lane's forward centerline direction");
+    Expect(!f.map->laneHeading(100,4,8,0)&&!f.map->laneHeading(100,0,-8,0),
+        "off-lane or opposite-direction actors do not inherit a target-lane direction");
+    auto check=f.evaluate({});
+    Expect(check.safe&&check.covers_completion,"TEST4: actual empty-road candidate covers completion and follow-on");
+    Expect(check.clear_time_s>6&&check.clear_time_s<7,"completion time comes from the actual 8m/s path");
+    auto leader=MakeVehicleAt(9,112,0,0,.3);
+    Expect(!f.evaluate({leader}).safe,"TEST5: close leader blocks actual candidate");
+    Expect(f.evaluate({MakeVehicleAt(9,200,0,0,8)}).safe,"TEST5: distant leader does not block");
+    Expect(!f.evaluate({MakeVehicleAt(10,25,0,0,20)}).safe,"fast rear traffic cannot be ignored");
+    Expect(!f.evaluate({MakeVehicleAt(11,75,0,0,8)}).safe,"side-by-side longitudinal overlap is unsafe");
+    auto old=f.path;f.path.x.resize(25);f.path.y.resize(25);f.path.yaw.resize(25);
+    f.path.kappa.resize(25);f.path.v.resize(25);f.path.a.resize(25);
+    check=f.evaluate({});
+    Expect(!check.safe&&check.reason=="insufficient_completion_horizon","short candidate cannot certify future merge");
+    f.path=old;f.path.v[1]=NAN;
+    Expect(!f.evaluate({}).safe,"non-finite candidate fails closed");
+    f.path=old;auto malformed=leader;malformed.geometry_valid=false;
+    Expect(!f.evaluate({malformed}).safe,"invalid object geometry never means free space");
+    malformed=leader;malformed.x=NAN;
+    Expect(!f.evaluate({malformed}).safe,"non-finite object center never means free space");
+    f.cfg.max_collision_samples=2;
+    Expect(f.evaluate({}).reason=="collision_sample_budget","search budget exhaustion cannot approve");
+    f.cfg.max_collision_samples=12000;
+    const auto timed_out=EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,{},f.cfg,
+        MakeEgoShape(),MakeCollisionCfg(),.1,true,0,std::chrono::steady_clock::now());
+    Expect(!timed_out.safe&&timed_out.reason=="planning_time_budget","expired search never approves a partial certificate");
+    const auto invalid_time=EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,{},f.cfg,
+        MakeEgoShape(),MakeCollisionCfg(),.1,true,NAN);
+    Expect(!invalid_time.safe,"invalid object/ego time alignment fails closed");
+    auto stale=MakeVehicleAt(16,50,0,0,8);
+    const auto at_epoch=f.evaluate({stale});
+    const auto aged=EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,{stale},f.cfg,
+        MakeEgoShape(),MakeCollisionCfg(),.1,true,1.25);
+    Expect(at_epoch.safe&&!aged.safe,"source-time offset moves an old rear object to its actual current pose");
+    f.cfg.enabled=false;
+    Expect(!f.evaluate({}).safe,"TEST6: disabled policy never approves");
+}
+void TestHighwayContinuationPrefix() {
+    HighwayFixture f;
+    // A distant actor changes collision sampling density without blocking us.
+    const std::vector<TrackedObject> remote={MakeVehicleAt(91,300,50,0,11)};
+    const auto full=f.evaluate(remote);
+    Expect(full.safe&&full.covers_completion,"dense sampling certifies the full continuation");
+    const double end=(full.certified_path_samples-1)*.1;
+    Expect(end-full.clear_time_s+1e-9>=f.cfg.post_merge_horizon_s,
+           "retained prefix includes two full seconds after checker clearance");
+    Expect(end-full.clear_time_s<f.cfg.post_merge_horizon_s+.1+1e-9,
+           "unused generated tail is limited to one trajectory-grid rounding step");
+    Expect(full.certified_path_samples<f.path.x.size(),"checker returns a shorter certified prefix");
+
+    // The former generator clipped at the first motion-grid clear sample.
+    // Its tail is genuinely too short for this denser check and stays rejected.
+    const auto original=f.path;
+    const auto old_end=static_cast<std::size_t>(std::ceil((120+2.25-70)/8/.1))+20+1;
+    for(auto* v:{&f.path.x,&f.path.y,&f.path.yaw,&f.path.kappa,&f.path.v,&f.path.a})v->resize(old_end);
+    const auto short_check=f.evaluate(remote);
+    Expect(!short_check.safe&&short_check.reason=="insufficient_completion_horizon",
+           "a pre-trimmed short continuation never receives an artificial tolerance");
+    Expect(short_check.certified_path_samples==0,"failed candidates expose no certified prefix");
+    f.path=original;
+    // Collision checks include the continued driving after rear clearance.
+    auto obstacle=MakeVehicleAt(92,70+8*(full.clear_time_s+1),0,0,0);
+    const auto collision=EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,{obstacle},f.cfg,
+        MakeEgoShape(),MakeCollisionCfg(),.1,false);
+    Expect(!collision.safe&&collision.reason=="candidate_collision",
+           "post-completion collision is checked before any prefix is accepted");
+    f.cfg.post_merge_horizon_s=NAN;
+    Expect(!f.evaluate({}).safe,"invalid continuation duration fails closed");
+}
+void TestHighwayPredictionAndLaneScope() {
+    auto object=MakeVehicleAt(101,100,4,0,10);
+    object.motion_state=ObjectMotionState::DYNAMIC;
+    HighwayMergeConfig cfg=MakeHighwayCfg();cfg.speed_error_mps=5;
+    cfg.speed_error_floor_mps=1;cfg.speed_error_correlation_s=.5;
+    Expect(std::fabs(HighwayPositionError(5,.2,cfg)-1)<1e-9,
+           "near-term sensor error remains fully represented");
+    Expect(std::fabs(HighwayPositionError(5,10,cfg)-50)<1e-9&&
+           HighwayPositionError(5,15,cfg)>HighwayPositionError(5,10,cfg),
+           "observed uncertainty persists over the complete path rather than shrinking without evidence");
+    auto provisional=PrepareHighwayObjectPrediction(object,nullptr,cfg);
+    Expect(provisional.prediction_max_speed==15,
+           "new tracks retain the full sensor speed-error ceiling");
+    ObservedObjectMotion track;
+    for(int i=0;i<6;++i) {
+        auto sample=object;sample.x=95+i;sample.vy=-.4;
+        track.Observe(sample,100+.1*i,1);
+    }
+    object=track.last;object.yaw_rate=0;
+    const auto lane=MakeStraightRefLine(400);
+    const auto fitted=PrepareHighwayObjectPrediction(object,&track,cfg,&lane);
+    const double tangent_speed=std::hypot(10,.4);
+    Expect(std::fabs(fitted.vx-10)<1e-6&&fitted.vy==object.vy,
+           "a position fit refines longitudinal speed without changing observed lateral motion");
+    Expect(std::fabs(fitted.prediction_max_speed-(tangent_speed+1))<1e-6,
+           "stable fit retains a nonzero residual-speed floor over the full horizon");
+    auto jumping=track;jumping.samples[2].y+=2;
+    const auto robust=PrepareHighwayObjectPrediction(object,&jumping,cfg,&lane);
+    Expect(std::fabs(robust.prediction_max_speed-std::hypot(object.vx,object.vy)-1)<1e-6,
+           "a transverse center jump does not erase consistent longitudinal observations");
+    auto turned=object;turned.yaw_rate=.2;
+    const auto turning=PrepareHighwayObjectPrediction(turned,&track,cfg);
+    Expect(std::fabs(turning.prediction_max_speed-std::hypot(turned.vx,turned.vy)-5)<1e-6,
+           "an unresolved turn retains the original motion model and ceiling");
+
+    HighwayFixture f;f.cfg.speed_error_mps=5;
+    f.cfg.speed_error_floor_mps=5; // isolate lane classification from noise-window reduction
+    auto parallel=MakeVehicleAt(102,180,3,0,8);
+    parallel.motion_state=ObjectMotionState::DYNAMIC;
+    parallel.vx=-8;parallel.vy=-.1;
+    // Small physical OBB; speed uncertainty alone reaches into the target
+    // polygon, but remains clear of ego throughout the certified prefix.
+    for(auto& p:parallel.corners)p.y=parallel.y+(p.y-parallel.y)*(.2/1.9);
+    parallel.width=.2;
+    Expect(f.evaluate({parallel}).safe,
+           "another lane is not target traffic solely because its speed hull touches the target polygon");
+    auto crossing=MakeVehicleAt(103,110,5,-M_PI/2,1);
+    crossing.motion_state=ObjectMotionState::DYNAMIC;
+    const auto blocked=f.evaluate({crossing});
+    Expect(!blocked.safe&&blocked.reason=="candidate_collision",
+           "a real off-corridor crossing actor still blocks the physical trajectory");
+}
+void TestHighwayReferenceArrival() {
+    HighwayFixture f;
+    f.cfg.completion_lateral_m=.5;f.cfg.completion_heading_rad=.12;
+    const auto check=[&](const std::vector<TrackedObject>& objects,bool entering=true) {
+        return EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,objects,f.cfg,
+            MakeEgoShape(),MakeCollisionCfg(),.1,entering,0,
+            std::chrono::steady_clock::time_point::max(),true);
+    };
+    const auto clear=check({});
+    Expect(clear.safe&&clear.entry_time_s==0&&clear.clear_time_s==0,
+        "actual target footprint arrival does not wait for the old mission station");
+    Expect(clear.certified_path_samples==21,"actual arrival still retains two full seconds of checked continuation");
+    auto rear=MakeVehicleAt(201,60,0,0,8);rear.motion_state=ObjectMotionState::DYNAMIC;
+    const auto blocked=check({rear});
+    Expect(!blocked.safe&&blocked.reason=="rear_gap_ttc_or_required_braking",
+        "rear admission policy applies at actual lane entry before the mapped taper");
+    Expect(check({rear},false).safe,"committed lane motion does not stop to request the rear gap again");
+    auto fast_rear=MakeVehicleAt(203,55,0,0,20);fast_rear.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({fast_rear}).safe,"fast following traffic still prevents a new lane-entry approval");
+    Expect(check({fast_rear},false).safe,"an established committed vehicle does not stop for rear catch-up alone");
+    const auto straight=f.path;
+    for(std::size_t i=0;i<f.path.y.size();++i) {
+        const double q=std::min(1.0,i*.1);
+        f.path.y[i]=-3.5+3.5*(10*q*q*q-15*q*q*q*q+6*q*q*q*q*q);
+        f.path.yaw[i]=std::atan(3.5*(30*q*q-60*q*q*q+30*q*q*q*q)/8);
+    }
+    auto responsive=MakeVehicleAt(206,46,0,0,16);responsive.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(check({responsive},false).safe,
+        "committed crossing retains forward motion when a separated follower can respond within admitted braking");
+    f.path=straight;
+    auto cutin=MakeVehicleAt(204,55,4,0,20);cutin.motion_state=ObjectMotionState::DYNAMIC;cutin.vy=-2;
+    Expect(!check({cutin},false).safe,"a rear vehicle entering from another lane retains collision checks");
+    auto oncoming=MakeVehicleAt(205,90,0,0,-8);oncoming.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({oncoming},false).safe,"oncoming traffic never gets a rear-following exemption");
+    auto collision=MakeVehicleAt(202,70,0,0,8);collision.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({collision},false).safe,"post-commit physical collision remains a hard rejection");
+    for(auto* v:{&f.path.x,&f.path.y,&f.path.yaw,&f.path.kappa,&f.path.v,&f.path.a})v->resize(20);
+    Expect(!check({}).safe,"short continuation cannot complete reference-transition admission");
+}
+
+void TestSourceLaneFollowerContinuation() {
+    using namespace asmc_planner::lane_reference;
+    HighwayFixture f;
+    LaneMapData data;data.identity={"map","source-rear","test",std::string(64,'b')};data.complete=true;
+    for(int i=0;i<2;++i) {
+        LaneData lane;lane.id=lane.link_id=i?"target":"source";lane.traversable=true;
+        const double y=i?3.5:0;
+        lane.centerline={{0,y},{400,y}};
+        lane.polygon={{0,y-1.75},{400,y-1.75},{400,y+1.75},{0,y+1.75}};
+        data.lanes.push_back(lane);
+    }
+    data.areas={{"road",{{0,-2},{400,-2},{400,6},{0,6}},true}};
+    std::string error;f.map=HdLaneMap::create(data,error);
+    f.zone.source_region=f.map->corridor({"source"},error);
+    f.zone.target_region=f.map->corridor({"target"},error);
+    f.zone.source_reference=f.ref;f.zone.target_reference=f.ref;
+    for(auto& p:f.zone.target_reference.points)p.y=3.5;
+    auto rear=MakeVehicleAt(311,48,0,0,18);rear.motion_state=ObjectMotionState::DYNAMIC;
+    const auto check=[&](const std::vector<TrackedObject>& objects,bool entering=false) {
+        return EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,objects,f.cfg,
+            MakeEgoShape(),MakeCollisionCfg(),.1,entering,0,
+            std::chrono::steady_clock::time_point::max(),true);
+    };
+    Expect(check({rear}).safe,"current-lane forward continuation survives faster separated rear traffic");
+    Expect(check({rear},true).reason=="insufficient_completion_horizon",
+        "source rear no longer blocks preparation; missing target completion still prevents entry approval");
+    auto crossing=rear;crossing.vy=1;
+    Expect(!check({crossing}).safe,"source-lane lateral crossing retains the full collision check");
+    auto pedestrian=rear;pedestrian.type=int(asmc_planner::ObjectType::PEDESTRIAN);
+    Expect(!check({pedestrian}).safe,"pedestrians never acquire the new highway source-following role");
+    auto provisional=rear;provisional.vy=.7;provisional.turn_prediction_duration=.2;
+    provisional.continuation_vx=18;provisional.continuation_vy=0;
+    Expect(check({provisional}).safe,"far provisional rear motion uses following only beyond its strict observation window");
+    auto near=MakeVehicleAt(315,65,0,0,18);near.motion_state=ObjectMotionState::DYNAMIC;
+    near.vy=.7;near.turn_prediction_duration=.2;near.continuation_vx=18;near.continuation_vy=0;
+    Expect(!check({near}).safe,"a collision inside provisional rear observation time still rejects the candidate");
+    auto contact=MakeVehicleAt(312,70,0,0,18);contact.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({contact}).safe,"source-following policy never hides current contact");
+    auto front=MakeVehicleAt(313,90,0,0,0);front.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({front}).safe,"a source-lane front obstacle still rejects a forward candidate");
+    for(std::size_t i=0;i<f.path.y.size();++i)f.path.y[i]=std::min(3.5,i*.35);
+    auto target_rear=MakeVehicleAt(314,48,3.5,0,25);target_rear.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({target_rear},true).safe,"current-lane role does not exempt a fast target-lane rear vehicle during entry");
+    for(auto& y:f.path.y)y=0;
+    data.lanes.clear();
+    LaneData source;source.id=source.link_id="source";source.traversable=true;
+    source.centerline={{0,0},{100,0}};source.polygon={{0,-1.75},{100,-1.75},{100,1.75},{0,1.75}};
+    LaneData common=source;common.id=common.link_id="common";
+    common.centerline={{100,0},{400,0}};common.polygon={{100,-1.75},{400,-1.75},{400,1.75},{100,1.75}};
+    data.lanes={source,common};f.map=HdLaneMap::create(data,error);
+    f.zone.source_region=f.map->corridor({"source"},error);
+    f.zone.target_region=f.map->corridor({"common"},error);f.zone.target_reference=f.ref;
+    f.zone.source_following_region=f.map->corridor({"source","common"},error);
+    Expect(check({rear}).safe,"current-lane rear role survives the boundary into the shared successor");
+    f.path.y[5]=3.5;
+    Expect(!check({rear}).safe,"source following never resumes after a candidate leaves and re-enters the corridor");
+}
+
+void TestMappedFollowerOnCurve() {
+    HighwayFixture f;f.ref={};f.ref.length=200;
+    asmc_planner::lane_reference::LaneMapData data;
+    data.identity={"map","curve","curve",std::string(64,'b')};data.complete=true;
+    asmc_planner::lane_reference::LaneData lane;
+    lane.id=lane.link_id="curve";lane.traversable=true;
+    for(int i=0;i<=400;++i) {
+        const double s=.5*i,a=s/100;
+        const RefPoint p{100*std::sin(a),100*(1-std::cos(a)),s,a,.01,0};
+        f.ref.points.push_back(p);lane.centerline.push_back({p.x,p.y});
+        lane.polygon.push_back({p.x-1.75*std::sin(a),p.y+1.75*std::cos(a)});
+    }
+    for(int i=400;i>=0;--i){const double a=.005*i;
+        lane.polygon.push_back({101.75*std::sin(a),100-101.75*std::cos(a)});}
+    data.lanes={lane};data.areas={{"road",lane.polygon,true}};
+    std::string error;f.map=asmc_planner::lane_reference::HdLaneMap::create(data,error);
+    Expect(bool(f.map),"curved rear-follower fixture has a valid mapped corridor");
+    if(!f.map)return;
+    f.zone.target_region=f.map->corridor({"curve"},error);f.zone.target_reference=f.ref;
+    for(size_t i=0;i<f.path.x.size();++i) {
+        const auto p=Interpolate(f.ref,70+.8*i);
+        f.path.x[i]=p.x;f.path.y[i]=p.y;f.path.yaw[i]=p.theta;f.path.kappa[i]=p.kappa;
+    }
+    const auto p=Interpolate(f.ref,55);
+    auto rear=MakeVehicleAt(901,p.x,p.y,p.theta,20);rear.motion_state=ObjectMotionState::DYNAMIC;
+    rear.prediction_lane=std::make_shared<const RefLine>(f.ref);rear.prediction_lane_s=55;
+    rear.prediction_lane_d=0;rear.prediction_lane_end_s=200;
+    rear.prediction_lane_anchor_x=p.x;rear.prediction_lane_anchor_y=p.y;
+    rear.prediction_lane_heading=p.theta;rear.prediction_lane_curvature=.01;
+    const auto check=[&](bool entering){return EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,
+        {rear},f.cfg,MakeEgoShape(),MakeCollisionCfg(),.1,entering,0,
+        std::chrono::steady_clock::time_point::max(),true);};
+    Expect(!check(true).safe,"fast mapped rear traffic still rejects a new entry on a curve");
+    Expect(check(false).safe,"committed curve continuation uses rear actor lane tangent instead of ego tangent");
+    rear.velocity_unavailable=true;rear.vx=rear.vy=0;
+    const auto ahead=Interpolate(f.ref,80);const double dx=ahead.x-rear.x,dy=ahead.y-rear.y;
+    rear.x=ahead.x;rear.y=ahead.y;rear.prediction_lane.reset();
+    for(auto& corner:rear.corners){corner.x+=dx;corner.y+=dy;}
+    Expect(!check(false).safe,"unavailable motion retains its physical footprint in the forward corridor");
+}
+
+void TestHighwayBoundedRearResponse() {
+    HighwayFixture f;
+    f.cfg.completion_lateral_m=.5;f.cfg.completion_heading_rad=.12;
+    f.cfg.speed_error_mps=.25;f.cfg.max_rear_decel_mps2=3;
+    const auto check=[&](const TrackedObject& object,bool reference=true) {
+        return EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,{object},f.cfg,
+            MakeEgoShape(),MakeCollisionCfg(),.1,true,0,
+            std::chrono::steady_clock::time_point::max(),reference);
+    };
+    for(std::size_t i=0;i<f.path.y.size();++i) {
+        const double q=std::min(1.0,i*.1/3);
+        f.path.y[i]=-3.5+3.5*(10*q*q*q-15*q*q*q*q+6*q*q*q*q*q);
+        f.path.yaw[i]=std::atan(3.5/3*(30*q*q-60*q*q*q+30*q*q*q*q)/8);
+    }
+    auto rear=MakeVehicleAt(301,38,0,0,12);rear.motion_state=ObjectMotionState::DYNAMIC;
+    const auto original=check(rear);
+    rear.prediction_lane=std::make_shared<const RefLine>(f.ref);rear.prediction_lane_s=38;
+    rear.prediction_lane_d=0;rear.prediction_lane_end_s=400;
+    const auto responsive=check(rear);
+    Expect(!original.safe&&responsive.safe,
+        "confirmed target follower uses bounded reaction in BOTH dense collision and rear-gap admission");
+    Expect(responsive.minimum_rear_gap_m>=f.cfg.min_rear_gap&&
+           responsive.minimum_rear_ttc_s>=f.cfg.min_rear_ttc&&
+           responsive.maximum_rear_decel_mps2<=3,
+        "responsive admission retains rear gap/TTC and original 3m/s2 braking limits");
+    Expect(!check(rear,false).safe,"ordinary/legacy merge evaluation does not inherit highway response");
+    auto uncertain=rear;uncertain.prediction_min_speed=7;uncertain.prediction_max_speed=17;
+    Expect(!check(uncertain).safe,"wide observed speed intervals cannot be erased by assuming a rear response");
+    auto unconfirmed=rear;unconfirmed.motion_state=ObjectMotionState::UNKNOWN;
+    Expect(!check(unconfirmed).safe,"unconfirmed motion cannot receive a rear-response hypothesis");
+    auto fork=rear;fork.prediction_lane_end_s=55;
+    Expect(!check(fork).safe,"an unresolved lane successor restores strict prediction");
+    auto close=MakeVehicleAt(302,62,0,0,20);close.motion_state=ObjectMotionState::DYNAMIC;
+    close.prediction_lane=rear.prediction_lane;close.prediction_lane_s=62;close.prediction_lane_end_s=400;
+    Expect(!check(close).safe,"late close rear traffic still rejects before any assumed reaction");
+    auto alongside=MakeVehicleAt(303,70,0,0,12);alongside.motion_state=ObjectMotionState::DYNAMIC;
+    alongside.prediction_lane=rear.prediction_lane;alongside.prediction_lane_s=70;alongside.prediction_lane_end_s=400;
+    Expect(!check(alongside).safe,"alongside traffic cannot become a responsive follower");
+    auto contact=MakeVehicleAt(304,70,-3.5,0,12);contact.motion_state=ObjectMotionState::DYNAMIC;
+    contact.prediction_lane=rear.prediction_lane;contact.prediction_lane_s=70;contact.prediction_lane_end_s=400;
+    Expect(!check(contact).safe,"current physical contact is never exempted");
+    highway_rear_response::State model;
+    model.enabled=true;model.start=2;model.low=11.75;model.high=12.25;
+    model.floor=8;model.required_decel=1;model.maximum_decel=3;
+    const auto coast=model.distances(1.5),react=model.distances(3),speeds=model.speeds(3);
+    Expect(std::fabs(coast.first-11.75*1.5)<1e-9&&std::fabs(coast.second-12.25*1.5)<1e-9,
+        "the full original speed interval coasts until entry plus one-second response");
+    Expect(react.first<react.second&&speeds.first<speeds.second&&speeds.second<12.25,
+        "response occupancy keeps both speed uncertainty and bounded braking alternatives");
+    Expect(model.speeds(10).first==0&&model.distances(10).first<model.distances(10).second,
+        "the maximum-braking bound includes a rear vehicle slowing all the way to rest");
+    const auto poly=model.footprint(rear,3);
+    Expect(poly.size()>=3,"response retains the measured footprint through the shared lane sweep");
+}
+
+void TestJoiningFollowerContinuity() {
+    using namespace asmc_planner::lane_reference;
+    for(double side:{-1.,1.}) {
+        HighwayFixture f;f.cfg.max_rear_decel_mps2=3;
+        LaneMapData data;data.identity={"map","joining","test",std::string(64,'d')};data.complete=true;
+        auto lane=[&](std::string id,double begin,double end,double y) {
+            LaneData l;l.id=l.link_id=id;l.traversable=true;
+            l.centerline={{begin,y},{end,y}};
+            l.polygon={{begin,y-1.75},{end,y-1.75},{end,y+1.75},{begin,y+1.75}};
+            return l;
+        };
+        data.lanes={lane("source",0,100,0),lane("traffic",0,100,side*3.5),lane("common",100,400,side*3.5)};
+        data.areas={{"road",{{0,-6},{400,-6},{400,6},{0,6}},true}};
+        std::string error;f.map=HdLaneMap::create(data,error);
+        Expect(bool(f.map),"joining fixture prepares source, predecessor traffic and separate common successor");
+        if(!f.map)continue;
+        f.zone.source_reference=f.ref;
+        f.zone.source_region=f.map->corridor({"source"},error);
+        f.zone.target_region=f.map->corridor({"common"},error);
+        f.zone.target_reference=f.ref;for(auto& p:f.zone.target_reference.points)p.y=side*3.5;
+        const auto traffic=std::make_shared<const RefLine>(f.zone.target_reference);
+        f.zone.following_lanes={{traffic,f.map->corridor({"traffic","common"},error)}};
+        f.zone.following_region=f.map->corridor({"source","traffic","common"},error);
+        for(std::size_t i=0;i<f.path.x.size();++i) {
+            f.path.y[i]=side*(1.75+1.75*std::min(1.,i*.1/3));
+            f.path.yaw[i]=i<30?std::atan(side*1.75/(3*8)):0;
+        }
+        auto rear=MakeVehicleAt(801,45,side*3.5,0,12);
+        rear.motion_state=ObjectMotionState::DYNAMIC;rear.prediction_lane=traffic;
+        rear.prediction_lane_s=45;rear.prediction_lane_end_s=400;
+        const auto check=[&](const std::vector<TrackedObject>& objects,bool entering=false) {
+            return EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,objects,f.cfg,
+                MakeEgoShape(),MakeCollisionCfg(),.1,entering,0,
+                std::chrono::steady_clock::time_point::max(),true);
+        };
+        const auto continued=check({rear});
+        if(!continued.safe)std::cerr<<"joining side="<<side<<" reason="<<continued.reason<<" blocker="<<continued.blocking_object_id<<'\n';
+        Expect(continued.safe,"left/right committed straddling retains following before the common successor");
+        const auto initial_y=f.path.y.front();f.path.y.front()=0;
+        Expect(!check({rear}).safe,
+            "commitment alone cannot assume a parallel rear vehicle reacts before actual lane occupancy");
+        f.path.y.front()=initial_y;
+        const auto aligned=AdvanceObjectObservation(rear,.08);
+        Expect(check({aligned}).safe,
+            "source-time alignment retains a candidate-local rear response instead of restoring constant speed");
+        Expect(aligned.prediction_origin&&aligned.prediction_origin->vx==rear.vx&&
+            aligned.prediction_origin_offset_s==.08,
+            "rear response never mutates the original observation or drops its alignment age");
+        auto unresolved_origin=aligned;auto origin=*aligned.prediction_origin;
+        origin.prediction_lane.reset();unresolved_origin.prediction_origin=std::make_shared<const TrackedObject>(origin);
+        Expect(!check({unresolved_origin}).safe,
+            "alignment from an unresolved prediction origin cannot inherit a mapped rear response");
+        Expect(!check({rear},true).safe,"new entry still requires the original collision and rear-gap certificate");
+        auto original=f.zone.following_lanes;f.zone.following_lanes.clear();
+        Expect(!check({rear}).safe,"the common-successor-only baseline reproduces rear starvation during the join");
+        f.zone.following_lanes=original;
+        auto unknown=rear;unknown.type=0;
+        Expect(check({unknown}).safe,"a mapped UNKNOWN rear actor has the same geometry-based responsibility");
+        auto unprepared=rear;unprepared.prediction_lane=std::make_shared<const RefLine>(*traffic);
+        Expect(!check({unprepared}).safe,"a foreign parallel reference cannot inherit the prepared joining role");
+        auto cutin=rear;cutin.vy=-side*2;
+        Expect(!check({cutin}).safe,"observed lateral crossing never acquires a joining follower role");
+        auto pedestrian=rear;pedestrian.type=int(asmc_planner::ObjectType::PEDESTRIAN);
+        Expect(!check({pedestrian}).safe,"pedestrians retain collision checks even with a supplied lane pointer");
+        auto front=MakeVehicleAt(802,90,side*3.5,0,2);front.motion_state=ObjectMotionState::DYNAMIC;
+        Expect(!check({rear,front}).safe,"joining followers cannot hide a simultaneous front obstacle");
+        auto close=MakeVehicleAt(803,65,side*3.5,0,20);close.motion_state=ObjectMotionState::DYNAMIC;
+        close.prediction_lane=traffic;close.prediction_lane_s=65;close.prediction_lane_end_s=400;
+        Expect(!check({close}).safe,"near rear impact remains strict throughout the reaction interval");
+        Expect(!check({AdvanceObjectObservation(close,.08)}).safe,
+            "time-aligned close traffic cannot claim a reaction before current commitment");
+        auto contact=MakeVehicleAt(804,70,f.path.y[0],0,12);contact.motion_state=ObjectMotionState::DYNAMIC;
+        contact.prediction_lane=traffic;contact.prediction_lane_s=70;contact.prediction_lane_end_s=400;
+        Expect(!check({contact}).safe,"current physical contact is never exempted after commitment");
+        auto fork=rear;fork.prediction_lane_end_s=60;
+        Expect(!check({fork}).safe,"a rear role cannot extrapolate beyond an unresolved map successor");
+        const auto path=f.path;f.path.y[20]=side*7;
+        Expect(!check({rear}).safe,"leaving then reentering the joining corridor cannot restore the role");
+        f.path=path;f.path.x[20]=f.path.x[19]-1;
+        Expect(!check({rear}).safe,"reverse motion cannot claim forward following responsibility");
+        f.path=path;
+        for(std::size_t i=0;i<f.path.x.size();++i) {
+            const double t=std::min(i*.1,8./3.);
+            f.path.x[i]=70+8*t-1.5*t*t;f.path.y[i]=side*1.75;f.path.yaw[i]=0;
+            f.path.v[i]=std::max(0.,8-3*i*.1);f.path.a[i]=f.path.v[i]>0?-3:0;
+        }
+        Expect(!check({rear}).safe,"ego braking that exceeds the admitted rear response remains unsafe");
+        f.path=path;
+        data.lanes[2]=lane("common",100.02,400,side*3.5);
+        const auto seam=HdLaneMap::create(data,error);
+        f.zone.following_region=seam->corridor({"source","traffic","common"},error);
+        f.zone.following_lanes={{traffic,seam->corridor({"traffic","common"},error)}};
+        Expect(!check({rear}).safe,"a vector seam without a physical road certificate remains unresolved");
+        f.zone.following_road_body={2.25,2.25,.95};
+        f.zone.following_road_footprint=[road=seam->road(),body=f.zone.following_road_body](double x,double y,double yaw){
+            return road->coversFootprint(x,y,yaw,body,0);
+        };
+        Expect(check({rear}).safe,"a validated road body and prepared reference bridge vector membership seams on both sides");
+        data.areas={{"a",{{0,-6},{100,-6},{100,6},{0,6}},true},
+                    {"b",{{102,-6},{400,-6},{400,6},{102,6}},true}};
+        const auto blocked_road=HdLaneMap::create(data,error);
+        f.zone.following_road_footprint=[road=blocked_road->road(),body=f.zone.following_road_body](double x,double y,double yaw){
+            return road->coversFootprint(x,y,yaw,body,0);
+        };
+        Expect(!check({rear}).safe,"a real non-drivable road gap cannot use the vector-seam continuation");
+    }
+}
+
+void TestObservedFastUnknownFragment() {
+    HighwayFixture f;
+    auto fragment=MakeVehicleAt(1433,70,2.05,0,10);
+    fragment.type=0;fragment.motion_state=ObjectMotionState::DYNAMIC;
+    fragment.width=.16;fragment.length=1.6;fragment.height=.05;
+    for(int i=0;i<4;++i){
+        const double dx=(i==0||i==3)?-.8:.8,dy=i<2?-.08:.08;
+        fragment.corners[i]={fragment.x+dx,fragment.y+dy,0};
+        fragment.corners[i+4]={fragment.x+dx,fragment.y+dy,.05};
+    }
+    Expect(!f.evaluate({fragment}).safe,
+        "main observed fast-UNKNOWN fragment protection applies to actual admission candidate");
+    Expect(fragment.width==.16&&fragment.corners[0].y==fragment.y-.08,
+        "admission envelope never changes authoritative source geometry");
 }
 
 int main() {
     TestRoundaboutGapSafeWhenNoTraffic();
     TestRoundaboutGapBlockedByPrecedingVehicle();
     TestRoundaboutGapUnconfirmedWhenEgoFarAway();
-    TestHighwayGapSafeWhenCorridorEmpty();
-    TestHighwayGapRejectsInsufficientFrontGap();
-    TestHighwayGapDisabledConfigIsNeverSafe();
-    TestHighwayGapRejectsFastUnknownVehicleFragment();
-
-    if (g_failures == 0) {
-        std::cout << "[ALL PASS]\n";
-        return 0;
-    }
-    std::cerr << g_failures << " test(s) failed\n";
-    return 1;
+    TestHighwayActualCandidate();
+    TestHighwayContinuationPrefix();
+    TestHighwayPredictionAndLaneScope();
+    TestHighwayReferenceArrival();
+    TestMappedFollowerOnCurve();
+    TestSourceLaneFollowerContinuation();
+    TestHighwayBoundedRearResponse();
+    TestJoiningFollowerContinuity();
+    TestObservedFastUnknownFragment();
+    std::cout<<g_failures<<" failures\n";return g_failures?1:0;
 }

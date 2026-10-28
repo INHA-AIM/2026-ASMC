@@ -7,10 +7,10 @@ BehaviorState Fsm::update(BehaviorType b){if(b==BehaviorType::MERGE)return Behav
 Fsm::ManeuverOutput Fsm::updateManeuver(
     BehaviorType candidate, const PlannerFeedbackData& feedback,
     uint32_t active_command_id, bool stop_preempts_committed,
-    bool cancel_reclassified_avoid, bool follow_owns_avoid_target) {
+    bool cancel_reclassified_avoid, bool follow_owns_avoid_target,bool allow_merge_left_prepare) {
   return lifecycle_.update(candidate, feedback, active_command_id,
                            stop_preempts_committed, cancel_reclassified_avoid,
-                           follow_owns_avoid_target, stability_);
+                           follow_owns_avoid_target, stability_,allow_merge_left_prepare);
 }
 
 }  // namespace behavior_planner

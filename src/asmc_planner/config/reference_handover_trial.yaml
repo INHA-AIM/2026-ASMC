@@ -1,0 +1,25 @@
+# Controlled empty-road trial only. No automatic highway merge/LC policy.
+# IDs are the selected fixture, not production lane-choice rules.
+source_lane: lane:A2256W000408
+target_lanes: [lane:A2256W000434]
+expected_build_id: kcity2025_static_junction_widened_drivable_v6
+expected_geometry_sha256: 01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf
+speed_mps: 5.555555555555555
+arrival_ahead_m: 25.0
+alignment_settle_s: 0.5
+input_max_age_s: 0.3
+max_pose_gap_s: 0.21
+end_guard_s: 8.0
+reference:
+  max_join_gap_m: 0.05
+  sample_distance_m: 0.2
+  sample_yaw_rad: 0.02
+  footprint_margin_m: 0.0
+  max_samples: 30000
+continuity:
+  overlap_s: 1.0
+  position_m: 0.35
+  heading_rad: 0.05
+  curvature_inv_m: 0.03
+  speed_mps: 0.5
+  acceleration_mps2: 1.0

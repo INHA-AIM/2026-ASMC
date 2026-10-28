@@ -77,6 +77,13 @@ asmc_msgs::BehaviorCommand RequestTransaction::update(
         ? Command::PREPARE : Command::EXECUTE;
     candidate.reason = "roundabout_merge";
   }
+  if(has_issued_request_&&!terminal_feedback&&
+      issued_request_.maneuver_type==Command::LANE_CHANGE&&candidate.maneuver_type==Command::LANE_CHANGE&&
+      issued_request_.direction==candidate.direction&&
+      candidate.reason=="slow_leader_highway_lane_change") {
+    const auto request=candidate.execution_request;const auto reason=candidate.reason;
+    candidate=issued_request_;candidate.execution_request=request;candidate.reason=reason;
+  }
   if (terminal_feedback) {
     request_identity_locked_ = false;
   }

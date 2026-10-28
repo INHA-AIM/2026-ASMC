@@ -9,13 +9,16 @@
   <depend>planning_inputs</depend>
   <depend>morai_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>yaml-cpp</depend>
+  <depend>boost</depend>
   <depend>asmc_msgs</depend>
   <depend>roscpp</depend>
   <exec_depend>asmc_controller</exec_depend>
+  <exec_depend>asmc_hd_map</exec_depend>
   <exec_depend>asmc_camera</exec_depend>
   <exec_depend>asmc_lidar</exec_depend>
   <exec_depend>lane_boundary_adapter</exec_depend>

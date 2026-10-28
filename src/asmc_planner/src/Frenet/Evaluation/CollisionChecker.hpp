@@ -38,8 +38,27 @@ struct CollisionCheckConfig {
     double reactive_lookahead;  // [s], 논문 기본값 3.0
 };
 
-// 공용 객체 운동 예측 결과. 충돌 형상은 이 pose로 재생성하지
-// 않고 perception의 authoritative TrackedObject corner를 중심 이동만 시킨다.
+// Explicit opt-in for lane following / stop-capable approaches. Zero decel
+// retains the legacy coast policy used by STOP, AVOID, LC and roundabout MERGE.
+struct StoppingContinuationPolicy {
+    double decel = 0.0;
+    double jerk = 0.0;
+    double max_curvature = 0.0;
+    double max_lateral_accel = 0.0;
+    // Ordinary KEEP may retain an already safe coast continuation. A source
+    // approach must prove a stop before its finite road frontier instead.
+    bool allow_coast_alternative = false;
+};
+
+// Build the safety witness without changing the executable prefix. A partial
+// spatial candidate continues its original lateral curve, not a new steering
+// correction. Time-polynomial candidates must end with settled lateral motion.
+bool BuildStoppingSafetyPath(const FrenetPath& prefix, const RefLine& ref,
+    const StoppingContinuationPolicy& policy, double prediction_horizon,
+    FrenetPath& checked_path);
+
+// 공용 객체 운동 예측 결과. 측정된 corner는 유지하며 예측 위치로 이동한다.
+// 확인된 고주로 차로 모델은 지도 진행 방향의 변화만큼 미래 형상을 강체 회전한다.
 struct PredictedObjectPose {
     double x = 0.0;
     double y = 0.0;
@@ -58,6 +77,9 @@ std::pair<double, double> PredictTrackedObjectVelocity(
 
 PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t);
 
+// Rigidly move the measured corners. Only a confirmed highway lane model
+// adds the mapped heading change; time zero always preserves source geometry.
+geometry::Corners8 PredictTrackedObjectCorners(const TrackedObject&,double time);
 // Advance a derived planning copy from its observation time. Preserve every
 // authoritative corner and the original observation held by the caller.
 // Precondition: elapsed is finite and nonnegative (input adapter validates it).
@@ -102,13 +124,22 @@ CartesianCollisionCheckResult EvaluateCartesianTrajectorySafety(
 // AVOID recovery ID는 시작 시 이미 안전마진과 겹친 경우 실제 OBB 비충돌이며
 // 계속 멀어지는 후보만 탈출할 수 있게 한다. coast exempt ID는 실제 후보
 // 구간에는 적용되지 않고 coast 연장에서만 제외된다.
+// following_lane_half_width > 0 opts an ordinary lane-following request into
+// rear-traffic responsibility: a separated, forward-moving object initially
+// wholly in this reference corridor is a follower, not a stop obstacle. It
+// may leave away from the lane; a predicted return keeps strict checks.
+// Current overlap/margin, lateral intrusions and any path
+// leaving this corridor remain strict. Zero preserves all maneuver checks.
 void FilterByCollision(std::vector<FrenetPath>& combined,
                         const RefLine& ref,
                         const std::vector<TrackedObject>& obstacles,
                         const VehicleShape& ego_shape,
                         const CollisionCheckConfig& cfg,
                         int reactive_coast_exempt_object_id = -1,
-                        int margin_recovery_object_id = -1);
+                        int margin_recovery_object_id = -1,
+                        double following_lane_half_width = 0.0,
+                        const StoppingContinuationPolicy* stopping = nullptr,
+                        bool reuse_object_predictions = false);
 
 #endif
 
