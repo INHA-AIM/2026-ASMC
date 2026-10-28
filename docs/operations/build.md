@@ -17,7 +17,8 @@
 ```
 
 모든 모드는 **빌드만** 한다. `full`은 `EXCLUDE_FROM_ALL`인 C++ 시험도 포함하며 시험을 실행하지 않는다.
-Python 시험은 C++ 컴파일이 필요하지 않다. 기존 CTest/rostest/nosetest 등록과 launch는 유지한다.
+Python 시험 파일 자체는 컴파일 대상이 아니지만 ROS 메시지·native 모듈 등 시험 의존성은 먼저 빌드해야 한다.
+기존 CTest/rostest/nosetest 등록과 launch는 유지한다.
 전체 회귀 실행은 [CI 안내](ci.md)의 수동 workflow 또는 해당 group script를 사용한다.
 원래 catkin 명령이 필요하면 `./scripts/build_ws.sh --catkin ...`으로 전달한다.
 `clean`, `install`, `run_tests`도 기존 catkin 명령으로 전달되며 실행 의미는 각 명령을 따른다.
