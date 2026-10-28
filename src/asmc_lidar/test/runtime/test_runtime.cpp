@@ -564,7 +564,7 @@ TEST(RuntimeConfig, LoadsShippedConfigWithMainValues) {
   EXPECT_EQ(p.roi.f32_MinY, -20.f);
   EXPECT_EQ(p.roi.f32_MaxY, 20.f);
   EXPECT_EQ(p.roi.f32_MinZ, -2.f);
-  EXPECT_EQ(p.roi.f32_MaxZ, 3.f);
+  EXPECT_EQ(p.roi.f32_MaxZ, 2.f);  // Integrated live ROI requested by the user.
   EXPECT_EQ(p.clustering.f32_Eps, 0.5f);
   EXPECT_EQ(p.clustering.s32_MinPoints, 5);
   EXPECT_TRUE(p.clustering.b_Adaptive);
@@ -577,7 +577,9 @@ TEST(RuntimeConfig, LoadsShippedConfigWithMainValues) {
   EXPECT_EQ(p.tracking.f32_MergedTrackRetireDistance, 0.45f);
   EXPECT_TRUE(p.use_roll);
   EXPECT_EQ(p.voxel_leaf_m, 0.1f);
+  // Main tuning stays canonical; the historical low-obstacle profile is opt-in.
   EXPECT_EQ(p.ground.near_threshold_m, 0.30);
+  EXPECT_FALSE(p.camera_point_refinement.enabled);
   EXPECT_EQ(p.ground.far_threshold_m, 0.40);
   EXPECT_EQ(p.ground.seed_max_z_m, -0.65);
   EXPECT_EQ(p.ground.maximum_iterations, 80);
@@ -1087,6 +1089,7 @@ TEST(LidarRuntime, CameraSourceRunsFusionWithoutChangingGeometry) {
   };
   c.RunTo(500);
   ASSERT_TRUE(c.scans.at(500).fusion_ran);
+  // Optional refinement is disabled in the shipped main profile.
   EXPECT_EQ(1, refreshed);
   EXPECT_EQ(Ros(500) + 3 * kMs + 777 * kMs, recording->last_ros_now);
   EXPECT_EQ(Steady(500) + 3 * kMs + 555 * kMs, recording->last_steady_now);

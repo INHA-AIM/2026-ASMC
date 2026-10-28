@@ -1,5 +1,7 @@
 # asmc_lidar
 
+- [실측점 기반 차량·벽면·steel 정제와 프로필](docs/camera-point-refinement.md) · [저상 장애물 임시 근거](docs/low-obstacle-camera-evidence.md). 새 기능은 기본 OFF이며 main의 3뷰·mission15 소비를 유지한다.
+
 ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 3뷰 카메라 fusion → local/map 객체를 처리한다. 공용 추적 관측을 판제가 직접 소비할 수 있다. 판제·수집·시나리오는 이 패키지를 정본으로 사용하며 nested Main/Msg 빌드·source는 폐기했다.
 
 안승현은 **3뷰 fusion·HD맵·카메라 연결**, 손재호는 **터널 통합·관측 위치/OBB·추적·속도·운동 상태**를 진행한다.

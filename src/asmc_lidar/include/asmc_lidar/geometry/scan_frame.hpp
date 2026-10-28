@@ -46,6 +46,8 @@ class ScanFrame {
   void RecordTrackingFrame(TrackedObject& object) const;
   void AlignTrackingState(TrackedObject& object, double yaw_now_rad) const;
   void AlignTrackingFrame(TrackedObject& object, double yaw_now_rad) const;
+  std::optional<asmc::lidar::Pose> PreviousTrackingTransform(
+      const TrackedObject& object,double yaw_now_rad) const;
 
   // Diagnostics of AlignTrackingFrame's corner-edge yaw follow (Main applies it
   // only for |correction| < 0.1 rad). Counts every call so a corner-order

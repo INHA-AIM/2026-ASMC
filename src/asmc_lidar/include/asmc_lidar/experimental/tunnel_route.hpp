@@ -5,11 +5,13 @@
 #include <asmc_lidar/experimental/tunnel_filter_stage.hpp>
 #include <asmc_lidar/fusion/camera_observations.hpp>
 #include <asmc_lidar/tracking/track.hpp>
+#include <functional>
 
 namespace asmc::lidar::pipeline {
 struct TunnelProtectionConfig {
   bool enabled = true;
   bool multiview = false;
+  bool motion_compensated_fallback = false;
   double max_time_offset_s = .05;
   float box_margin_ratio = .10f, box_margin_px = 8.f;
   float depth_vehicle_m = 6.f, depth_person_m = 1.5f;
@@ -39,6 +41,7 @@ struct TunnelRouteConfig {
   bool original_pipeline = false;
   bool integrated_motion = false;
   bool boundary_cluster_rescue = false;
+  bool low_obstacle_evidence = false;
   tunnel_filter::Params params;
   TunnelProtectionConfig protection;
   TunnelClusterZConfig cluster_z;
@@ -48,11 +51,22 @@ struct TunnelRouteConfig {
     params.wall_remove_distance_m = .25f;
   }
 };
+struct TunnelCameraInput;
 struct TunnelCameraView {
   bool common_projection=false; // M1 uses the canonical optical-axis transform
   bool calibrated = false, available = false;
   camera::Calibration calibration;
   std::vector<camera::Box> boxes;
+  std::int64_t stamp_ns=0;
+  int image_width=0,image_height=0;
+  std::string identity;
+  std::function<bool()> still_current;
+  std::function<bool()> source_current;
+  std::shared_ptr<const TunnelCameraInput> low_obstacle_camera;
+  bool motion_compensated=false;
+  bool source_active=false;
+  std::uint64_t camera_epoch=0;
+  asmc::lidar::Pose image_sensor_from_scan_sensor=asmc::lidar::Pose::Identity();
 };
 struct TunnelCameraInput : TunnelCameraView {
   std::vector<TunnelCameraView> views; // empty preserves the front rollback path
@@ -62,6 +76,7 @@ struct TunnelRouteOutput {
   std::vector<int> kept_indices, pre_filter_indices;
   std::vector<pcl::PointIndices> clusters;  // compact filtered-cloud indices
   std::vector<std::string> protected_classes;
+  std::vector<LowObstacleCue> low_obstacle_cues;
   GroundPlaneSnapshot plane;
   asmc::lidar::Rot leveling = asmc::lidar::Rot::Identity();
   TunnelFilterStageReport report;

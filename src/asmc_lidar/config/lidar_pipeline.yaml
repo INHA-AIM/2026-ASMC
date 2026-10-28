@@ -64,7 +64,7 @@ lidar:
     MinY: -20.0
     MaxY: 20.0
     MinZ: -2.0
-    MaxZ: 3.0
+    MaxZ: 2.0
   # Flat K-City course. Upright height after IMU leveling, before ground/cluster.
   # A tall truck retains its lower collision support; upper shape is truncated.
   height_roi:
@@ -131,6 +131,19 @@ map:
   origin: [302595.0, 4124145.0, 0.0]
   # Main ~map_altitude_origin_m; must equal origin z.
   map_altitude_origin_m: 0.0
+
+# Optional measured-point refinement; existing fusion/tuning remains canonical.
+camera_point_refinement:
+  enabled: false
+  steel_fragment_merge: false
+  steel_minimum_confidence: 0.5
+  steel_maximum_gap_m: 2.8
+  steel_minimum_ownership: 0.8
+  minimum_confidence: 0.7
+  max_age_s: 0.15
+  vehicle_scanline_grouping: true
+  independent_wall_cleanup: true
+  detached_wall_cleanup: false
 
 # Camera fusion: policy values retained from the front-only baseline.
 fusion:

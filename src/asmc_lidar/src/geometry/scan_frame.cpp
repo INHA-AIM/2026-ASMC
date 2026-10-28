@@ -167,6 +167,15 @@ void ScanFrame::AlignTrackingFrame(TrackedObject& object, double yaw_now_rad) co
   AlignState(object, change, yaw_now_rad);
 }
 
+std::optional<asmc::lidar::Pose> ScanFrame::PreviousTrackingTransform(
+    const TrackedObject& object,double yaw_now_rad) const {
+  if(!object.tracking.tracking_frame_valid)return {};
+  const auto change=ChangeSincePrevious(object,yaw_now_rad);
+  asmc::lidar::Pose out=asmc::lidar::Pose::Identity();
+  out.linear()=change.rotation;out.translation()=change.translation;
+  return asmc::lidar::pose_valid(out)?std::optional<asmc::lidar::Pose>(out):std::nullopt;
+}
+
 }  // namespace pipeline
 }  // namespace lidar
 }  // namespace asmc

@@ -2,8 +2,21 @@
 #include <asmc_lidar/core/types.hpp>
 
 namespace asmc::lidar::pipeline {
+struct CameraPointSupport {
+  std::int64_t stamp_ns=0;
+  std::uint64_t epoch=0;
+  int box_index=-1;
+  std::string identity,source_class;
+};
+struct LowObstacleCue {
+  std::int64_t stamp_ns=0;
+  std::uint64_t camera_epoch=0;
+  std::string source_class;
+};
 // One scan observation in the leveled LiDAR frame. The cluster is owned here once.
 struct DetectionObservation {
+  CameraPointSupport camera_point_support;
+  LowObstacleCue low_obstacle_cue;
   Cloud pcl_ClusterPoints;
   ObjectGroundEvidence ground_evidence;
 

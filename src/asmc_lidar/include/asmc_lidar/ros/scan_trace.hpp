@@ -84,6 +84,13 @@ void RowMajor(std::ostream& out, const Matrix& m) {
 
 // <object>: idx, core, min, max, dist, points, obb, corners (no braces).
 inline void ObjectFields(std::ostream& out, const pipeline::TrackedObject& o) {
+  const auto& cs=o.detection.camera_point_support;
+  out << "\"camera_point_support\":{\"stamp_ns\":" << cs.stamp_ns
+      << ",\"epoch\":" << cs.epoch << ",\"box_index\":" << cs.box_index << ",\"identity\":";
+  Str(out,cs.identity);out << ",\"source_class\":";Str(out,cs.source_class);out << "},";
+  out << "\"low_obstacle_cue\":{\"stamp_ns\":" << o.detection.low_obstacle_cue.stamp_ns
+      << ",\"camera_epoch\":" << o.detection.low_obstacle_cue.camera_epoch << ",\"temporary_class\":";
+  Str(out,o.detection.low_obstacle_cue.source_class);out << "},";
   out << "\"idx\":" << static_cast<unsigned>(o.detection.u16_Idx) << ",\"core\":";
   Vec3(out, o.detection.f32_CoreX, o.detection.f32_CoreY, o.detection.f32_CoreZ);
   out << ",\"min\":";
@@ -332,6 +339,17 @@ struct LineInput {
 
 inline void Tunnel(std::ostream& out,const pipeline::TunnelFilterStageReport& t) {
   out << "{\"ran\":";Bool(out,t.ran);
+  out << ",\"low_obstacle_verified\":" << t.low_obstacle_verified
+      << ",\"low_obstacle_rescued\":" << t.low_obstacle_rescued
+      << ",\"low_obstacle_rescued_points\":" << t.low_obstacle_rescued_points
+      << ",\"low_obstacle_decisions\":[";
+  for(std::size_t i=0;i<t.low_obstacle_decisions.size();++i) {
+    if(i)out << ',';
+    out << "{\"support\":[";
+    for(std::size_t j=0;j<7;++j){if(j)out << ',';Num(out,t.low_obstacle_decisions[i].first[j]);}
+    out << "],\"temporary_class\":";Str(out,t.low_obstacle_decisions[i].second);out << '}';
+  }
+  out << ']';
   out << ",\"ground_removed\":" << t.ground_labeled << ",\"wall_removed\":" << t.wall_labeled
       << ",\"removed\":" << t.removed_points
       << ",\"left_allowed\":";Bool(out,t.wall_left_removal_allowed);
@@ -403,6 +421,9 @@ inline void Tunnel(std::ostream& out,const pipeline::TunnelFilterStageReport& t)
     out << "]}";
   }
   out << ']';
+  out << ",\"protection_available\":";Bool(out,t.protection_available);
+  out << ",\"protected_points\":" << t.protected_points
+      << ",\"wall_ambiguous_skipped\":" << t.wall_ambiguous_skipped;
   out << ",\"motion_steps\":" << t.motion_steps << '}';
 }
 
@@ -481,6 +502,24 @@ inline std::string Line(const LineInput& in) {
           << ",\"tracks\":" << n.tracks << ",\"observed\":" << n.observed_tracks
           << ",\"predicted\":" << n.predicted_tracks << '}';
       out << ",\"tunnel\":";Tunnel(out,r.tunnel);
+      const auto& cr=r.camera_point_refinement;
+      out << ",\"camera_point_refinement\":{\"enabled\":";Bool(out,cr.enabled);
+      out << ",\"image_stamp_ns\":" << cr.image_stamp_ns << ",\"projection\":[";
+      for(std::size_t i=0;i<cr.projection.size();++i){if(i)out << ',';Num(out,cr.projection[i]);}out << ']';
+      out << ",\"applied\":";Bool(out,cr.applied);out << ",\"reason\":";Str(out,cr.reason);
+      out << ",\"projected_points\":" << cr.projected_points << ",\"extracted_objects\":" << cr.extracted_objects
+          << ",\"removed_wall_points\":" << cr.removed_wall_points << ",\"ms\":" << cr.ms << ",\"decisions\":[";
+      for(std::size_t i=0;i<cr.decisions.size();++i) {
+        if(i)out << ',';
+        const auto& d=cr.decisions[i];
+        out << "{\"box\":" << d.box << ",\"class\":";Str(out,d.source_class);
+        out << ",\"reason\":";Str(out,d.reason);
+        out << ",\"input_points\":" << d.input_points << ",\"object_points\":" << d.object_points
+            << ",\"wall_points\":" << d.wall_points << ",\"components\":" << d.components
+            << ",\"scanline_groups\":" << d.scanline_groups << ",\"depth_m\":";
+        Num(out,d.depth_m);out << '}';
+      }
+      out << "]}";
       if (in.debug) {
         out << ",\"digests\":{\"roi\":";
         Str(out, r.digests.roi);
@@ -542,7 +581,7 @@ inline std::string Line(const LineInput& in) {
       << ",\"roi\":" << r.timings.roi_ms << ",\"voxel\":" << r.timings.voxel_ms
       << ",\"level\":" << r.timings.level_ms << ",\"height\":" << r.timings.height_ms << ",\"ground\":" << r.timings.ground_ms
       << ",\"cluster\":" << r.timings.cluster_ms << ",\"detection\":" << r.timings.detection_ms
-      << ",\"tracking\":" << r.timings.tracking_ms << '}';
+        << ",\"tracking\":" << r.timings.tracking_ms << ",\"camera_point_refinement\":" << r.camera_point_refinement.ms << '}';
   out << ",\"typed\":{\"local\":";
   Array(out, o.arrays.accepted, o.arrays.local);
   out << ",\"map\":";
