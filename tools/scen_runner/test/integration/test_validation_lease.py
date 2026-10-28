@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace as S
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from scen_runner.runtime.validation_lease import ValidationLease,ValidationBusy
@@ -12,6 +12,20 @@ from scen_runner.runtime.validation_episode import EpisodeController
 
 
 class LeaseTest(unittest.TestCase):
+    def test_private_runtime_uses_the_same_shared_endpoint_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict('os.environ', ASMC_VALIDATION_LEASE_DIR=directory):
+                explicit = ValidationLease('host', 7789, directory)
+                private = ValidationLease('host', 7789)
+                self.assertEqual(explicit.path, private.path)
+                try:
+                    explicit.acquire()
+                    with self.assertRaises(ValidationBusy):
+                        private.acquire()
+                finally:
+                    explicit.release()
+                    private.release()
+
     def test_same_endpoint_is_exclusive_and_can_start_after_owner_stops(self):
         with tempfile.TemporaryDirectory() as directory:
             first=ValidationLease('host',7789,directory)

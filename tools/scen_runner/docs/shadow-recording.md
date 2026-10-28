@@ -112,7 +112,13 @@ Source/header는 원문대로 보존하며 ROS receipt와 monotonic 시간을 �
 모델·bbox confidence·family freshness·차로 변경 timeout은 두 설정에서 유지한다.
 실제 실패와 후속 단위는 [음영 판제 계획](../../../docs/architecture/shadow-planning-refactoring.md)을 따른다.
 
-## S1 수정 후보를 별도로 실행
+## S1 수정 후보를 별도로 실행 — 역사적 재현 전용
+
+2026-10-29 main 리베이스 이후 아래 실행은 현재 노드와 호환되지 않는다.
+`archive/local-before-rebase-20261029` (`3bb14526`)에서만 당시 메시지·노드를
+함께 빌드해 재현한다. 현재 NORMAL/기존 음영 노드는 PR127을 따르고, 독립 LOCAL은
+`run_local_trial.py`를 사용한다. 옛 실험 환경값은 조용히 무시하지 않고 거부한다.
+원본 bag·접점 fixture·분석 코드는 당시 증거로 보존한다.
 
 후속4시간 실험에서는 동일한 제어기 안에 제한된 clearance 후보를 추가했다.
 일반 `autonomy.launch`는 그대로이며, 아래 환경값을 **scenario planning 실행기 시작 전**에 지정할 때만

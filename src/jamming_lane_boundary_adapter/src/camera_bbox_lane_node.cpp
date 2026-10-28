@@ -1,10 +1,7 @@
-// BBOX 차로 판정. 운영 기본은 기존 영상 겹침이며, 실험용 local 근거를 선택할 수 있다.
-// 차량 제어 명령은 발행하지 않는다.
+// 직선 구간 BBOX 차로 판정. 거리/주행 명령은 출력하지 않는다.
 // 기존 YOLO와 차선 모듈을 그대로 사용하고, 영상 하단 접점의 차로만 분류한다.
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
 #include "lane_boundary_adapter/ground_projection.hpp"
-#include "lane_boundary_adapter/contact_clearance.hpp"
-#include "lane_boundary_adapter/local_obstacle_support.hpp"
 #include <lane_boundary_adapter/CameraBBoxFrame.h>
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
 #include <sensor_msgs/Image.h>
@@ -35,7 +32,6 @@ using Context = lane_boundary_adapter::BoundaryFamilyStripContext;
 // 1. Parameters: 기본값, 단위, 설명. 모두 private ROS parameter로 설정 가능.
 // ============================================================================
 struct Parameters {
-    bool local_contact_support_enabled=false; // trial-only, public LiDAR contract unchanged.
     std::string reference_lane_topic;      // 선택 사항: 주행 노드의 기준 차로. 비어 있으면 관측 전용 자동 선택.
     double reference_timeout = 0.5;        // [s] 기준 차로 미수신 시 자동 선택으로 복귀.
     std::string calibration_file;          // Canonical cameras_v3; explicit v2 is legacy replay only.
@@ -95,7 +91,6 @@ struct Camera {
     double slope_x = 0.0, slope_y = 0.0;
     cv::Vec3d selected_plane;
 } camera;
-lane_boundary_adapter::LocalObstacleSupport local_obstacles;
 std::vector<cv::Point2d> ego_polygon;
 cv::Mat ego_bitmap;
 
@@ -193,13 +188,6 @@ int main(int argc, char** argv) {
         diagnostic_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(params.diagnostics_topic, 1);
         const auto lane_sub = nh.subscribe(params.lane_topic, 1, laneCallback);
         const auto frame_sub = nh.subscribe(params.frame_topic, 1, frameCallback);
-        ros::Subscriber local_sub;
-        if(params.local_contact_support_enabled)
-            local_sub=nh.subscribe<asmc_msgs::LidarTrackingObservation>("/perception/lidar/tracks_local",8,
-                +[](const asmc_msgs::LidarTrackingObservation::ConstPtr& m){
-                    local_obstacles.accept(m,ros::Time::now(),ros::SteadyTime::now());
-                    drainPending(); // wake exact-image work; never wait inside a ROS callback.
-                });
         ros::Subscriber projection_sub, lane_status_sub;
         if(params.projection_context_required) {
             projection_sub=nh.subscribe<asmc_msgs::CameraGroundProjection>(params.projection_topic,8,
@@ -524,30 +512,6 @@ uint8_t classifyBox(const lane_boundary_adapter::CameraBBox& box, const std::vec
     return Result::OUTSIDE;
 }
 
-// Contact uncertainty is carried separately from semantic lane assignment. The
-// planner may compare a swept vehicle corridor against it; it is NOT an OBB.
-bool groundContact(const lane_boundary_adapter::CameraBBox& box, geometry_msgs::Polygon& polygon) {
-    const double crop_bottom = camera.height * (1.0 - params.hood_crop_bottom_ratio) - params.bottom_clip_px;
-    if (maskOccludesContact(box) || box.ymax >= crop_bottom || box.xmin < 0 || box.ymin < 0 ||
-        box.xmax > camera.width || box.ymax > camera.height || box.xmax <= box.xmin || box.ymax <= box.ymin)
-        return false;
-    const auto inverse = camera.homography.inv(cv::DECOMP_SVD);
-    const double top = std::max<double>(box.ymin, box.ymax - params.contact_band_height_px);
-    const double bottom = std::min(crop_bottom, box.ymax + params.contact_row_tolerance_px);
-    for (const auto& pixel : std::vector<cv::Point2d>{
-        {box.xmin-params.boundary_margin_px,top},{box.xmax+params.boundary_margin_px,top},
-        {box.xmax+params.boundary_margin_px,bottom},{box.xmin-params.boundary_margin_px,bottom}}) {
-        const auto h = inverse * cv::Vec3d(pixel.x,pixel.y,1.0);
-        if (!std::isfinite(h[2]) || std::abs(h[2]) < 1e-9) return false;
-        const double x=h[0]/h[2], y=h[1]/h[2];
-        if (!std::isfinite(x) || !std::isfinite(y) || x < 0 || x > 200 || std::abs(y)>100) return false;
-        geometry_msgs::Point32 p; p.x=x; p.y=y;
-        p.z=camera.selected_plane[0]*x+camera.selected_plane[1]*y+camera.selected_plane[2];
-        polygon.points.push_back(p);
-    }
-    return polygon.points.size()==4;
-}
-
 double boxIoU(const lane_boundary_adapter::CameraBBox& a, const lane_boundary_adapter::CameraBBox& b) {
     const double intersection = std::max(0.0, static_cast<double>(std::min(a.xmax,b.xmax)-std::max(a.xmin,b.xmin))) *
                                 std::max(0.0, static_cast<double>(std::min(a.ymax,b.ymax)-std::max(a.ymin,b.ymin)));
@@ -637,14 +601,6 @@ void drainPending() {
                 params.camera_view,now,steady);
             reason=match.reason;
             if(!match.valid)continue;
-            // A12Hz LiDAR scan can arrive after this15Hz image even though its
-            // source stamp is within50ms. Reuse the existing bounded pending
-            // queue/250ms deadline instead of publishing a transient missing
-            // local result. No wider skew, stale reuse or synthetic empty input.
-            if(params.local_contact_support_enabled &&
-               !local_obstacles.select(input->message->header.stamp,now,steady)){
-                reason="waiting_for_local_contact_observation";continue;
-            }
             const auto ready=input->message;
             const LaneFrame* exact=&*lane;
             while(!pending_frames.empty() && pending_frames.front().message->header.stamp<=ready->header.stamp) {
@@ -715,32 +671,8 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
     result.adjacent_state = Result::NO_DETECTION;
     result.boxes = message->boxes;
     const auto quads = projectLanes(nearest->context);
-    result.contact_projection_valid = projection != nullptr || !params.projection_context_required;
-    double support[2] = {0.,0.};
-    for(unsigned lane=0;lane<2;++lane) {
-        std::vector<std::pair<double,double>> intervals;
-        for(const auto& segment:nearest->context.segments)
-            if(segment.lateral_index==lane && segment.effective_confidence>=params.min_confidence)
-                intervals.emplace_back(segment.valid_x_min_m,segment.valid_x_max_m);
-        support[lane]=lane_boundary_adapter::clearance::contiguousSupport(std::move(intervals));
-    }
-    result.contact_support_x_max_m=std::min(support[0],support[1]);
     bool own_hit = false, adjacent_hit = false, unknown = false, deferred_far = false;
     const auto matches = matchBoxTracks(result.boxes, stamp);
-    const auto local=params.local_contact_support_enabled ?
-        local_obstacles.select(stamp,ros::Time::now(),ros::SteadyTime::now()):asmc_msgs::LidarTrackingObservation::ConstPtr();
-    std::vector<int> local_matches(result.boxes.size(),-1);
-    if(local){
-        const auto& obs=local->observation;
-        result.local_obstacles_valid=true;result.local_obstacles_stamp=obs.objects.header.stamp;
-        result.local_obstacles_session=obs.producer_session_id;result.local_obstacles_generation=obs.generation;
-        result.local_obstacles_sequence=obs.scan_sequence;
-        local_matches=lane_boundary_adapter::LocalObstacleSupport::associate(result.boxes,*local,camera.intrinsic,camera.rotation,camera.translation);
-        for(const auto& object:obs.objects.objects){geometry_msgs::Polygon footprint;
-            if(!lane_boundary_adapter::LocalObstacleSupport::footprint(object,footprint)){result.local_obstacles_valid=false;break;}
-            result.local_obstacle_footprints.push_back(footprint);}
-        if(!result.local_obstacles_valid){result.local_obstacle_footprints.clear();std::fill(local_matches.begin(),local_matches.end(),-1);}
-    }
     std::vector<BoxTrack> next_tracks;
     for (std::size_t i=0; i<result.boxes.size(); ++i) {
         const auto& box = result.boxes[i];
@@ -755,22 +687,6 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
             reason = "tracked_clipped_contact:geometric_lane=" + std::to_string(old->lane);
         }
         result.clipped_association.push_back(associated);
-        geometry_msgs::Polygon contact;
-        bool contact_valid=result.contact_projection_valid && groundContact(box,contact);
-        std::string contact_source=contact_valid?"image_plane":"unavailable";
-        // A uniquely verified published 3D object supplies measured extent
-        // from first association onward. Waiting until visual contact is hidden
-        // changes the obstacle model mid-maneuver and can strand the controller.
-        if(result.contact_projection_valid && result.local_obstacles_valid && local_matches[i]>=0 &&
-           (contact_valid || reason=="bottom_contact_occluded_by_ego_mask" || reason=="bottom_contact_clipped_by_hood_crop")) {
-            contact_valid=lane_boundary_adapter::LocalObstacleSupport::footprint(local->observation.objects.objects[local_matches[i]],contact);
-            if(contact_valid){contact_source="lidar_observed";
-                if(assignment==Result::UNKNOWN)reason="local_lidar_supported:"+reason;}
-        }
-        if(!contact_valid) contact.points.clear();
-        result.ground_contact_sources.push_back(contact_source);
-        result.ground_contacts.push_back(contact);
-        result.ground_contact_valid.push_back(contact_valid);
         if (assignment == Result::OWN || assignment == Result::ADJACENT) {
             BoxTrack track;
             track.box = box; track.stamp = stamp;
@@ -959,10 +875,9 @@ void publishImage(cv::Mat image, const std_msgs::Header& header, const Result& r
 }
 
 // ============================================================================
-// 6. 설정 / 카메라 정본 보정 로드. 별도 깊이 모델은 없으며, local OBB 소비는 실험 설정에서만 켠다.
+// 6. 설정 / 기존 보정 파일 로드. 깊이 모델과 라이다를 사용하지 않는다.
 // ============================================================================
 void loadParameters(ros::NodeHandle& nh) {
-    nh.param("local_contact_support_enabled",params.local_contact_support_enabled,false);
 #define PARAM(name) nh.param(#name, params.name, params.name)
     PARAM(reference_lane_topic); PARAM(reference_timeout);
     PARAM(projection_context_required); PARAM(projection_manifest); PARAM(projection_topic); PARAM(lane_status_topic);

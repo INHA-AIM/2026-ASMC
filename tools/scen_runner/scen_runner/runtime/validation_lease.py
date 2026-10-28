@@ -16,7 +16,8 @@ class ValidationBusy(RuntimeError):
 class ValidationLease:
     def __init__(self, host, port, directory=None):
         self.endpoint=f'{host}:{int(port)}'
-        directory=TOOL_ROOT/'.runtime' if directory is None else Path(directory)
+        # LOCAL containers keep private engine pointers; only the simulator lease is shared.
+        directory=Path(directory) if directory is not None else Path(os.environ.get('ASMC_VALIDATION_LEASE_DIR',str(TOOL_ROOT/'.runtime')))
         digest=hashlib.sha256(self.endpoint.encode()).hexdigest()[:16]
         self.path=directory/f'validation_{digest}.lock'
         self.fd=None
