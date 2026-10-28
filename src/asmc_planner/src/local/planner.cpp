@@ -744,7 +744,13 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       return full;
     }
   }
-  if (out.path.size() < 3 && !Recovery(s, c, out)) {
+  // The full-sweep crawl alternative can still fail at a semantic shadow.
+  // Try the separately labelled3km/h near-field recovery before turning a
+  // short prefix into full STOP. Its actual-OBB veto above is unconditional;
+  // terminal speed integration below must still fit the new path length.
+  const bool recovered=(out.path.size()<3 || short_for_current_speed) &&
+      Recovery(s,c,out);
+  if (out.path.size() < 3 && !recovered) {
     out.reason = "no_verified_prefix";
     out.elapsed_ms = elapsed(start);
     return out;
