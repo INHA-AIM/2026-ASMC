@@ -2,6 +2,7 @@
 #include "local/motion.hpp"
 #include "local/planner.hpp"
 #include "local/road_memory.hpp"
+#include "local/reference_prior.hpp"
 #include "local/semantic_reference.hpp"
 #include <asmc_msgs/CameraGroundProjection.h>
 #include <asmc_msgs/LaneBoundaryFamily.h>
@@ -45,6 +46,7 @@ class Node {
   Config config;
   MotionHistory motion;
   RoadMemory road_memory;
+  ReferencePrior reference_prior;
   bool use_road_memory = true;
   bool semantic_reference_fallback = false;
   bool active_in_jamming_only = false, jamming_selected = false;
@@ -451,7 +453,7 @@ class Node {
     phase = selected_mode ? "active" : preparation ? "prepare" :
         active_in_jamming_only ? "idle" : "preview";
     if (calculated_generation != expected_scene_generation || !compute) {
-      previous.clear(); road_memory.clear(); last_scene = 0; home_role = 0;
+      previous.clear(); road_memory.clear(); reference_prior.clear(); last_scene = 0; home_role = 0;
       calculated_generation = expected_scene_generation;
     }
     if (!compute) {
@@ -745,17 +747,24 @@ class Node {
     // LOCAL-2B: left paint support no longer shortens right-home navigation.
     // Painted support never replaces the physical semantic/OBB sweep.
     home_role = 2;
+    const auto reference_hint = semantic_reference_fallback ?
+        reference_prior.aligned(Pose{origin->x,origin->y,origin->yaw},plan_stamp.toSec()) :
+        std::vector<std::array<double,2>>{};
     if (semantic_reference) {
-      scene.home=SemanticReference(g,config);
+      scene.home=SemanticReference(g,config,reference_hint);
       if (scene.home.empty()) { invalid("semantic_reference_unavailable");return; }
     } else for (double x = begin; x <= end; x += .25) {
       scene.corridor.push_back(
           {x, bounds[1].empty() ? 0. : at(1, x), at(3, x)});
       scene.home.push_back({x, .5 * (at(home_role, x) + at(home_role + 1, x))});
     }
+    if (!semantic_reference && semantic_reference_fallback)
+      reference_prior.observe(scene.home,Pose{origin->x,origin->y,origin->yaw},t);
     if (detail) join_debug.insert(join_debug.size()-1,
         std::string(",\"reference_source\":\"")+(semantic_reference?"semantic_right_offset_trial":"family")+
-        "\",\"family_input_valid\":"+(family->valid?"true":"false"));
+        "\",\"family_input_valid\":"+(family->valid?"true":"false")+
+        ",\"reference_prior_used\":"+(semantic_reference&&!reference_hint.empty()?"true":"false")+
+        ",\"reference_prior_age_s\":"+std::to_string(reference_prior.age(plan_stamp.toSec())));
     for (const auto &o : array.objects) {
       if (o.observation_state != o.OBSERVED)
         continue;

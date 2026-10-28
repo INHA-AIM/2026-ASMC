@@ -2,6 +2,7 @@
 #include "local/motion.hpp"
 #include "local/planner.hpp"
 #include "local/road_memory.hpp"
+#include "local/reference_prior.hpp"
 #include "local/semantic_reference.hpp"
 #include <cmath>
 #include <cstdio>
@@ -26,6 +27,27 @@ Scene empty() {
   return s;
 }
 int main() {
+  {
+    ReferencePrior prior;Config c;auto s=empty();
+    prior.observe(s.home,Pose{},10.);
+    const auto hint=prior.aligned(Pose{1.,.25,.04},10.5);
+    expect(!hint.empty() && std::abs(hint[0][0]+std::cos(.04)+.25*std::sin(.04))<1e-10,
+           "navigation prior transported once using relative odometry");
+    expect(prior.aligned(Pose{},12.001).empty(),"source-aged reference expires without renewal");
+    prior.observe(s.home,Pose{},10.);
+    expect(prior.aligned(Pose{},12.001).empty(),"duplicate source cannot refresh navigation prior");
+    expect(prior.aligned(Pose{6.1,0.,0.},11.).empty(),"reference displacement bound");
+    expect(prior.aligned(Pose{0.,0.,.21},11.).empty(),"reference yaw bound");
+    const auto original=s.grid.probability;
+    auto a=SemanticReference(s.grid,c,s.home);
+    expect(!a.empty() && std::abs(a[5][1])<1e-10,"current road respects source-aged home preference");
+    expect(s.grid.probability==original,"reference hint cannot fill road");
+    for (int col=0;col<160;++col) s.grid.probability[100*160+col]=0;
+    auto b=SemanticReference(s.grid,c,s.home);Result check;
+    expect(!b.empty() && !CheckFootprint(s,c,Pose{10.,0.,0.,0.,0.},check),
+           "historical navigation hint cannot override current physical obstruction");
+    prior.clear();expect(prior.aligned(Pose{},10.5).empty(),"epoch reset drops reference hint");
+  }
   {
     auto s=empty();Config c;
     for(int row=0;row<250;++row) for(int col=0;col<160;++col) {
