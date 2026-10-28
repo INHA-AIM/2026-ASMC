@@ -475,7 +475,7 @@ rosservice call /test/lidar/lidar_pipeline/reset "{}"
 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 따릅니다.
 
 
-## LOCAL-1 실험 계산과 모니터
+## LOCAL 실험 계산과 모니터
 
 일반 autonomy 실행과 별도로 개발 중인 GPS 독립 경로다. 현재 운영 기본이나
 전 터널 수락 구성이 아니다. [검증 상태·제한](../records/planning/2026-10-28-local-planner.md)을 먼저 확인한다.
@@ -516,3 +516,17 @@ local 제어의 소유권을 함께 관리한다. 실행 중인 정상 판제를
 접촉·원복 결과를 기록한다. bag 비교는 `replay_local.py`, 본차로/급제동 평가는
 `scen_runner.records.analyze_local_following`, 시각/자세 대조는
 `scen_runner.records.audit_local_inputs`를 사용한다.
+
+LOCAL-2B는 [경로·속도·실패 검수](../records/planning/2026-10-28-local-path-stability.md)에
+현재 결과를 기록한다. `http://localhost:8000/`의 **LOCAL-2B 주행·실패 검수** 바로가기와
+**로컬 경로·주행·실패 검수** 분류에서 시험을 선택한다. 주행 그래프와 각 실패의 정확한
+RGB/semantic source·선택/탈락 경로를 연결한다. 실시간 화면에는 선택 길이/탐색 한계,
+본차로 근거 끝, 과거 노면의 나이도 표시한다. 청회색은 새 추론이 아닌 과거 실제 노면이다.
+
+`src/asmc_planner/config/local_planner.yaml`의 `causal_road_memory`는 근거리 과거 노면
+보조의 내부 비교 스위치다. planner/controller의 `acceleration_limit_mps2`는 둘 다1.0으로
+맞춘 local 전용 설정이다. 실행 목표25와 실제 허용속도는 다르며 관측 범위와 정지거리
+때문에 낮아질 수 있다. NORMAL 설정이나 기존 jamming follower에는 적용되지 않는다.
+
+실험 목록 일부만 갱신할 때는 `build_experiment_gallery_hub.py --artifacts <root> --group <run-id>`를
+사용한다. 지정하지 않은 실험과 기존 번호를 보존한다. 전체 재탐색은 `--group` 없이 실행한다.

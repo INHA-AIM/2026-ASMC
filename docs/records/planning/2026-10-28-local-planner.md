@@ -128,7 +128,7 @@ drive19는 별도 장애물 actor가 없는 접근 구간에서도 unknown OBB�
 
 ## 통합 웹·직접 확인
 
-[실행 명령](../../operations/commands.md#local-1-실험-계산과-모니터)과
+[실행 명령](../../operations/commands.md#local-실험-계산과-모니터)과
 `http://localhost:8088/web/index_v2.html`을 사용한다. 별도 renderer를 중복
 구현하지 않고 기존 V2 캔버스와 독립 local.html이 같은 renderer를 쓴다.
 자동 보기 또는 `LOCAL-1 경로·노면·fusion`에서 노면·family·후보·선택 경로·
