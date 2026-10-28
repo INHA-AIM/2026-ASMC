@@ -1,5 +1,6 @@
 #include "lane_boundary_adapter/contact_clearance.hpp"
 #include <gtest/gtest.h>
+#include "lane_boundary_adapter/drivable_clearance.hpp"
 using namespace lane_boundary_adapter::clearance;
 static std::vector<Point> straight(double y=0.){std::vector<Point> p;for(int i=0;i<=40;++i)p.push_back({i*.25,y});return p;}
 TEST(ContactClearance, NearSampleOffsetDoesNotAuthorizeAForwardGap) {
@@ -87,5 +88,15 @@ TEST(ContactClearance, ConvexHullPaddingPreservesRotationAndEveryCorner) {
  EXPECT_TRUE(overlaps({},hull));
  EXPECT_FALSE(pathClearOfPolygons(straight(),{Polygon{{30.,0.},{30.,1.}}},Vehicle{},15.));
  std::vector<Polygon> occupied;EXPECT_FALSE(projectedContactOccupancy({hull},{{0.,0.},{30.,0.}},20.,occupied));
+}
+TEST(DrivableClearance, WholeBodyAndUnknownCellsAreChecked) {
+ GridSpec spec{250,160,20.,8.,.1};std::vector<uint8_t> p(40000,255),c(40000,255);DrivableClearance grid;
+ ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{}));EXPECT_TRUE(grid.check(straight(),Vehicle{}).clear);
+ // A narrow hole away from the path centre still intersects the body.
+ p[120*160+70]=0;ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{}));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
+ p.assign(40000,255);c[120*160+70]=0;ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{}));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
+ EXPECT_TRUE(grid.check(straight(-3.),Vehicle{}).clear);
+ EXPECT_FALSE(grid.check(straight(7.5),Vehicle{}).clear);
+ EXPECT_FALSE(grid.prepare(spec,{},c,Vehicle{}));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
 }
 int main(int argc,char** argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}

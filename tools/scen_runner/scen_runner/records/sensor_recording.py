@@ -17,6 +17,7 @@ import time
 SHADOW_TOPICS = (
     '/image_jpeg/compressed', '/cam_left/image_jpeg/compressed', '/cam_right/image_jpeg/compressed',
     '/velodyne_points', '/imu', '/gps', '/Ego_topic', '/morai_sensor_bridge/frame_timing',
+    '/perception/bev/camera/drivable_probability', '/perception/bev/camera/coverage',
     '/CollisionData', '/morai_sensor_bridge/diagnostics', '/morai_udp_bridge/diagnostics',
     '/perception/camera/objects', '/perception/camera/objects/observations', '/perception/camera/objects/status',
     '/perception/camera/lane/status', '/perception/lane/boundary_family', '/perception/lane/ground_projection',
