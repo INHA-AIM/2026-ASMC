@@ -2752,6 +2752,23 @@ bool lineClear(double line, std::vector<FamilyPoint2d>& path) {
     return false;
 }
 
+// 선 line의 왼쪽과 오른쪽에 모두 아직 지나지 않은 장애물이 있으면 그 사이 틈의 중앙 선.
+// 한쪽에만 있거나 line이 장애물 안이면 false. 좁은 틈은 한쪽에 붙지 않고 가운데로 지난다.
+bool lineGapCentre(double line, double& centre) {
+    double left = -std::numeric_limits<double>::infinity();
+    double right = std::numeric_limits<double>::infinity();
+    for (const auto& obstacle : line_state.obstacles) {
+        if (!lineObstacleConfirmed(obstacle) ||
+            lineObstacleX(obstacle) + obstacle.length + params.vehicle_rear + params.avoid_pass_margin <= 0.0) continue;
+        if (obstacle.line_right <= line) left = std::max(left, obstacle.line_right);
+        else if (obstacle.line_left >= line) right = std::min(right, obstacle.line_left);
+        else return false;
+    }
+    if (!std::isfinite(left) || !std::isfinite(right)) return false;
+    centre = 0.5 * (left + right);
+    return true;
+}
+
 std::string updateLinePlan(bool new_scan) {
     LineFrame near;
     if (!lineFrameAt(params.planning_start_x, near)) return "five_lines_unavailable";
@@ -2793,13 +2810,25 @@ std::string updateLinePlan(bool new_scan) {
         line_decision = summary;
     };
     std::vector<FamilyPoint2d> path;
+    double centre = 0.0;
+    std::vector<FamilyPoint2d> centre_path;
     if (!ahead && std::abs(line_state.target - line_state.home) > params.epsilon && lineClear(line_state.home, path)) {
         // 일반 구간 AVOID의 RETURN과 같다: 장애물 중심을 모두 지났고 차로 중앙 경로가 비어 있으면 복귀.
         ROS_INFO("Line selection: return %.2f -> %.2f", line_state.target, line_state.home);
         line_state.target = line_state.home;
         describe("return");
     } else if (lineClear(line_state.target, path)) {
-        describe("keep");
+        // 양쪽 장애물 사이를 지나는 중이면 틈 중앙으로 맞춘다. 한 칸 이상 벗어났을 때만 옮겨 떨림을 막는다.
+        if (lineGapCentre(line_state.target, centre) &&
+            std::abs(centre - line_state.target) >= params.avoid_line_step - params.epsilon &&
+            lineClear(centre, centre_path)) {
+            ROS_INFO("Line selection: %.2f -> gap centre %.2f", line_state.target, centre);
+            line_state.target = centre;
+            path = centre_path;
+            describe("centre to");
+        } else {
+            describe("keep");
+        }
     } else {
         // 지금 선이 막혔다. 가까운 선부터(같으면 오른쪽 먼저) 피할 수 있는 선을 찾는다.
         bool found = false;
@@ -2812,9 +2841,17 @@ std::string updateLinePlan(bool new_scan) {
                 // pathInsideRoad(corridorAt)가 판정한다. 따라서 숫자 한계는 갓길까지
                 // 후보로 낼 수 있도록 한 칸 넓히고, 실제 제약은 corridor에 맡긴다.
                 if (line < 0.0 || line > 6.0 || !lineClear(line, path)) continue;
+                double chosen = line;
+                // 양쪽에 장애물이 있으면 한쪽으로 더 밀지 않고 틈 중앙을 쓴다.
+                if (lineGapCentre(line, centre) && lineClear(centre, centre_path)) {
+                    ROS_INFO("Line selection: %.2f blocked -> gap centre %.2f", line_state.target, centre);
+                    line_state.target = centre;
+                    path = centre_path;
+                    found = true;
+                    break;
+                }
                 // 통과 가능한 가장 가까운 선은 장애물을 바짝 스친다. avoid_line_extra만큼
                 // 같은 방향으로 더 밀어 여유를 늘린다. 추가 후보가 막히면 직전 값을 쓴다.
-                double chosen = line;
                 for (double extra = params.avoid_line_step; extra <= params.avoid_line_extra + params.epsilon;
                      extra += params.avoid_line_step) {
                     const double pushed = line + side * extra;
@@ -2825,6 +2862,18 @@ std::string updateLinePlan(bool new_scan) {
                 }
                 ROS_INFO("Line selection: %.2f blocked -> %.2f", line_state.target, chosen);
                 line_state.target = chosen;
+                found = true;
+                break;
+            }
+        }
+        // 격자 선이 모두 막혀도 두 장애물 사이 틈의 중앙은 지날 수 있다(격자 간격보다 좁은 틈).
+        for (int k = 0; k <= steps && !found; ++k) {
+            for (int side : {1, -1}) {
+                const double line = line_state.target + side * k * params.avoid_line_step;
+                if (line < 0.0 || line > 6.0 || !lineGapCentre(line, centre) || !lineClear(centre, centre_path)) continue;
+                ROS_INFO("Line selection: %.2f blocked -> gap centre %.2f", line_state.target, centre);
+                line_state.target = centre;
+                path = centre_path;
                 found = true;
                 break;
             }

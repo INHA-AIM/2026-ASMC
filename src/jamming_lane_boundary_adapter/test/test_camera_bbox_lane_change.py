@@ -652,6 +652,17 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(status['locked_lane'],'1')
         self.assertGreater(self.target.point.y,0.3)  # Heading back towards line 4 (+1.75 m in this frame).
 
+    def test_straddle_obstacles_on_both_sides_use_gap_centre(self):
+        self.feed()
+        # Right obstacle blocks line 4 (y -0.8..-3.2); left obstacle covers up to line ~1.49 (y 4.4..6.0).
+        # The nearest clear line 3.5 would graze the right obstacle; the gap centre is line ~2.97.
+        self.feed(spans=[(-3.2,-0.8,13.),(4.4,6.0,13.)],speed=0.,duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,2.97,delta=0.15)
+        self.assertEqual(status['locked_lane'],'0')
+        self.assertGreater(self.command.steering,0)
+
     def test_straddle_far_blocking_obstacle_uses_lane_change(self):
         self.feed()
         # Own lane fully blocked beyond the path reach: not ignored; the left lane (line 2.25) becomes my lane.
