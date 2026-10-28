@@ -51,9 +51,13 @@ canonical_configs:
   - path: src/asmc_camera/config/bev/fusion.yaml
     sha256: 9b8a11f2c4849df99675df64b5ceec823b05c12ee82bfb0fc2e496a76982706c
   - path: src/asmc_camera/config/bev/lane_fitting.yaml
-    sha256: 9f0a137c78515a9eb75a8ac3f72eb7d2c9694557d49810d382290304d2facad6
-    previous_sha256: 00b0909db8813e8bda08e9c9efa079bc6556b98d56511c9b532da79aec060a9d
-    revision_reason: family_supply_20261015_sync_queue_12_to_4_no_fitting_threshold_changes
+    sha256: 5f38547527423c6708bb5e7f14e46f4d1ec214d12ab3c3dae55245da64412f6c
+    previous_sha256: 9f0a137c78515a9eb75a8ac3f72eb7d2c9694557d49810d382290304d2facad6
+    revision_reason: lane_family_20261028_guarded_native_backend_auto_no_geometry_or_gate_changes
+    revision_evidence: docs/records/camera/2026-10-28-lane-family-compute-optimization.md
+    prior_revisions:
+      - sha256: 00b0909db8813e8bda08e9c9efa079bc6556b98d56511c9b532da79aec060a9d
+        reason: before_family_supply_20261015_sync_queue_12_to_4_no_fitting_threshold_changes
   - path: src/asmc_camera/config/bev/visualization.yaml
     sha256: d14e4fef3848506342181d69fd01b76513a65d2572fe4602c9a215964e903573
     previous_sha256: ab145bda84b1ba3de1c296a26a5a836a99cc3b6bbb9aa7021fdee4d326a7db04

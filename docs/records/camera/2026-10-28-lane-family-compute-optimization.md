@@ -201,3 +201,7 @@ geometry hash가 판제 기대값과 같고, 실제 lateral gate 변경은 hash�
 기존 검증 이미지의 Torch 포함 headers를 쓰는 경우 위의 CMake include 인자를 명시한다.
 빌드 후 `source devel/setup.bash` 및 `python3 -c 'from asmc_camera import _lane_association; print(_lane_association.__file__)'`
 로 확인한다. extension 없이 auto의 Python fallback만 실행한 결과를 native 최적화 적용으로 보지 않는다.
+
+최초 hosted CI는 `lane_fitting.yaml`의 파일 SHA 등록 누락으로 계약 감사에서 중단됐다.
+`perception_support_config_parity_v1.yaml`의 해당 항목만 새 SHA·변경 이유로 갱신하고 이전 SHA
+이력을 남겼다. 9월 원본 실측·bag 검증 기록이나 판제 geometry hash/검증기를 변경하지 않았다.
