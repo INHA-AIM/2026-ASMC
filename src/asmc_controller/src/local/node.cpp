@@ -27,10 +27,11 @@ class LocalController {
   ros::SteadyTime state_received, plan_received;
   ros::Time evaluation_time;
   ros::SteadyTime last_solved;
-  bool command_published = false, motion_waited = false;
+  bool command_published = false, input_waited = false;
   std::string frame, reason = "initializing";
   bool enabled = false, selected = false, duplicate = false;
   double command_age = 0, last_steering = 0;
+  double local_acceleration_limit = 1.;
   static double yaw(const geometry_msgs::Quaternion &q) {
     return std::atan2(2 * (q.w * q.z + q.x * q.y),
                       1 - 2 * (q.y * q.y + q.z * q.z));
@@ -116,7 +117,7 @@ class LocalController {
     cmd.steering = last_steering;
     ResetMPCOnFailSafe();
     last_solved = ros::SteadyTime();
-    motion_waited = false;
+    input_waited = false;
     if (enabled && !duplicate && selected) {
       command_pub.publish(cmd);
       command_published = true;
@@ -203,7 +204,7 @@ class LocalController {
     // geometry must never renew its350ms source freshness (550ms crawl grace).
     const double source_age = (now - candidate->scene_stamp).toSec();
     if (age < 0 || age > (grace ? .55 : .35) || source_age < age ||
-        source_age > (grace ? .55 : .35) || state_age < 0 || state_age > .15) {
+        source_age > (grace ? .55 : .40) || state_age < 0 || state_age > .15) {
       stop("local_source_stale");
       return;
     }
@@ -254,17 +255,35 @@ class LocalController {
       return;
     }
     ego.vx = std::max(0., ego.vx);
+    if (!grace && source_age > .35) {
+      // No new command computed from expired perception. One normal20Hz tick
+      // may wait for a replacement after a recent solve in the same session.
+      // The existing selector keeps only the original command age/watchdog.
+      if (!input_waited && last_good &&
+          candidate->header.frame_id == last_good->header.frame_id &&
+          candidate->scene_stamp >= last_good->scene_stamp && age <= .15 &&
+          state_age <= .10 && std::isfinite(state->twist.twist.angular.z) &&
+          (steady - last_solved).toSec() < .10) {
+        input_waited = true;
+        reason = "plan_replacement_pending";
+        report(false, morai_msgs::CtrlCmd());
+        return;
+      }
+      stop("local_source_stale");
+      return;
+    }
+
     // State and trajectory have independent source times. Propagate the most
     // recent odometry once to this control tick, within the same100ms bound as
     // the planner's MotionHistory. Camera latency was handled by the planner.
-    if (!motion_waited && state_age > .10 && state_age <= .15 &&
+    if (!input_waited && state_age > .10 && state_age <= .15 &&
         std::isfinite(state->twist.twist.angular.z) && ego.vx <= 5. / 3.6 &&
         (steady - last_solved).toSec() < .10) {
       // A measured100.7ms cadence gap used to issue one full-brake tick at
       // crawl. Wait for the next actual state, with no command refresh or extra
       // extrapolation. The existing250ms selector watchdog still owns expiry.
       // Only a recently solved path at crawl qualifies; sustained gaps fail.
-      motion_waited = true;
+      input_waited = true;
       reason = "motion_sample_pending";
       report(false, morai_msgs::CtrlCmd());
       return;
@@ -291,7 +310,7 @@ class LocalController {
       return;
     }
     auto start = ros::SteadyTime::now();
-    auto output = MPCProcess(ego, ref);
+    auto output = MPCProcess(ego, ref, local_acceleration_limit);
     if (!output.success) {
       stop(output.failure_reason ? output.failure_reason : "mpc_failed");
       return;
@@ -299,7 +318,7 @@ class LocalController {
     auto command =
         mpc_controller_ros::ToRosControlCommand(output.control, GetMPCParams());
     last_solved = ros::SteadyTime::now();
-    motion_waited = false;
+    input_waited = false;
     last_steering = command.steering;
     if (enabled && selected) {
       command_pub.publish(command);
@@ -335,10 +354,16 @@ public:
             params.weight_control_rate);
     p.param("heading_cost", params.weight_heading_error,
             params.weight_heading_error);
+    // LOCAL-2B: cap the solve, not pedal normalization or NORMAL parameters.
+    // Lowering params.accel_max would also change legacy pedal conversion.
+    p.param("acceleration_limit_mps2", local_acceleration_limit, 1.);
     if (params.horizon < 20 || params.horizon > 61 ||
         !std::isfinite(params.weight_control_rate +
-                       params.weight_heading_error) ||
-        params.weight_control_rate <= 0 || params.weight_heading_error <= 0)
+                       params.weight_heading_error +
+                       local_acceleration_limit) ||
+        params.weight_control_rate <= 0 || params.weight_heading_error <= 0 ||
+        local_acceleration_limit <= 0 ||
+        local_acceleration_limit > params.accel_max)
       throw std::runtime_error("invalid local MPC tuning");
     InitMPC(params);
     p.param("enable_control", enabled, false);

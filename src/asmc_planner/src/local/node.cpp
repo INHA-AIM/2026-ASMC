@@ -1,6 +1,7 @@
 #include "local/journal.hpp"
 #include "local/motion.hpp"
 #include "local/planner.hpp"
+#include "local/road_memory.hpp"
 #include <asmc_msgs/CameraGroundProjection.h>
 #include <asmc_msgs/LaneBoundaryFamily.h>
 #include <asmc_msgs/LidarTrackingObservation.h>
@@ -40,6 +41,8 @@ class Node {
   ros::NodeHandle nh, p{"~"};
   Config config;
   MotionHistory motion;
+  RoadMemory road_memory;
+  bool use_road_memory = true;
   // Callbacks own the small input cache. Expensive Plan runs outside this lock;
   // a second callback thread keeps signed odometry and arrivals current.
   std::mutex input_mutex, calculation_mutex;
@@ -78,6 +81,7 @@ class Node {
   double imu_received = 0, next_plan_due = 0;
   ros::SteadyTime last_invalid;
   uint64_t sequence = 0, last_scene = 0;
+  uint64_t last_deferred_scene = 0, aged_bundle_deferred = 0;
   std::unique_ptr<Journal> journal;
   std::deque<std::string> recent;
   std::string reason = "initializing", last_json = "{}";
@@ -99,6 +103,7 @@ class Node {
     family_arrivals.clear();
     lidar_arrivals.clear();
     previous.clear();
+    road_memory.clear();
     last_scene = 0;
     home_role = 0;
   }
@@ -232,11 +237,17 @@ class Node {
       << ",\"valid\":" << (r.valid ? "true" : "false") << ",\"reason\":\""
       << r.reason << "\",\"age_s\":" << age
       << ",\"processing_ms\":" << r.elapsed_ms
+      << ",\"reference_end_m\":" << r.reference_end
+      << ",\"search_horizon_m\":" << r.search_horizon
+      << ",\"selected_length_m\":" << (r.path.empty() ? 0 : r.path.back().s)
+      << ",\"path_source\":" << std::quoted(r.path_source)
+      << ",\"soft_semantic_margin_visits\":" << r.soft_margin_cells
       << ",\"search_ms\":" << r.search_ms << ",\"speed_ms\":" << r.speed_ms
       << ",\"alignment_ms\":" << r.alignment_ms
       << ",\"requested_kph\":" << config.speed_cap * 3.6
       << ",\"curve_kph\":" << r.curve_cap * 3.6
       << ",\"space_kph\":" << r.space_cap * 3.6
+      << ",\"actual_state_stopping_kph\":" << r.stopping_cap * 3.6
       << ",\"selected_kph\":" << r.chosen_cap * 3.6 << ",\"speed_reason\":\""
       << r.speed_reason << "\",\"assisted\":" << (r.assisted ? "true" : "false")
       << ",\"recovery\":" << (r.recovery ? "true" : "false")
@@ -297,6 +308,7 @@ class Node {
     }
     s << "],\"candidates_omitted\":" << r.candidates_omitted;
     s << ",\"discarded_generation_results\":" << discarded_plans;
+    s << ",\"aged_bundle_deferred\":" << aged_bundle_deferred;
     s << ",\"vehicle\":{\"width\":" << config.width
       << ",\"front\":" << config.length - config.rear
       << ",\"rear\":" << config.rear << ",\"margin\":" << config.margin << "}}";
@@ -393,6 +405,18 @@ class Node {
     if (selected == last_scene ||
         ros::SteadyTime::now().toSec() < next_plan_due)
       return;
+    // Keep350ms source freshness at the control boundary. A250ms-old bundle
+    // can expire during up to50ms planning plus the next20Hz control tick.
+    // Wait for the next complete bundle instead of publishing a path that its
+    // first consumer must reject. This does not renew the previous command.
+    if (age > .25) {
+      if (last_deferred_scene != selected) {
+        last_deferred_scene = selected;
+        ++aged_bundle_deferred;
+      }
+      ROS_WARN_THROTTLE(5., "LOCAL waiting for fresher bundle: age=%.3fs", age);
+      return;
+    }
     const auto plan_stamp = ros::Time::now();
     auto camera_origin = motion.at(t);
     auto origin = motion.at(plan_stamp.toSec());
@@ -558,7 +582,7 @@ class Node {
         started = true;
       }
     }
-    if (bounds[1].size() < 2 || bounds[2].size() < 2 || bounds[3].size() < 2) {
+    if (bounds[2].size() < 2 || bounds[3].size() < 2) {
       invalid("family_support");
       return;
     }
@@ -573,10 +597,8 @@ class Node {
         }
       return line.back()[1];
     };
-    double begin = std::max(
-        {bounds[1].front()[0], bounds[2].front()[0], bounds[3].front()[0]});
-    double end = std::min(
-        {bounds[1].back()[0], bounds[2].back()[0], bounds[3].back()[0]});
+    double begin = std::max(bounds[2].front()[0], bounds[3].front()[0]);
+    double end = std::min(bounds[2].back()[0], bounds[3].back()[0]);
     if (begin > config.length - config.rear || end <= begin) {
       // Preserve the exact rejection evidence in input diagnostics, including
       // during body-motion cases where one role loses its near support.
@@ -591,11 +613,12 @@ class Node {
     // Do not switch home strip just because the vehicle straddles the centre.
     // This is a navigation/return preference only: Plan checks semantic road
     // and local OBBs, never clips the footprint at these painted boundaries.
-    // The all-three-role support dependency above is a remaining input limit,
-    // not evidence that the painted lines delimit the physical tunnel corridor.
+    // LOCAL-2B: left paint support no longer shortens right-home navigation.
+    // Painted support never replaces the physical semantic/OBB sweep.
     home_role = 2;
     for (double x = begin; x <= end; x += .25) {
-      scene.corridor.push_back({x, at(1, x), at(3, x)});
+      scene.corridor.push_back(
+          {x, bounds[1].empty() ? 0. : at(1, x), at(3, x)});
       scene.home.push_back({x, .5 * (at(home_role, x) + at(home_role + 1, x))});
     }
     for (const auto &o : array.objects) {
@@ -649,6 +672,12 @@ class Node {
       q.yaw += previous_origin.yaw - origin->yaw;
       scene.previous.push_back(q);
     }
+    if (use_road_memory) {
+      road_memory.apply(g, Pose{origin->x, origin->y, origin->yaw},
+                        plan_stamp.toSec());
+      road_memory.observe(
+          g, Pose{camera_origin->x, camera_origin->y, camera_origin->yaw}, t);
+    }
     // Bounded debug geometry, never a second projection or image encoder.
     std::ostringstream debug;
     debug << std::setprecision(17) << "{\"ground_z\":" << g.ground_z
@@ -687,7 +716,31 @@ class Node {
         debug << ',';
       debug << '[' << scene.home[k][0] << ',' << scene.home[k][1] << ']';
     }
-    debug << "],\"boundaries\":[";
+    debug << "],\"recent_road_runs\":[";
+    bool first_run = true;
+    unsigned memory_cells = 0;
+    double memory_age = 0;
+    for (int row = 0; row < g.rows; ++row) {
+      int begin = -1;
+      for (int col = 0; col <= g.cols; ++col) {
+        double age = col < g.cols ? g.recent_road_age[row * g.cols + col] : 0;
+        if (age > 0) {
+          ++memory_cells;
+          memory_age = std::max(memory_age, age);
+          if (begin < 0)
+            begin = col;
+        } else if (begin >= 0) {
+          if (!first_run)
+            debug << ",";
+          first_run = false;
+          debug << "[" << row << "," << begin << "," << col - 1 << "]";
+          begin = -1;
+        }
+      }
+    }
+    debug << "],\"recent_road_cells\":" << memory_cells
+          << ",\"recent_road_max_age_s\":" << memory_age;
+    debug << ",\"boundaries\":[";
     for (int role = 1; role <= 3; ++role) {
       if (role > 1)
         debug << ',';
@@ -792,21 +845,25 @@ public:
     p.param("speed_cap_kph", config.speed_cap, 25.);
     config.speed_cap /= 3.6;
     p.param("near_blind_assist", config.blind_assist, false);
+    p.param("causal_road_memory", use_road_memory, true);
     p.param("recovery", config.recovery, true);
     p.param("vehicle_width", config.width, 2.160835);
     p.param("vehicle_length", config.length, 4.635);
     p.param("rear_axle_to_bumper", config.rear, .790);
     p.param("clearance_margin", config.margin, .10);
     p.param("planning_budget_ms", config.budget_ms, 40.);
+    p.param("acceleration_limit_mps2", config.accel, 1.);
     if (run.empty() || run.size() > 128 ||
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
                               "WXYZ0123456789-_.") != std::string::npos ||
         !std::isfinite(config.width + config.length + config.rear +
-                       config.margin + config.budget_ms + config.speed_cap) ||
+                       config.margin + config.budget_ms + config.speed_cap +
+                       config.accel) ||
         config.width < 1.892 || config.length < 4.5 || config.rear <= 0 ||
         config.rear >= config.length || config.margin < 0 ||
         config.budget_ms <= 0 || config.budget_ms > 100 ||
-        config.speed_cap <= 0 || config.speed_cap > 25. / 3.6)
+        config.speed_cap <= 0 || config.speed_cap > 25. / 3.6 ||
+        config.accel <= 0 || config.accel > 2.)
       throw std::runtime_error("invalid LOCAL-1 run/configuration");
     std::string log;
     p.param<std::string>("journal_path", log, "");

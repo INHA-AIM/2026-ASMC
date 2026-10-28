@@ -128,7 +128,10 @@ def main():
                         >= seq - 1
                     )
                     for row in received:
-                        if row["reason"] == "motion_sample_pending":
+                        if row["reason"] in (
+                            "motion_sample_pending",
+                            "plan_replacement_pending",
+                        ):
                             assert not row["command_published"]
                     received.clear()
                 for wanted in [expected] if isinstance(expected, str) else expected:
@@ -136,6 +139,53 @@ def main():
                 print(name, expected, "PASS")
 
             case("exact epoch-scale stamp", lambda s, p: None, "ok")
+            # This same solved path expires between planner ticks. It may wait
+            # once without a command refresh, then must fail if no replacement.
+            import copy
+
+            state = Odometry()
+            state.header.stamp = rospy.Time.now()
+            state.header.frame_id = "local/fixture/0"
+            state.child_frame_id = "base_link"
+            state.pose.pose.orientation.w = 1.0
+            state.twist.twist.linear.x = 2.0
+            plan = LocalTrajectory()
+            plan.header = copy.deepcopy(state.header)
+            plan.ego_at_plan = copy.deepcopy(state)
+            plan.scene_stamp = plan.header.stamp - rospy.Duration(0.27)
+            plan.valid = True
+            plan.reason = "ok"
+            plan.dt = 0.05
+            plan.plan_sequence = seq + 1
+            for i in range(100):
+                point = TrajectoryPoint()
+                point.x = i * 0.1
+                point.velocity = 2.0
+                plan.points.append(point)
+            received.clear()
+            states.publish(state)
+            plans.publish(plan)
+            until = time.monotonic() + 0.35
+            while time.monotonic() < until:
+                state.header.stamp = rospy.Time.now()
+                states.publish(state)
+                time.sleep(0.015)
+            reasons = [r["reason"] for r in received]
+            assert (
+                "ok" in reasons and reasons.count("plan_replacement_pending") == 1
+            ), reasons
+            assert "local_source_stale" in reasons, reasons
+            assert not any(
+                r["command_published"]
+                for r in received
+                if r["reason"] == "plan_replacement_pending"
+            )
+            print(
+                "one source-replacement wait; sustained expiry fails", reasons, "PASS"
+            )
+            received.clear()
+            seq = plan.plan_sequence
+            case("recovery after source replacement timeout", lambda s, p: None, "ok")
             held = []
 
             def missing_new_state(s, p):

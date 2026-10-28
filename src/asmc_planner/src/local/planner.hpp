@@ -19,7 +19,7 @@ struct Obstacle {
 };
 struct Config {
   double length = 4.635, width = 2.160835, rear = .79, margin = .10;
-  double speed_cap = 25. / 3.6, decel = 1.5, accel = 2., jerk = 4.8;
+  double speed_cap = 25. / 3.6, decel = 1.5, accel = 1., jerk = 4.8;
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;
@@ -30,6 +30,8 @@ struct Grid {
   double resolution = .1, xmax = 20., ymax = 8.;
   std::vector<uint8_t> probability, coverage;
   std::vector<std::vector<int>> blocked_columns;
+  std::vector<float>
+      recent_road_age; // Original observation age;0 means no evidence.
   // base_link ground -> gravity-aligned planning plane, no second projection.
   std::array<double, 9> rotation{{1, 0, 0, 0, 1, 0, 0, 0, 1}};
   double ground_z = -.36;
@@ -40,11 +42,10 @@ struct Grid {
 struct Scene {
   Grid grid;
   std::vector<Obstacle> obstacles;
-  // Current family support: x, left painted line, right painted line. Only its
-  // longitudinal support currently limits the horizon. Painted lines are NOT
-  // physical walls or footprint clipping bounds; qualified free road can extend
-  // beyond them. Decoupling horizon validity from all three roles is
-  // LOCAL-2A/B.
+  // Current family support: x, left painted line, right painted line. Its
+  // longitudinal support is diagnostic. Painted lines are NOT
+  // physical walls or footprint clipping bounds. LOCAL-2B uses right-home
+  // support for navigation and the full semantic body sweep for physical range.
   std::vector<std::array<double, 3>> corridor;
   std::vector<std::array<double, 2>>
       home; // soft right-home reference, not a discrete lane/target selection
@@ -62,7 +63,12 @@ struct Result {
   int blocking_id = -1;
   double blocked_x = 0, blocked_y = 0, minimum_clearance = 1e9, elapsed_ms = 0;
   double raw_cap = 0, curve_cap = 0, space_cap = 0, chosen_cap = 0;
+  double stopping_cap = 0;
   bool budget_exhausted = false;
+  double reference_end = 0, search_horizon = 0;
+  std::string path_source = "new_search";
+  unsigned remembered_cells = 0;
+  unsigned soft_margin_cells = 0; // Sample visits, not unique physical cells.
   std::vector<std::array<double, 2>> goals;
   struct Rejected {
     Pose pose;

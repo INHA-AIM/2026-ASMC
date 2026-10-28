@@ -1,6 +1,7 @@
 #include "local/journal.hpp"
 #include "local/motion.hpp"
 #include "local/planner.hpp"
+#include "local/road_memory.hpp"
 #include <cmath>
 #include <cstdio>
 #include <iostream>
@@ -157,6 +158,70 @@ int main() {
       beyond_paint |= std::abs(q.y) + c.width * .5 > 1.75;
     expect(beyond_paint,
            "valid swept avoidance can cross paint inside measured free road");
+    // A shorter unused left boundary must not truncate a right-home path.
+    s = empty();
+    s.corridor.resize(16);
+    auto support = Plan(s, c);
+    expect(support.valid && support.path.back().x > 14.,
+           "paint support is not a physical stopping boundary");
+    RoadMemory memory;
+    auto observed = empty().grid;
+    memory.observe(observed, Pose{}, 10.);
+    auto hidden = observed;
+    hidden.coverage.assign(40000, 128);
+    hidden.probability.assign(40000, 0);
+    memory.apply(hidden, Pose{1., 0, 0}, 11.);
+    const int near = 150 * 160 + 80; // x5, beyond the physical bonnet
+    expect(hidden.recent_road_age[near] > 0,
+           "past actually observed road is aligned into near ego occlusion");
+    expect(hidden.recent_road_age[50 * 160 + 80] == 0,
+           "memory cannot fill distant unobserved road");
+    hidden.coverage[near] = 255;
+    memory.apply(hidden, Pose{1., 0, 0}, 11.);
+    expect(hidden.recent_road_age[near] == 0,
+           "current observed nonroad always overrides old road");
+    hidden.coverage[near] = 128;
+    memory.apply(hidden, Pose{1., 0, 0}, 16.);
+    expect(hidden.recent_road_age[near] == 0,
+           "expired evidence is not renewed");
+    memory.clear();
+    memory.apply(hidden, Pose{1., 0, 0}, 11.);
+    expect(hidden.recent_road_age[near] == 0, "epoch reset erases road memory");
+    memory.observe(observed, Pose{}, 10.);
+    auto obstruction = observed;
+    obstruction.probability[near] = 0;
+    memory.observe(obstruction, Pose{}, 10.5);
+    memory.apply(hidden, Pose{}, 11.);
+    expect(hidden.recent_road_age[near] == 0,
+           "newer observed obstruction blocks older free road");
+    s = empty();
+    s.grid.coverage[idx] = 128;
+    s.grid.recent_road_age.assign(40000, 0.);
+    s.grid.recent_road_age[idx] = .5;
+    check = {};
+    expect(CheckFootprint(s, c, p, check),
+           "causal near road can support footprint");
+    s.obstacles.push_back(o);
+    check = {};
+    expect(!CheckFootprint(s, c, p, check),
+           "fresh obstacle vetoes remembered road");
+    s = empty();
+    s.home.resize(16); // 7.5m rear-axle path cannot stop from25km/h.
+    s.speed = 25. / 3.6;
+    s.acceleration = .8;
+    expect(!Plan(s, c).valid,
+           "positive acceleration cannot invent emergency stopping space");
+    s = empty();
+    s.speed = 5.;
+    const int soft_edge = 160 * 160 + 94; // x4, y-1.4: outside hard envelope
+    s.grid.probability[soft_edge] = 0;
+    check = {};
+    expect(CheckFootprint(s, c, p, check) && check.soft_margin_cells > 0,
+           "speed comfort margin is a cost, not physical collision");
+    s.grid.probability[160 * 160 + 91] = 0; // y-1.1: hard footprint margin
+    check = {};
+    expect(!CheckFootprint(s, c, p, check),
+           "observed nonroad inside body and minimum margin still vetoes");
     // Reusing an old path must not carry a stale 100m arc-length into speed
     // cap.
     s = empty();

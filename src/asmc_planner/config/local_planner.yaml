@@ -11,3 +11,9 @@ planning_budget_ms: 40.0
 # soft-cost simulation trial and must not be reported as collision-free space.
 recovery: true
 near_blind_assist: false
+# LOCAL-2B experimental near-body evidence, not a filled current semantic mask.
+# Actual observed free road only, max5s/6m, fresh nonroad/OBB always veto.
+# Set false for the LOCAL-2A memory-OFF comparison (same runtime, no extra node).
+causal_road_memory: true
+# Match the local solver bound; NORMAL's2m/s^2 configuration stays unchanged.
+acceleration_limit_mps2: 1.0
