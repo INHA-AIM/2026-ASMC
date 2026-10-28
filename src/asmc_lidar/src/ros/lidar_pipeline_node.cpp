@@ -38,7 +38,7 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/String.h>
-#include <std_msgs/UInt8.h>
+#include <std_msgs/Bool.h>
 #include <std_srvs/Trigger.h>
 #include <asmc_msgs/LidarObservation.h>
 #include <asmc_msgs/LidarTrackingObservation.h>
@@ -436,16 +436,17 @@ class LidarPipelineNode {
     gps_sub_ = nh_.subscribe(gps_topic_, 1, &LidarPipelineNode::OnGps, this, hints);
     // latched 토픽이다. 재밍 제어는 카메라만 쓰므로 그동안 스캔 처리를 멈춘다.
     if (skip_lidar_in_jamming_)
-      planning_mode_sub_ = nh_.subscribe("/planning/mode", 1, &LidarPipelineNode::OnPlanningMode, this);
+      planning_mode_sub_ = nh_.subscribe("/planning/mode/lidar_pause", 1, &LidarPipelineNode::OnLidarPause, this);
   }
 
   // 음영(JAMMING)에서는 selector가 /ctrl_cmd/normal을 내보내지 않는다. 그동안 LiDAR
   // 스캔 처리를 멈춰 CPU를 카메라에 돌려준다. IMU/CAN/GPS는 계속 runtime에 들어가므로
-  // 추측항법은 끊기지 않는다.
-  void OnPlanningMode(const std_msgs::UInt8::ConstPtr& msg) {
-    const bool jamming = msg->data == 1;
-    if (paused_.exchange(jamming) != jamming)
-      ROS_WARN("LiDAR pipeline %s (/planning/mode=%u)", jamming ? "paused" : "resumed", msg->data);
+  // 추측항법은 끊기지 않는다. /planning/mode가 아니라 판정 노드의 lidar_pause를 따른다.
+  // 재밍 원인이 사라지면 NORMAL 복귀 대기 동안 먼저 재개해 복귀 순간 장애물 입력이 준비되어 있게 한다.
+  void OnLidarPause(const std_msgs::Bool::ConstPtr& msg) {
+    const bool pause = msg->data;
+    if (paused_.exchange(pause) != pause)
+      ROS_WARN("LiDAR pipeline %s (/planning/mode/lidar_pause)", pause ? "paused" : "resumed");
   }
 
   static std::int64_t RosNow() { return static_cast<std::int64_t>(ros::Time::now().toNSec()); }

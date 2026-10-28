@@ -40,6 +40,9 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   }
   mode_pub_ = nh_.advertise<std_msgs::UInt8>("/planning/mode", 1, true);
   status_pub_ = nh_.advertise<std_msgs::String>("/planning/mode/status", 1);
+  // LiDAR는 재밍 원인이 사라지는 즉시 재개한다. NORMAL 복귀(exit_hold_s와 궤적 준비
+  // 대기) 시점에 추적이 이미 데워져 있어야 판제가 장애물 입력 stale로 정지하지 않는다.
+  lidar_pause_pub_ = nh_.advertise<std_msgs::Bool>("/planning/mode/lidar_pause", 1, true);
   gps_sub_ = nh_.subscribe("/gps", 1, &GpsModeSource::gpsCallback, this);
   feedback_sub_ = nh_.subscribe("/planning/frenet_feedback_v2", 1,
                                 &GpsModeSource::feedbackCallback, this);
@@ -47,6 +50,7 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   initial.data = static_cast<std::uint8_t>(mode_);
   mode_pub_.publish(initial);
   publishStatus(Now());
+  publishLidarPause();
   timer_ = nh_.createSteadyTimer(ros::WallDuration(0.05), &GpsModeSource::timerCallback, this);
   ROS_INFO("Planning mode NORMAL: waiting for raw /gps");
 }
@@ -57,6 +61,7 @@ void GpsModeSource::gpsCallback(const morai_msgs::GPSMessage::ConstPtr& message)
   detector_.OnGps(*message, now);
   // 0 좌표·no-fix 진입은 타이머를 기다리지 않고 같은 메시지에서 반영한다.
   if (detector_.Update(now)) onDetectorChange();
+  publishLidarPause();
 }
 
 void GpsModeSource::stateCallback(const asmc_msgs::VehicleState::ConstPtr& message) {
@@ -96,6 +101,7 @@ void GpsModeSource::timerCallback(const ros::SteadyTimerEvent&) {
     // The normal controller/selector's existing safe stop remains authoritative.
     publishMode(PlanningMode::NORMAL, "GPS recovery deadline; normal safety checks apply");
   }
+  publishLidarPause();
   if (last_status_s_ < 0.0 || now - last_status_s_ >= 0.5) publishStatus(now);
 }
 
@@ -129,6 +135,15 @@ void GpsModeSource::publishMode(PlanningMode next, const char* reason) {
   output.data = static_cast<std::uint8_t>(mode_);
   mode_pub_.publish(output);
   publishStatus(Now());
+}
+
+void GpsModeSource::publishLidarPause() {
+  const bool pause = mode_ == PlanningMode::JAMMING && detector_.cause() != JammingReason::NONE;
+  if (static_cast<int>(pause) == lidar_pause_) return;
+  lidar_pause_ = pause;
+  std_msgs::Bool output;
+  output.data = pause;
+  lidar_pause_pub_.publish(output);
 }
 
 void GpsModeSource::publishStatus(double now) {

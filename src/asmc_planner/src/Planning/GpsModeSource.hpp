@@ -6,6 +6,7 @@
 #include <asmc_msgs/VehicleState.h>
 #include <morai_msgs/GPSMessage.h>
 #include <ros/ros.h>
+#include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
 #include <std_msgs/UInt8.h>
 
@@ -27,12 +28,14 @@ class GpsModeSource final {
   void onDetectorChange();
   void publishMode(PlanningMode next, const char* reason);
   void publishStatus(double now);
+  void publishLidarPause();
   ros::NodeHandle nh_;
   ros::Subscriber gps_sub_;
   ros::Subscriber state_sub_;
   ros::Subscriber feedback_sub_;
   ros::Publisher mode_pub_;
   ros::Publisher status_pub_;
+  ros::Publisher lidar_pause_pub_;
   ros::SteadyTimer timer_;
   JammingDetector detector_;
   std::unique_ptr<ShadowZone> zone_;
@@ -43,5 +46,6 @@ class GpsModeSource final {
   ros::SteadyTime recovery_started_;
   ros::Time recovery_source_time_, last_ready_stamp_;
   unsigned ready_frames_ = 0;
+  int lidar_pause_ = -1;  // 마지막 발행값, -1은 미발행.
 };
 }  // namespace asmc_planner
