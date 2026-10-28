@@ -2,6 +2,7 @@
 
 #include "Frenet/Config/FrenetConfig.hpp"
 #include "Frenet/Geometry/ObservedMotion.hpp"
+#include "Frenet/Geometry/PredictionInput.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 
 // Current observation-derived uncertainty covers the FULL certified path.
@@ -70,7 +71,8 @@ inline TrackedObject PrepareHighwayObjectPrediction(
     const HighwayMergeConfig& config,const RefLine* lane=nullptr,double traffic_heading=NAN,
     double direction_resolution_rad=.05) {
     auto predicted=object;
-    if(object.motion_state==ObjectMotionState::LOW_THREAT)return predicted;
+    if(object.motion_state==ObjectMotionState::LOW_THREAT||
+       InspectPredictionVelocity(object)!=PredictionInputStatus::MEASURED)return predicted;
     const double speed=std::hypot(object.vx,object.vy);
     if(!std::isfinite(speed)||speed<1e-6)return predicted;
     double error=config.speed_error_mps;

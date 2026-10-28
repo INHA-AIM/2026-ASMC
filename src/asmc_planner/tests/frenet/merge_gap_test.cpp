@@ -415,6 +415,47 @@ void TestHighwayReferenceArrival() {
     Expect(!check({}).safe,"short continuation cannot complete reference-transition admission");
 }
 
+void TestMappedFollowerOnCurve() {
+    HighwayFixture f;f.ref={};f.ref.length=200;
+    asmc_planner::lane_reference::LaneMapData data;
+    data.identity={"map","curve","curve",std::string(64,'b')};data.complete=true;
+    asmc_planner::lane_reference::LaneData lane;
+    lane.id=lane.link_id="curve";lane.traversable=true;
+    for(int i=0;i<=400;++i) {
+        const double s=.5*i,a=s/100;
+        const RefPoint p{100*std::sin(a),100*(1-std::cos(a)),s,a,.01,0};
+        f.ref.points.push_back(p);lane.centerline.push_back({p.x,p.y});
+        lane.polygon.push_back({p.x-1.75*std::sin(a),p.y+1.75*std::cos(a)});
+    }
+    for(int i=400;i>=0;--i){const double a=.005*i;
+        lane.polygon.push_back({101.75*std::sin(a),100-101.75*std::cos(a)});}
+    data.lanes={lane};data.areas={{"road",lane.polygon,true}};
+    std::string error;f.map=asmc_planner::lane_reference::HdLaneMap::create(data,error);
+    Expect(bool(f.map),"curved rear-follower fixture has a valid mapped corridor");
+    if(!f.map)return;
+    f.zone.target_region=f.map->corridor({"curve"},error);f.zone.target_reference=f.ref;
+    for(size_t i=0;i<f.path.x.size();++i) {
+        const auto p=Interpolate(f.ref,70+.8*i);
+        f.path.x[i]=p.x;f.path.y[i]=p.y;f.path.yaw[i]=p.theta;f.path.kappa[i]=p.kappa;
+    }
+    const auto p=Interpolate(f.ref,55);
+    auto rear=MakeVehicleAt(901,p.x,p.y,p.theta,20);rear.motion_state=ObjectMotionState::DYNAMIC;
+    rear.prediction_lane=std::make_shared<const RefLine>(f.ref);rear.prediction_lane_s=55;
+    rear.prediction_lane_d=0;rear.prediction_lane_end_s=200;
+    rear.prediction_lane_anchor_x=p.x;rear.prediction_lane_anchor_y=p.y;
+    rear.prediction_lane_heading=p.theta;rear.prediction_lane_curvature=.01;
+    const auto check=[&](bool entering){return EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,
+        {rear},f.cfg,MakeEgoShape(),MakeCollisionCfg(),.1,entering,0,
+        std::chrono::steady_clock::time_point::max(),true);};
+    Expect(!check(true).safe,"fast mapped rear traffic still rejects a new entry on a curve");
+    Expect(check(false).safe,"committed curve continuation uses rear actor lane tangent instead of ego tangent");
+    rear.velocity_unavailable=true;rear.vx=rear.vy=0;
+    const auto ahead=Interpolate(f.ref,80);const double dx=ahead.x-rear.x,dy=ahead.y-rear.y;
+    rear.x=ahead.x;rear.y=ahead.y;rear.prediction_lane.reset();
+    for(auto& corner:rear.corners){corner.x+=dx;corner.y+=dy;}
+    Expect(!check(false).safe,"unavailable motion retains its physical footprint in the forward corridor");
+}
+
 void TestHighwayBoundedRearResponse() {
     HighwayFixture f;
     f.cfg.completion_lateral_m=.5;f.cfg.completion_heading_rad=.12;
@@ -494,6 +535,7 @@ int main() {
     TestHighwayContinuationPrefix();
     TestHighwayPredictionAndLaneScope();
     TestHighwayReferenceArrival();
+    TestMappedFollowerOnCurve();
     TestHighwayBoundedRearResponse();
     TestObservedFastUnknownFragment();
     std::cout<<g_failures<<" failures\n";return g_failures?1:0;

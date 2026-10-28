@@ -505,6 +505,9 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             roundabout_prediction_.WithObservedSpeedRanges(departure_obstacles),
             object_tracking_cfg_.yaw_rate_clamp_rad_s);
     }
+    if(execution_->merge.committed)
+        ctx.predicted_obstacles=roundabout_prediction_.ExecutionOccupancies(ctx.predicted_obstacles,
+            roundabout_zone_.circulating_references,roundabout_merge_cfg_.max_horizon);
     const auto sensor_model_obstacles=ctx.predicted_obstacles;
     const double observation_age=std::max(0.0,evaluation_time-observation_stamp);
     for(auto& object:ctx.predicted_obstacles)object=AdvanceObjectObservation(object,observation_age);
@@ -608,8 +611,53 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         ctx.s >= roundabout_zone_.stop_s-1.0 &&
         !avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,vehicle_shape_);
     bool selected_bridge=false, profile_failed=false;
-    CartesianPath progress_certificate;bool progress_checked=false;
+    CartesianPath progress_certificate;
+    struct ProgressAlternative { CartesianPath path; double offset; };
+    std::vector<ProgressAlternative> progress_alternatives;
+    std::pair<double,double> progress_geometry{NAN,NAN};
     double selected_d=roundabout_preferred_d_;
+    bool progress_evaluated=false;
+    const auto find_progress=[&]() {
+        progress_evaluated=true;
+        for(const auto& alternative:progress_alternatives) {
+            const double minimum_prefix=std::max(path_cfg_.dt,replanning_period_s_+observation_age);
+            const auto nominal_safety=EvaluateCartesianTrajectorySafety(alternative.path,
+                ctx.predicted_obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt);
+            const double latest_prefix=nominal_safety.clear?minimum_prefix:
+                ProgressPrefixBeforeCollision(alternative.path,nominal_safety.blocking_sample_index,
+                    minimum_prefix,path_cfg_.dt,stop_cfg_.max_service_decel,limits_.max_longitudinal_jerk);
+            const double prefixes[]{latest_prefix,minimum_prefix};
+            for(int prefix_index=0;prefix_index<2;++prefix_index) {
+                if(prefix_index==1&&latest_prefix==minimum_prefix)break;
+                const double prefix_time=prefixes[prefix_index];
+                auto certified=MakeProgressStoppingCertificate(alternative.path,prefix_time,path_cfg_.dt,
+                    stop_cfg_.max_service_decel,limits_.max_longitudinal_jerk,prefix_time,.25);
+                bool physical=!certified.x.empty()&&certified.v.back()<=.05;
+                for(size_t i=0;i<certified.x.size()&&physical;++i)
+                    physical=std::isfinite(certified.kappa[i])&&std::fabs(certified.kappa[i])<=limits_.max_curvature&&
+                        certified.v[i]*certified.v[i]*std::fabs(certified.kappa[i])<=limits_.max_lateral_accel&&
+                        std::fabs(certified.a[i])<=stop_cfg_.max_service_decel;
+                if(!physical||!avoid_road_map_.EvaluatePath(certified,vehicle_shape_,path_cfg_.dt).drivable)continue;
+                const double horizon=(certified.x.size()-1)*path_cfg_.dt+observation_age;
+                auto progress_obstacles=roundabout_prediction_.ExecutionOccupancies(sensor_model_obstacles,
+                    roundabout_zone_.circulating_references,horizon);
+                for(auto& object:progress_obstacles) {
+                    object=roundabout_prediction_.MappedMotion(object,roundabout_zone_.circulating_references,horizon);
+                    object=AdvanceObjectObservation(object,observation_age);
+                }
+                auto safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
+                    vehicle_shape_,collision_cfg_,path_cfg_.dt);
+                if(!safety.clear&&safety.blocking_sample_index==0)
+                    safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
+                        vehicle_shape_,collision_cfg_,path_cfg_.dt,safety.blocking_object_id);
+                if(safety.clear) {
+                    progress_certificate=std::move(certified);selected_d=alternative.offset;break;
+                }
+            }
+            if(!progress_certificate.x.empty())break;
+        }
+    };
+
     last_candidate_paths_.clear();last_candidate_validity_.clear();
     const double ordinary_settle=std::max(10.0,std::min(25.0,ego.v*2.5));
     // Keep the same mission reference and prefer the last selected local
@@ -654,34 +702,15 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                 merge_cfg_.min_rear_time_gap,!execution_->merge.committed);
             valid=check.safe;
             if(check.blocking_object_id>=0)result.blocking_object_id=check.blocking_object_id;
-            // One bounded alternative, only after COMMIT and on an ordinary
-            // road-contained preferred geometry. Keep every object and the
-            // full stationary tail; entry/gap approval is never shortened.
-            if(!valid&&execution_->merge.committed&&!bridge&&!progress_checked) {
-                progress_checked=true;
-                const double prefix_time=std::max(path_cfg_.dt,replanning_period_s_+observation_age);
-                auto certified=MakeProgressStoppingCertificate(path,prefix_time,path_cfg_.dt,
-                    stop_cfg_.max_service_decel,limits_.max_longitudinal_jerk,
-                    prefix_time,.25);
-                bool physical=!certified.x.empty()&&certified.v.back()<=.05;
-                for(size_t i=0;i<certified.x.size()&&physical;++i)
-                    physical=std::isfinite(certified.kappa[i])&&std::fabs(certified.kappa[i])<=limits_.max_curvature&&
-                        certified.v[i]*certified.v[i]*std::fabs(certified.kappa[i])<=limits_.max_lateral_accel&&
-                        std::fabs(certified.a[i])<=stop_cfg_.max_service_decel;
-                if(physical&&avoid_road_map_.EvaluatePath(certified,vehicle_shape_,path_cfg_.dt).drivable) {
-                    auto progress_obstacles=sensor_model_obstacles;
-                    const double horizon=(certified.x.size()-1)*path_cfg_.dt+observation_age;
-                    for(auto& object:progress_obstacles) {
-                        object=roundabout_prediction_.MappedMotion(object,roundabout_zone_.circulating_references,horizon);
-                        object=AdvanceObjectObservation(object,observation_age);
-                    }
-                    auto safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
-                        vehicle_shape_,collision_cfg_,path_cfg_.dt);
-                    if(!safety.clear&&safety.blocking_sample_index==0)
-                        safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
-                            vehicle_shape_,collision_cfg_,path_cfg_.dt,safety.blocking_object_id);
-                    if(safety.clear)progress_certificate=std::move(certified);
-                }
+            // Keep only the existing four speed schedules of the first
+            // road-contained geometry. Check continuations only after that
+            // family's full traversals fail; ordinary success pays no extra checks.
+            if(!valid&&execution_->merge.committed&&!bridge&&
+               (progress_alternatives.empty()||
+                (geometry==progress_geometry))&&
+               progress_alternatives.size()<4) {
+                progress_geometry=geometry;
+                progress_alternatives.push_back({path,geometry.second});
             }
         }
         double cost=check.exit_time+AvoidRoadMap::PaintCost(road)+std::fabs(geometry.second);
@@ -705,17 +734,24 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             result.entry_time=check.entry_time;result.exit_time=check.exit_time;
             result.candidate_path=std::move(path);}
     }
+    // Certify continuation on the already generated preferred family before
+    // spending work on alternate lateral shapes. This is execution only: a
+    // complete departure remains mandatory for every new entry approval.
+    if(execution_->merge.committed&&!nominal_candidate_found&&
+       !progress_evaluated&&!progress_alternatives.empty())find_progress();
+    if(!progress_certificate.x.empty())break;
     // Prefer the original reference geometry when it is feasible. Alternate
     // local shapes rescue geometry or prolonged paint contact, with bounded work.
     if(nominal_family_valid&&nominal_family_paint<.3)break;
     }
-    if(nominal_candidate_found)break;
+    if(nominal_candidate_found||!progress_certificate.x.empty())break;
     }
-    if(nominal_candidate_found)break;
+    if(nominal_candidate_found||!progress_certificate.x.empty())break;
     }
     if(!execution_->merge.committed&&uncertain>=0)result.blocking_object_id=uncertain;
     else if(result.candidate_valid)result.blocking_object_id=-1;
     if(execution_->merge.committed) {
+        if(!result.candidate_valid&&!progress_evaluated)find_progress();
         if(!result.candidate_valid&&!progress_certificate.x.empty()) {
             result.progress_stopping=true;
             result.candidate_path=std::move(progress_certificate);++result.valid;

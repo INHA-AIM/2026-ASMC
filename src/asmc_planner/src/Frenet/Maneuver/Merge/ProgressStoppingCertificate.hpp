@@ -4,6 +4,23 @@
 #include <algorithm>
 #include <cmath>
 
+// Search indices on an ALREADY generated curve, not another geometry/speed
+// catalogue. A nominal collision supplies a response deadline. The caller must
+// still certify the complete stop against ALL objects: this is no clearance.
+inline double ProgressPrefixBeforeCollision(const CartesianPath& nominal,
+    std::size_t collision_sample,double minimum_prefix,double dt,double decel,double jerk) {
+    if(dt<=0||nominal.v.size()!=nominal.x.size()||nominal.a.size()!=nominal.x.size()||
+       collision_sample>=nominal.x.size())return minimum_prefix;
+    const auto first=static_cast<std::size_t>(std::ceil(minimum_prefix/dt));
+    for(std::size_t i=collision_sample;i>first;--i) {
+        FrenetState boundary{};boundary.s_d=nominal.v[i];boundary.s_dd=nominal.a[i];
+        const auto stop=GenerateBrakingContinuation(boundary,decel,jerk,dt,0);
+        if(stop.valid&&!stop.s.empty()&&i+stop.s.size()-1<=collision_sample)
+            return i*dt;
+    }
+    return minimum_prefix;
+}
+
 // Execute a prefix only when a COMPLETE jerk-limited stop on the same geometry
 // exists. Callers must certify the entire returned path, including its held
 // endpoint, against road and every obstacle over this complete stop horizon.

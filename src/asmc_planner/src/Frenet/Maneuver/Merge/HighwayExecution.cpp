@@ -543,8 +543,9 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
               for(std::size_t schedule_index=0;;++schedule_index) {
                   if(schedule_index==schedules.size()) {
                       // A certified free-flow path needs no extra FOLLOW search.
-                      // Only a rejected schedule opens the bounded alternatives.
-                      if(!result.candidate_valid&&!following_loaded&&optional&&highway_committed_&&
+                      // Only a rejected schedule opens the bounded alternatives, for
+                      // mandatory merges as well as optional lane changes.
+                      if(!result.candidate_valid&&!following_loaded&&highway_committed_&&
                          std::abs(target-targets.front())<1e-3&&destination&&
                          std::chrono::steady_clock::now()<search_deadline) {
                           following_loaded=true;
