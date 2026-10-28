@@ -18,8 +18,6 @@
 | `camera/lane_runtime.yaml` | Large v7 E8 기본 TensorRT FP16·GPU 전처리·수요 기반 출력·고정 engine manifest |
 | `camera/lane_runtime_pytorch.yaml` | 같은 Large E8·입력 크기의 명시적 PyTorch 복구 설정. 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
 | `camera/lane_runtime_large.yaml` | Large v7 E8 TensorRT 명시적 선택. 현재 기본과 같은 설정이며 이전 후보 실행 명령도 보존 |
-| `camera/lane_runtime_medium.yaml` | 기존 Medium v6 TensorRT의 명시적 복구 설정. 노드 종료 후 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
-| `camera/lane_runtime_tensorrt.yaml` | 기존 T2 실험 재현 설정. 현재 실행 정본은 `lane_runtime.yaml` |
 | `camera/lane_input.yaml` | TwinLite 전방544×960·좌우480×640 후보. 추론과 model-grid 투영이 함께 읽음 |
 | `camera/lane_input_side384.yaml` | 전방960·기존 좌우384 비교/복구용 |
 | `camera/twinlite_medium.yaml` | TwinLite backend와 구형 launch의 공통 기본값 |
@@ -47,3 +45,5 @@ Git으로 보존하고, 재현에 필요한 실험 프로필·SHA·실패 증거
 
 Family 표시는 결과 도착 즉시 갱신하고 큰 합성 화면은 최대10Hz로 제한합니다.
 `bev/cameras_v2.yaml`의0.35m는 과거 재현용이며 현재 정본과 구분합니다.
+
+Medium v6 배포본과 프로필은 [Git 이력 자산](../../../docs/operations/asset-history.md)으로 이전했다. 현재 차선 복구는 같은 Large E8의 `camera/lane_runtime_pytorch.yaml`이다.

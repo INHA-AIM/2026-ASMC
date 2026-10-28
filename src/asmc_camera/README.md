@@ -7,7 +7,7 @@ YOLO 객체 인지·TwinLite 차선 영상 처리·ResNet 신호등 인지를 �
 현재 기본 tensor는 두 모델 모두 전방544×960·좌우480×640입니다. 모델별 독립 프로세스를 사용하며 입력 tensor를 공유하지 않습니다.
 TwinLite 기본 모델은 **Large v7 E8·TensorRT FP16**입니다.
 2026-10-18 사용자가 알려진 SUNNY freshness·공급 지연 제한을 확인한 뒤 기본 전환을 승인했습니다.
-같은 Large의 PyTorch 복구와 기존 Medium v6 TensorRT 복구 설정을 보존합니다. 자동 수락 실패 기록과350ms 기준은 유지합니다.
+같은 Large E8의 PyTorch 복구 설정을 보존합니다. Medium v6 배포 파일은 Git 이력에 있습니다. 자동 수락 실패 기록과350ms 기준은 유지합니다.
 [선정·동일 평가·실시간 검증](../../docs/records/camera/2026-10-18-twinlite-large-deployment.md)에 배포 SHA와 한계를 기록합니다. 변환 품질 검증은
 [TensorRT 검증 기록](../../docs/records/camera/camera-twinlite-tensorrt.md)에서 관리합니다.
 [음영 family 최적화](../../docs/records/camera/camera-shadow-family-optimization.md)는
@@ -25,8 +25,8 @@ YOLO/TwinLite의 최소 공급10Hz와 목표15Hz 달성은 별도로 검증합�
 roslaunch asmc_camera camera.launch                        # 세 모델 상시 ACTIVE
 roslaunch asmc_camera camera.launch mode:=standby          # 명시적인 대기 실행; 둘 중 하나만 실행
 roslaunch asmc_camera camera.launch mode:=active models:=objects
-# 기존 실행을 종료한 뒤 사전학습 모델 대조
-roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
+# 기존 실행을 종료한 뒤 이전 E8 모델 대조
+roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=e8
 ```
 
 배포 E3 객체 엔진은 RTX4060, Large E8 차선 엔진은 RTX4060Ti에서 생성했습니다.
@@ -90,7 +90,7 @@ LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)와
 상태의 session UUID는 객체 관측과 같으며 기존 `asmc_camera` 타입은 구형 노드 제어 경로에 보존한다.
 정본 경로 소비자는 공용 타입으로 재빌드하고 카메라·LiDAR 소비자와 함께 재시작한다.
 
-공식 BDD100K Large의 추가학습 전 결과는 [별도 추론 실험](docs/bdd-pretrained-experiment.md)으로
+BDD 가중치는 현재 패키지에서 제외했다. 과거 공식 BDD100K Large 비교는 [실험 기록](docs/bdd-pretrained-experiment.md)으로
 확인한다. `bdd_lane.launch`·`bdd_lane_view.launch`는 이진 drivable/lane 시각화만 제공하며
 운영 family 입력과 상태 토픽에 결과를 섞지 않는다. 운영 기본 모델은 변경하지 않는다.
 
@@ -100,5 +100,5 @@ LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)와
 2026-10-18 완료된8epoch 중E8을 선정하고 품질·TensorRT·정차 통합 시험을 완료했다.
 FOGGY 전체 GUI10분은 통과했으나 교차12회 중 Large SUNNY1회에서 readiness 저하3건이 남았다.
 후속 사용자 결정으로 `lane_runtime.yaml`을 Large E8 기본으로 전환했다.
-`lane_runtime_large.yaml`은 같은 모델의 명시적 선택이며 `lane_runtime_medium.yaml`은 복구 설정이다.
-위 학습·선정 당시의 병합 전 기록과 달리 현재 main에는 Large E8 기본 설정이 반영되어 있다.
+`lane_runtime_large.yaml`은 같은 모델의 명시적 선택이며 `lane_runtime_pytorch.yaml`은 동일 가중치의 복구 설정이다.
+현재 main에는 Large E8 기본 설정이 반영되어 있다.

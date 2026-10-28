@@ -68,7 +68,7 @@
   "evidence_gallery": "http://127.0.0.1:8000/camera-seg-large-deploy-20261018-r1/index.html",
   "public_contract_changed": false,
   "training_after_epoch8": false,
-  "medium_recovery_profile": "src/asmc_camera/config/camera/lane_runtime_medium.yaml",
+  "medium_recovery_profile": null,
   "live_validation": {
     "state": "completed_with_failure",
     "acceptance": {
@@ -252,5 +252,7 @@
     "fallback_profile": "src/asmc_camera/config/camera/lane_runtime_medium.yaml",
     "runtime_gates_changed": false,
     "scope": "default model selection only; automatic acceptance failure retained"
-  }
+  },
+  "current_recovery_profile": "src/asmc_camera/config/camera/lane_runtime_pytorch.yaml",
+  "retired_medium_assets_manifest": "config/artifacts/git-history-assets-v1.json"
 }

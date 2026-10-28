@@ -107,7 +107,7 @@
 |---|---|---|
 | `mode` | `active` | off &#124; standby &#124; active; default continuous inference |
 | `models` | `all` | all or comma-separated objects,lane,traffic_light |
-| `detector` | `e3` | e3 &#124; e8 &#124; pretrained; restart to change weights |
+| `detector` | `e3` | e3 &#124; e8; restart to change weights |
 | `confidence` | `0.40` | — |
 | `nms_iou` | `0.50` | — |
 
@@ -118,27 +118,9 @@
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
 | `models` | `all` | — |
-| `detector` | `e3` | e3 &#124; e8 &#124; pretrained |
+| `detector` | `e3` | e3 &#124; e8 |
 
 유효성 검사 전용 내부 인자는 일반 사용자 옵션에서 제외합니다.
-
-## BDD Large experimental inference
-
-[소스](../../src/asmc_camera/launch/bdd_lane.launch)
-
-| 인자 | 기본값 / 필수 | 소스 설명 |
-|---|---|---|
-| `resolution` | `runtime` | runtime: front960/sides640 &#124; official: all384x640 |
-
-유효성 검사 전용 내부 인자는 일반 사용자 옵션에서 제외합니다.
-
-## BDD Large experimental visualization
-
-[소스](../../src/asmc_camera/launch/bdd_lane_view.launch)
-
-| 인자 | 기본값 / 필수 | 소스 설명 |
-|---|---|---|
-| — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
 
 ## HD Map
 

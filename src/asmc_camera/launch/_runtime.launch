@@ -15,8 +15,8 @@
   <arg name="objects" default="$(eval arg('mode') != 'off' and 'objects' in arg('selection') and arg('valid_models'))"/>
   <arg name="lane" default="$(eval arg('mode') != 'off' and 'lane' in arg('selection') and arg('valid_models'))"/>
   <arg name="traffic" default="$(eval arg('mode') != 'off' and 'traffic_light' in arg('selection') and arg('valid_models'))"/>
-  <arg name="model_profile" default="$(eval {'e3':'collect_e3','e8':'finetuned_e8','pretrained':'pretrained_coco7'}[arg('detector')])"/>
-  <arg name="object_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'e3':'yolo26l_mission15_e3_three_view.yaml','e8':'yolo26l_mission16_e8_three_view.yaml','pretrained':'yolo26l_pretrained_mission_three_view.yaml'}[arg('detector')])"/>
+  <arg name="model_profile" default="$(eval {'e3':'collect_e3','e8':'finetuned_e8'}[arg('detector')])"/>
+  <arg name="object_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'e3':'yolo26l_mission15_e3_three_view.yaml','e8':'yolo26l_mission16_e8_three_view.yaml'}[arg('detector')])"/>
   <arg name="object_classes" default="$(eval find('asmc_camera') + '/config/camera/' + ('object_classes_mission15_v1.yaml' if arg('detector') == 'e3' else 'object_classes_mission16_v1.yaml'))"/>
   <arg name="separate" default="$(eval {'separate':True,'shared':False}[arg('implementation')])"/>
   <include file="$(find asmc_camera)/launch/_components.launch">

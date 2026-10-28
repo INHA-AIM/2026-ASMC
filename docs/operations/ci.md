@@ -49,7 +49,8 @@ Noetic Python3.8을 지원하는 pip24.3.1 resolver를 CI에서 먼저 준비하
 설치 후 공간 검색/회전·OpenCV·Torch의 실제 import도 확인한다. C++ cache는 빌드 성공 직후 저장해
 나중의 시험 실패로 같은 소스를 다시 컴파일하는 낭비를 줄인다. 시험 성공이나 build/devel은 저장하지 않는다.
 
-저장소 추적 파일은 약 1.56 GB이며 다운로드 자체도 병목이다. source audit job의 sparse view는
+정리 전 저장소 추적 파일은 약 1.56 GB였으며 다운로드 자체도 병목이었다. 사용자 승인으로
+현재 Git tree에서 약 916 MB의 과거 자산을 제외하고 [이력 목록](asset-history.md)을 유지한다. source audit job의 sparse view는
 약 333 MB다. 전체 회귀 job은 가중치·보존 근거를 계속 받으므로 그 checkout 시간은 남는다.
 
 소요 시간은 runner·cache 영향을 받으므로 wall time과 병렬 job 시간 합계를 함께 비교한다.

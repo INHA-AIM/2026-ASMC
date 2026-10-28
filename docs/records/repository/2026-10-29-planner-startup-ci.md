@@ -147,3 +147,22 @@ smoke와 동일한 기본 구성이다. 공용 컨테이너 마운트·호스트
 
 [actions/checkout v4 구현](https://github.com/actions/checkout/blob/v4/src/git-source-provider.ts)은
 sparse-checkout을 지정하면 fetch에 blob:none을 적용한다. 별도 filter 인자로 덮어쓰지 않았다.
+
+
+## 사용자 승인 자산 정리
+
+현재 tree에서 미사용 자산을 제외하고 Git 이력으로 보존하라는 후속 요청을 적용했다.
+[파일별 이력 목록](../../../config/artifacts/git-history-assets-v1.json)에 65개 경로·크기·SHA·blob을 기록했다.
+기준 main `af6df9e66ecb439bc44be94ef4370e2d97e010e0`에서 모든 원래 바이트를 검증했다.
+기록 목록은 현재 tree에 남으며 과거 대형 blob을 CI가 다시 받도록 하지 않는다.
+
+현재 모델 선택은 객체 E3·E8, 차선 Large E8·같은 가중치의 PyTorch 복구다.
+Medium 기본값이 남아 있던 단독 camera_lane/facade도 Large로 맞췄다.
+COCO pretrained의 공개 선택은 거부한다. BDD/YOLO11m 실험 설정은 역사 가중치를 복구한
+별도 checkout의 재현 자료이며, 현재 모델이 패키지에 있다고 표시하지 않는다.
+
+로컬 camera-unit 31.8초 통과, E3/E8 및 Large 패키지 launch/manifest 검사 통과,
+native association 회귀 6개 통과, camera-ros 60.1초 통과했다.
+초기 camera-ros 두 실패는 최소 시험 컨테이너에 native module/HD-map 메시지가 준비되지 않은
+문제였으며, 해당 빌드 산출물을 준비한 후 동일 fixture 전부를 통과했다.
+D의 원본·reference·full checkpoint와 병행 작업트리는 변경하지 않았다.

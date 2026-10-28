@@ -1,3 +1,5 @@
+# Historical experiment only: model assets are no longer bundled.
+# Restore the matching files from commit af6df9e6 before replay; see config/artifacts/git-history-assets-v1.json.
 # Behaviour-preserving P2a profile. Side views and model/precision experiments follow later.
 views: [front]
 image_topic: /image_jpeg/compressed

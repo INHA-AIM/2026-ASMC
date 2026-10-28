@@ -80,6 +80,11 @@ jobs:
       - name: Test documentation link and retention checks
         run: python3 -m unittest tools/audit/test_documentation_migration.py
 
+      - name: Verify current models and history-only asset inventory
+        run: |
+          python3 tools/audit/check_git_history_assets.py
+          python3 -m unittest tools/audit/test_git_history_assets.py
+
       - name: Check current launch documentation
         run: |
           python3 tools/audit/check_runtime_documentation.py

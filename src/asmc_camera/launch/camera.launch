@@ -3,7 +3,7 @@
        see docs/handoffs/perception-to-planning.md. Do not gate object freshness here. -->
   <arg name="mode" default="active" doc="off | standby | active; default continuous inference"/>
   <arg name="models" default="all" doc="all or comma-separated objects,lane,traffic_light"/>
-  <arg name="detector" default="e3" doc="e3 | e8 | pretrained; restart to change weights"/>
+  <arg name="detector" default="e3" doc="e3 | e8; restart to change weights"/>
   <arg name="confidence" default="0.40"/>
   <arg name="nms_iou" default="0.50"/>
   <include file="$(find asmc_camera)/launch/_runtime.launch">

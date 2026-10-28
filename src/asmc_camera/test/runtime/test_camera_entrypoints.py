@@ -65,10 +65,9 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertEqual(config.params['/camera_lane/input_hw'].value,[480,640])
         self.assertEqual(config.params['/camera_lane/input_hw_by_view/front'].value,[544,960])
 
-    def test_large_default_and_medium_recovery_resolve_separate_engine_manifests(self):
+    def test_large_default_and_explicit_profile_resolve_packaged_engine_manifests(self):
         from asmc_camera.camera.backends.twinlite_tensorrt import load_manifest
-        for profile, scale in [('lane_runtime.yaml', 'large'), ('lane_runtime_large.yaml', 'large'),
-                               ('lane_runtime_medium.yaml', 'medium')]:
+        for profile, scale in [('lane_runtime.yaml', 'large'), ('lane_runtime_large.yaml', 'large')]:
             config = self.config('_runtime.launch', 'lane_runtime_config:=' +
                                  str(LAUNCH.parent/'config/camera'/profile))
             values = {k[len('/camera_lane/'):]: v.value for k, v in config.params.items()
@@ -81,21 +80,28 @@ class CameraEntrypointsTest(unittest.TestCase):
 
     def test_twinlite_candidate_resolves_local_engines_in_both_process_layouts(self):
         from asmc_camera.camera.backends.twinlite_tensorrt import load_manifest
-        profile = LAUNCH.parent / 'config/camera/lane_runtime_tensorrt.yaml'
+        profile = LAUNCH.parent / 'config/camera/lane_runtime_large.yaml'
         for layout, prefix in [('separate', '/camera_lane/'),
                                ('shared', '/camera_runtime/components/lane/')]:
             config = self.config('_runtime.launch', 'implementation:=' + layout,
                                  'lane_runtime_config:=' + str(profile))
             params = {k[len(prefix):]: v.value for k, v in config.params.items() if k.startswith(prefix)}
             self.assertEqual(params['backend'], 'twinlite_tensorrt')
-            self.assertEqual(params['checkpoint'],str(LAUNCH.parent/'models/lane_segmentation/twinlite-medium-v6.pt'))
+            self.assertEqual(params['checkpoint'],str(LAUNCH.parent/'models/lane_segmentation/twinlite-large-v7-e8.pt'))
             self.assertTrue(params['gpu_preprocess'] and params['lazy_outputs'])
             self.assertEqual(params['input_hw'], [480, 640])
             self.assertEqual(params['input_hw_by_view/front'], [544, 960])
             manifest, directory = load_manifest(params['engine_manifest'], params['checkpoint'],
-                (480, 640), {'front': (544, 960)}, 'medium')
+                (480, 640), {'front': (544, 960)}, 'large')
             self.assertEqual(directory, LAUNCH.parent / 'models/lane_segmentation')
             self.assertEqual([r['max_batch'] for r in manifest['engines']], [1, 2])
+
+    def test_standalone_lane_fallback_uses_the_current_large_checkpoint(self):
+        config=self.config('camera_lane.launch')
+        self.assertEqual(config.params['/camera_semantic_inference/model_config'].value,'large')
+        path=Path(config.params['/camera_semantic_inference/checkpoint'].value)
+        self.assertTrue(path.is_file())
+        self.assertEqual(path.name,'twinlite-large-v7-e8.pt')
 
     def test_off_has_no_producers(self):
         self.assertFalse(self.config('camera.launch', 'mode:=off').nodes)
@@ -122,21 +128,21 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertEqual({n.name for n in config.nodes}, {'camera_traffic_light'})
 
     def test_package_weights_resolve_without_external_model_mount(self):
-        for detector, filename in [('e3','yolo26l-mission15-e3.engine'),('e8','yolo26l-finetuned_e8.engine'),('pretrained','yolo26l-pretrained_coco7.engine')]:
+        for detector, filename in [('e3','yolo26l-mission15-e3.engine'),('e8','yolo26l-finetuned_e8.engine')]:
             config = self.config('camera.launch','models:=objects','detector:='+detector)
             path = Path(config.params['/camera_objects/weights'].value)
             self.assertEqual(path, LAUNCH.parent/'models/object_detection'/filename)
             self.assertTrue(path.is_file())
             self.assertFalse(path.is_symlink())
 
-    def test_models_order_and_pretrained_selection(self):
-        config = self.config('camera.launch', 'models:=traffic_light,objects', 'detector:=pretrained')
+    def test_models_order_and_e8_selection(self):
+        config = self.config('camera.launch', 'models:=traffic_light,objects', 'detector:=e8')
         self.assertEqual({n.name for n in config.nodes}, {'camera_traffic_light', 'camera_objects'})
-        self.assertEqual(config.params['/camera_objects/deployment_profile'].value, 'pretrained_coco7')
+        self.assertEqual(config.params['/camera_objects/deployment_profile'].value, 'finetuned_e8')
 
     def test_invalid_public_arguments_are_rejected(self):
         for arg in ('mode:=bad', 'models:=objects,bad', 'models:=objects,objects',
-                    'models:=objects,', 'models:=objectslane', 'models:=all,objects', 'detector:=bad'):
+                    'models:=objects,', 'models:=objectslane', 'models:=all,objects', 'detector:=bad', 'detector:=pretrained'):
             with self.subTest(arg=arg), self.assertRaises(roslaunch.RLException):
                 self.config('camera.launch', arg)
 
@@ -166,7 +172,7 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertNotIn('object_view_node.py',{n.type for n in legacy.nodes})
 
     def test_normal_visualizer_consumes_published_names_without_another_class_id_table(self):
-        for detector in ('e3', 'e8', 'pretrained'):
+        for detector in ('e3', 'e8'):
             config = self.config('view.launch','models:=objects','detector:='+detector)
             self.assertEqual([n.type for n in config.nodes], ['object_view_node.py'])
             self.assertFalse(any(k.endswith('/allowed_names') for k in config.params))

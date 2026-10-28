@@ -86,8 +86,8 @@ C/D는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [�
 유효 family를 확인합니다. A448은 접근 구간, 주변 차량 소비는 A153 끝/A451 진입까지입니다.
 
 현재 차선 기본 모델은 Large v7 E8 TensorRT다. 사용자가 알려진 공급·freshness 제한을 확인한 뒤 전환을 승인했다.
-[선정·실측·Medium 복구](../records/camera/2026-10-18-twinlite-large-deployment.md)를 확인한다.
-공식 BDD100K Large의 추가학습 전 결과는 [별도 실험 실행 안내](../../src/asmc_camera/docs/bdd-pretrained-experiment.md)를
+[선정·실측 기록](../records/camera/2026-10-18-twinlite-large-deployment.md)를 확인한다.
+공식 BDD100K Large의 추가학습 전 결과는 과거 [별도 실험 기록](../../src/asmc_camera/docs/bdd-pretrained-experiment.md)를
 따릅니다. 이진 차선 시각화 실험이며 위 B의 운영 family를 대체하지 않습니다.
 
 ### 개별 디버그·시각화
@@ -103,7 +103,7 @@ roslaunch asmc_camera view.launch
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-E8은16종, pretrained는COCO80 checkpoint에서7종만 선택합니다. 입력은 YOLO/TwinLite 모두
+E8은16종입니다. pretrained 비교는 현재 배포 선택에서 제외했습니다. 입력은 YOLO/TwinLite 모두
 전방544×960 B1·좌우480×640 B2, 목표15/15Hz·ResNet10Hz, confidence0.40·NMS0.50입니다.
 Ego mask·보정·engine은 YAML/manifest가 소유합니다. 자동 PyTorch fallback은 없습니다.
 
@@ -188,7 +188,7 @@ LiDAR `debug:=true`는 중간 점군과 필터 전후 표현을 위한 샘플 �
 |---|---|---|
 | `asmc_camera camera.launch` | `models:=all` | 기본 객체·차선·신호등 모두 추론. 선택값은 `objects`, `lane`, `traffic_light`의 쉼표 조합 |
 | `asmc_camera camera.launch` | `mode:=active` | 기본 상시 추론·발행. `standby`는 로드·예열 후 대기, `off`는 모델 미실행 |
-| `asmc_camera camera.launch` | `detector:=e8` | `pretrained`는 사전학습 COCO7 대조용. 가중치 변경 시 재시작 |
+| `asmc_camera camera.launch` | `detector:=e8` | 현재 선택은 E3·E8. 가중치 변경 시 재시작 |
 | `asmc_camera camera.launch` | `confidence:=0.40`, `nms_iou:=0.50` | 현재 검증된 객체 검출 기본값 |
 | `asmc_camera view.launch` | `models:=all` | 기본 세 모델의 결과 표시. 일부 화면만 선택해도 추론은 유지 |
 | `asmc_lidar lidar.launch` | `fusion:=true` | 카메라 분류 연결. `false`는 LiDAR 단독 진단용 |

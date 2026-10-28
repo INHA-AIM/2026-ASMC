@@ -1,3 +1,5 @@
+# Historical experiment only: model assets are no longer bundled.
+# Restore the matching files from commit af6df9e6 before replay; see config/artifacts/git-history-assets-v1.json.
 # RTX 50(sm_120) 임시 실행용. coco7_three_view_candidate.yaml의 사본이며
 # head_profile을 명시해 parameter server 잔류값에 의존하지 않는다.
 # TensorRT .engine은 다른 GPU arch/TRT 버전 산출물이라 sm_120에서 로드되지 않는다.
