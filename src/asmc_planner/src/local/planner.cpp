@@ -100,7 +100,7 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   for (const auto &o : s.obstacles) {
     double distance = geometry::ConvexPolygonDistance(physical, o.polygon);
     r.minimum_clearance = std::min(r.minimum_clearance, distance);
-    if (distance <= clearance_margin + o.uncertainty)
+    if (c.recovery_geometry ? distance<=1e-9 : distance <= clearance_margin + o.uncertainty)
       return fail(r, "local_obb", p.x, p.y, o.id);
   }
   const auto &g = s.grid;
@@ -160,6 +160,7 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
                           x <= c.length - c.rear + .5 * g.resolution &&
                           std::abs(y) <= c.width * .5 + .5 * g.resolution;
       if (cover != 255) {
+        if(c.recovery_geometry)continue; // Only the original bounded near-field recovery.
         if (current_body)
           continue;
         // Unknown clearance padding is not a measured collision. The physical
@@ -182,6 +183,11 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
         return fail(r, cover == 128 ? "ego_occlusion" : "unobserved", x, y);
       }
       if (g.probability[index] < 153) {
+        if(c.recovery_geometry) {
+          if(g.exterior_nonroad.size()!=g.coverage.size())
+            return fail(r,"recovery_boundary_unavailable",x,y);
+          if(!g.exterior_nonroad[index]) {++r.soft_margin_cells;continue;}
+        }
         // Keep physical body +10cm +cell quantization hard. Additional
         // speed-dependent semantic clearance is a preference, not collision.
         // Otherwise a single bonnet-edge pixel30cm outside the body can
@@ -189,7 +195,7 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
         const double hard = c.margin + g.resolution * std::sqrt(.5);
         if (a >= -c.rear - hard && a <= c.length - c.rear + hard &&
             std::abs(b) <= c.width * .5 + hard)
-          return fail(r, "observed_nonroad", x, y);
+          return fail(r, c.recovery_geometry?"recovery_exterior_nonroad":"observed_nonroad", x, y);
         ++r.soft_margin_cells;
       }
     }
@@ -301,10 +307,19 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
   // near-field soft policy is never extended beyond its existing4m range.
   const double target = std::max(4., required + .25);
   if (target > 8.) return false;
-  for (const auto &goal : goals) {
-    const double requested =
-        std::clamp(2 * goal[1] / (goal[0] * goal[0] + goal[1] * goal[1]),
-                   -c.max_k, c.max_k);
+  std::vector<std::pair<std::array<double,2>,double>> requests;
+  for(const auto &goal:goals)
+    requests.push_back({goal,std::clamp(2*goal[1]/(goal[0]*goal[0]+goal[1]*goal[1]),-c.max_k,c.max_k)});
+  // Tight near obstacles may need a stronger initial turn than a distant
+  // centroid arc. Only add directions with a CURRENT observed opening.
+  for(double sign:{-1.,1.}) {
+    auto it=std::find_if(goals.begin(),goals.end(),[&](const auto &g){return sign*g[1]>.3;});
+    if(it!=goals.end())requests.push_back({*it,sign*c.max_k});
+  }
+  double best_length=0.;
+  for (const auto &request : requests) {
+    const auto &goal=request.first;
+    const double requested=request.second;
     Pose p;
     p.k =
         s.speed > .3 ? std::clamp(s.yaw_rate / s.speed, -c.max_k, c.max_k) : 0.;
@@ -313,6 +328,10 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
     unsigned overlap = 0;
     int known = 0;
     bool physical_collision = false;
+    // The occupied starting body must also be clear of measured geometry.
+    auto initial=MakeEgoFootprint(CartesianState{0,0,0,0,0,0},VehicleShape{c.width,c.length,c.rear},0.);
+    for(const auto &o:s.obstacles)
+      if(geometry::ConvexPolygonDistance(initial,o.polygon)<=1e-9)return false;
     for (int step = 1; step <= int(std::ceil(target/.1)); ++step) {
       const Pose before = p;
       const double delta=std::atan(c.wheelbase*p.k/c.gain),
@@ -332,7 +351,12 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
         Config strict=c; strict.blind_assist=false;
         if (!CheckSweep(s,strict,before,p,check)) break;
       }
-      path.push_back(p);
+      Config recovery_geometry=c;recovery_geometry.recovery_geometry=true;
+      Result physical;
+      if(!CheckSweep(s,recovery_geometry,before,p,physical)) {
+        for(const auto &v:physical.rejected)out.rejected[v.first]+=v.second;
+        break;
+      }
       CartesianState state{p.x, p.y, p.yaw, p.k, 0, 0};
       auto body =
           MakeEgoFootprint(state, VehicleShape{c.width, c.length, c.rear}, 0.);
@@ -348,7 +372,8 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
         } else
           cost += .05 / std::max(.05, d);
       }
-      if (physical_collision) break;
+      if (physical_collision) {++out.rejected["recovery_physical_obb"];break;}
+      path.push_back(p); // Never retain the first actually colliding pose.
       if (step % 4) continue;
       for (double a : {0., c.length - c.rear})
         for (double b : {-c.width * .5, 0., c.width * .5}) {
@@ -380,9 +405,16 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
     cost += .3 * std::abs(goal[1] - homeAt(s, goal[0])) + .2 * (8. - goal[0]);
     Result candidate;
     candidate.path=path; candidate.assisted=true; candidate.recovery=true;
-    const bool feasible = !physical_collision && path.size()>10 && known>=10 &&
-        BuildSpeedProfile(s,c,candidate);
-    if (feasible && cost < best_cost) {
+    const bool short_reposition=s.speed<=1./3.6 && path.back().s>=.6;
+    // At a stopped bonnet blind spot, the opening itself supplies current
+    // directional evidence. Do not demand an entire4m arc before allowing
+    // a braking-feasible short reposition. This remains labelled recovery.
+    const bool feasible = path.size()>6 && (known>=10 || short_reposition) &&
+        BuildSpeedProfile(s,c,candidate) && candidate.chosen_cap>.02;
+    const double quality=cost/std::max(.1,path.back().s);
+    if (feasible && (path.back().s>best_length+.1 ||
+        (path.back().s>=best_length-.1 && quality<best_cost))) {
+      best_length=path.back().s; cost=quality;
       best_cost = cost;
       best = std::move(path);
       best_overlap = overlap;
@@ -397,9 +429,30 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
   out.recovery_cost = best_cost;
   out.recovery_obb_overlap = best_overlap;
   out.recovery_extension_m = std::max(0.,out.path.back().s-4.);
+  if(out.path.back().s<target-.05)out.path_source="bounded_recovery_prefix";
   return true;
 }
 } // namespace
+void BuildGridIndex(Grid &grid) {
+  grid.blocked_columns.assign(grid.rows, {});
+  grid.exterior_nonroad.assign(grid.rows*grid.cols,0);
+  for (int row = 0; row < grid.rows; ++row) {
+    int first=grid.cols,last=-1;
+    for(int col=0;col<grid.cols;++col) {
+      const int i=row*grid.cols+col;
+      if(grid.coverage[i]==255 && grid.probability[i]>=153) {first=std::min(first,col);last=col;}
+    }
+    for (int col = 0; col < grid.cols; ++col) {
+      int index = row * grid.cols + col;
+      if (grid.coverage[index] != 255 || grid.probability[index] < 153)
+        grid.blocked_columns[row].push_back(col);
+      // No road mask is filled/changed. This current-row exterior protects
+      // actual road sides when an internal occlusion hole is a recovery cost.
+      if(grid.coverage[index]==255 && grid.probability[index]<153 && (col<first || col>last))
+        grid.exterior_nonroad[index]=1;
+    }
+  }
+}
 static Result PlanPrepared(const Scene &, const Config &);
 Result Plan(Scene indexed, const Config &c) {
   const auto started = std::chrono::steady_clock::now();
@@ -413,13 +466,7 @@ Result Plan(Scene indexed, const Config &c) {
     out.reason = "grid_invalid";
     return out;
   }
-  grid.blocked_columns.assign(grid.rows, {});
-  for (int row = 0; row < grid.rows; ++row)
-    for (int col = 0; col < grid.cols; ++col) {
-      int index = row * grid.cols + col;
-      if (grid.coverage[index] != 255 || grid.probability[index] < 153)
-        grid.blocked_columns[row].push_back(col);
-    }
+  BuildGridIndex(grid);
   const double index_ms = elapsed(started);
   auto out_prepared = PlanPrepared(indexed, c);
   out_prepared.index_ms = index_ms;

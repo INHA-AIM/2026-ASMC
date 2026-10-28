@@ -25,6 +25,7 @@ struct Config {
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;
+  bool recovery_geometry = false; // Internal near-field policy; never a launch switch.
   int beam = 40;
 };
 struct Grid {
@@ -32,6 +33,7 @@ struct Grid {
   double resolution = .1, xmax = 20., ymax = 8.;
   std::vector<uint8_t> probability, coverage;
   std::vector<std::vector<int>> blocked_columns;
+  std::vector<uint8_t> exterior_nonroad; // Current row exterior, not interior occlusion holes.
   std::vector<float>
       recent_road_age; // Original observation age;0 means no evidence.
   // base_link ground -> gravity-aligned planning plane, no second projection.
@@ -93,6 +95,7 @@ struct Result {
 };
 // Distance-normalized final score; does not certify collision validity.
 double SegmentQualityCost(const Scene &, const Config &, const Pose &, const Pose &, unsigned soft_cells);
+void BuildGridIndex(Grid &); // Current raster index; never changes probability/coverage.
 Result Plan(Scene, const Config &);
 bool CheckFootprint(const Scene &, const Config &, const Pose &, Result &);
 std::array<double, 3> Rotate(const std::array<double, 9> &, double, double,

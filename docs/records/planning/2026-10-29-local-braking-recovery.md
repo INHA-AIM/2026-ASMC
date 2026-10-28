@@ -106,3 +106,26 @@ ROS 정합 시험의 모든plan에서LiDAR–family 차이가150ms를 넘어야 
 바로잡았다. 네topic callback은 원자적이지 않다. 실제 선택stamp 차이와age 차이의
 일치·모든 표본의 기존freshness 준수·시험 전체의150ms 초과 독립시각 사례 존재를
 검사한다. 운영 시각 한계를 완화하지 않는다.
+
+### 정지 장면의 두 번째 보완
+
+동일 위치로 시작한drive09도준비 실패였다. 당시source scene을그대로 C++ core에 넣었을
+때 aided 경로는0.6m였지만 미래 차체 앞부분이 모두가려져 현재front-road 셀 조건을
+충족하지 못했다. 이는 단순 계산 예산 부족이 아니며250ms 예산도같이실패했다.
+
+기존generic 복구는centroid arc 전체가충돌하면 앞의유효 prefix까지버렸다. 현재는
+실제충돌 pose 이전까지만 잘라 제동 검사를하고, 관측한 opening 방향의최대곡률 후보도
+추가한다. 원점 차체가 이미 OBB와겹치면복구하지 않는다. 실제 차체는매10cm의각pose만
+검사하던 것에서기존연속sweep 검사로 바꿨다. 정지·1km/h 이하에서만 opening 근거에 따른
+짧은재배치 예외를쓰고, 나머지속도는기존관측/제동 조건을유지한다.
+
+또한복구가 내부그림자뿐 아니라도로외곽 비노면까지비용으로만 처리하던부분을제한했다.
+현재raster의각행에서노면 양끝밖에있는 관측비노면은차체+기존최소여유에대해 hard veto다.
+내부hole만복구의soft cost로남는다. 이는새벽 검출이나실제터널벽의독립측정이아니다.
+원본probability/coverage를채우거나수정하지않으며 추가색인은40kB/scene이고재귀탐색에서
+공유한다. 미관측전체·실제OBB·도로외곽·분리된partial-road 반례를유지한다.
+
+`local_planner_test`에실제정지scene의결정동등fixture를추가했다. 원본8bit는D에보존하고
+153/166의운영threshold에서동등한3레벨RLE를Gitfixture로사용한다. coverage와geometry는
+그대로다. 직접C++대조와전구간sweep 검사로이fixture의재배치경로를확인한다. 준비실패와
+실제폐루프검증은서로다른결과로남긴다.

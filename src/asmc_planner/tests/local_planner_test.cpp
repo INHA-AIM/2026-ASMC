@@ -1,4 +1,5 @@
 #include "local/journal.hpp"
+#include "fixtures/local2f_stopped_barrier.hpp"
 #include "local/motion.hpp"
 #include "local/obstacle_memory.hpp"
 #include "local/planner.hpp"
@@ -111,6 +112,35 @@ int main() {
     expect(SemanticReference(s.grid,c).empty(),"unknown semantic area cannot create a reference");
   }
   try {
+    {
+      auto s=RecordedStoppedBarrier();Config c;c.budget_ms=250.;c.speed_cap=10./3.6;
+      expect(!Plan(s,c).valid,"recorded stopped barrier needs an explicit recovery path");
+      c.recovery=true;const auto r=Plan(s,c);
+      expect(r.valid && r.recovery && r.path.back().s>=.6 && r.path_source=="bounded_recovery_prefix",
+             "recorded stopped barrier has a bounded braking-feasible reposition");
+      BuildGridIndex(s.grid);c.recovery_geometry=true;
+      for(size_t i=1;i<r.path.size();++i){Result check;
+        expect(CheckSweep(s,c,r.path[i-1],r.path[i],check),
+               "recorded reposition never intersects actual OBB or current road exterior");}
+    }
+    {
+      auto s=empty(); Config c;
+      for(int row=0;row<250;++row)for(int col=0;col<160;++col){
+        const double y=8.-col*.1;
+        if(y < -3. || y > 3. || (row==120 && col>=78 && col<=82))s.grid.probability[row*160+col]=0;
+      }
+      const auto original=s.grid.probability;BuildGridIndex(s.grid);
+      expect(s.grid.probability==original,"exterior indexing never fills semantic holes");
+      Result check;
+      expect(!CheckFootprint(s,c,Pose{8.,0.,0.,0.,8.},check),"normal sweep rejects current interior nonroad");
+      c.recovery_geometry=true;check=Result{};
+      expect(CheckFootprint(s,c,Pose{8.,0.,0.,0.,8.},check),"recovery can score an internal occlusion separately");
+      check=Result{};
+      expect(!CheckFootprint(s,c,Pose{8.,2.5,0.,0.,8.},check) && check.rejected.count("recovery_exterior_nonroad"),
+             "recovery cannot cross the measured road exterior");
+      s.obstacles.push_back({73,{{8.,-.2},{8.1,-.2},{8.1,.2},{8.,.2}}});check=Result{};
+      expect(!CheckFootprint(s,c,Pose{8.,0.,0.,0.,8.},check),"semantic occlusion never overrides a measured OBB");
+    }
     {
       auto s=empty(); Config c;c.recovery=true;c.budget_ms=250.;
       // A measured far wall leaves only a short braking-feasible prefix.
@@ -228,9 +258,13 @@ int main() {
         if(x<4.6) s.grid.coverage[row*160+col]=128;
       }
       auto r=Plan(s,c);
-      expect(r.valid && r.recovery,"partial near-body raster exercises recovery goal generation");
+      expect(!r.valid,"disconnected partial road cannot override a measured exterior boundary");
+      for(int row=0;row<250;++row)for(int col=0;col<160;++col){
+        double y=8.-col*.1;s.grid.probability[row*160+col]=(y>=-1.4&&y<=2.6)?255:0;}
+      r=Plan(s,c);
+      expect(r.valid && r.recovery,"connected partial near-body road exercises recovery goals");
       for(const auto& goal:r.goals)
-        expect(goal[1]>=.3+c.width*.5-1e-6 && goal[1]<=4.3-c.width*.5+1e-6,
+        expect(goal[1]>=-1.4+c.width*.5-1e-6 && goal[1]<=2.6-c.width*.5+1e-6,
                "recovery goals contain the physical body inside their observed road interval");
     }
     // Tiny overspeed must converge, not become a full-brake trough. The old
