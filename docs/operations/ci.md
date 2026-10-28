@@ -1,81 +1,84 @@
 # CI 실행과 유지
 
-매 PR과 main push에서는 전체 workspace를 한 번 빌드하고 판제 회귀도 그 결과를 사용한다.
-최소 패키지 구성의 의존성 점검은 `Planning integration build`의 수동 실행(`workflow_dispatch`)에
-남겼다. 이 독립 빌드는 더 이상 매 PR의 자동 gate가 아니며, package.xml·CMake·외부 의존성 변경 때
-추가 실행한다. 빌드 결과·devel·시험 성공을 cache로 건너뛰지 않는다.
+매 PR과 main push에서는 운영 실행파일 빌드와 핵심 계약·회귀만 자동 실행한다.
+전체 회귀는 `Full regression (manual)`에서 필요할 때 실행한다. 자동 검증의 목표는
+runner 실행 시작부터 종료까지 **7분 이내**다. 빌드 job은 각각 6분, 계약 job은 3분으로
+제한하고 병렬 실행해 여유를 둔다. 시간 제한으로 실패한 실행은 목표 달성으로 세지 않는다.
+GitHub runner 대기열 지연은 workflow 밖의 대기 시간으로 구분한다.
 
-## 구성
+## 매번 실행하는 검사
 
-- `CI / catkin-build`: 환경·문서·공용 계약 검사, `all`과 명시적인 시험 target을 한 catkin 호출에서 빌드한 후
-  시간 민감 HTTP 검사를 포함한 LiDAR 그룹을 단독 실행한 뒤 나머지
-  [회귀 그룹](../../.github/ci/groups.json)을 최대2개씩 실행한다. 같은 build tree에서 병렬 컴파일하지 않는다.
-- `planning` 그룹: dashboard·launch·AVOID·로터리·도로 제약·충돌·고속도로 runtime 검사를
-  공통 빌드에서 수행한다. 입력 executable 4개와 `lidar_observation.test`는 `lidar` 그룹에서 한 번 실행한다.
-- `CI / planning-catkin-build`: 이전 check 이름을 유지하는 결과 gate다. 공통 build/test의 실패·취소도
-  실패로 전달한다. workflow 소속이 바뀌므로 workflow까지 제한하는 외부 보호 규칙이 있다면 확인한다.
-- `Planning integration build / planning-standalone-build`: 수동 실행에서만 기존 6패키지 whitelist를
-  최소 의존성 환경에서 클린 빌드한다. PR에서는 실행하지 않는다.
-- `validated-lidar-build`: 구 실행 의존성과 입력 소유권의 정적 검사다. 소스 전체를 유지하되
-  검사하지 않는 PT/engine/ONNX/보존 tar.gz만 sparse checkout에서 제외한다. 실제 배포 파일 존재·회귀
-  검사는 모든 파일을 받는 전체 CI에서 유지한다. Git 정본이나 로컬 운영 파일을 삭제하지 않는다.
+자동 workflow는 [ci.yml](../../.github/workflows/ci.yml) 하나이며 세 job을 의존 관계 없이 실행한다.
+기존 check 이름을 유지하지만 세 job 모두 실제 검사를 수행한다.
 
-같은 job의 LiDAR/음영 어댑터/카메라/bridge/판제 시험은 각각 다른 ROS master와 시험 소유 프로세스를
-사용한다. ROS 시험 내부 timeout·freshness·수치 기준은 줄이지 않는다. 같은 workspace에서 반복하던
-YOLO baseline/all·segmentation 세 fixture만 한 번씩 실행하고 `--batched` 등 다른 옵션 검사는 유지한다.
-[보존 검사](../../tools/ci/check_coverage.py)가 이전141개와 PR #114 신규4개(총145개) 고유 명령·옵션 조합과 필수 그룹을 대조한다. 판제 고유 검사, 중복 build·입력 검사, 결과 gate도 확인한다.
-LiDAR 단독 실행 후 lane을 먼저 시작하고 나머지 그룹을 2 worker에 배치한다. 그룹 timeout과
-시험 내부 허용 시간·허용 오차는 이전과 같다. 차선 fixture 자체의 병렬 분할은 포함하지 않는다.
+| check | 필수 검사 | 제한 |
+|---|---|---|
+| `validated-lidar-build` | LiDAR 운영 정본·입력/토픽/저장·bridge·문서 계약, 엔진 선택 정책, dashboard, Python 문법 | 3분 |
+| `planning-catkin-build` | 판제·MPC·입력 어댑터 운영 target 빌드, 입력 신선도/유효성, 제동·reference·GPS 모드, 고속도로 초기화 preflight, ROS 입력 연결 | 6분 |
+| `catkin-build` | LiDAR/PCL·vehicle state·카메라 C++·native lane association 빌드, 배포 모델 무결성, frame/time·형상·투영, native parity, 카메라 launch/model/로컬 engine 준비 계약 | 6분 |
 
-## 실패·취소와 로그
+빌드할 package/target과 실행 script는 [essential.json](../../.github/ci/essential.json)에 명시한다.
+모든 시험 실행파일을 컴파일하던 `all` 대신 운영 target과 선택한 작은 회귀 target을 빌드한다.
+Python/카메라 native 모듈의 실제 import를 확인하며 모듈 누락을 skip으로 처리하지 않는다.
+LiDAR 운영 target은 `ASMC_LIDAR_PIPELINE_REQUIRED=ON`으로 PCL 의존성 누락을 오류로 처리한다.
+카메라 GPU 모델 추론·TensorRT 속도나 MORAI 전 구간 주행을 이 CPU CI의 검증 결과로 해석하지 않는다.
 
-한 그룹이 실패하거나 timeout돼도 나머지 그룹을 실행하고 전체는 실패한다. 빈/누락 그룹·기존 출력
-덮어쓰기는 오류다. 취소 신호는 시험 소유 process group에 전달한다. 더 최신 PR revision은 이전 실행을
-취소하지만 main 검증은 완료한다. 오류를 무시하는 `continue-on-error`는 사용하지 않는다.
+## 필요할 때 실행하는 전체 검사
 
-Actions의 `regression-<run-id>-<attempt>` artifact에는 각 그룹 전체 로그·script SHA·종료 코드·시간과
-`summary.json`을7일간 보존한다. 성공 결과를 다음 빌드에 재사용하지 않는다. 업로드 범위는 생성한
-`.ci-results`뿐이며 cache·설정·자격 증명은 포함하지 않는다.
+- [Full regression (manual)](../../.github/workflows/full-regression.yml): Actions에서 대상 ref를 선택해
+  `Run workflow`로 실행한다. 전체 workspace와 기존 시험 target, CPU Torch/Ultralytics 환경,
+  [6개 회귀 그룹](../../.github/ci/groups.json)을 보존한다. LiDAR 그룹을 단독 실행한 뒤
+  lane·camera-unit·camera-ros·bridge·planning 그룹을 최대 2개씩 실행한다.
+- [Planning integration build](../../.github/workflows/planning-integration.yml): package.xml·CMake·외부
+  의존성 변경 시 최소 6패키지 whitelist를 독립 빌드한다. 자동 CI와 중복 실행하지 않는다.
 
-## Cache와 비용
+긴 차선 합성 시험·카메라 ROS fixture·전체 bridge·AVOID/로터리/고속도로 회귀가 필요하면 수동 전체
+검사를 실행한다. 시험 내부 timeout·freshness·수치 허용 오차는 바꾸지 않았다.
+[검사 보존 audit](../../tools/ci/check_coverage.py)은 기존 145개 고유 명령·옵션 조합이 수동 전체
+검사에도 남아 있는지 확인한다. 자동 workflow에 전체 회귀나 Torch 설치가 다시 들어오거나,
+핵심 운영 target·병렬 job·시간 제한이 사라지면 audit을 실패시킨다.
+자동 CI 통과는 수동 전체 회귀까지 통과했다는 뜻이 아니다.
 
-ccache key는 commit SHA 대신 C++/header/CMake/package/message/service 내용으로 결정한다.
-동일 job의 cache를 우선하고 다른 job의 호환 cache를 보조로 복원한다. 실제 compiler/header 검사와
-링크·시험은 매번 수행한다. 통계는 복원 후0으로 초기화해 누적 hit 수치를 이번 실행으로 오해하지 않는다.
-CPU wheel cache는 [실제 설치 requirements](../../.github/ci/cpu-requirements.txt)에 연결한다. 의존성
-설치·검증은 생략하지 않으며 일반 workflow 편집만으로 같은 다운로드 cache를 새로 만들지 않는다.
-Noetic Python3.8을 지원하는 pip24.3.1 resolver를 CI에서 먼저 준비하고 설치 후 `pip check`를 실행한다.
-이전 pip의 dependency conflict 경고를 성공으로 넘기지 않는다. 운영 컨테이너의 pip/모델 환경은 변경하지 않는다. NumPy1.24.4·SciPy1.10.1을 함께 고정하고
-설치 후 공간 검색/회전·OpenCV·Torch의 실제 import도 확인한다. C++ cache는 빌드 성공 직후 저장해
-나중의 시험 실패로 같은 소스를 다시 컴파일하는 낭비를 줄인다. 시험 성공이나 build/devel은 저장하지 않는다.
+## 시간·cache·실패 기록
 
-정리 전 저장소 추적 파일은 약 1.56 GB였으며 다운로드 자체도 병목이었다. 사용자 승인으로
-현재 Git tree에서 약 916 MB의 과거 자산을 제외하고 [이력 목록](asset-history.md)을 유지한다. source audit job의 sparse view는
-약 333 MB다. 전체 회귀 job은 가중치·보존 근거를 계속 받으므로 그 checkout 시간은 남는다.
+인지 build에는 공식 Noetic perception 이미지의 고정 digest를 사용해 PCL/OpenCV 의존성 준비 비용을
+줄인다. PR 검사에서는 Torch/torchvision/Ultralytics를 설치하지 않고 필요한 NumPy·SciPy·PyYAML만
+[requirements](../../.github/ci/essential-requirements.txt)로 고정한다. 운영 컨테이너의 환경은 바꾸지 않는다.
+계약 job은 큰 배포 PT/engine/ONNX/과거 tar.gz를 sparse checkout에서 제외한다.
+Noetic의 Git 2.25는 checkout action의 sparse 지원 조건을 충족하지 않아 판제 job은 일반 checkout을 사용한다.
+인지 job은 전체 파일을 받아 E3/E8/Large와 신호등 모델 존재·해시를 확인한다.
 
-소요 시간은 runner·cache 영향을 받으므로 wall time과 병렬 job 시간 합계를 함께 비교한다.
-[초기 측정](../records/repository/2026-10-26-ci-runtime.md)과
-[중복 빌드 제거·판제 초기화 분석](../records/repository/2026-10-29-planner-startup-ci.md)을 참고한다.
-별도 job 제거는 runner 사용량을 줄이지만 기존 lane 그룹의 350초를 제거하지는 않는다.
-실제 PR 대기시간 개선은 수정 후 Actions run으로 확인해야 한다.
+ccache는 C++/header/CMake/package/message/service 내용으로 key를 만들고 역할별로 저장한다.
+호환되는 이전 compiler cache도 복원하되 compiler/header 검사·링크·시험은 매번 실행한다.
+통계는 이번 실행 전에 초기화한다. 빌드 성공 직후 cache를 저장하고 build/devel·시험 성공은 저장하지 않는다.
+
+실패·취소를 성공으로 넘기지 않는다. 더 최신 PR revision은 이전 CI를 취소하고 main 검증은 완료한다.
+자동 build/test 로그는 `essential-planning-*`, `essential-perception-*` artifact에 7일간 보존한다.
+수동 전체 회귀의 `regression-*` artifact에는 그룹별 로그·script SHA·종료 코드·시간·summary가 남는다.
+시간 제한 초과·cache miss·이미지 준비 지연은 Actions의 각 step 시간으로 구분해서 조사한다.
+
+이전 측정: [초기 CI 분석](../records/repository/2026-10-26-ci-runtime.md),
+[PR #133 판제 초기화·중복 빌드 개선](../records/repository/2026-10-29-planner-startup-ci.md).
+PR #133의 전체 CI는 16분 42초였고 그중 회귀가 8분 50초였다. 자동 검사를 핵심 범위로 줄인 것은
+후속 변경이며, 수동 전체 회귀의 소요 시간을 7분으로 줄였다는 의미는 아니다.
 
 ## 로컬 재현
 
-Noetic에서 전체 workspace와 필요한 시험 executable을 먼저 빌드한다. 기존 운영 노드는 유지하고
-서로 다른 master의 합성 시험만 실행한다. 아래 명령은 사용자용 실행 wrapper가 아니라 CI 재현 도구다.
+별도 Noetic workspace에서 역할별로 실행한다. 아래 두 빌드는 서로 다른 whitelist를 사용하므로
+같은 build/devel에서 동시에 실행하지 않는다. 기존 운영 노드·ROS master는 유지한다.
 
 ```bash
-source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test ground_projection_test detected_msg_converter_test feature_builder_avoid_test dynamic_object_policy_test highway_runtime_test -j2 -l2
-python3 tools/ci/check_coverage.py
-python3 -m unittest discover -s tools/ci -p 'test_*.py'
-python3 tools/ci/run_checks.py --workers 2 --output /tmp/asmc-ci-local-unique-run
+python3 tools/ci/build_essential.py planning
+bash .github/ci/essential-planning.sh
+
+python3 tools/ci/build_essential.py perception
+bash .github/ci/essential-perception.sh
+
+bash .github/ci/essential-contracts.sh
 ```
 
-출력 디렉토리는 새 이름을 사용한다. 별도 빌드의 재현은 `ASMC_CI_BUILD`와 `ASMC_CI_DEVEL`에 해당
-경로를 주입한다. `--workers 1`은 동일 검사를 순차 실행한다. 합성 capture 단위시험의 unmanaged 출력은
-그 시험의 `/tmp`에만 허용하며 수집·학습·운영 도구의 저장 규칙을 우회하지 않는다.
-
-GitHub 참고: [cache key·복원 순서](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching),
-[artifact 보존·숨김 경로](https://github.com/actions/upload-artifact#uploading-hidden-files).
+계약 검사는 PyYAML·Node.js가 필요하다. ROS 검사는 role별 빌드가 만든 devel을 사용한다.
+전체 회귀 재현은 수동 workflow의 build target과 의존성을 준비한 뒤
+`python3 tools/ci/run_checks.py --workers 2 --output /tmp/asmc-ci-local-unique-run`을 실행한다.
+출력 경로는 새 이름을 사용한다. 합성 단위시험의 unmanaged 출력은 해당 `/tmp`에만 허용하며
+수집·학습·운영 도구의 저장 규칙을 우회하지 않는다.

@@ -2,20 +2,6 @@ name: Planning integration build
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/asmc_planner/**'
-      - 'src/asmc_controller/**'
-      - 'src/planning_inputs/**'
-      - 'src/asmc_msgs/**'
-      - 'src/asmc_lidar/**'
-      - 'src/asmc_camera/**'
-      - 'src/jamming_lane_boundary_adapter/**'
-      - '.github/workflows/planning-integration.yml'
-      - '.github/workflows/ci.yml'
-      - '.github/ci/**'
-      - 'tools/ci/**'
 
 # A newer PR revision supersedes older checks; main push validation completes.
 concurrency:
@@ -23,24 +9,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Keep the existing check identity while retiring the third heavy ROS build.
-  validated-lidar-build:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # Only this source audit excludes binary assets. The full regression
-          # checkout keeps deployment weights and historical evidence intact.
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /*
-            !**/*.pt
-            !**/*.engine
-            !**/*.onnx
-            !**/*.tar.gz
-      - name: Check canonical LiDAR dependencies and input ownership
-        run: python3 tools/audit/check_lidar_canonicalization.py
-
   # Dependency-isolation audit on demand, not a second build on every PR.
   planning-standalone-build:
     if: github.event_name == 'workflow_dispatch'

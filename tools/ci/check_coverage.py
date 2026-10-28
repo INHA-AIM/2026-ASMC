@@ -72,46 +72,55 @@ def audit(root=ROOT):
     bridge = (root/'.github/ci/bridge.sh').read_text()
     if 'asmc_bridge' not in bridge or 'ctest --output-on-failure' not in bridge:
         errors.append('full bridge CTest replacement missing')
-    # The old Planning integration workflow must not regain a duplicate build
-    # or lose unique checks when its tests move into the shared build job.
+    # The user chose a small parallel PR gate; retain the old matrix only as
+    # an explicit manual run. No successful test result is reused as a cache.
     ci = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())
-    gate = ci['jobs'].get('planning-catkin-build', {})
-    if gate.get('needs') != 'catkin-build' or gate.get('if') != 'always()':
-        errors.append('planning check must propagate the shared job result, including failure')
-    if not any(step.get('env', {}).get('BUILD_RESULT') == '${{ needs.catkin-build.result }}'
-               and 'test "$BUILD_RESULT" = success' in step.get('run', '')
-               for step in gate.get('steps', [])):
-        errors.append('planning check must fail unless the shared job succeeded')
-    all_runs = [step.get('run', '') for workflow in workflows
-                for job in workflow['jobs'].values()
-                if job.get('if') != "github.event_name == 'workflow_dispatch'"
-                for step in job.get('steps', [])]
-    if sum(run.count('./scripts/build_ws.sh') for run in all_runs) != 1:
-        errors.append('ROS workspace must be built exactly once per CI revision')
+    required_jobs = {'validated-lidar-build', 'planning-catkin-build', 'catkin-build'}
+    if set(ci['jobs']) != required_jobs:
+        errors.append('three essential check identities required')
+    for name, job in ci['jobs'].items():
+        if job.get('needs') or job.get('if'):
+            errors.append('essential checks must run in parallel without conditional skipping: '+name)
+        if not 0 < job.get('timeout-minutes', 0) <= 6:
+            errors.append('essential job needs a budget of at most six minutes: '+name)
+    for name in ('full-regression.yml', 'planning-integration.yml'):
+        workflow = yaml.safe_load((root/'.github/workflows'/name).read_text())
+        events = workflow.get('on', workflow.get(True, {}))
+        if set(events or {}) != {'workflow_dispatch'}:
+            errors.append('heavy regression must remain manual-only: '+name)
+    full = (root/'.github/workflows/full-regression.yml').read_text()
+    if ('./scripts/build_ws.sh all' not in full or
+            'tools/ci/run_checks.py --output .ci-results --workers 2' not in full):
+        errors.append('manual full build and every regression group must remain available')
+    auto = (root/'.github/workflows/ci.yml').read_text()
+    for forbidden in ('./scripts/build_ws.sh all', 'cpu-requirements.txt',
+                      'tools/ci/run_checks.py --output .ci-results'):
+        if forbidden in auto:
+            errors.append('slow full suite reintroduced into required CI: '+forbidden)
+    spec = json.loads((root/'.github/ci/essential.json').read_text())
+    if spec.get('wall_target_minutes') != 7:
+        errors.append('essential wall target must remain seven minutes')
+    required_targets = {
+        'planning': {'asmc_planner_node', 'mpc_controller_node', 'asmc_control_selector_node',
+                     'planning_objects_adapter', 'highway_merge_preflight', 'planning_gps_recovery_test',
+                     'stop_brake_response_test', 'reference_validator_test'},
+        'perception': {'lidar_pipeline_node', 'vehicle_state_node', 'camera_bbox_lane_node',
+                       'camera_bbox_lane_change_node', '_lane_association',
+                       'asmc_lidar_frame_time_core_test', 'asmc_lidar_geometry_boundary_test'}}
+    for scope, expected_targets in required_targets.items():
+        job = spec['jobs'][scope]
+        if not expected_targets.issubset(job['targets']) or 'all' in job['targets']:
+            errors.append('essential production/safety targets missing or full build requested: '+scope)
+        if not (root/job['script']).is_file():
+            errors.append('essential test script missing: '+scope)
+    for script in ('essential-contracts.sh', 'essential-planning.sh', 'essential-perception.sh'):
+        if not (root/'.github/ci'/script).is_file():
+            errors.append('essential script missing: '+script)
     planning = (root/'.github/ci/planning.sh').read_text()
-    for required in ('runtime_launch_contract_test.py', 'object_filter_contract_test.py',
-                     'dashboard_motion_test.js', 'dashboard_shadow_test.js',
-                     'dashboard_observation_test.py', 'dashboard_startup_test.py',
-                     'prepared_static_inputs_test', 'rostest asmc_planner highway_runtime.test',
-                     'command_avoid_target_test', 'roundabout_execution_test',
-                     'avoid_road_constraints_test', 'polygon_collision_test',
-                     '_ctest_asmc_planner_gtest_detected_msg_converter_test',
-                     '_ctest_asmc_planner_gtest_feature_builder_avoid_test',
-                     '_ctest_asmc_planner_gtest_dynamic_object_policy_test'):
+    for required in ('rostest asmc_planner highway_runtime.test', 'roundabout_execution_test',
+                     'command_avoid_target_test', 'avoid_road_constraints_test', 'polygon_collision_test'):
         if required not in planning:
-            errors.append('missing former planning check: '+required)
-    standalone = yaml.safe_load((root/'.github/workflows/planning-integration.yml').read_text())['jobs'].get('planning-standalone-build', {})
-    if standalone.get('if') != "github.event_name == 'workflow_dispatch'":
-        errors.append('standalone dependency build must remain manual')
-    if sum(script.count('rostest planning_inputs lidar_observation.test') for script in
-           all_runs + [(root/g['script']).read_text() for g in groups]) != 1:
-        errors.append('planning observation ROS fixture must run exactly once')
-    # These input regressions are owned by lidar.sh and run once, not in each workflow.
-    for test in ('planning_lidar_observation_test', 'planning_group_conversion_test',
-                 'planning_lidar_companion_test', 'planning_gps_recovery_test'):
-        if sum(script.count('/lib/planning_inputs/'+test) for script in
-               all_runs + [(root/g['script']).read_text() for g in groups]) != 1:
-            errors.append('planning input executable must run exactly once: '+test)
+            errors.append('missing manual planning regression: '+required)
     return errors, len(expected)
 
 

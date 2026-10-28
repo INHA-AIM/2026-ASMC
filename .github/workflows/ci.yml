@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# A newer PR revision supersedes older checks; main push validation completes.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -16,167 +15,150 @@ env:
   CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_COMPILERCHECK: content
   CCACHE_MAXSIZE: 400M
-  PIP_CACHE_DIR: ${{ github.workspace }}/.ci-cache/pip
+  PIP_CACHE_DIR: ${{ github.workspace }}/.ci-cache/pip-essential
 
 jobs:
-  catkin-build:
+  validated-lidar-build:
+    name: validated-lidar-build
     runs-on: ubuntu-22.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !**/*.pt
+            !**/*.engine
+            !**/*.onnx
+            !**/*.tar.gz
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install contract parser
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.2
+      - name: Check essential contracts and Python syntax
+        run: bash .github/ci/essential-contracts.sh
+
+  planning-catkin-build:
+    name: planning-catkin-build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 6
     container: ros:noetic
     defaults:
       run:
         shell: bash
     steps:
-      # ros:noetic 이미지에 git이 없으면 checkout(submodules)이 REST fallback으로 실패함
-      - name: Install git and build deps
+      - name: Install small build dependencies
         run: |
-          # Same signed Ubuntu repositories; avoid observed HTTP download failures.
-          sed -i -e 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' \
-            -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
+          sed -i -e 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
           apt-get -o Acquire::Retries=3 update
-          # Last line: asmc_lidar shadow pipeline build_depend (PCL, GeographicLib, pcl_conversions, rosbag).
-          apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
-            git ca-certificates ccache libyaml-cpp-dev libssl-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-pil python3-nose python3-pip python3-dev pybind11-dev \
-            ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest \
-            libpcl-dev libgeographic-dev ros-noetic-pcl-conversions ros-noetic-rosbag ros-noetic-visualization-msgs
+          apt-get -o Acquire::Retries=3 install -y --no-install-recommends git ca-certificates build-essential cmake ccache libyaml-cpp-dev libeigen3-dev libssl-dev libgtest-dev python3-nose ros-noetic-rostest ros-noetic-rosbag ros-noetic-tf ros-noetic-tf2-ros
           rm -rf /var/lib/apt/lists/*
-
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      # Preserve the dashboard tests' Node runtime from Planning integration.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Restore C++ compiler cache
+      - name: Restore production compiler cache
         id: compiler-cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'src/**/*.cc', 'src/**/CMakeLists.txt', 'src/**/package.xml', 'src/**/*.msg', 'src/**/*.srv') }}
+          key: ${{ runner.os }}-essential-ccache-v1-planning-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'src/**/CMakeLists.txt', 'src/**/package.xml', 'src/**/*.msg', 'src/**/*.srv') }}
           restore-keys: |
-            ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-
+            ${{ runner.os }}-essential-ccache-v1-planning-
+            ${{ runner.os }}-noetic-ccache-v2-catkin-build-
             ${{ runner.os }}-noetic-ccache-v2-
-            ${{ runner.os }}-noetic-ccache-
-
-      - name: Reset cache statistics and check CI coverage
+      - name: Build production targets and critical tests
         run: |
           ccache --zero-stats
-          python3 tools/ci/check_coverage.py
-          python3 -m unittest discover -s tools/ci -p 'test_*.py'
-      - name: Verify morai_msgs submodule
-        run: |
-          test -d src/MORAI-ROS_morai_msgs/.git || test -f src/MORAI-ROS_morai_msgs/package.xml
-          echo "morai_msgs present"
-
-      - name: Check portable data paths and optional storage profiles
-        run: |
-          PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_collection/test -p 'test_storage_paths.py'
-          PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_collection/test -p 'test_data_locations.py'
-          python3 -m unittest tools/audit/test_storage_launchers.py
-          python3 -m unittest tools/audit/test_data_location_preflight.py
-
-      - name: Verify documentation migration
-        run: python3 tools/audit/check_documentation_migration.py
-      - name: Test documentation link and retention checks
-        run: python3 -m unittest tools/audit/test_documentation_migration.py
-
-      - name: Verify current models and history-only asset inventory
-        run: |
-          python3 tools/audit/check_git_history_assets.py
-          python3 -m unittest tools/audit/test_git_history_assets.py
-
-      - name: Check current launch documentation
-        run: |
-          python3 tools/audit/check_runtime_documentation.py
-          python3 -m unittest tools/audit/test_runtime_documentation.py
-
-      - name: Verify bridge profiles
-        run: |
-          python3 tools/bridge/render_morai_network_profiles.py --check
-          python3 tools/audit/validate_bridge_profiles.py
-          python3 -m unittest tools/audit/test_bridge_profiles.py
-
-      - name: Verify shared message contracts
-        run: |
-          python3 tools/audit/validate_p1b_contract.py
-          python3 tools/audit/validate_perception_contract.py
-          python3 tools/audit/validate_perception_topic_policy.py
-          python3 tools/audit/validate_perception_runtime_acceptance.py
-          python3 -m unittest tools/audit/test_p1b_contract.py
-          python3 -m unittest tools/audit/test_perception_contract.py
-          python3 -m unittest tools/audit/test_perception_topic_policy.py
-          python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
-          python3 -m unittest tools/perception/test_camera_object_parity.py
-          python3 -m unittest tools/perception/test_legacy_yolo_reference.py
-          python3 -m unittest tools/perception/test_camera_handoff_replay.py
-          python3 -m unittest tools/perception/test_fusion_diagnostics.py
-          python3 -m unittest tools/perception/test_track_continuity.py
-
-      - name: Build workspace and explicit test executables once
-        run: |
-          source /opt/ros/noetic/setup.bash
-          # A missing pipeline dependency fails the configure step instead of skipping the targets.
-          ./scripts/build_ws.sh all planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test ground_projection_test detected_msg_converter_test feature_builder_avoid_test dynamic_object_policy_test highway_runtime_test -j2 -l2 -DASMC_LIDAR_PIPELINE_REQUIRED=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
-          test -x devel/lib/asmc_lidar/camera_receiver_ros_test
-
-      - name: Require compiled lane association for parity regressions
-        run: |
-          source devel/setup.bash
-          python3 -c 'from asmc_camera import _lane_association; print(_lane_association.__file__)'
-
-      - name: C0 coordinate and clock regression (small synthetic inputs)
-        run: |
-          source devel/setup.bash
-          cmake -S tools/perception/frame_time -B /tmp/asmc-c0-probes -DASMC_C0_RUNTIME_LIB_DIR="$PWD/devel/lib" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build /tmp/asmc-c0-probes -j2
-          C0_PROBES=/tmp/asmc-c0-probes python3 tools/perception/test_frame_time_audit.py
-          python3 tools/perception/frame_time/test_state_probes.py --probes /tmp/asmc-c0-probes
-
-      - name: Save successful compilation before regression tests
+          mkdir .ci-essential
+          python3 tools/ci/build_essential.py planning 2>&1 | tee .ci-essential/build.log
+      - name: Save compilation before test execution
         if: steps.compiler-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
-
-      - name: Restore pinned CPU runtime downloads
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.PIP_CACHE_DIR }}
-          key: ${{ runner.os }}-noetic-pip-v1-${{ hashFiles('.github/ci/cpu-requirements.txt', '.github/ci/bootstrap-requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-noetic-pip-v1-
-      - name: Install CPU tensor runtime for preprocessing regression
-        run: |
-          python3 -m pip install --disable-pip-version-check -r .github/ci/bootstrap-requirements.txt
-          python3 -m pip install --disable-pip-version-check -r .github/ci/cpu-requirements.txt
-          python3 -m pip check
-          python3 -c 'import numpy, scipy, cv2, torch, torchvision; from scipy.spatial import cKDTree; from scipy.spatial.transform import Rotation; print("CI stack:", numpy.__version__, scipy.__version__, cv2.__version__, torch.__version__)'
-
-      - name: Run all isolated regression groups
-        run: python3 tools/ci/run_checks.py --output .ci-results --workers 2
-      - name: Preserve regression logs and status even on failure
+      - name: Run critical planning checks
+        run: bash .github/ci/essential-planning.sh 2>&1 | tee .ci-essential/tests.log
+      - name: Preserve essential logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: regression-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .ci-results
+          name: essential-planning-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci-essential
           include-hidden-files: true
-          retention-days: 7
           if-no-files-found: warn
-      - name: Report compiler cache reuse
+          retention-days: 7
+      - name: Compiler cache statistics
         if: always()
         run: command -v ccache >/dev/null && ccache --show-stats || true
 
-  # Preserve the former check name. All planning tests now consume the one
-  # build above; failures/cancellation must not turn this check into a skip.
-  planning-catkin-build:
-    needs: catkin-build
-    if: always()
+  catkin-build:
+    name: catkin-build
     runs-on: ubuntu-22.04
+    timeout-minutes: 6
+    container: ros:noetic-perception@sha256:ef5fdebeaa881604208c067f96d42b61331825309e559c093e24e9e89c7d3d2e
+    defaults:
+      run:
+        shell: bash
     steps:
-      - name: Require shared build and every regression group
-        env:
-          BUILD_RESULT: ${{ needs.catkin-build.result }}
-        run: test "$BUILD_RESULT" = success
+      - name: Install small build dependencies
+        run: |
+          sed -i -e 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
+          apt-get -o Acquire::Retries=3 update
+          apt-get -o Acquire::Retries=3 install -y --no-install-recommends git ca-certificates build-essential cmake ccache libyaml-cpp-dev libeigen3-dev libssl-dev libgtest-dev python3-nose ros-noetic-rostest ros-noetic-rosbag ros-noetic-tf ros-noetic-tf2-ros libopencv-dev libpcl-dev libgeographic-dev pybind11-dev python3-dev python3-pip python3-opencv ros-noetic-pcl-conversions
+          rm -rf /var/lib/apt/lists/*
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Restore production compiler cache
+        id: compiler-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-essential-ccache-v1-perception-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'src/**/CMakeLists.txt', 'src/**/package.xml', 'src/**/*.msg', 'src/**/*.srv') }}
+          restore-keys: |
+            ${{ runner.os }}-essential-ccache-v1-perception-
+            ${{ runner.os }}-noetic-ccache-v2-catkin-build-
+            ${{ runner.os }}-noetic-ccache-v2-
+      - name: Build production targets and critical tests
+        run: |
+          ccache --zero-stats
+          mkdir .ci-essential
+          python3 tools/ci/build_essential.py perception 2>&1 | tee .ci-essential/build.log
+      - name: Save compilation before test execution
+        if: steps.compiler-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
+      - name: Restore small scientific Python wheels
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PIP_CACHE_DIR }}
+          key: ${{ runner.os }}-essential-pip-v1-${{ hashFiles('.github/ci/essential-requirements.txt', '.github/ci/bootstrap-requirements.txt') }}
+      - name: Install only the essential CPU math stack
+        run: |
+          python3 -m pip install --disable-pip-version-check -r .github/ci/bootstrap-requirements.txt
+          # Keep apt-owned distutils packages; job-local wheels take precedence.
+          python3 -m pip install --disable-pip-version-check --ignore-installed -r .github/ci/essential-requirements.txt
+          python3 -m pip check
+          python3 -c 'import numpy, scipy, yaml, cv2; from scipy.spatial import cKDTree; print(numpy.__version__, scipy.__version__, yaml.__version__)'
+      - name: Run critical perception checks
+        run: bash .github/ci/essential-perception.sh 2>&1 | tee .ci-essential/tests.log
+      - name: Preserve essential logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: essential-perception-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci-essential
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Compiler cache statistics
+        if: always()
+        run: command -v ccache >/dev/null && ccache --show-stats || true
