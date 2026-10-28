@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SOURCE = Path(__file__).resolve().parents[2] / 'src/asmc_camera/src/asmc_camera/camera/backends/object_engine_selection.py'
 spec = importlib.util.spec_from_file_location('object_selection', SOURCE)
@@ -41,7 +42,33 @@ class ObjectSelectionTest(unittest.TestCase):
 
     def test_absent_profile_keeps_packaged_engine(self):
         self.profile.unlink()
-        self.assertEqual(self.select(), (Path('team.engine'), 'a'*64))
+        with patch.object(selection, 'TOOL_ROOT', self.root), patch.dict(
+                'os.environ', {'ASMC_CAMERA_RUNTIME_PROFILE': 'auto'}):
+            self.assertEqual(selection.select_object_engine('team.engine', 'a'*64, '4060 Ti',
+                '10.13', 'mission15_one2one_nms'), (Path('team.engine'), 'a'*64))
+
+    def test_missing_explicit_profile_is_rejected(self):
+        self.profile.unlink()
+        with self.assertRaisesRegex(RuntimeError, 'profile is missing'):
+            self.select()
+
+    def test_explicit_off_does_not_read_a_local_profile(self):
+        self.profile.write_text('invalid json')
+        with patch.dict('os.environ', {'ASMC_CAMERA_RUNTIME_PROFILE': 'off'}):
+            self.assertEqual(selection.select_object_engine('team.engine', 'a'*64, '4060 Ti',
+                '10.13', 'mission15_one2one_nms'), (Path('team.engine'), 'a'*64))
+
+    def test_relative_profile_and_engine_resolve_from_tool_root(self):
+        self.settings['engine_path'] = 'local.engine'
+        self.write()
+        with patch.object(selection, 'TOOL_ROOT', self.root):
+            self.assertEqual(selection.select_object_engine('team.engine', 'a'*64, '4060 Ti',
+                '10.13', 'mission15_one2one_nms', 'camera_runtime.json'), (self.engine, self.digest))
+
+    def test_stack_selected_engine_is_revalidated(self):
+        self.assertEqual(self.select(source=self.digest), (self.engine, self.digest))
+        with self.assertRaises(RuntimeError):
+            self.select(source=self.digest, gpu='4060')
 
     def test_other_model_is_not_overridden(self):
         self.assertEqual(self.select(source='b'*64), (Path('team.engine'), 'b'*64))
