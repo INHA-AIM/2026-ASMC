@@ -46,7 +46,7 @@ HighwayReferenceExecution::HighwayReferenceExecution(FrenetPlanner& mission,
         {zone.config.target_lanes.back()},options,LaneReferenceSampling::UNIFORM_ARC_LENGTH);
     if(!common)throw std::runtime_error(zone.config.name+" return: "+common.detail);
     auto core=std::make_unique<FrenetPlanner>();
-    if(!core->Init(config))throw std::runtime_error("target core initialization failed: "+zone.config.name);
+    if(!core->InitFromPrepared(config,mission))throw std::runtime_error("target core initialization failed: "+zone.config.name);
     core->ConfigurePreparedHighwayLane(route_->config,route_->map);
     entries_.push_back(std::make_unique<LaneReferenceExecution>(mission,*core,lane.candidate,
         alignment,continuity,end_guard_s_,lane.candidate->usableBegin()));
@@ -94,13 +94,13 @@ HighwayReferenceExecution::HighwayReferenceExecution(FrenetPlanner& mission,
           options,LaneReferenceSampling::UNIFORM_ARC_LENGTH);
       if(!built)throw std::runtime_error("lane-change reference: "+built.detail);
       auto core=std::make_unique<FrenetPlanner>();
-      if(!core->Init(config)||!core->SetPreparedReference(built.candidate->line()))
+      if(!core->InitFromPrepared(config,mission)||!core->SetPreparedReference(built.candidate->line()))
         throw std::runtime_error("lane-change dormant core preparation failed");
       core->ConfigurePreparedHighwayLane(route_->config,route_->map,ids);
       network_->lanes.push_back(built.candidate);lane_cores_.push_back(std::move(core));
     }
     auto common_core=std::make_unique<FrenetPlanner>();
-    if(!common_core->Init(config)||!common_core->SetPreparedReference(network_->common->line()))
+    if(!common_core->InitFromPrepared(config,mission)||!common_core->SetPreparedReference(network_->common->line()))
       throw std::runtime_error("common lane dormant core preparation failed");
     common_core->ConfigurePreparedHighwayLane(route_->config,route_->map,network_->common->lanes());
     lane_cores_.push_back(std::move(common_core));

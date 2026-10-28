@@ -123,7 +123,7 @@ python3 -m http.server 8768 --bind 127.0.0.1 \
 RTX 4060 Ti 8GB, MORAI 종료·network-none·master 11316에서 YOLO만 로드했다.
 GUI는 없고 debug ON은 별도 반복이다. 모든 20회와 원본 로그·관측·자원은
 [matrix summary](../../../config/baselines/evidence/camera_coco_classes_v1/matrix/summary.json)와
-[원본 archive](../../../config/baselines/evidence/camera_coco_classes_v1/matrix-raw.tar.gz)에 보존했다.
+[원본 archive](https://github.com/INHAautonav/2026-ASMC/blob/af6df9e66ecb439bc44be94ef4370e2d97e010e0/config/baselines/evidence/camera_coco_classes_v1/matrix-raw.tar.gz)에 보존했다.
 
 | 프로필 | debug | 3회 Hz | wall 지연 p95(ms) | GPU 사용률 p95(%) | 전체 VRAM 최대(MiB) |
 |---|---|---|---|---|---|

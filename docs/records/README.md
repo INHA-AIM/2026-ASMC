@@ -11,7 +11,7 @@
 | LiDAR | [10월 27일 연구 선별 통합](lidar/2026-10-27-research-integration.md), [F1 전방 연결 검증](lidar/2026-10-27-front-fusion-verification.md), [10월 26일 실제 주행·재밍 탈출 bag](lidar/2026-10-26-full-drive-bag-validation.md), [전환·재밍 자동 검증](lidar/2026-10-26-cutover-validation.md), [좌표/시간 경계](lidar/lidar-camera-frame-boundaries.md), [연속 회귀](lidar/lidar-continuous-regression.md) | [lidar](lidar/) |
 | Bridge | [콘솔 줄바꿈·센서별 Hz](bridge/2026-10-17-bridge-console-layout.md), [로그·선택 형식 구분](bridge/2026-10-17-bridge-log-readability.md), [LiDAR 회전율·진단 정리](bridge/2026-10-17-lidar-cadence-diagnostics.md), [P3-G local closeout](bridge/bridge-p3g-local-closeout-v1.md) | [bridge](bridge/) |
 | HD Map | [compact 제품](hd-map/kcity2025-compact-drivable-v1.md), [입력 감사](hd-map/kcity2025-drivable-input-v1.md) | [hd-map](hd-map/) |
-| 저장소 | [구조 이전](repository/documentation-restructure-v2.md), [현행화·소스 검토](repository/2026-10-16-documentation-refresh.md) | [repository](repository/) |
+| 저장소 | [판제 초기화·CI 중복 분석](repository/2026-10-29-planner-startup-ci.md), [구조 이전](repository/documentation-restructure-v2.md), [현행화·소스 검토](repository/2026-10-16-documentation-refresh.md) | [repository](repository/) |
 | 종료된 설계 | [과거 실행/연구 목록](archive/README.md) | [archive](archive/) |
 
 ## 긴 현행 문서에서 분리한 과거 근거

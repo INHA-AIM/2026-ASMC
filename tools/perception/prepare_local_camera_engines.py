@@ -78,8 +78,7 @@ def camera_params():
 def object_source(obj, manifest, models_root):
     """Resolve the active deployment, never silently export an older model."""
     profiles = {'collect_e3': 'mission15_one2one_nms',
-                'finetuned_e8': 'mission16_one2one_nms',
-                'pretrained_coco7': 'legacy_coco7'}
+                'finetuned_e8': 'mission16_one2one_nms'}
     profile = obj['deployment_profile']
     if profile not in profiles or obj['head_profile'] != profiles[profile]:
         raise RuntimeError('Unsupported object deployment/head profile')

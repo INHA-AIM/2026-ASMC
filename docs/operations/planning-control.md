@@ -22,6 +22,19 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 실행 중 중단/재개·주기는 카메라의 `set_mode`에서 제어합니다. 판제 신호 규칙·stale/invalid 처리와
 구간별 소비 책임은 유지합니다. [소비·제어 안내](../handoffs/perception-to-planning.md)를 따릅니다.
 
+통합 `autonomy_no_bridges_v2.launch`의 `highway_merge` 기본값은 `true`다. 명시적
+`highway_merge:=false`로 고속도로 기능을 끌 수 있다. 개별 `planner_v2.launch` 기본값은
+기존 `false`를 유지한다. 준비용 코어들은 검증된 정적 지도·경로를 재사용하며, 실행 상태·속도 이력은
+각 코어에 남긴다. 원본 입력 변경·누락은 다시 로딩/검증하고 잘못된 입력은 시작을 거부한다.
+[초기화 실측과 검증 한계](../records/repository/2026-10-29-planner-startup-ci.md)를 참고한다.
+
+통합 실행은 대시보드 서버를 기본 실행하고 브라우저는 자동으로 열지 않는다
+(`dashboard:=true`, `open_dashboard:=false`). 별도 `dashboard.launch`는 실행하지 않고,
+터미널에 표시된 `http://localhost:8088/web/index_v2.html`을 눌러 판제 패널을 연다.
+서버를 끄려면 `dashboard:=false`를 지정한다.
+같은 HTTP 포트로 중복 실행하면 새 대시보드는 ROS 노드 등록 전에 종료해 기존 콘솔을 보존한다.
+`dashboard_port` 변경은 포트 설정이며, 같은 ROS 노드 이름의 다중 콘솔 운영을 보장하지 않는다.
+
 최신 main PR #109의 기본 `state_source:=competition`을 유지합니다. GPS/IMU의 map pose에
 `competition_speed_state.yaml`이 지정한 `/Ego_topic` 종방향 속도를 결합하며, 센서 이름을 보고
 다른 상태 입력으로 자동 전환하지 않습니다. `state_source:=gps_imu`는 GPS/IMU 추정만 사용하고
@@ -44,8 +57,7 @@ roslaunch asmc_controller controller.launch state_topic:=/planning/vehicle/state
 MPC 입력 누락 시 STOP은 fail-safe 확인이며 정상 추종 증거가 아닙니다.
 
 ```bash
-# 관찰용 dashboard; 새 planner를 실행하지 않음
-roslaunch asmc_planner dashboard.launch state_topic:=/planning/vehicle/state
+# 대시보드는 통합 launch에 포함되므로 별도 실행하지 않음
 rostopic info /ctrl_cmd
 rostopic info /perception/camera/objects
 rostopic hz /planning/vehicle/state

@@ -9,7 +9,7 @@
        runtime configuration are owned by asmc_camera. -->
   <arg name="views" default="front, left, right"/>
   <arg name="checkpoint"
-       default="$(find asmc_camera)/models/lane_segmentation/twinlite-medium-v6.pt"/>
+       default="$(find asmc_camera)/models/lane_segmentation/twinlite-large-v7-e8.pt"/>
   <arg name="device" default="cuda"/>
   <arg name="amp" default="true"/>
   <arg name="warmup_iterations" default="1"/>
@@ -30,6 +30,7 @@
     <rosparam command="load"
               file="$(find asmc_camera)/config/camera/twinlite_medium.yaml"/>
     <rosparam param="views" subst_value="true">[$(arg views)]</rosparam>
+    <param name="model_config" value="large" if="$(eval arg('component_config') == '')"/>
     <param name="checkpoint" value="$(arg checkpoint)" if="$(eval arg('component_config') == '')"/>
     <param name="device" value="$(arg device)"/>
     <param name="amp" value="$(arg amp)"/>

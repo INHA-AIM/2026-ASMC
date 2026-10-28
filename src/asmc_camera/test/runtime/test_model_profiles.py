@@ -10,10 +10,9 @@ class ModelProfilesTest(unittest.TestCase):
         launch = Path(__file__).resolve().parents[2] / 'launch/perception.launch'
         return roslaunch.config.load_config_default([(str(launch), list(args))], None, verbose=False)
 
-    def test_e3_e8_and_pretrained_share_consumer_contract(self):
+    def test_e3_and_e8_share_consumer_contract(self):
         for profile, count, head in [('collect_e3', 15, 'mission15_one2one_nms'),
-                                     ('finetuned_e8', 16, 'mission16_one2one_nms'),
-                                     ('pretrained_coco7', 7, 'legacy_coco7')]:
+                                     ('finetuned_e8', 16, 'mission16_one2one_nms')]:
             config = self.config('profile:=planning', 'objects_model_profile:=' + profile)
             values = {key.rsplit('/', 1)[-1]: value.value for key, value in config.params.items()
                       if key.startswith('/camera_object_detector/')}
@@ -38,7 +37,7 @@ class ModelProfilesTest(unittest.TestCase):
 
     def test_bad_model_profile_fails_and_confidence_is_explicit(self):
         with self.assertRaises(roslaunch.RLException):
-            self.config('profile:=planning', 'objects_model_profile:=typo')
+            self.config('profile:=planning', 'objects_model_profile:=pretrained_coco7')
         config = self.config('profile:=planning', 'objects_conf_thres:=0.30')
         self.assertEqual(.3, config.params['/camera_object_detector/conf_thres'].value)
 

@@ -1,5 +1,7 @@
 # BDD100K Large 사전학습 추론 실험
 
+> 현재 패키지는 BDD 가중치를 배포하지 않습니다. 아래는 당시 실험 기록입니다. 재현은 [Git 이력 자산 안내](../../../docs/operations/asset-history.md)의 별도 checkout에서 진행합니다.
+
 공식 TwinLiteNet+ Large 가중치를 추가학습 없이 MORAI 영상에서 확인하는 경로다.
 운영 `camera.launch`의 Medium v6 TensorRT·family·YOLO·신호등 기본값은 유지한다.
 결과 기록은 [BDD Large 비교](../../../docs/records/camera/2026-10-17-twinlite-bdd-large.md)를 따른다.

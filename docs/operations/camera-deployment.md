@@ -15,10 +15,9 @@
 기존 실행 설정에 `detector:=e8` 또는 `detector:=pretrained`가 있으면 `detector:=e3`로 변경하고,
 구형 YOLO11m이나 이전 가중치 경로를 직접 지정한 실행도 E3 공개 실행 경로로 전환한다.
 이미 기본 `camera.launch`를 사용하는 경우 E3가 기본 선택이다. 기존 객체 인식 노드를 종료한 뒤
-업데이트한 루트 workspace를 빌드/source하고 재시작한다. E8·사전학습·YOLO11m 파일은
-비교·복구용으로 보존하며 이번 배포의 기본 모델로 사용하지 않는다.
+업데이트한 루트 workspace를 빌드/source하고 재시작한다. 현재 기본은 E3이며 E8은 비교·복구용으로 제공한다.
 호스트 실행 도우미 `scripts/run/C_camera_objects.sh`도 아래 E3 명령을 실행한다.
-메인에서 가져온 `coco7_three_view_pytorch_rtx50.yaml`은 구형 YOLO11m 비교·복구용이며,
+기존 `coco7_three_view_pytorch_rtx50.yaml`은 가중치의 Git 이력 복구가 필요한 YOLO11m 실험 설정이며,
 현재 E3 배포 실행에는 사용하지 않는다.
 
 ```bash
@@ -48,23 +47,23 @@ YOLO만 수동 변환할 때는
 |---|---|---|---|
 | `e3` — 기본 (`collect_e3`) | collect v5의 완전한3epoch `epoch2.pt` EMA | traffic_cone을 제외한15종 | RTX4060에서 재생성한 engine |
 | `e8` (`finetuned_e8`) | v11의 완전한8epoch `epoch7.pt` | 이전16종 | 이전 모델 대조용; engine은 RTX4060Ti용 |
-| `pretrained` (`pretrained_coco7`) | 공식 YOLO26l detection | person, dog, bicycle, car, motorcycle, bus, truck | checkpoint는 COCO80, runtime은7종만 출력; 신규 장애물을 지원한다고 표시하지 않음 |
 
 선택은 실행 시 고정한다. 변경하려면 기존 detector를 종료한 뒤 재시작한다. 동시에 두 모델을
 같은 출력 토픽에 띄우지 않는다. PREPARE 완료와 새로운 ACTIVE 세대 결과를 기다린다.
 STANDBY는 모델을 해제하는 동작이 아니다. 살아 있는 worker의 경로 파라미터만 바꾸어
 가중치가 변경됐다고 간주하지 않는다. 각 실행의 실제 profile·engine SHA는 diagnostics에 나온다.
 
-사용자 요청으로 E3와 기존 모델의 checkpoint·engine 실제 배포 파일을 카메라 패키지에 포함한다.
+사용자 요청으로 현재 배포는 E3·E8 checkpoint/engine과 TwinLite Large E8로 제한한다.
+YOLO11m·COCO pretrained·BDD·Medium v6·ONNX는 [이력 자산](asset-history.md)으로 보존한다.
 [배포 파일·SHA 목록 v3](../../config/models/camera_object_models_v3.json)가 현재 배포의 정본이다.
 E8은 원본 EMA를 그대로 유지한53.07MB 배포본이며 학습 재개 상태는 포함하지 않는다.
 각 모델 YAML은 `$(find asmc_camera)/models/object_detection/`의 engine을 읽는다.
 기존 [모델 Release](https://github.com/INHAautonav/2026-ASMC/releases/tag/camera-yolo26l-v11-e8-v1)와
 [원본 목록 v1](../../config/models/camera_object_models_v1.json)은 과거 배포·학습 재개용으로 보존한다.
-E3 engine은 RTX4060·TensorRT10.13.0.35 CUDA11에서 생성했다. 기존 E8/사전학습 engine은
+E3 engine은 RTX4060·TensorRT10.13.0.35 CUDA11에서 생성했다. 기존 E8 engine은
 RTX4060Ti용이다. 다른 GPU/런타임에 같은 engine을
 무조건 적용하지 않으며, 제공한 checkpoint와 `prepare_coco7_models.py --head-profile`로 다시 생성한다.
-E8은 one2one+외부 same-class NMS이고, 사전학습 복구 engine은 검증된 one2many 경로다.
+E8은 one2one+외부 same-class NMS 경로다.
 checkpoint·가중치 라이선스는 Ultralytics AGPL-3.0이며 저장소 코드 라이선스와 구분한다.
 
 지원 GPU·컨테이너에서 패키지를 pull·빌드하면 YOLO를 별도 다운로드하지 않아도 된다.
@@ -93,10 +92,10 @@ python3 tools/perception/install_camera_model_release.py \
 roslaunch asmc_camera camera.launch mode:=active models:=objects
 ```
 
-사전학습 모델은 기존 detector를 종료한 뒤 선택한다.
+이전 E8 모델은 기존 detector를 종료한 뒤 선택한다.
 
 ```bash
-roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=pretrained
+roslaunch asmc_camera camera.launch mode:=active models:=objects detector:=e8
 ```
 
 시각화와 GUI는 각각 별도 한 세트다.
@@ -112,7 +111,7 @@ rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/d
 생산자 발행 제한과 구별하며, Frenet 객체 입력을 구간별로 끊지 않는다.
 TwinLite 기본은 Large v7 E8·15Hz 목표·TensorRT·전방544×960/좌우480×640이다.
 [Large 배포 검증](../records/camera/2026-10-18-twinlite-large-deployment.md)의 동일 평가·정차 부하 결과와
-전방 황색차선 회귀와 SUNNY freshness 실패를 확인한다. 사용자가 이 제한을 확인한 뒤 Large E8 기본 전환을 승인했다. Medium은 명시적 복구 설정으로 보존한다. 음영 lane 모드와 readiness는 [실행 계약](../contracts/camera-runtime-v1.md)을 따른다.
+전방 황색차선 회귀와 SUNNY freshness 실패를 확인한다. 사용자가 이 제한을 확인한 뒤 Large E8 기본 전환을 승인했다. 복구는 같은 Large E8의 `lane_runtime_pytorch.yaml`을 사용한다. Medium 배포본은 Git 이력으로 이전했다. 음영 lane 모드와 readiness는 [실행 계약](../contracts/camera-runtime-v1.md)을 따른다.
 신호등 생산자는 카메라 담당의 `asmc_camera` 하나다. 판제 launch는 별도 ResNet을 시작하지 않는다.
 중단·재개·주기는 카메라의 기존 `/perception/camera/traffic_light/set_mode`로 제어한다.
 
@@ -152,7 +151,7 @@ CargoBox/WoodBox는 box, Scooter/SportBike는 motorcycle, PE_Firewall은 plastic
 - 미등록 라벨은unknown/진단으로 남긴다. 클래스 이름만 보고 static으로 자동 배정하지 않는다.
 
 과거 Main/wire 분류 정책은 삭제 전 고정 revision에서 재현한다. 현재 모델 대조는 카메라 프로필을 선택하고 LiDAR 공용 관측 계약을 따른다.
-이는 위 `pretrained_coco7` 선택(동일3그룹 계약 유지)과 다르다.
+과거 pretrained 비교 모델은 현재 배포 선택에서 제외했으며 원래 수치·출처는 이력에 남긴다.
 이전 E8의 cone까지 전달하려면 LiDAR 설정 파일의 `fusion.camera_class_profile`을 `mission16_v1`로 함께 맞춘다.
 시각화도 `view.launch detector:=e8`로 맞춘다. 기존 engine의 다른 GPU 호환성은 별도로 확인해야 한다.
 

@@ -1,3 +1,5 @@
+# Historical experiment only: model assets are no longer bundled.
+# Restore the matching files from commit af6df9e6 before replay; see config/artifacts/git-history-assets-v1.json.
 weights: $(find asmc_camera)/models/object_detection/yolo26l-pretrained_coco7.engine
 expected_sha256: 95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f
 runtime_backend: tensorrt

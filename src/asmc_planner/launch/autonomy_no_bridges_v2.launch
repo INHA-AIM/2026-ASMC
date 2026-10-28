@@ -1,5 +1,5 @@
 <launch>
-  <arg name="highway_merge" default="false"/>
+  <arg name="highway_merge" default="true"/>
   <arg name="dashboard" default="true"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="open_dashboard" default="false"/>

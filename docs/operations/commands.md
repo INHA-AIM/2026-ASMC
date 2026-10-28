@@ -58,7 +58,8 @@ python3 /root/ws/src/asmc_lidar/tools/check_runtime_build.py
 | C | `roslaunch asmc_lidar lidar.launch` | 공용 local/map 추적·속도/운동·전달 필터; 카메라 모델 미실행 |
 | D | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
 
-고주로 통합 브랜치에서는 D에 `highway_merge:=true`를 지정합니다.
+D의 통합 판제 실행은 `highway_merge:=true`가 기본입니다. 고속도로 기능을 끌 때만
+`highway_merge:=false`를 지정합니다. 개별 `planner_v2.launch`는 기존 `false` 기본값을 유지합니다.
 GPU가 다른 PC에서 만든 객체 엔진을 사용하던 경우, 추론 노드를 정지한 뒤
 `bash tools/scen_runner/prepare_camera_engines.sh`로 현재 모델·GPU·TensorRT에 맞는
 엔진을 생성합니다. 검증을 마친 로컬 객체 엔진은 직접 실행하는 `camera.launch`와
@@ -85,8 +86,8 @@ C/D는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [�
 유효 family를 확인합니다. A448은 접근 구간, 주변 차량 소비는 A153 끝/A451 진입까지입니다.
 
 현재 차선 기본 모델은 Large v7 E8 TensorRT다. 사용자가 알려진 공급·freshness 제한을 확인한 뒤 전환을 승인했다.
-[선정·실측·Medium 복구](../records/camera/2026-10-18-twinlite-large-deployment.md)를 확인한다.
-공식 BDD100K Large의 추가학습 전 결과는 [별도 실험 실행 안내](../../src/asmc_camera/docs/bdd-pretrained-experiment.md)를
+[선정·실측 기록](../records/camera/2026-10-18-twinlite-large-deployment.md)를 확인한다.
+공식 BDD100K Large의 추가학습 전 결과는 과거 [별도 실험 기록](../../src/asmc_camera/docs/bdd-pretrained-experiment.md)를
 따릅니다. 이진 차선 시각화 실험이며 위 B의 운영 family를 대체하지 않습니다.
 
 ### 개별 디버그·시각화
@@ -102,7 +103,7 @@ roslaunch asmc_camera view.launch
 rosrun rqt_image_view rqt_image_view --clear-config /perception/camera/objects/debug/mosaic/compressed
 ```
 
-E8은16종, pretrained는COCO80 checkpoint에서7종만 선택합니다. 입력은 YOLO/TwinLite 모두
+E8은16종입니다. pretrained 비교는 현재 배포 선택에서 제외했습니다. 입력은 YOLO/TwinLite 모두
 전방544×960 B1·좌우480×640 B2, 목표15/15Hz·ResNet10Hz, confidence0.40·NMS0.50입니다.
 Ego mask·보정·engine은 YAML/manifest가 소유합니다. 자동 PyTorch fallback은 없습니다.
 
@@ -150,8 +151,11 @@ private 메시지 갱신 후에는 위 전체 빌드를 수행하고 adapter·�
 
 | 화면 | 기본 실행 | 주소 |
 |---|---|---|
-| 판제 웹 콘솔 | `roslaunch asmc_planner dashboard.launch` | `http://127.0.0.1:8088/web/index_v2.html` |
+| 판제 웹 콘솔 | 통합 `autonomy_no_bridges_v2.launch`에 포함; 별도 launch 불필요 | `http://127.0.0.1:8088/web/index_v2.html` |
 | LiDAR 웹 시각화 | `roslaunch asmc_lidar view.launch` | `http://127.0.0.1:8091/` |
+
+판제는 통합 launch에서 서버가 기본 ON이고 브라우저 자동 열기는 OFF입니다.
+별도 dashboard launch 없이 터미널에 출력된 주소를 눌러 패널을 엽니다.
 
 LiDAR `view.launch`는 모니터만 시작합니다. 기본 `debug:=false`에서도 발행 객체 수·진단 상태를
 확인할 수 있습니다. 웹의 OBB·점군 그림과 필터 전후·ROI 단계를 보려면 처리 노드의
@@ -184,7 +188,7 @@ LiDAR `debug:=true`는 중간 점군과 필터 전후 표현을 위한 샘플 �
 |---|---|---|
 | `asmc_camera camera.launch` | `models:=all` | 기본 객체·차선·신호등 모두 추론. 선택값은 `objects`, `lane`, `traffic_light`의 쉼표 조합 |
 | `asmc_camera camera.launch` | `mode:=active` | 기본 상시 추론·발행. `standby`는 로드·예열 후 대기, `off`는 모델 미실행 |
-| `asmc_camera camera.launch` | `detector:=e8` | `pretrained`는 사전학습 COCO7 대조용. 가중치 변경 시 재시작 |
+| `asmc_camera camera.launch` | `detector:=e8` | 현재 선택은 E3·E8. 가중치 변경 시 재시작 |
 | `asmc_camera camera.launch` | `confidence:=0.40`, `nms_iou:=0.50` | 현재 검증된 객체 검출 기본값 |
 | `asmc_camera view.launch` | `models:=all` | 기본 세 모델의 결과 표시. 일부 화면만 선택해도 추론은 유지 |
 | `asmc_lidar lidar.launch` | `fusion:=true` | 카메라 분류 연결. `false`는 LiDAR 단독 진단용 |

@@ -1,0 +1,463 @@
+{
+  "schema_version": 1,
+  "history_commit": "af6df9e66ecb439bc44be94ef4370e2d97e010e0",
+  "history_repository": "INHAautonav/2026-ASMC",
+  "purpose": "User-approved removal from the current Git tree; historical bytes retained in Git",
+  "assets": [
+    {
+      "path": "config/baselines/evidence/camera_acceptance_followup_v1/raw.tar.gz",
+      "bytes": 17109530,
+      "sha256": "a335cf96a96ff059f87a05bb4fba378ea080ed87ebe642413e0f3ad730c09241",
+      "git_blob": "e581416578a8aa8eea0af2d18feb5336218ad495",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_coco_classes_v1/matrix-raw.tar.gz",
+      "bytes": 6636558,
+      "sha256": "f337ad995e83674f2b499aede6e2a7642b81c808037467cce9fbb7f9903ae52f",
+      "git_blob": "0df00e63f085cb691d97d462835ef9b38c049109",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_hood_mask_v1/raw-verification.tar.gz",
+      "bytes": 14058220,
+      "sha256": "671cf7363780536758af66c2e94384b266472c885710aa78c31b44fa888b76a0",
+      "git_blob": "1d77a915906e140ba97fa438ae86f5f58c20bfda",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_hood_policy_selection_v1/raw-comparison.tar.gz",
+      "bytes": 26165502,
+      "sha256": "4d338c5ea7c98387a023a85164c6e189042e369edcec50dafe448d4078dcd8fb",
+      "git_blob": "c9a9c04ea54d1aac788e579c174dc87057b3a8ef",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-canonical-example-01.tar.gz",
+      "bytes": 171908,
+      "sha256": "de5a0a51b26e835d80b4263e5df0fb8572450617e75f8412aa0c6eb547186b23",
+      "git_blob": "20f52c451e21c491f48fd5ecad3196a9e4c1c10c",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-drive-01.tar.gz",
+      "bytes": 291660,
+      "sha256": "c1c7d9c578bb9a4d0d398e4b1d12b6a07814f79b6749f307727d8144317e3eda",
+      "git_blob": "4cb812349882400be5846ed3e6ff9afe1d80fead",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-01.tar.gz",
+      "bytes": 122286,
+      "sha256": "b7e80ed0503fae6accb919919dce05982f96db68d9b9b837f618b11291ad2253",
+      "git_blob": "f7c567ba846bdf131ac1cea76a523c82b309b280",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-02.tar.gz",
+      "bytes": 122785,
+      "sha256": "8d6e4f918b5429f6f5eb6cce302c7d69bc6db98348dde9d98089fa570c5d8ee7",
+      "git_blob": "96d4f20f5ce7e0c3d9ba42ca3c694d598721f912",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-03.tar.gz",
+      "bytes": 121840,
+      "sha256": "91a0f7affb198ec634f7f703e357b1ad6761bfedd7502a750c04f161c7ed5bdb",
+      "git_blob": "69f08509943120c5fb0c87bca16f320b66c3c657",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-preview-01.tar.gz",
+      "bytes": 50687,
+      "sha256": "2d712e517147df6b6dc3a01bc7ef27b8a70e6fea8d268f47a82d9460c6aedf33",
+      "git_blob": "a4573c98b62288a83f718651c11a6ca904283456",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_inference_lifecycle_v1/gpu_lifecycle_raw.tar.gz",
+      "bytes": 49086,
+      "sha256": "3207fd588ffa08affb784ac564edfbc44ea96a12490645281ef2a52e58f288c8",
+      "git_blob": "beba53f28263111700ab0eb59d036987a505268b",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_inference_lifecycle_v1/regression_raw.tar.gz",
+      "bytes": 53521,
+      "sha256": "0a9e808942d5ddb97108770234a454402020b5dd693d72b44545365f04bcb7fd",
+      "git_blob": "15c847c60b13f50c91b8b6cecea872aa01e932b5",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_launch_profiles_v1/raw.tar.gz",
+      "bytes": 41410,
+      "sha256": "f5820fe7ed5b2213b35de4fc3a2ed775fa320be9490deab4602fd03aafec6ce7",
+      "git_blob": "614fc6e82bda40ec8e9b9e9006e10da1b34b8967",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b0_v1/raw-fixed-camera.tar.gz",
+      "bytes": 3500401,
+      "sha256": "058a0192732b0a4a142f903c7c54b2d167a1187613cde6b88b134a5d0dd600a5",
+      "git_blob": "970bbcaec44d079d06b87b23a45808d68a96ef4d",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b0_v1/raw-fixed-fusion.tar.gz",
+      "bytes": 15898059,
+      "sha256": "37a07832f698162183f0ea06902b10db03c306ad5ef0dc76a850ee0fdccc9db4",
+      "git_blob": "1025d39d67de07f100d5c6c7bdfde2614c53ba4d",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b0_v1/raw-fixed-gps.tar.gz",
+      "bytes": 16349896,
+      "sha256": "79528618d4c5a514087d18d382a667bfc32da4017d6f2ad32555b387efd588c4",
+      "git_blob": "4d9378bd32345913cebfb2b3cee681211df8a2f6",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b0_v1/raw-preliminary.tar.gz",
+      "bytes": 21143710,
+      "sha256": "125c1d08185da9f22df314cc77219b93cf9b607dcdd7fc07e03aece0585818b2",
+      "git_blob": "f445b95cc56e6d45c8d6ff6d3623094a2d06bf34",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b0_v1/raw-supplemental.tar.gz",
+      "bytes": 20104596,
+      "sha256": "120311c8f8dbebd4a567548de6ce5378e975af945da80cbaf78fdf44a7a54196",
+      "git_blob": "a8ea58d4016656fc11cd01ed6f40b2b4d1bfe2ba",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b0_v1/raw-support.tar.gz",
+      "bytes": 3425425,
+      "sha256": "4e4d40268e973260574ad93beb1c3caccf4079d4988ab594662d4cf77c4b8432",
+      "git_blob": "5b9502b0037b96aff6170926c2dbff6784886fc3",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b1a_v1/raw-fixed-offline.tar.gz",
+      "bytes": 3175693,
+      "sha256": "6b4342a7597611b7521ecba97a65f6d8e86d7addf9a44a8842d5f28323ad8800",
+      "git_blob": "b666a51d5d3eb4542bf069add1dc4d4e20dc6fd6",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b1a_v1/raw-fixed-realtime.tar.gz",
+      "bytes": 13787686,
+      "sha256": "cbada973d0461b8ae1d412599d88a4a9b12382cf4630c4c312b83cff82e10164",
+      "git_blob": "5f6c94782e7924423763023f6d1116374247a882",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b1a_v1/raw-preliminary.tar.gz",
+      "bytes": 9766684,
+      "sha256": "5ae94bcb0a9031384b5066b14075256b2baf7615b2afd6cf744ee9d8203c4220",
+      "git_blob": "80de5aefbde99768a3b838e0ed59051057a10e0b",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b1a_v1/replay-source.tar.gz",
+      "bytes": 194445,
+      "sha256": "cd0c8d083bf8ad335a1ec0900e45cc570051fd453216041d07989c3ac62f8b40",
+      "git_blob": "117ea567352f59e825bc66db0ec5a4d937dde28c",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_lidar_b1a_v1/support/ros-logs-final.tar.gz",
+      "bytes": 627519,
+      "sha256": "3b7a2999cd2e7094e059676b011a840af7635eb8515d62bdec2f2638120a27cb",
+      "git_blob": "791d551bb55d70d18b812f5f9b88d3c94636989a",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_objects_followup_v1/continuous_reports.tar.gz",
+      "bytes": 15284815,
+      "sha256": "3740cb84c038636525fcf6d5ebc0a32ff3c163989f1f5a3a375dd0aba97d8e0a",
+      "git_blob": "4c8c733289608ffceddee2ccfb97b0a7af6b6eaa",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_objects_followup_v1/cpu_reports.tar.gz",
+      "bytes": 38359,
+      "sha256": "a2b5a756e8ac6755dc00d8bd8424d3e45f2a0efb0fb3534feb1a05634360aef2",
+      "git_blob": "0c8550c7ea6fd2c2b5b48ac25e989ae5dc41763b",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_objects_followup_v1/gpu_reports.tar.gz",
+      "bytes": 4798493,
+      "sha256": "9991a0f5b85fd47e92827583d42a6d001f55f925e2605a22ecc05329c9ddac8e",
+      "git_blob": "8bb86960ac27d8396f4f4895aa62bf2daf7269fc",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_objects_p2a_v1/reports.tar.gz",
+      "bytes": 1536476,
+      "sha256": "bd3431f3ed7670e39e73a0b8f622d599a9e6ae3e99c250d30a5a803658b7ecd4",
+      "git_blob": "2e144b7ef71cf2c968bf23cf29cdf6fce58fa1ec",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_seg_selection_v1/runtime-raw.tar.gz",
+      "bytes": 17067479,
+      "sha256": "660a2b0fa74eb72368f8c01d8ec8118ed4a4b38ec53522ffdddeeba25c44abba",
+      "git_blob": "41e3324775128eaf496a9e7912efe1b77908a9ad",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_seg_selection_v1/selection-raw.tar.gz",
+      "bytes": 33664009,
+      "sha256": "d904ca7ddedb30dde99aadd5fd280f4365d86986cac8e3a359f8b05653b453d9",
+      "git_blob": "d7408a9f7c509f7db8bdf85d53f043ea33894fb4",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_seg_selection_v1/supplemental-raw.tar.gz",
+      "bytes": 690095,
+      "sha256": "e40cf2d2ea7ade7b154a0c57863aee23df9fbbfd1bd5779079d446d327076e9a",
+      "git_blob": "acf55b1203c67a661a2dfe05342258a0ba8c1018",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/camera_yoloe_l_first_v1/numeric-raw.tar.gz",
+      "bytes": 14297760,
+      "sha256": "b4c90fb78ffab336a9e2acd7c0d4eb0d6ac44b15b0415d890b35930b974ad6cc",
+      "git_blob": "c93c03d8ef01e1d3d4c1d5c4586c8c80bf97bc7b",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/build-and-test-attempts.tar.gz",
+      "bytes": 100792,
+      "sha256": "faec2ff9908deb324dbb2e95fe84b30754b3121c86be29ce449ae5471bba335e",
+      "git_blob": "ccc7683f5b227eaf004c8487d201f7633d45c9fb",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/ci-install-failures.tar.gz",
+      "bytes": 61406,
+      "sha256": "52cf40c85ecb2f7a365c00dc49a6482d2db697379f03c146008b094e0d36e99f",
+      "git_blob": "d5025384d7442bdad4b2647981ab7e3f090fac82",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-cost-primary.tar.gz",
+      "bytes": 39928357,
+      "sha256": "7c92340ddcc00d82181aafb5ff0c28073342734e700b0676c2f6fdef5b830063",
+      "git_blob": "4ff609ed03509a79066990756e6000188c1eae19",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-cost-shadow.tar.gz",
+      "bytes": 13806768,
+      "sha256": "e832cc141952f4e3bac1f766f90b941f79d1b8c6134c173bfbff98b2f7c12bcd",
+      "git_blob": "6c151b46ce0dac227f3f1f1d358345f75dc3cc68",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-primary-r1.tar.gz",
+      "bytes": 37799005,
+      "sha256": "822ba7e986a16b3f754db6ec33924fd21d22c1cb5c5badbeac454a2984db408d",
+      "git_blob": "279893559a006efb22fec05494529790b4e1cc81",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-primary-r2.tar.gz",
+      "bytes": 37806676,
+      "sha256": "3b15df1e4e04388cc25326a3a5ddfcfba29069416801f624f6846ebd11b83976",
+      "git_blob": "c9b1272775d9f26661a3138000e3c592c07d5ba3",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-primary-r3.tar.gz",
+      "bytes": 37736577,
+      "sha256": "972ecd72ef3d3f51e60bc72d5252dd7b85b35d3d5b5c222644ff973d338df1a8",
+      "git_blob": "c7e282329226de2000742f995a95e85e2c242473",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-shadow-r1.tar.gz",
+      "bytes": 11814983,
+      "sha256": "e21efb1ff3e8160c3389f6f2ae3c33986f02a03ba4f275c706c1ff42f107b571",
+      "git_blob": "711c73870685f450aafcdac9e45e9d23ac44bbeb",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-shadow-r2.tar.gz",
+      "bytes": 11828294,
+      "sha256": "3898384ce7f7bb5439898b3b9179e0fe9dd31a65a3b45cd4b5effc61f36bacf0",
+      "git_blob": "bc59910e41cfc1dfc33a1bd19bb77f1ce186bfdb",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixed-matrix-state-shadow-r3.tar.gz",
+      "bytes": 11827183,
+      "sha256": "a3405c6bc40d4c3310403be51c78a7b152b8b00fe58ba7b6d7e35234d94d1ad3",
+      "git_blob": "63215c9b57b22407a894e96f9435bad9561de64a",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-boundary-smoke-attempts.tar.gz",
+      "bytes": 4088767,
+      "sha256": "86535db564f8cdf8cc0a2a2f4338e08558abdaad3a9f73f87b27abd81f05c0ca",
+      "git_blob": "0235e6f7bf219a9166ac2e5c2c73b972d3681c6c",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_camera_frame_boundaries_v1/parser-order-final.tar.gz",
+      "bytes": 23125,
+      "sha256": "1295626ee1d802f5d1c1881bb62b986f97fe321470eac09de30f6f32d851d343",
+      "git_blob": "f50f7d53f4709de1ab9418c778a5e076b0c03bea",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_continuous_regression_v1/cpu-attempt-v2.tar.gz",
+      "bytes": 31939044,
+      "sha256": "9db5ec6790565a34095814089a2909b98bf6f3b40b3b5cce68b4b7eb873aefdf",
+      "git_blob": "f7c85af32755c074ec46ebac1bfeb0d724c52f30",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_continuous_regression_v1/cpu-failed-attempt-v1.tar.gz",
+      "bytes": 1755628,
+      "sha256": "c91b28418f48bfcc0f67614caee69ca675b7da6b7522c49a12dca4bd0af9a66a",
+      "git_blob": "a78ecf8535d67fefbfb25e515eaf4dd3ca687790",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_continuous_regression_v1/cpu-final-v3-primary.tar.gz",
+      "bytes": 71098005,
+      "sha256": "38c723d489ace6806a7c707812af0ca27e6d74792861844eb5f69a8111a8847f",
+      "git_blob": "29436e4685d9ceb8d556b9784474d4c64f66c1c8",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_continuous_regression_v1/cpu-final-v3-shadow.tar.gz",
+      "bytes": 48527044,
+      "sha256": "ce31b64d26ceb30927fcbc6241eba26267786bb9a7034fadb72c814ec03245ba",
+      "git_blob": "c1589830c92b388166160f07735fa1bd77598629",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_continuous_regression_v1/final-checks.tar.gz",
+      "bytes": 34394,
+      "sha256": "7742829923b2f582339c287164f2981b030a284a24b790596cee3e31832dd8e6",
+      "git_blob": "5a45b7a48d5bc7753ebb47a8c03070e6de8f193d",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_continuous_regression_v1/realtime-all-18.tar.gz",
+      "bytes": 55091074,
+      "sha256": "660c3bb0d9d082b270dfab9209edb1a5d7e01b59e8890b283c6d09b7682cc51b",
+      "git_blob": "c5dd3f17f1e6c3276c483decc85a3dfb0bcbb3d6",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "config/baselines/evidence/lidar_continuous_regression_v1/synthetic-and-fixed-cases.tar.gz",
+      "bytes": 42640062,
+      "sha256": "2cff5e3aef226d03bb19d5a0d62fee790479a844b47b1cd46887b5632ec94c8b",
+      "git_blob": "a7cf8aeb0ecbfd7c879f2837015b8d5a956a9881",
+      "kind": "experiment_archive"
+    },
+    {
+      "path": "src/asmc_camera/config/camera/lane_runtime_medium.yaml",
+      "bytes": 620,
+      "sha256": "5a3051e9fd57a6e587b9cf0bf5e29d6bcd58709a0c368a77bb70fc74121a574a",
+      "git_blob": "66d347f1af873f73e5c792290a5b5659ede41352",
+      "kind": "retired_profile"
+    },
+    {
+      "path": "src/asmc_camera/config/camera/lane_runtime_tensorrt.yaml",
+      "bytes": 634,
+      "sha256": "198c1c0da0c27630bf40478821440b489bf87c18b1e3e8dc73cdd24de6b4c2ba",
+      "git_blob": "015b8afba2ca760e8717fdd950a738c02aded324",
+      "kind": "retired_profile"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/manifest.json",
+      "bytes": 3004,
+      "sha256": "74ce9e2149a94d41f78342dbf495171b34093616d295b2119ecac7a7b9bbccdb",
+      "git_blob": "8bc3e4f411e3629b411b3be5150d2aedb3f3d327",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/twinlite-large-bdd100k.pt",
+      "bytes": 7953318,
+      "sha256": "e503cbbb05177ef6e59fe19285b60314715109f95bf2a494185e3145dd53a4a6",
+      "git_blob": "638e127ed69a9dcfe145e4d1e1f9a31b03efc2bd",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/twinlite-medium-v6.pt",
+      "bytes": 8141406,
+      "sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b",
+      "git_blob": "02bfcd7a5e1c914846a05fe330148c70fa30fe9b",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/twinlite_large_v7_e8_front.onnx",
+      "bytes": 7920309,
+      "sha256": "8703f78025b46a40e72e65027d7e015965cfff45ef51a305f1c370d18d5a168a",
+      "git_blob": "0659ab441193e74216e15ddff253c5979fc3684b",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/twinlite_large_v7_e8_sides.onnx",
+      "bytes": 7920309,
+      "sha256": "752b6048ab90828c237aee2afa47970fa25fc73e334d1ba74751e6999cd3e6e1",
+      "git_blob": "4a2dfbf402f251843350ee3bee65d914d52e4311",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/twinlite_medium_v6_front.engine",
+      "bytes": 5237276,
+      "sha256": "b0a544448e3e431b6974c749c0b894740198c67faacfdab8939d32678cfd6cd6",
+      "git_blob": "1a97fe6a47a0f7b1d50418174b1d098cf3a6cf87",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/twinlite_medium_v6_front.onnx",
+      "bytes": 2022712,
+      "sha256": "3cdbd9289aeb0326f365d26ababf20f88913eaef6e31b41a6f740cdf2a22240f",
+      "git_blob": "6f85f440dcb30257b1e53090ec88159846931db9",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/twinlite_medium_v6_sides.engine",
+      "bytes": 5518268,
+      "sha256": "1df1b5fb4f2c37bbed0c6c078e5938034632a112770244e10879254c5e866cd4",
+      "git_blob": "68b6801cf48d578beabca55ae36f1ee29fae79a3",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/lane_segmentation/twinlite_medium_v6_sides.onnx",
+      "bytes": 2022712,
+      "sha256": "9e7108c101b3842c58013db9494fe785cb3ad49f7c5da5ba1d855712860078ca",
+      "git_blob": "1acb0e601efab837c5de31c46b50911ea9487f6e",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/object_detection/yolo11m.pt",
+      "bytes": 40684120,
+      "sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+      "git_blob": "05594001be7410a012b15c759bea3e716ad40eee",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/object_detection/yolo26l-pretrained_coco7.engine",
+      "bytes": 57496998,
+      "sha256": "95f4af0d66ff6cd1a435fcc02ec09630d087a02231d7488e131f23c72167df3f",
+      "git_blob": "04fae324f434045310e9fbc7ccdec46b0a782b2f",
+      "kind": "retired_model_or_export"
+    },
+    {
+      "path": "src/asmc_camera/models/object_detection/yolo26l-pretrained_coco7.pt",
+      "bytes": 53211173,
+      "sha256": "9fe3c544f2b19bebad7ea41e76d7ad3d88b7c2f10d11d24430c5311f6b32db26",
+      "git_blob": "e372a8c2e136f1e517ebe8c3f7b5f8ad2544da89",
+      "kind": "retired_model_or_export"
+    }
+  ]
+}

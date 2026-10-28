@@ -1,21 +1,31 @@
 # CI 실행과 유지
 
-전체 workspace 검사와 별도 판제 전용 빌드를 유지한다. 후자는 큰 workspace가 잘못된 의존성을
-가려주는 일을 검출하기 위한 독립 구성이다. 빌드 결과·devel·시험 성공을 cache로 건너뛰지 않는다.
+매 PR과 main push에서는 전체 workspace를 한 번 빌드하고 판제 회귀도 그 결과를 사용한다.
+최소 패키지 구성의 의존성 점검은 `Planning integration build`의 수동 실행(`workflow_dispatch`)에
+남겼다. 이 독립 빌드는 더 이상 매 PR의 자동 gate가 아니며, package.xml·CMake·외부 의존성 변경 때
+추가 실행한다. 빌드 결과·devel·시험 성공을 cache로 건너뛰지 않는다.
 
 ## 구성
 
-- `CI / catkin-build`: 환경·문서·공용 계약 검사, 전체 클린 빌드와 명시적인 시험 executable 준비 후
+- `CI / catkin-build`: 환경·문서·공용 계약 검사, `all`과 명시적인 시험 target을 한 catkin 호출에서 빌드한 후
   시간 민감 HTTP 검사를 포함한 LiDAR 그룹을 단독 실행한 뒤 나머지
   [회귀 그룹](../../.github/ci/groups.json)을 최대2개씩 실행한다. 같은 build tree에서 병렬 컴파일하지 않는다.
-- `Planning integration build / planning-catkin-build`: 기존 whitelist만 새 환경에 빌드하고 입력 변환,
-  dashboard·launch·AVOID·로터리·도로 제약·충돌 회귀를 유지한다.
-- `validated-lidar-build`: 구 실행 의존성과 입력 소유권의 정적 검사다. 실제 LiDAR 회귀는 전체 CI에서 필수 실행한다.
+- `planning` 그룹: dashboard·launch·AVOID·로터리·도로 제약·충돌·고속도로 runtime 검사를
+  공통 빌드에서 수행한다. 입력 executable 4개와 `lidar_observation.test`는 `lidar` 그룹에서 한 번 실행한다.
+- `CI / planning-catkin-build`: 이전 check 이름을 유지하는 결과 gate다. 공통 build/test의 실패·취소도
+  실패로 전달한다. workflow 소속이 바뀌므로 workflow까지 제한하는 외부 보호 규칙이 있다면 확인한다.
+- `Planning integration build / planning-standalone-build`: 수동 실행에서만 기존 6패키지 whitelist를
+  최소 의존성 환경에서 클린 빌드한다. PR에서는 실행하지 않는다.
+- `validated-lidar-build`: 구 실행 의존성과 입력 소유권의 정적 검사다. 소스 전체를 유지하되
+  검사하지 않는 PT/engine/ONNX/보존 tar.gz만 sparse checkout에서 제외한다. 실제 배포 파일 존재·회귀
+  검사는 모든 파일을 받는 전체 CI에서 유지한다. Git 정본이나 로컬 운영 파일을 삭제하지 않는다.
 
-같은 job의 LiDAR/음영 어댑터/카메라/bridge 시험은 각각 다른 ROS master와 시험 소유 프로세스를
+같은 job의 LiDAR/음영 어댑터/카메라/bridge/판제 시험은 각각 다른 ROS master와 시험 소유 프로세스를
 사용한다. ROS 시험 내부 timeout·freshness·수치 기준은 줄이지 않는다. 같은 workspace에서 반복하던
 YOLO baseline/all·segmentation 세 fixture만 한 번씩 실행하고 `--batched` 등 다른 옵션 검사는 유지한다.
-[보존 검사](../../tools/ci/check_coverage.py)가 이전141개와 PR #114 신규4개(총145개) 고유 명령·옵션 조합과 필수 그룹을 대조한다.
+[보존 검사](../../tools/ci/check_coverage.py)가 이전141개와 PR #114 신규4개(총145개) 고유 명령·옵션 조합과 필수 그룹을 대조한다. 판제 고유 검사, 중복 build·입력 검사, 결과 gate도 확인한다.
+LiDAR 단독 실행 후 lane을 먼저 시작하고 나머지 그룹을 2 worker에 배치한다. 그룹 timeout과
+시험 내부 허용 시간·허용 오차는 이전과 같다. 차선 fixture 자체의 병렬 분할은 포함하지 않는다.
 
 ## 실패·취소와 로그
 
@@ -39,8 +49,15 @@ Noetic Python3.8을 지원하는 pip24.3.1 resolver를 CI에서 먼저 준비하
 설치 후 공간 검색/회전·OpenCV·Torch의 실제 import도 확인한다. C++ cache는 빌드 성공 직후 저장해
 나중의 시험 실패로 같은 소스를 다시 컴파일하는 낭비를 줄인다. 시험 성공이나 build/devel은 저장하지 않는다.
 
+정리 전 저장소 추적 파일은 약 1.56 GB였으며 다운로드 자체도 병목이었다. 사용자 승인으로
+현재 Git tree에서 약 916 MB의 과거 자산을 제외하고 [이력 목록](asset-history.md)을 유지한다. source audit job의 sparse view는
+약 333 MB다. 전체 회귀 job은 가중치·보존 근거를 계속 받으므로 그 checkout 시간은 남는다.
+
 소요 시간은 runner·cache 영향을 받으므로 wall time과 병렬 job 시간 합계를 함께 비교한다.
-[초기 측정·debug OFF 확인](../records/repository/2026-10-26-ci-runtime.md)을 기준으로 실제 Actions 결과를 확인한다.
+[초기 측정](../records/repository/2026-10-26-ci-runtime.md)과
+[중복 빌드 제거·판제 초기화 분석](../records/repository/2026-10-29-planner-startup-ci.md)을 참고한다.
+별도 job 제거는 runner 사용량을 줄이지만 기존 lane 그룹의 350초를 제거하지는 않는다.
+실제 PR 대기시간 개선은 수정 후 Actions run으로 확인해야 한다.
 
 ## 로컬 재현
 
@@ -50,7 +67,7 @@ Noetic에서 전체 workspace와 필요한 시험 executable을 먼저 빌드한
 ```bash
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test ground_projection_test -j2 -l2
+catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test ground_projection_test detected_msg_converter_test feature_builder_avoid_test dynamic_object_policy_test highway_runtime_test -j2 -l2
 python3 tools/ci/check_coverage.py
 python3 -m unittest discover -s tools/ci -p 'test_*.py'
 python3 tools/ci/run_checks.py --workers 2 --output /tmp/asmc-ci-local-unique-run
