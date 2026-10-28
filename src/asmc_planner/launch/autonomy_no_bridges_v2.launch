@@ -18,6 +18,7 @@
   <arg name="expected_config_sha256"
        default="2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
+  <arg name="rviz" default="false" doc="재밍 카메라 차선변경 RViz(BBOX·차선·경로) 표시"/>
 
   <!-- 재밍 판정(/planning/mode, asmc_planner 내부 GpsModeSource). 별도 인자 없이 자동이다.
        진입: raw GPS 0 좌표 | no-fix | 1s 이상 끊김 | GPS 위치가 음영 구간 안.
@@ -75,7 +76,7 @@
     <arg name="control_topic" value="/ctrl_cmd/jamming"/>
     <arg name="expected_config_sha256" value="$(arg expected_config_sha256)"/>
     <arg name="calibration_file" value="$(arg calibration_file)"/>
-    <arg name="use_rviz" value="false"/>
+    <arg name="use_rviz" value="$(arg rviz)"/>
     <!-- jamming_dev.launch에서 실주행 통과를 확인한 재밍 튜닝값. 두 곳을 함께 바꾼다. -->
     <arg name="straddle_avoidance" value="true"/>
     <arg name="line_edge_expand" value="0.10"/>
