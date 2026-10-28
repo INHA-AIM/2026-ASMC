@@ -75,9 +75,11 @@ int main(int argc,char**argv){
  for(const auto& poly:bbox->ground_contacts){
   lane_boundary_adapter::clearance::Bounds b{1e100,-1e100,1e100,-1e100};
   for(const auto&p:poly.points){b.xmin=std::min(b.xmin,double(p.x));b.xmax=std::max(b.xmax,double(p.x));b.ymin=std::min(b.ymin,double(p.y));b.ymax=std::max(b.ymax,double(p.y));}
+  lane_boundary_adapter::clearance::Polygon q;
+  for(const auto& p:poly.points)q.push_back({p.x,p.y});
   if(bbox->ground_contact_sources.size()==bbox->boxes.size() && bbox->ground_contact_sources[contact_index]=="lidar_observed")
-   local_occupied.push_back({{{b.xmin,b.ymin},{b.xmax,b.ymin},{b.xmax,b.ymax},{b.xmin,b.ymax}}});
-  else {lane_boundary_adapter::clearance::Polygon q;for(unsigned i=0;i<4;++i)q[i]={poly.points[i].x,poly.points[i].y};contacts.push_back(q);}
+   local_occupied.push_back(q);
+  else contacts.push_back(q);
   ++contact_index;
   std::cout<<"contact "<<b.xmin<<','<<b.xmax<<','<<b.ymin<<','<<b.ymax<<'\n';
  }
@@ -87,7 +89,7 @@ int main(int argc,char**argv){
  for(const auto& lane:change_state.lanes)if(lane.lane_index==1)for(const auto& p:lane.left_boundary)reference.push_back({p.x,p.y});
  std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
  if(!lane_boundary_adapter::clearance::projectedContactOccupancy(contacts,reference,horizon,occupied))return 4;
- for(const auto& p:bbox->local_obstacle_footprints){lane_boundary_adapter::clearance::Polygon o;for(unsigned i=0;i<4;++i)o[i]={p.points[i].x,p.points[i].y};local_occupied.push_back(o);}
+ for(const auto& p:bbox->local_obstacle_footprints){lane_boundary_adapter::clearance::Polygon o;for(const auto& point:p.points)o.push_back({point.x,point.y});local_occupied.push_back(o);}
  occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
  const lane_boundary_adapter::clearance::Vehicle shape{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
  std::vector<double> offsets{0.,-.05,.05,-.1,.1,-.15,.15,-.2,.2,-.25,.25,-.3,.3,-.35,.35,-.4,.4,-.45,.45,-.5,.5};

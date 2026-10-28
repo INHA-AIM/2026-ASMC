@@ -1600,38 +1600,33 @@ std::string updateContactPathPlan() {
        contact_result->ground_contact_valid.size()!=contact_result->boxes.size()) return fail("contact_contract_invalid");
     std::vector<lane_boundary_adapter::clearance::Polygon> contacts;
     std::vector<lane_boundary_adapter::clearance::Polygon> local_occupied;
+    auto polygonFromMessage=[](const geometry_msgs::Polygon& input){
+        lane_boundary_adapter::clearance::Polygon polygon;
+        for(const auto& p:input.points)polygon.push_back({p.x,p.y});
+        return polygon;
+    };
     for(std::size_t i=0;i<contact_result->boxes.size();++i){
-        if(!contact_result->ground_contact_valid[i] || contact_result->ground_contacts[i].points.size()!=4)
-            return fail("contact_ground_unavailable");
-        lane_boundary_adapter::clearance::Bounds b{1e100,-1e100,1e100,-1e100};
-        for(const auto& p:contact_result->ground_contacts[i].points){
-            if(!std::isfinite(p.x)||!std::isfinite(p.y))return fail("contact_geometry_invalid");
-            b.xmin=std::min(b.xmin,double(p.x));b.xmax=std::max(b.xmax,double(p.x));
-            b.ymin=std::min(b.ymin,double(p.y));b.ymax=std::max(b.ymax,double(p.y));
-        }
+        if(!contact_result->ground_contact_valid[i])return fail("contact_ground_unavailable");
+        auto polygon=polygonFromMessage(contact_result->ground_contacts[i]);
+        if(!lane_boundary_adapter::clearance::convexValid(polygon))return fail("contact_geometry_invalid");
         const bool measured=contact_result->ground_contact_sources.size()==contact_result->boxes.size() &&
             contact_result->ground_contact_sources[i]=="lidar_observed";
-        if(measured) local_occupied.push_back({{{b.xmin,b.ymin},{b.xmax,b.ymin},{b.xmax,b.ymax},{b.xmin,b.ymax}}});
+        if(measured)local_occupied.push_back(std::move(polygon));
         else {
-            lane_boundary_adapter::clearance::Polygon polygon;
-            for(unsigned j=0;j<4;++j)polygon[j]={contact_result->ground_contacts[i].points[j].x,contact_result->ground_contacts[i].points[j].y};
-            contacts.push_back(polygon);
+            if(polygon.size()!=4)return fail("contact_ground_unavailable");
+            contacts.push_back(std::move(polygon));
         }
     }
-    // Supplement camera occupancy with EVERY published local footprint, not
-    // only classified/matched objects. An empty array never clears image boxes.
+    // Every measured local footprint participates, independently of camera
+    // matching. Preserve its ordered convex projection, including tilted OBBs;
+    // do not re-expand the measured geometry into an axis-aligned rectangle.
     if(contact_result->local_obstacles_valid) {
         if(std::abs((contact_result->header.stamp-contact_result->local_obstacles_stamp).toSec())>.050000001)
             return fail("local_obstacle_timestamp_skew");
         for(const auto& poly:contact_result->local_obstacle_footprints){
-            if(poly.points.size()!=4)return fail("local_obstacle_geometry_invalid");
-            lane_boundary_adapter::clearance::Bounds b{1e100,-1e100,1e100,-1e100};
-            for(const auto& p:poly.points){if(!std::isfinite(p.x)||!std::isfinite(p.y))return fail("local_obstacle_geometry_invalid");
-                b.xmin=std::min(b.xmin,double(p.x));b.xmax=std::max(b.xmax,double(p.x));
-                b.ymin=std::min(b.ymin,double(p.y));b.ymax=std::max(b.ymax,double(p.y));}
-            // Measured OBB envelope (already padded), not an image's unknown
-            // depth corridor. Preserve near/rear points during the pass.
-            local_occupied.push_back({{{b.xmin,b.ymin},{b.xmax,b.ymin},{b.xmax,b.ymax},{b.xmin,b.ymax}}});
+            auto polygon=polygonFromMessage(poly);
+            if(!lane_boundary_adapter::clearance::convexValid(polygon))return fail("local_obstacle_geometry_invalid");
+            local_occupied.push_back(std::move(polygon));
         }
     }
     contact_geometry_ready=true;

@@ -46,7 +46,7 @@ TEST(ContactClearance, OcclusionFollowsRoadInsteadOfTurningEgoHeading) {
  EXPECT_FALSE(contactOccupancy({{8.,9.,-2.,-1.5}},{{0.,0.},{10.,-3.}},15.,occupied));
 }
 TEST(ContactClearance, ProjectedBandDoesNotMixNearAndFarLateralExtents) {
- const Polygon p{{{25.58,3.475},{24.39,.846},{18.41,.622},{19.04,2.518}}};
+ const Polygon p{{25.58,3.475},{24.39,.846},{18.41,.622},{19.04,2.518}};
  std::vector<Polygon> exact,box;
  ASSERT_TRUE(projectedContactOccupancy({p},{{0.,0.},{30.,0.}},20.,exact));
  ASSERT_TRUE(contactOccupancy({{18.41,25.58,.622,3.475}},{{0.,0.},{30.,0.}},20.,box));
@@ -59,10 +59,10 @@ TEST(ContactClearance, ProjectedBandDoesNotMixNearAndFarLateralExtents) {
 }
 TEST(ContactClearance, ProjectedContactKeepsUnknownDepthAndRejectsBadOrder) {
  std::vector<Polygon> occupied;
- ASSERT_TRUE(projectedContactOccupancy({Polygon{{{5.,-.3},{6.,-.3},{6.,.3},{5.,.3}}}},{{0.,0.},{15.,0.}},15.,occupied));
+ ASSERT_TRUE(projectedContactOccupancy({Polygon{{5.,-.3},{6.,-.3},{6.,.3},{5.,.3}}},{{0.,0.},{15.,0.}},15.,occupied));
  auto path=straight(-2.);for(auto& point:path)if(point.x>8.)point.y=0.;
  EXPECT_FALSE(pathClearOfPolygons(path,occupied,Vehicle{},15.));
- EXPECT_FALSE(projectedContactOccupancy({Polygon{{{5.,-.3},{6.,.3},{6.,-.3},{5.,.3}}}},{{0.,0.},{15.,0.}},15.,occupied));
+ EXPECT_FALSE(projectedContactOccupancy({Polygon{{5.,-.3},{6.,.3},{6.,-.3},{5.,.3}}},{{0.,0.},{15.,0.}},15.,occupied));
 }
 TEST(ContactClearance, HeadingCorrectionSatisfiesEndpointConditions) {
  const double h=1e-4;
@@ -72,5 +72,20 @@ TEST(ContactClearance, HeadingCorrectionSatisfiesEndpointConditions) {
  EXPECT_NEAR((startSlopeBasis(1)-startSlopeBasis(1-h))/h,0.,1e-6);
  EXPECT_NEAR((startSlopeBasis(2*h)-2*startSlopeBasis(h))/h/h,0.,.004);
  EXPECT_NEAR((startSlopeBasis(1-2*h)-2*startSlopeBasis(1-h))/h/h,0.,.004);
+}
+TEST(ContactClearance, ConvexHullPaddingPreservesRotationAndEveryCorner) {
+ const Polygon measured{{18.282587,-1.663957},{18.022652,-1.569104},{17.592718,-2.747056},
+     {17.590937,-2.758485},{17.850870,-2.853337},{18.280804,-1.675385}};
+ const auto hull=paddedHull(measured,.25);
+ ASSERT_TRUE(convexValid(hull));EXPECT_GT(hull.size(),4u);
+ for(const auto& p:measured)for(double dx:{-.25,.25})for(double dy:{-.25,.25}){
+   for(size_t i=0;i<hull.size();++i)EXPECT_GE(cross(hull[i],hull[(i+1)%hull.size()],{p.x+dx,p.y+dy}),-1e-8);
+ }
+ auto area=[](const Polygon& p){double a=0.;for(size_t i=0;i<p.size();++i)a+=p[i].x*p[(i+1)%p.size()].y-p[i].y*p[(i+1)%p.size()].x;return std::abs(a)*.5;};
+ EXPECT_LT(area(hull),(18.282587-17.590937+.5)*(-1.569104+2.853337+.5));
+ EXPECT_TRUE(overlaps(hull,{{18.,-2.},{18.1,-2.},{18.1,-1.9},{18.,-1.9}}));
+ EXPECT_TRUE(overlaps({},hull));
+ EXPECT_FALSE(pathClearOfPolygons(straight(),{Polygon{{30.,0.},{30.,1.}}},Vehicle{},15.));
+ std::vector<Polygon> occupied;EXPECT_FALSE(projectedContactOccupancy({hull},{{0.,0.},{30.,0.}},20.,occupied));
 }
 int main(int argc,char** argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}

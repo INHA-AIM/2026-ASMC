@@ -38,12 +38,44 @@ inline double startSlopeBasis(double u) {
   return u-6*u*u*u+8*u*u*u*u-3*u*u*u*u*u;
 }
 inline bool finite(const Point& p) { return std::isfinite(p.x)&&std::isfinite(p.y); }
+// Bounded convex footprint, ordered counter-clockwise. Preserve the projection
+// of all eight OBB corners; roll/pitch can produce more than four XY vertices.
+// The Minkowski sum with the same axis-aligned padding square retains the old
+// 0.25m uncertainty in BOTH axes without inventing the OBB's entire AABB.
+inline double cross(const Point& a,const Point& b,const Point& c) {
+  return (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+}
+inline bool convexValid(const std::vector<Point>& p) {
+  if(p.size()<3 || p.size()>32)return false;
+  double sign=0.;
+  for(std::size_t i=0;i<p.size();++i){
+    if(!finite(p[i]))return false;
+    const double c=cross(p[i],p[(i+1)%p.size()],p[(i+2)%p.size()]);
+    if(std::abs(c)<1e-10 || (sign!=0. && c*sign<0.))return false;
+    sign=c;
+  }return true;
+}
+inline std::vector<Point> paddedHull(const std::vector<Point>& points,double padding) {
+  if(points.size()<3 || points.size()>8 || !std::isfinite(padding)||padding<0.)return {};
+  std::vector<Point> p;p.reserve(points.size()*4);
+  for(const auto& v:points){if(!finite(v))return {};
+    for(double dx:{-padding,padding})for(double dy:{-padding,padding})p.push_back({v.x+dx,v.y+dy});}
+  std::sort(p.begin(),p.end(),[](const Point& a,const Point& b){return a.x<b.x || (a.x==b.x && a.y<b.y);});
+  p.erase(std::unique(p.begin(),p.end(),[](const Point& a,const Point& b){return a.x==b.x&&a.y==b.y;}),p.end());
+  if(p.size()<3)return {};
+  std::vector<Point> hull;hull.reserve(p.size()*2);
+  for(const auto& v:p){while(hull.size()>1 && cross(hull[hull.size()-2],hull.back(),v)<=1e-10)hull.pop_back();hull.push_back(v);}
+  const auto lower=hull.size();
+  for(auto i=p.rbegin()+1;i!=p.rend();++i){while(hull.size()>lower && cross(hull[hull.size()-2],hull.back(),*i)<=1e-10)hull.pop_back();hull.push_back(*i);}
+  hull.pop_back();return convexValid(hull)?hull:std::vector<Point>{};
+}
 // Separating-axis test, including boundary contact. Invalid input is occupied.
-inline bool overlaps(const std::array<Point,4>& a,const std::array<Point,4>& b) {
+inline bool overlaps(const std::vector<Point>& a,const std::vector<Point>& b) {
+  if(!convexValid(a)||!convexValid(b))return true;
   for(const auto& p:a) if(!finite(p)) return true;
   for(const auto& p:b) if(!finite(p)) return true;
-  for(const auto* polygon:{&a,&b}) for(unsigned i=0;i<4;++i) {
-    const auto& p=(*polygon)[i];const auto& q=(*polygon)[(i+1)%4];
+  for(const auto* polygon:{&a,&b}) for(std::size_t i=0;i<polygon->size();++i) {
+    const auto& p=(*polygon)[i];const auto& q=(*polygon)[(i+1)%polygon->size()];
     const Point axis{q.y-p.y,p.x-q.x};
     if(std::hypot(axis.x,axis.y)<1e-9) continue;
     double amin=1e100,amax=-1e100,bmin=1e100,bmax=-1e100;
@@ -53,7 +85,7 @@ inline bool overlaps(const std::array<Point,4>& a,const std::array<Point,4>& b) 
   }
   return true;
 }
-using Polygon = std::array<Point,4>;
+using Polygon = std::vector<Point>;
 inline bool referenceY(const std::vector<Point>& reference,double x,double& y) {
   if(reference.size()<2)return false;
   for(std::size_t i=1;i<reference.size();++i) {
@@ -75,7 +107,7 @@ inline bool contactOccupancy(const std::vector<Bounds>& contacts,const std::vect
        r.xmax<=r.xmin||r.ymax<=r.ymin)return false;
     if(r.xmin>horizon)continue;
     const double end=std::min(r.xmax,horizon);
-    occupied.push_back({{{r.xmin,r.ymin},{end,r.ymin},{end,r.ymax},{r.xmin,r.ymax}}});
+    occupied.push_back({{r.xmin,r.ymin},{end,r.ymin},{end,r.ymax},{r.xmin,r.ymax}});
     if(end>=horizon)continue;
     double origin;if(!referenceY(reference,end,origin))return false;
     double x=end,dy=0;
@@ -83,8 +115,8 @@ inline bool contactOccupancy(const std::vector<Bounds>& contacts,const std::vect
       const double next=std::min(x+.25,horizon);double y;
       if(!referenceY(reference,next,y))return false;
       const double next_dy=y-origin;
-      occupied.push_back({{{x,r.ymin+dy},{next,r.ymin+next_dy},
-                            {next,r.ymax+next_dy},{x,r.ymax+dy}}});
+      occupied.push_back({{x,r.ymin+dy},{next,r.ymin+next_dy},
+                            {next,r.ymax+next_dy},{x,r.ymax+dy}});
       x=next;dy=next_dy;
     }
   }
@@ -99,6 +131,7 @@ inline bool projectedContactOccupancy(const std::vector<Polygon>& contacts,const
   occupied.clear();
   if(!std::isfinite(horizon)||horizon<=0.)return false;
   for(const auto& polygon:contacts){
+    if(polygon.size()!=4)return false;
     Bounds b{1e100,-1e100,1e100,-1e100};double orientation=0.;
     for(unsigned i=0;i<4;++i){
       const auto& p=polygon[i];const auto& q=polygon[(i+1)%4];const auto& r=polygon[(i+2)%4];
@@ -121,16 +154,17 @@ inline bool projectedContactOccupancy(const std::vector<Polygon>& contacts,const
 }
 inline bool pathClearOfPolygons(const std::vector<Point>& path,const std::vector<Polygon>& occupied,
                       const Vehicle& v,double supported_horizon,double sample_padding=.25) {
+  for(const auto& p:occupied)if(!convexValid(p))return false;
   if(path.size()<2||!std::isfinite(supported_horizon)||supported_horizon<=0)return false;
   for(std::size_t i=0;i<path.size();++i){
     if(!finite(path[i]))return false;
     const auto& a=path[i?i-1:i]; const auto& b=path[std::min(i+1,path.size()-1)];
     const double yaw=std::atan2(b.y-a.y,b.x-a.x),c=std::cos(yaw),s=std::sin(yaw);
-    Polygon ego;unsigned k=0;
-    for(const Point p:Polygon{{{v.front+v.longitudinal_margin+sample_padding,v.half_width+v.lateral_margin},
+    Polygon ego(4);unsigned k=0;
+    for(const Point p:Polygon{{v.front+v.longitudinal_margin+sample_padding,v.half_width+v.lateral_margin},
        {-v.rear-v.longitudinal_margin-sample_padding,v.half_width+v.lateral_margin},
        {-v.rear-v.longitudinal_margin-sample_padding,-v.half_width-v.lateral_margin},
-       {v.front+v.longitudinal_margin+sample_padding,-v.half_width-v.lateral_margin}}}) {
+       {v.front+v.longitudinal_margin+sample_padding,-v.half_width-v.lateral_margin}}) {
       ego[k++]={path[i].x+p.x*c-p.y*s,path[i].y+p.x*s+p.y*c};
     }
     double xmin=1e100,xmax=-1e100;
