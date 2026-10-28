@@ -1,5 +1,6 @@
 #include "local/journal.hpp"
 #include "local/motion.hpp"
+#include "local/obstacle_memory.hpp"
 #include "local/planner.hpp"
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
@@ -46,6 +47,8 @@ class Node {
   Config config;
   MotionHistory motion;
   RoadMemory road_memory;
+  ObstacleMemory obstacle_memory;
+  bool retain_static_observations = false;
   ReferencePrior reference_prior;
   bool use_road_memory = true;
   bool semantic_reference_fallback = false;
@@ -458,7 +461,7 @@ class Node {
     phase = selected_mode ? "active" : preparation ? "prepare" :
         active_in_jamming_only ? "idle" : "preview";
     if (calculated_generation != expected_scene_generation || !compute) {
-      previous.clear(); road_memory.clear(); reference_prior.clear(); last_scene = 0; home_role = 0;
+      previous.clear(); road_memory.clear(); reference_prior.clear(); obstacle_memory.clear(); last_scene = 0; home_role = 0;
       calculated_generation = expected_scene_generation;
     }
     if (!compute) {
@@ -791,6 +794,8 @@ class Node {
         budget = std::max(budget, std::hypot(v.x, v.y));
       }
       ob.uncertainty = object_age * budget;
+      ob.motion_budget = budget;
+      ob.moving = o.dynamic_valid && o.is_dynamic;
       for (const auto &corner : o.obb_corners) {
         if (!std::isfinite(corner.x + corner.y + corner.z)) {
           invalid("object_nonfinite");
@@ -811,6 +816,9 @@ class Node {
       }
       scene.obstacles.push_back(std::move(ob));
     }
+    if(retain_static_observations)
+      obstacle_memory.apply(scene.obstacles,Pose{origin->x,origin->y,origin->yaw},
+                            array.header.stamp.toSec(),plan_stamp.toSec());
     for (auto q : previous) {
       double wx = previous_origin.x + std::cos(previous_origin.yaw) * q.x -
                   std::sin(previous_origin.yaw) * q.y - origin->x,
@@ -856,6 +864,8 @@ class Node {
             << ",\"classification\":" << std::quoted(ob.classification)
             << ",\"source_age_s\":" << ob.source_age
             << ",\"motion_uncertainty_m\":" << ob.uncertainty
+            << ",\"retained_measurement\":" << (ob.retained?"true":"false")
+            << ",\"motion_budget_mps\":" << ob.motion_budget
             << ",\"polygon\":[";
       for (size_t j = 0; j < ob.polygon.size(); ++j) {
         if (j)
@@ -864,7 +874,8 @@ class Node {
       }
       debug << "]}";
     }
-    debug << "],\"obstacles_omitted\":"
+    debug << "],\"asset_retention_enabled\":" << (retain_static_observations?"true":"false")
+          << ",\"obstacles_omitted\":"
           << (scene.obstacles.size() > 32 ? scene.obstacles.size() - 32 : 0)
           << ",\"home\":[";
     for (size_t k = 0; k < scene.home.size(); k += 4) {
@@ -1041,6 +1052,7 @@ public:
     p.param("near_blind_assist", config.blind_assist, false);
     p.param("causal_road_memory", use_road_memory, true);
     p.param("semantic_reference_fallback", semantic_reference_fallback, false);
+    p.param("retain_static_observations", retain_static_observations, false);
     p.param("active_in_jamming_only", active_in_jamming_only, false);
     p.param("recovery", config.recovery, true);
     p.param("vehicle_width", config.width, 2.160835);

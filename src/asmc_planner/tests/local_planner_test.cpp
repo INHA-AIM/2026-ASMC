@@ -1,5 +1,6 @@
 #include "local/journal.hpp"
 #include "local/motion.hpp"
+#include "local/obstacle_memory.hpp"
 #include "local/planner.hpp"
 #include "local/speed_profile.hpp"
 #include "local/road_memory.hpp"
@@ -29,6 +30,38 @@ Scene empty() {
   return s;
 }
 int main() {
+  {
+    ObstacleMemory memory;
+    Obstacle box{41,{{5.,-.4},{6.,-.4},{6.,.4},{5.,.4}},"box","static_obstacle"};
+    for(int i=0;i<3;++i) {auto current=std::vector<Obstacle>{box};memory.apply(current,Pose{},10.+i*.05,10.+i*.05);}
+    std::vector<Obstacle> missing;
+    memory.apply(missing,Pose{1.,.2,.1},10.15,10.15);
+    expect(missing.size()==1 && missing[0].retained && std::abs(missing[0].source_age-.05)<1e-8,
+           "brief asset dropout retains original observation age");
+    const double expected=std::cos(.1)*4.+std::sin(.1)*(-.6);
+    expect(std::abs(missing[0].polygon[0].x-expected)<1e-9 &&
+           std::abs(missing[0].uncertainty-.25)<1e-8,
+           "retained geometry changes relative frame once and preserves motion uncertainty");
+    missing.clear();memory.apply(missing,Pose{},10.31,10.31);
+    expect(missing.empty() && memory.size()==0,"retention cannot become indefinite obstacle ghost");
+    for(const auto &name: {"motorcycle","unknown","person","car"}) {
+      memory.clear(); box.camera_class=name;
+      for(int i=0;i<3;++i){auto cur=std::vector<Obstacle>{box};memory.apply(cur,Pose{},10.+i*.05,10.+i*.05);}
+      missing.clear();memory.apply(missing,Pose{},10.15,10.15);
+      expect(missing.empty(),"group alone never asserts an immovable asset");
+    }
+    memory.clear();box.camera_class="box";
+    for(int i=0;i<3;++i){auto cur=std::vector<Obstacle>{box};memory.apply(cur,Pose{},10.,10.);}
+    missing.clear();memory.apply(missing,Pose{},10.05,10.05);
+    expect(missing.empty(),"duplicate scan cannot meet retention confirmation");
+    memory.clear();
+    for(int i=0;i<3;++i){auto cur=std::vector<Obstacle>{box};memory.apply(cur,Pose{},10.+i*.05,10.+i*.05);}
+    box.moving=true;auto cur=std::vector<Obstacle>{box};memory.apply(cur,Pose{},10.15,10.15);
+    missing.clear();memory.apply(missing,Pose{},10.20,10.20);
+    expect(missing.empty(),"actual moving evidence cancels static asset retention");
+    memory.clear();expect(memory.size()==0,"producer/generation reset clears planning retention");
+  }
+
   {
     ReferencePrior prior;Config c;auto s=empty();
     prior.observe(s.home,Pose{},10.);

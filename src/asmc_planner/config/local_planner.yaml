@@ -20,3 +20,5 @@ acceleration_limit_mps2: 1.0
 # Candidate for a missing/folded home reference. Current raster/OBB collision
 # checks remain authoritative; unvalidated candidate stays OFF in this profile.
 semantic_reference_fallback: false
+# LOCAL-2F short measured-asset retention candidate, max200ms; OFF until A/B.
+retain_static_observations: false

@@ -16,6 +16,8 @@ struct Obstacle {
   geometry::Polygon2D polygon;
   std::string camera_class, classification;
   double source_age = 0, uncertainty = 0;
+  double motion_budget = 5.;
+  bool retained = false, moving = false;
 };
 struct Config {
   double length = 4.635, width = 2.160835, rear = .79, margin = .10;
