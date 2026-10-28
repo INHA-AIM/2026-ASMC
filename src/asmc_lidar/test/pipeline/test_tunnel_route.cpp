@@ -19,7 +19,8 @@ CloudPtr Scene() {
 }
 TunnelCameraInput NoImage() {
   TunnelCameraInput cam;cam.calibrated=true;cam.calibration.width=cam.calibration.height=200;
-  cam.calibration.base_from_camera.translation().z()=1000;return cam;
+  cam.calibration.base_from_camera.translation().z()=1000;
+  cam.calibration.base_from_camera.linear()=asmc::lidar::rpy(0,0,std::acos(-1.));return cam;
 }
 LocalState Local() {LocalState l;l.st_IMU.b_ImuReady=true;return l;}
 }
@@ -72,6 +73,7 @@ TEST(TunnelRoute, EgoMotionUsesScanTimeYawAndSpeedAndResetsOnExit) {
 }
 TEST(TunnelRoute, CameraProtectionUsesActualCalibrationAndUnavailableFrameCannotProtectByClass) {
   TunnelRoute route(TunnelRouteConfig{});route.Select(false);auto cam=NoImage();cam.calibration.base_from_camera=asmc::lidar::Pose::Identity();
+  // Preserve the explicit legacy/front rollback calibration contract.
   cam.calibration.base_from_camera.linear()<<0,0,1,-1,0,0,0,-1,0;
   cam.calibration.intrinsic<<100,0,100,0,100,100,0,0,1;cam.available=true;
   asmc::lidar::camera::Box box;box.xmin=50;box.xmax=150;box.ymin=60;box.ymax=140;box.source_class_name="car";cam.boxes.push_back(box);
@@ -83,6 +85,24 @@ TEST(TunnelRoute, OffProfileDoesNotChangeNormalClusteringOrGeometry) {
   Pipeline left(a),right(b);ScanInput scan;scan.time.stamp_ns=1000000000;scan.points=Scene();asmc::lidar::PoseSelection map;
   const auto l=left.Process(scan,Local(),map),r=right.Process(scan,Local(),map);
   EXPECT_EQ(l.digests.roi,r.digests.roi);EXPECT_EQ(l.digests.voxel,r.digests.voxel);EXPECT_EQ(l.digests.ground_kept,r.digests.ground_kept);EXPECT_EQ(l.cluster_sizes,r.cluster_sizes);EXPECT_EQ(l.objects.size(),r.objects.size());EXPECT_FALSE(r.tunnel.ran);
+}
+TEST(TunnelRoute, CausalFallbackRequiresMotionCurrentEpochAndExactImageGeometry) {
+  TunnelRouteConfig cfg;cfg.protection.motion_compensated_fallback=true;
+  auto outer=NoImage();outer.available=false;
+  auto causal=std::make_shared<TunnelCameraInput>();causal->calibrated=causal->available=true;
+  causal->calibration.width=causal->calibration.height=200;causal->image_width=causal->image_height=200;
+  causal->calibration.intrinsic<<100,0,100,0,100,100,0,0,1;
+  causal->stamp_ns=1000000000;causal->identity="causal";causal->motion_compensated=true;causal->still_current=[](){return true;};
+  asmc::lidar::camera::Box b;b.xmin=50;b.xmax=150;b.ymin=60;b.ymax=140;b.source_class_name="car";causal->boxes.push_back(b);outer.low_obstacle_camera=causal;
+  auto run=[&](){TunnelRoute route(cfg);route.Select(false);route.Process(Scene(),Local(),1100000000,VehicleSpec{},&outer);return std::make_pair(route.last().protection_available,route.last().protected_points);};
+  auto r=run();EXPECT_TRUE(r.first);EXPECT_GT(r.second,0);
+  causal->image_sensor_from_scan_sensor.translation().y()=100;r=run();EXPECT_TRUE(r.first);EXPECT_EQ(0,r.second);
+  causal->image_sensor_from_scan_sensor=asmc::lidar::Pose::Identity();causal->motion_compensated=false;EXPECT_FALSE(run().first);
+  causal->motion_compensated=true;causal->still_current=[](){return false;};EXPECT_FALSE(run().first);
+  causal->still_current=[](){return true;};causal->image_width=199;EXPECT_FALSE(run().first);
+  causal->image_width=200;causal->stamp_ns=900000000;EXPECT_FALSE(run().first);
+  causal->stamp_ns=1200000000;EXPECT_FALSE(run().first);
+  causal->stamp_ns=1000000000;causal->boxes[0].source_class_name="steel_barricade";EXPECT_FALSE(run().first);
 }
 TEST(TunnelRoute, FullPipelineUsesTunnelOnlyWhenMapUnavailableAndExportsMatchingContext) {
   PipelineConfig cfg;cfg.calibration_id="test";cfg.capture_debug=true;cfg.tunnel.enabled=true;cfg.tunnel_route.original_pipeline=true;
@@ -106,6 +126,7 @@ TEST(TunnelRoute, InvalidConfigurationRejectedBeforeCoreRuns) {
   cfg=TunnelRouteConfig{};cfg.params.ceiling_max_z_lidar_m=std::numeric_limits<float>::quiet_NaN();EXPECT_THROW(TunnelRoute x(cfg),std::invalid_argument);
 }
 int main(int argc,char**argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}
+#include "low_obstacle_evidence_cases.hpp"
 
 TEST(TunnelClusterZ, UsesRawSensorMeanStrictBoundaryAndRemapsPointsDuringLiveChanges) {
   TunnelRouteConfig cfg;cfg.params.wall_enable=false;cfg.params.obb_filter_enable=false;
@@ -535,4 +556,40 @@ TEST(TunnelRoute, MultiViewUsesCanonicalOpticalAxesAndEightClassesWithoutClassif
     route.Process(Scene(),Local(),1100000000,VehicleSpec{},&input);
     EXPECT_EQ(route.last().protected_points,0)<<label;
   }
+}
+
+TEST(TunnelRoute, CausalFrontFallbackPreservesSideViewsAndNeverUsesSteelAgeWindow) {
+  TunnelRouteConfig cfg;cfg.protection.multiview=true;cfg.protection.motion_compensated_fallback=true;
+  auto outer=NoImage();outer.available=false;outer.calibration.frame_id="camera_front";
+  auto causal=std::make_shared<TunnelCameraInput>();causal->calibrated=causal->available=true;
+  causal->calibration.frame_id="camera_front";
+  causal->calibration.width=causal->calibration.height=200;causal->image_width=causal->image_height=200;
+  causal->calibration.intrinsic<<100,0,100,0,100,100,0,0,1;
+  causal->stamp_ns=1000000000;causal->identity="causal";causal->motion_compensated=true;
+  causal->still_current=[](){return true;};
+  asmc::lidar::camera::Box b;b.xmin=50;b.xmax=150;b.ymin=60;b.ymax=140;b.source_class_name="car";
+  causal->boxes={b};outer.low_obstacle_camera=causal;
+  TunnelCameraView front=static_cast<const TunnelCameraView&>(outer);
+  TunnelCameraView side=front;side.calibrated=side.available=true;side.calibration.frame_id="camera_left";
+  side.still_current=[](){return true;};outer.views={front,side};
+  auto run=[&](std::int64_t stamp){TunnelRoute route(cfg);route.Select(false);
+    route.Process(Scene(),Local(),stamp,VehicleSpec{},&outer);
+    return std::make_pair(route.last().protection_available,route.last().protected_points);};
+  auto current=run(1100000000);EXPECT_TRUE(current.first);EXPECT_GT(current.second,0);
+  // A 160ms image may remain valid steel geometry, but never general protection.
+  auto old=run(1160000000);EXPECT_FALSE(old.first);EXPECT_EQ(old.second,0);
+  causal->still_current=[](){return false;};auto reset=run(1100000000);
+  EXPECT_FALSE(reset.first);EXPECT_EQ(reset.second,0);
+}
+
+TEST(TunnelRoute, CanonicalOpticalProjectionAlsoProtectsWithoutLegacyRotation) {
+  TunnelRoute route(TunnelRouteConfig{});route.Select(false);auto cam=NoImage();
+  cam.common_projection=true;cam.calibration.base_from_camera=asmc::lidar::Pose::Identity();
+  cam.calibration.intrinsic<<100,0,100,0,100,100,0,0,1;cam.available=true;
+  asmc::lidar::camera::Box box;box.xmin=50;box.xmax=150;box.ymin=60;box.ymax=140;box.source_class_name="car";cam.boxes={box};
+  route.Process(Scene(),Local(),1000000000,VehicleSpec{},&cam);
+  EXPECT_GT(route.last().protected_points,0);
+  cam.still_current=[](){return false;};
+  route.Process(Scene(),Local(),1100000000,VehicleSpec{},&cam);
+  EXPECT_EQ(route.last().protected_points,0);
 }

@@ -32,6 +32,8 @@ struct TunnelWallEvidence {
   std::string reason;
 };
 struct TunnelFilterStageReport {
+  int low_obstacle_verified=0,low_obstacle_rescued=0,low_obstacle_rescued_points=0;
+  std::vector<std::pair<std::array<float,7>,std::string>> low_obstacle_decisions;
   std::vector<TunnelWallEvidence> wall_evidence;
   bool original_pipeline = false, protection_available = false;
   int boundary_rescued_clusters=0, boundary_rescued_points=0;

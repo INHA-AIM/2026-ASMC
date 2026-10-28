@@ -28,6 +28,7 @@ class MultiCameraFusion {
     std::int64_t stamp=0,queued=0;
     std::uint64_t sequence=0;
     std::vector<int> ids;
+    std::map<int,CameraPointSupport> point_support; // measured membership at this scan
     std::map<std::string,View> views;
     std::map<int,CameraClassEvidence> start;
   };

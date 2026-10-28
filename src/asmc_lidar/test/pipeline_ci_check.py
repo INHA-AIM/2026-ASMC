@@ -34,7 +34,7 @@ LEGACY_PROGRAMS = ('asmc_lidar_camera_buffer_test', 'asmc_lidar_camera_calibrati
                    'asmc_lidar_geometry_boundary_test', 'asmc_lidar_frame_time_core_test',
                    'asmc_lidar_imu_selection_test')
 # Python unittest scripts registered with add_test: minimum number of cases.
-UNITTESTS = {'asmc_lidar_camera_calibration_hash_test': 2, 'asmc_lidar_camera_contract_test': 5,
+UNITTESTS = {'asmc_lidar_refinement_profile_test': 4, 'asmc_lidar_camera_calibration_hash_test': 2, 'asmc_lidar_camera_contract_test': 5,
              'asmc_lidar_pipeline_contract_test': 10, 'asmc_lidar_object_markers_test': 6, 'asmc_lidar_monitor_core_test': 34, 'asmc_lidar_fusion_audit_test': 3}
 # catkin_add_gtest targets: minimum number of cases.
 GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessing': 21,
@@ -46,6 +46,12 @@ GTESTS = {'asmc_lidar_test_tunnel_filter_core': 27, 'asmc_lidar_test_preprocessi
           'asmc_lidar_test_stage_observer': 5, 'asmc_lidar_test_motion_classifier': 7,
           'asmc_lidar_test_observation_quality': 28,
           'asmc_lidar_test_typed_output': 15, 'asmc_lidar_test_runtime': 30, 'asmc_lidar_test_delivery_preview': 14}
+GTESTS.update({'asmc_lidar_test_camera_point_refinement': 38,
+              'asmc_lidar_test_tunnel_route': 54,
+              'asmc_lidar_test_tunnel_runtime': 3,
+              'asmc_lidar_test_euclidean_components': 5,
+              'asmc_lidar_test_front_camera_fusion': 51})
+
 # rostest file stem -> (rosunit result name, minimum number of cases).
 ROSTESTS = {'test_camera_receiver_ros': ('camera_receiver_ros', 1),
             'test_ros_lidar_pipeline_node': ('lidar_pipeline_node', 17),

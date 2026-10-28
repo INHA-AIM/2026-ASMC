@@ -1,4 +1,5 @@
 #include <asmc_lidar/experimental/tunnel_route.hpp>
+#include <asmc_lidar/experimental/low_obstacle_evidence.hpp>
 #include <asmc_lidar/detection/obb.hpp>
 #include <asmc_lidar/geometry/scan_frame.hpp>
 #include <asmc_lidar/geometry/projection.hpp>
@@ -37,27 +38,31 @@ void ProtectionView(const Cloud& cloud, const VehicleSpec& vehicle, const Tunnel
   const auto n=cloud.size();protect.assign(n,tunnel_filter::kProtectNone);ambiguous.assign(n,0);
   std::vector<float> u(n,-1),v(n,-1),range(n,0);std::vector<bool> visible(n,false);
   Eigen::Matrix<double,3,4> P=Eigen::Matrix<double,3,4>::Zero();
-  const bool calibrated=camera && camera->calibrated;
+  bool calibrated=camera && camera->calibrated;
   if(calibrated)P=camera->calibration.intrinsic *
       (camera->calibration.base_from_camera.inverse()*ScanFrame::SensorMount(vehicle)).matrix().topRows<3>();
-  if(calibrated && camera->common_projection) {
-    Context context;context.frame=Frame::Sensor;context.base_from_sensor=ScanFrame::SensorMount(vehicle);
-    context.calibration_source="sensor_mount";
-    const auto canonical=camera_projection(context,camera->calibration.base_from_camera,camera->calibration.intrinsic);
-    if(canonical)P=*canonical;else return;
+  if(calibrated && (camera->common_projection || cfg.motion_compensated_fallback)) {
+    Context sensor;sensor.frame=Frame::Sensor;sensor.base_from_sensor=ScanFrame::SensorMount(vehicle);
+    sensor.calibration_source="sensor_mount";
+    const auto canonical=camera_projection(sensor,camera->calibration.base_from_camera,camera->calibration.intrinsic);
+    if(canonical)P=(*canonical)*camera->image_sensor_from_scan_sensor.matrix();else calibrated=false;
   }
+  const double p00=P(0,0),p01=P(0,1),p02=P(0,2),p03=P(0,3);
+  const double p10=P(1,0),p11=P(1,1),p12=P(1,2),p13=P(1,3);
+  const double p20=P(2,0),p21=P(2,1),p22=P(2,2),p23=P(2,3);
   for(std::size_t i=0;i<n;++i) {
     const auto& p=cloud.points[i];if(!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.z))continue;
     range[i]=std::sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
     if(!calibrated) { // No usable projection: conservatively protect nearby wall candidates.
       ambiguous[i]=range[i]<=cfg.ambiguous_max_range_m;continue;
     }
-    const auto q=(P*Eigen::Vector4d(p.x,p.y,p.z,1)).eval();if(q.z()<=.1)continue;
-    u[i]=q.x()/q.z();v[i]=q.y()/q.z();
+    const double depth=p20*p.x+p21*p.y+p22*p.z+p23;if(depth<=.1)continue;
+    u[i]=(p00*p.x+p01*p.y+p02*p.z+p03)/depth;
+    v[i]=(p10*p.x+p11*p.y+p12*p.z+p13)/depth;
     visible[i]=u[i]>=0&&u[i]<camera->calibration.width&&v[i]>=0&&v[i]<camera->calibration.height;
     ambiguous[i]=visible[i]&&range[i]<=cfg.ambiguous_max_range_m;
   }
-  if(!cfg.enabled || !calibrated || !camera->available)return;
+  if(!cfg.enabled || !calibrated || !camera->available || (camera->still_current&&!camera->still_current()))return;
   const float width=camera->calibration.width,height=camera->calibration.height;
   for(const auto& box:camera->boxes) {
     auto kind=tunnel_filter::ProtectClassFromLabel(box.source_class_name);
@@ -71,11 +76,14 @@ void ProtectionView(const Cloud& cloud, const VehicleSpec& vehicle, const Tunnel
     std::vector<std::pair<float,std::size_t>> inside;
     for(std::size_t i=0;i<n;++i)if(visible[i]&&u[i]>=box.xmin-mx&&u[i]<=box.xmax+mx&&v[i]>=box.ymin-my&&v[i]<=box.ymax+my)inside.emplace_back(range[i],i);
     if(inside.size()<static_cast<std::size_t>(cfg.min_box_points))continue;
-    std::sort(inside.begin(),inside.end());
-    const float ref=inside[static_cast<std::size_t>(std::floor(cfg.depth_ref_percentile*(inside.size()-1)))].first;
+    const auto ref_index=static_cast<std::size_t>(std::floor(cfg.depth_ref_percentile*(inside.size()-1)));
+    std::nth_element(inside.begin(),inside.begin()+ref_index,inside.end());
+    const float ref=inside[ref_index].first;
     const float extent=tunnel_filter::IsPersonClass(kind)?cfg.depth_person_m:cfg.depth_vehicle_m;
     for(const auto& q:inside)if(q.first>=ref-cfg.depth_front_margin_m&&q.first<=ref+extent&&protect[q.second]==tunnel_filter::kProtectNone)protect[q.second]=kind;
   }
+  if(camera->still_current&&!camera->still_current())
+    std::fill(protect.begin(),protect.end(),tunnel_filter::kProtectNone);
 }
 // Union of per-view protections, without consuming post-tracking observations.
 void Protection(const Cloud& cloud,const VehicleSpec& vehicle,const TunnelCameraInput* camera,
@@ -86,11 +94,12 @@ void Protection(const Cloud& cloud,const VehicleSpec& vehicle,const TunnelCamera
   std::vector<std::uint8_t> covered(cloud.size(),0);
   for(const auto& view:camera->views) {
     std::vector<std::uint8_t> p,a;ProtectionView(cloud,vehicle,&view,cfg,p,a);
+    const bool current=view.available&&view.calibrated&&(!view.still_current||view.still_current());
     for(std::size_t i=0;i<p.size();++i) {
       if(protect[i]==tunnel_filter::kProtectNone)protect[i]=p[i];
       // Availability is per view: a missing camera cannot turn the complete
       // union into unavailable, nor can another view certify unseen points.
-      if(view.available&&view.calibrated)covered[i]|=a[i];
+      if(current)covered[i]|=a[i];
       else ambiguous[i]|=a[i];
     }
   }
@@ -254,15 +263,45 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   if(config_.integrated_motion)motion=integrated_motion?*integrated_motion:tunnel_filter::EgoMotion{};
   anchor_valid_=local.st_IMU.b_ImuReady;anchor_stamp_=stamp;anchor_yaw_=local.st_IMU.f32_Yaw_rad;anchor_speed_=local.st_CAN.f32_CurrentVel_MPS;
   std::vector<std::uint8_t> protect,ambiguous;
+  TunnelCameraInput compensated;
+  const TunnelCameraInput* protection_camera=camera;
+  if(config_.protection.motion_compensated_fallback&&camera&&camera->low_obstacle_camera) {
+    const auto* causal=camera->low_obstacle_camera.get();
+    // The original protection enum cannot represent every mission class. Do
+    // not turn off ambiguity protection around steel/low obstacles it cannot
+    // protect; their separate evidence path remains authoritative.
+    const bool representable=std::all_of(causal->boxes.begin(),causal->boxes.end(),[](const camera::Box& b) {
+      return tunnel_filter::ProtectClassFromLabel(b.source_class_name)!=tunnel_filter::kProtectNone||
+        tunnel_filter::ProtectClassFromLabel(b.class_name)!=tunnel_filter::kProtectNone;
+    });
+    if(representable&&causal->calibrated&&causal->available&&causal->stamp_ns>0&&causal->stamp_ns<=stamp&&
+       stamp-causal->stamp_ns<=150000000LL&&causal->motion_compensated&&
+       pose_valid(causal->image_sensor_from_scan_sensor)&&!causal->identity.empty()&&
+       causal->image_width==static_cast<int>(causal->calibration.width)&&
+       causal->image_height==static_cast<int>(causal->calibration.height)&&
+       causal->still_current&&causal->still_current()){
+        if(camera->views.empty()&&!camera->available)protection_camera=causal;
+        else if(!camera->views.empty()) {
+          // A front lease cannot replace side-view evidence or ambiguity.
+          compensated=*camera;
+          for(auto& view:compensated.views)if(!view.available&&view.calibration.frame_id==causal->calibration.frame_id)
+            view=static_cast<const TunnelCameraView&>(*causal);
+          protection_camera=&compensated;
+        }
+      }
+  }
   const auto protection_start=std::chrono::steady_clock::now();
-  Protection(*voxel,vehicle,camera,config_.protection,protect,ambiguous);
+  Protection(*voxel,vehicle,protection_camera,config_.protection,protect,ambiguous);
   const double protection_ms=std::chrono::duration<double,std::milli>(
     std::chrono::steady_clock::now()-protection_start).count();
-  const bool available=config_.protection.enabled&&camera&&
-    (camera->views.empty() ? camera->calibrated&&camera->available :
-     std::all_of(camera->views.begin(),camera->views.end(),[](const auto& v){return v.calibrated&&v.available;}));
+  const bool available=config_.protection.enabled&&protection_camera&&
+    (protection_camera->views.empty() ? protection_camera->calibrated&&protection_camera->available&&
+      (!protection_camera->still_current||protection_camera->still_current()) :
+     std::all_of(protection_camera->views.begin(),protection_camera->views.end(),[](const auto& v){
+       return v.calibrated&&v.available&&(!v.still_current||v.still_current());}));
   const auto& f=core_.Process(*voxel,local.st_IMU.f32_Roll_rad,local.st_IMU.f32_Pitch_rad,&protect,&ambiguous,available,&motion);
   TunnelRouteOutput out;out.leveled=f.leveled;out.kept_indices=f.kept_indices;
+  const auto low_evidence=LowObstacleEvidence(*voxel,f,vehicle,stamp,camera,config_);
   for(int i:f.kept_indices)out.filtered->push_back(f.leveled->points[i]);
   std::vector<int> compact(f.leveled->size(),-1);
   for(std::size_t k=0;k<f.kept_indices.size();++k)compact[f.kept_indices[k]]=k;
@@ -272,7 +311,26 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   bool has_structure_removed=false;
   int structure_wall_points=0,structure_ground_points=0,structure_ceiling_points=0,structure_ground_objects=0;
   for(std::size_t c=0;c<f.clusters.size();++c) {
-    if(f.objects.at(c).flags.removed) {
+    const auto& flags=f.objects.at(c).flags;
+    const bool low_verified=!low_evidence[c].source_class.empty();
+    if(low_verified)++out.report.low_obstacle_verified;
+    double sensor_z=0;
+    for(int i:f.clusters[c].indices)sensor_z+=voxel->points.at(i).z;
+    const bool below_z=config_.cluster_z.enabled && !f.clusters[c].indices.empty() &&
+        sensor_z/f.clusters[c].indices.size()<config_.cluster_z.min_sensor_z_m;
+    const bool rescued=low_verified && (below_z || (flags.removed&&flags.ground_residual));
+    if(rescued) {
+      ++out.report.low_obstacle_rescued;
+      out.report.low_obstacle_rescued_points+=low_evidence[c].support.size();
+      for(int i:f.clusters[c].indices)
+        if(std::find(low_evidence[c].support.begin(),low_evidence[c].support.end(),i)==low_evidence[c].support.end())z_removed.at(i)=true;
+      const auto& p=f.leveled->at(f.clusters[c].indices.front());
+      out.report.low_obstacle_decisions.push_back({{p.x,p.y,p.z,static_cast<float>(sensor_z/f.clusters[c].indices.size()),
+        static_cast<float>(low_evidence[c].support.size()),below_z?1.f:0.f,flags.ground_residual?1.f:0.f},low_evidence[c].source_class});
+    }
+    // Camera evidence may skip only these two low-height decisions. Wall,
+    // ceiling and point-level ground rejection remain authoritative.
+    if(flags.removed && !(low_verified&&flags.ground_residual&&!flags.wall&&!flags.ceiling)) {
       // The original OBB stage rejected only the box. In the residual-surface
       // experiment remove its point support as well, so the real filtered
       // cloud cannot still contain a rejected wall/ground component.
@@ -289,24 +347,23 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
     }
     // Use the ORIGINAL sensor coordinates, not base_link height or the OBB
     // center. The same indices survive leveling without reordering.
-    double sensor_z=0;
-    for(int i:f.clusters[c].indices)sensor_z+=voxel->points.at(i).z;
-    if(config_.cluster_z.enabled && !f.clusters[c].indices.empty() &&
-       sensor_z/f.clusters[c].indices.size() < config_.cluster_z.min_sensor_z_m) {
+    if(below_z && !low_verified) {
       ++out.report.cluster_z_removed;
       for(int i:f.clusters[c].indices)z_removed.at(i)=true;
       continue;
     }
     pcl::PointIndices cluster;pcl::PointXYZI center{};
-    for(int i:f.clusters[c].indices) {if(compact.at(i)<0)throw std::logic_error("tunnel cluster not in kept cloud");cluster.indices.push_back(compact[i]);const auto& q=f.leveled->points[i];center.x+=q.x;center.y+=q.y;center.z+=q.z;}
+    const auto& support=rescued?low_evidence[c].support:f.clusters[c].indices;
+    for(int i:support) {if(compact.at(i)<0)throw std::logic_error("tunnel cluster not in kept cloud");cluster.indices.push_back(compact[i]);const auto& q=f.leveled->points[i];center.x+=q.x;center.y+=q.y;center.z+=q.z;}
     if(cluster.indices.empty())continue;
     center.x/=cluster.indices.size();center.y/=cluster.indices.size();center.z/=cluster.indices.size();
     out.clusters.push_back(std::move(cluster));out.centroids->push_back(center);
     out.protected_classes.push_back(f.objects[c].is_protected?tunnel_filter::ProtectClassName(f.objects[c].protect_class):"unknown");
+    out.low_obstacle_cues.push_back(rescued?LowObstacleCue{stamp,low_evidence[c].camera_epoch,low_evidence[c].source_class}:LowObstacleCue{});
   }
   // Remove rejected cluster support from the real non-ground cloud and remap
   // all surviving compact indices together; ROI/voxel views remain unchanged.
-  if(out.report.cluster_z_removed || has_structure_removed) {
+  if(out.report.cluster_z_removed || has_structure_removed || out.report.low_obstacle_rescued) {
     std::vector<int> remap(out.filtered->size(),-1),kept;
     CloudPtr filtered(new Cloud);filtered->header=out.filtered->header;
     for(std::size_t k=0;k<out.kept_indices.size();++k) {
@@ -360,6 +417,7 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
         center.x/=count;center.y/=count;center.z/=count;
         out.report.boundary_rescued_points+=cluster.indices.size();++out.report.boundary_rescued_clusters;
         out.clusters.push_back(std::move(cluster));out.centroids->push_back(center);out.protected_classes.push_back("unknown");
+        out.low_obstacle_cues.emplace_back();
       }
     }
   }

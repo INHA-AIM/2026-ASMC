@@ -106,8 +106,8 @@ void LidarRuntime::OnImu(const pipeline::ImuInput& input, std::int64_t receipt_n
   const auto stamp_ms = pipeline::SourceStampMs(input.stamp_ns, static_cast<std::uint64_t>(ros_now_ns));
   const bool accepted=pose_.AddImu(stamp_ms,data,&sanity_reason,input.stamp_ns,static_cast<std::uint64_t>(receipt_ns));
   if(!accepted)++imu_rejected_;
-  if(config_.pipeline.tunnel_route.integrated_motion)
-    tunnel_motion_history_.AddYaw(input.stamp_ns,data.b_ImuReady?data.f32_Yaw_rad:NAN,accepted);
+  if(config_.pipeline.tunnel_route.integrated_motion||config_.pipeline.tunnel_route.low_obstacle_evidence||config_.pipeline.camera_point_refinement.enabled||config_.pipeline.camera_point_refinement.steel_fragment_merge)
+    tunnel_motion_history_.AddYaw(input.stamp_ns,data.b_ImuReady?data.f32_Yaw_rad:NAN,accepted,data.f32_Roll_rad,data.f32_Pitch_rad);
 }
 
 // Ported from Main src/Parser/Parser.cpp:519-543 (CANParser_Callback, common
@@ -119,7 +119,7 @@ void LidarRuntime::OnCan(const pipeline::CanInput& input, std::int64_t receipt_n
   const auto stamp_ms = pipeline::SourceStampMs(input.stamp_ns, static_cast<std::uint64_t>(ros_now_ns));
   const bool accepted=pose_.AddCan(stamp_ms,data,&sanity_reason,input.stamp_ns,static_cast<std::uint64_t>(receipt_ns));
   if(!accepted)++can_rejected_;
-  if(config_.pipeline.tunnel_route.integrated_motion)
+  if(config_.pipeline.tunnel_route.integrated_motion||config_.pipeline.tunnel_route.low_obstacle_evidence||config_.pipeline.camera_point_refinement.enabled||config_.pipeline.camera_point_refinement.steel_fragment_merge)
     tunnel_motion_history_.AddSpeed(input.stamp_ns,input.vx,accepted,input.vy);
 }
 
@@ -194,15 +194,25 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   const auto map = pose_.MapAt(input.time, local);
   out.ego_speed_mps = local.st_CAN.f32_CurrentVel_MPS;
   BackFillAntenna(map, config_.pipeline.vehicle, &local);
-  if(config_.pipeline.tunnel.enabled && config_.pipeline.tunnel_route.original_pipeline && !map.valid) {
+  if((config_.pipeline.tunnel.enabled && config_.pipeline.tunnel_route.original_pipeline && !map.valid)||
+      config_.pipeline.camera_point_refinement.enabled||config_.pipeline.camera_point_refinement.steel_fragment_merge) {
     auto selected=std::make_shared<pipeline::TunnelCameraInput>();
     if(tunnel_camera_calibration_) {selected->calibrated=true;selected->calibration=*tunnel_camera_calibration_;}
     const auto& protection=config_.pipeline.tunnel_route.protection;
-    if(config_.fusion.views != "all" && camera_ && selected->calibrated && protection.enabled) {
+    const bool need_causal=config_.pipeline.tunnel_route.low_obstacle_evidence||config_.pipeline.camera_point_refinement.enabled||config_.pipeline.camera_point_refinement.steel_fragment_merge;
+    if(camera_ && selected->calibrated && (need_causal||(config_.fusion.views!="all"&&protection.enabled))) {
       ScanTimes now=times;
       if(times.refresh_before_fusion)times.refresh_before_fusion(now);
       const auto limit=static_cast<std::int64_t>(protection.max_time_offset_s*1e9);
-      const auto snapshot=camera_->Read(scan_stamp,limit,now.ros_now_ns,now.steady_now_ns);
+      const auto snapshot=camera_->Read(scan_stamp,need_causal?350000000LL:limit,now.ros_now_ns,now.steady_now_ns);
+      selected->source_active=snapshot.active;selected->camera_epoch=snapshot.epoch;
+      const auto camera_epoch=snapshot.epoch;
+      selected->source_current=[this,scan_stamp,camera_epoch,times]() {
+        ScanTimes current=times;
+        if(times.refresh_before_fusion)times.refresh_before_fusion(current);
+        const auto latest=camera_->Read(scan_stamp,350000000LL,current.ros_now_ns,current.steady_now_ns);
+        return latest.active&&camera_epoch!=0&&latest.epoch==camera_epoch;
+      };
       const pipeline::fusion::CameraFrame* best=nullptr;
       std::int64_t distance=limit+1;
       if(snapshot.active)for(const auto& frame:snapshot.frames) {
@@ -211,10 +221,46 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
       }
       if(best && camera_->Current(*best,now.ros_now_ns,now.steady_now_ns)) {
         selected->available=true;selected->boxes=best->boxes;
+        selected->stamp_ns=best->stamp_ns;selected->identity=best->identity;
+        selected->image_width=best->width;selected->image_height=best->height;
+        const auto frame=*best;
+        selected->still_current=[this,frame,times]() {
+          ScanTimes current=times;
+          if(times.refresh_before_fusion)times.refresh_before_fusion(current);
+          return camera_->Current(frame,current.ros_now_ns,current.steady_now_ns);
+        };
+      }
+      if(need_causal && snapshot.active) {
+        const auto causal_age=config_.pipeline.camera_point_refinement.steel_fragment_merge?250000000LL:150000000LL;
+        const pipeline::fusion::CameraFrame* low=nullptr;std::int64_t delta_best=causal_age+1;
+        for(const auto& frame:snapshot.frames) {
+          const auto delta=scan_stamp-frame.stamp_ns;
+          if(delta>=0&&delta<=causal_age&&delta<delta_best){low=&frame;delta_best=delta;}
+        }
+        if(low && camera_->Current(*low,now.ros_now_ns,now.steady_now_ns)) {
+          auto evidence=std::make_shared<pipeline::TunnelCameraInput>();
+          evidence->calibrated=true;evidence->calibration=selected->calibration;
+          evidence->available=true;evidence->boxes=low->boxes;evidence->stamp_ns=low->stamp_ns;
+          evidence->identity=low->identity;evidence->image_width=low->width;evidence->image_height=low->height;
+          evidence->camera_epoch=low->epoch;
+          const auto transform=tunnel_motion_history_.CameraFromScan(low->stamp_ns,scan_stamp,
+              pipeline::ScanFrame::SensorMount(config_.pipeline.vehicle),causal_age);
+          if(transform){evidence->motion_compensated=true;evidence->image_sensor_from_scan_sensor=*transform;}
+          // Every non-simultaneous image needs verified motion. A short
+          // timestamp difference alone never substitutes for an estimate.
+          if(delta_best>0&&!transform)evidence->available=false;
+          const auto frame=*low;
+          evidence->still_current=[this,frame,times]() {
+            ScanTimes current=times;
+            if(times.refresh_before_fusion)times.refresh_before_fusion(current);
+            return camera_->Current(frame,current.ros_now_ns,current.steady_now_ns);
+          };
+          selected->low_obstacle_camera=std::move(evidence);
+        }
       }
     }
     if(config_.fusion.views=="all") {
-      selected->views.clear();selected->available=false;selected->calibrated=false;
+      selected->views.clear(); // Retain front evidence metadata for bounded refinement.
       ScanTimes now=times;if(times.refresh_before_fusion)times.refresh_before_fusion(now);
       const auto limit=static_cast<std::int64_t>(protection.max_time_offset_s*1e9);
       const auto snapshot=camera_?camera_->Read(scan_stamp,limit,now.ros_now_ns,now.steady_now_ns):pipeline::fusion::CameraSnapshot{};
@@ -224,7 +270,16 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
         const pipeline::fusion::CameraFrame* best=nullptr;
         if(snapshot.gate_active&&found!=snapshot.by_view.end())for(const auto& f:found->second)
           if(std::llabs(f.stamp_ns-scan_stamp)<=limit && (!best||std::llabs(f.stamp_ns-scan_stamp)<std::llabs(best->stamp_ns-scan_stamp)))best=&f;
-        if(best&&camera_->Current(*best,now.ros_now_ns,now.steady_now_ns)){v.available=true;v.boxes=best->boxes;}
+        if(best&&camera_->Current(*best,now.ros_now_ns,now.steady_now_ns)) {
+          v.available=true;v.boxes=best->boxes;v.stamp_ns=best->stamp_ns;v.identity=best->identity;
+          v.image_width=best->width;v.image_height=best->height;v.camera_epoch=best->epoch;
+          if(need_causal) {
+            const auto frame=*best;
+            v.still_current=[this,frame,times]() {ScanTimes current=times;
+              if(times.refresh_before_fusion)times.refresh_before_fusion(current);
+              return camera_->Current(frame,current.ros_now_ns,current.steady_now_ns);};
+          }
+        }
         selected->views.push_back(std::move(v));
       }
     }
