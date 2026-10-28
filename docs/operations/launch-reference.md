@@ -212,6 +212,7 @@
 | `camera_calibration_config` | `(빈 문자열)` | — |
 | `experimental_tunnel_filter` | `(빈 문자열)` | — |
 | `publish_tf` | `false` | — |
+| `skip_lidar_in_jamming` | `false` | — |
 | `tf_child_frame` | `lidar_pipeline/lidar_leveled` | — |
 | `debug` | `false` | Publish sampled stages for view.launch; no algorithm changes |
 | `debug_rate_hz` | `5.0` | — |
@@ -245,6 +246,16 @@
 | `avoid_path_margin_m` | `0.4` | — |
 | `expected_config_sha256` | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | — |
 | `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
+| `rviz` | `false` | 재밍 카메라 차선변경 RViz(BBOX·차선·경로) 표시 |
+| `jamming_line_edge_expand` | `0.30` | [m] 기준선 1·5를 바깥으로 확장(최대 0.5) |
+| `jamming_avoid_line_extra` | `1.0` | 통과 가능한 선에서 바깥으로 더 미는 양(선 번호, 최대 2.0) |
+| `jamming_avoid_clearance` | `0.05` | [m] 차체 측면-장애물 최소 간격 |
+| `jamming_obstacle_lateral_margin` | `0.05` | [m] 차체 좌우 여유(도로 경계 검사 포함) |
+| `jamming_avoid_line_overrun` | `1.5` | [m] 벽 미확인 쪽에서 차량 중심이 끝 차선을 넘을 수 있는 거리 |
+| `jamming_use_lidar_obstacles` | `true` | — |
+| `jamming_creep_speed_kph` | `3.0` | — |
+| `jamming_creep_clear_distance` | `0.0` | [m] 0보다 크면 앞 범퍼부터 이 거리 안 경로 장애물에 정지 |
+| `shadow_zone_start_m` | `1847.744798966` | — |
 
 ## Planner component
 
@@ -380,6 +391,9 @@
 | `far_obstacle_speed_kph` | `5.0` | — |
 | `bbox_source_timeout` | `0.5` | — |
 | `bbox_receive_timeout` | `0.5` | — |
+| `person_stop` | `true` | — |
+| `person_stop_sec` | `3.0` | — |
+| `person_ignore_sec` | `4.0` | — |
 | `max_sensor_skew` | `0.4` | — |
 | `obstacle_confirm_frames` | `2` | — |
 | `adjacent_clear_frames` | `3` | — |
@@ -403,6 +417,48 @@
 | `lane_change_pause_timeout` | `30.0` | — |
 | `lane_change_timeout` | `15.0` | — |
 | `lane_change_cooldown` | `4.0` | — |
+| `straddle_avoidance` | `true` | — |
+| `ego_topic` | `/Ego_topic` | — |
+| `ego_speed_timeout` | `0.3` | — |
+| `avoid_clearance` | `0.5` | — |
+| `avoid_speed_kph` | `8.0` | — |
+| `avoid_obstacle_length` | `6.0` | — |
+| `avoid_pass_margin` | `2.0` | — |
+| `avoid_lane_tie` | `0.10` | — |
+| `avoid_shift_length` | `5.0` | — |
+| `avoid_lookahead_distance` | `5.0` | — |
+| `avoid_line_straddle` | `true` | — |
+| `avoid_max_offset` | `3.5` | — |
+| `avoid_max_shoulder` | `2.0` | — |
+| `avoid_wall_margin` | `0.3` | — |
+| `avoid_line_overrun` | `1.0` | — |
+| `avoid_line_step` | `0.25` | — |
+| `creep_speed_kph` | `0.0` | 인식·판단 정지 대신 기어가는 속도. 0이면 정지 |
+| `creep_clear_distance` | `2.0` | [m] 기어가기 전 앞 범퍼부터 비어 있어야 하는 경로 거리 |
+| `line_obstacle_reach` | `20.0` | [m] 선 선택에 쓰는 장애물 최대 전방 거리. 0 이하면 제한 없음 |
+| `avoid_line_extra` | `0.0` | — |
+| `line_edge_expand` | `0.0` | — |
+| `lane_hold_distance` | `15.0` | — |
+| `lane_hold_time` | `8.0` | — |
+| `imu_topic` | `/imu` | — |
+| `pedal_speed_control` | `true` | — |
+| `speed_kp` | `0.3` | — |
+| `speed_ki` | `0.1` | — |
+| `speed_integral_limit` | `3.0` | — |
+| `max_accel_pedal` | `0.5` | — |
+| `max_brake_pedal` | `0.5` | — |
+| `avoid_reconsider_distance` | `0.5` | — |
+| `avoid_plan_margin` | `0.05` | — |
+| `use_lidar_obstacles` | `false` | — |
+| `lidar_objects_topic` | `/perception/lidar/objects_local` | — |
+| `lidar_timeout` | `0.6` | — |
+| `lidar_max_x` | `30.0` | — |
+| `lidar_min_height` | `0.15` | — |
+| `lidar_max_length` | `20.0` | — |
+| `lidar_min_points` | `5` | — |
+| `lidar_road_min_overlap` | `0.20` | — |
+| `lidar_lane_min_overlap` | `0.10` | — |
+| `lidar_structure_hold` | `1.5` | — |
 | `use_rviz` | `true` | — |
 | `bbox_consumer_x_max` | `20.0` | — |
 | `start_classifier` | `true` | — |

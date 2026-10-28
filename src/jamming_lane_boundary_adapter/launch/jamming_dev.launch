@@ -1,0 +1,99 @@
+<launch>
+  <!-- 재밍(음영구간) 단독 개발용. 이 파일 하나로 재밍 주행 전체가 뜬다.
+       지도·MPC·판제 입력 없이 카메라만으로 /ctrl_cmd까지 나간다.
+
+       포함:
+         1) /planning/mode=1 강제 발행 (force_jamming)
+         2) asmc_control_selector  — /ctrl_cmd/jamming -> /ctrl_cmd
+         3) 재밍 노드 + BBOX 판정 + frame bridge(카메라 객체 결과 직접 소비) + RViz
+
+       포함하지 않음 (별도 터미널):
+         - bridge            : ./scripts/udp_bridge.sh
+         - 카메라 차선 모델  : asmc_camera/_runtime.launch models:=lane
+         - 카메라 객체 모델  : asmc_camera/camera_objects.launch
+         모든 카메라 추론은 asmc_camera가 소유한다. 여기서 생산자를 만들지 않는다.
+
+       asmc_planner/mode_control_integration.launch와 동시에 실행하지 않는다.
+       /planning/mode publisher와 selector, 재밍 노드가 모두 중복된다. -->
+
+  <arg name="enable_control" default="true"
+       doc="false면 판단·경로 미리보기만 하고 /ctrl_cmd/jamming을 내지 않는다."/>
+  <arg name="use_rviz" default="true"/>
+  <arg name="conf_thres" default="0.7" doc="BBOX 소비 cutoff. 생산자 0.40과 별개."/>
+
+  <!-- 실제 음영구간에서 시험할 때는 false로 두고 GpsModeSource가 모드를 소유하게 한다.
+       권위 있는 판정은 raw /gps의 위도·경도·고도가 전부 정확히 0일 때 JAMMING이다. -->
+  <arg name="force_jamming" default="true"/>
+
+  <!-- false: 1020의 기준선 선택을 끄고 기존 카메라 BBOX 점유 기반 차선변경만 쓴다.
+       속도 입력·거리 추정이 필요 없어 입력 의존성이 가장 적다. -->
+  <arg name="straddle_avoidance" default="true"/>
+
+  <!-- 장애물 팽창. 필요 여유 = vehicle_width/2 + max(avoid_clearance, obstacle_lateral_margin)
+       이므로 둘 중 큰 값만 작용한다. 좁은 틈을 통과시키려면 둘을 함께 내린다. -->
+  <arg name="line_edge_expand" default="0.30" doc="[m] 기준선 1·5를 바깥으로 확장"/>
+  <arg name="avoid_line_extra" default="1.0" doc="회피 선을 더 밀어 여유 확보(선 번호). 0은 기존 동작."/>
+  <arg name="avoid_clearance" default="0.05"/>
+  <arg name="obstacle_lateral_margin" default="0.05"/>
+  <!-- 갓길 사용량. 카메라만으로는 벽 위치를 확인하지 않는다. -->
+  <arg name="avoid_line_overrun" default="1.5"/>
+  <arg name="avoid_max_shoulder" default="2.0"/>
+  <!-- 인식/판단 정지 대신 기어가는 속도[km/h]. 0이면 정지. -->
+  <arg name="creep_speed_kph" default="3.0"/>
+  <!-- 0이면 장애물로는 멈추지 않는다(사람·비상정지·입력 timeout만 정지). -->
+  <arg name="creep_clear_distance" default="0.0"/>
+
+  <!-- 주행 부드러움 관련. 실주행에서 통과를 확인한 값으로 고정했다(공용
+       camera_bbox_lane_change.launch의 기본값은 바꾸지 않았다).
+       stop_brake=0.5는 순간 정지를 완만하게 하지만 입력 유실·invalid·비상정지의
+       제동력도 같이 낮춘다. 본선 설정으로 승격하기 전에 팀 검토가 필요하다. -->
+  <arg name="target_speed_kph" default="20.0"/>
+  <arg name="avoid_speed_kph" default="10.0"/>
+  <arg name="avoid_shift_length" default="7.0"/>
+  <arg name="max_lateral_accel" default="1.8"/>
+  <arg name="max_steering_rate" default="1.0"/>
+  <arg name="stop_brake" default="0.5"/>
+  <arg name="speed_kp" default="0.3"/>
+  <arg name="speed_ki" default="0.1"/>
+  <arg name="max_accel_pedal" default="0.5"/>
+  <arg name="max_brake_pedal" default="0.5"/>
+
+  <!-- latched: 늦게 올라오는 selector/재밍 노드도 즉시 JAMMING을 받는다. -->
+  <node if="$(arg force_jamming)" pkg="rostopic" type="rostopic"
+        name="forced_jamming_mode" output="screen"
+        args="pub -l /planning/mode std_msgs/UInt8 'data: 1'"/>
+
+  <!-- /ctrl_cmd의 단일 발행자. JAMMING일 때만 /ctrl_cmd/jamming을 전달하고,
+       선택된 소스가 0.25s 넘게 끊기면 watchdog이 정지를 낸다. -->
+  <node pkg="asmc_planner" type="asmc_control_selector_node"
+        name="asmc_control_selector" output="screen" required="true"/>
+
+  <!-- 회피·차선변경 인자는 camera_bbox_lane_change.launch의 기본값을 쓴다
+       (one_lane_change_only=false, ignore_bbox_during_lane_change=true,
+        pedal_speed_control=true, obstacle_confirm_frames=2, adjacent_clear_frames=3).
+       expected_config_sha256 기본값이 현재 카메라 config_sha256와 일치한다. -->
+  <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
+    <arg name="enable_control" value="$(arg enable_control)"/>
+    <arg name="use_rviz" value="$(arg use_rviz)"/>
+    <arg name="bbox_conf_thres" value="$(arg conf_thres)"/>
+    <arg name="straddle_avoidance" value="$(arg straddle_avoidance)"/>
+    <arg name="line_edge_expand" value="$(arg line_edge_expand)"/>
+    <arg name="avoid_line_extra" value="$(arg avoid_line_extra)"/>
+    <arg name="target_speed_kph" value="$(arg target_speed_kph)"/>
+    <arg name="avoid_speed_kph" value="$(arg avoid_speed_kph)"/>
+    <arg name="avoid_shift_length" value="$(arg avoid_shift_length)"/>
+    <arg name="max_lateral_accel" value="$(arg max_lateral_accel)"/>
+    <arg name="max_steering_rate" value="$(arg max_steering_rate)"/>
+    <arg name="stop_brake" value="$(arg stop_brake)"/>
+    <arg name="speed_kp" value="$(arg speed_kp)"/>
+    <arg name="speed_ki" value="$(arg speed_ki)"/>
+    <arg name="max_accel_pedal" value="$(arg max_accel_pedal)"/>
+    <arg name="max_brake_pedal" value="$(arg max_brake_pedal)"/>
+    <arg name="avoid_clearance" value="$(arg avoid_clearance)"/>
+    <arg name="obstacle_lateral_margin" value="$(arg obstacle_lateral_margin)"/>
+    <arg name="avoid_line_overrun" value="$(arg avoid_line_overrun)"/>
+    <arg name="avoid_max_shoulder" value="$(arg avoid_max_shoulder)"/>
+    <arg name="creep_speed_kph" value="$(arg creep_speed_kph)"/>
+    <arg name="creep_clear_distance" value="$(arg creep_clear_distance)"/>
+  </include>
+</launch>

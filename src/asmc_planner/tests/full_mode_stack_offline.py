@@ -81,7 +81,7 @@ def main():
                  'JAMMING after raw GPS 0/0/0')
         wait_for(lambda: seen['control'] is not None,
                  'selected jamming STOP command')
-        recovered = GPSMessage(latitude=37.0, longitude=126.0, altitude=12.0)
+        recovered = GPSMessage(latitude=37.0, longitude=126.0, altitude=12.0, status=1)
         wait_for(lambda: (gps.publish(recovered) or False) or
                  (seen['mode'] == 0 and seen['jamming'] == 'false' and
                   'selected_source=/ctrl_cmd/normal' in seen['source']),

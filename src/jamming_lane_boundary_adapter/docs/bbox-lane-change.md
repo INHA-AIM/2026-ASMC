@@ -1,5 +1,24 @@
 # BBOX 검출에 따른 반복 차선변경
 
+## PR #127 통합·시험 경계 — 2026-10-28
+
+- `CameraBBoxLaneResult`에 `contact_x/contact_y_min/contact_y_max` 배열이 추가되어 ROS1 MD5가
+  바뀐다. classifier와 follower 및 외부 소비자는 같은 checkout에서 함께 재빌드한다.
+  실행 중인 다른 worktree의 `build/devel`을 재사용하거나 덮어쓰지 않는다.
+- LOCAL 실험 제어기와 이 통합 launch를 같은 master에서 동시에 제어 출력자로 띄우지 않는다.
+  먼저 별도 ROS master에서 합성 입력으로 검사한다. 실제 시뮬 시험은 기존 제어 생산자를
+  명시적으로 종료한 뒤 하나만 선택한다. 브릿지·카메라를 임의로 재시작할 필요는 없다.
+- `scripts/run/B_camera_lane.sh`와 `C_camera_objects.sh`는 RTX 50 개발 환경의
+  `/opt/yolo-venv`·PyTorch/COCO7 설정을 선택한다. 공용 GPU 기본 실행을 대신하는 명령이 아니다.
+  해당 환경이 없는 PC는 기존 `roslaunch asmc_camera camera.launch`와 검증된 설정을 유지한다.
+- 이번 CI 정합성 수정은 launch 인자 안내를 실제 XML에서 재생성한 것이다. 회피 알고리즘과
+  팀원이 조정한 주행 파라미터는 재튜닝하지 않았다. 통합 launch의 creep 3km/h,
+  `jamming_creep_clear_distance=0`, 측면 여유 0.05m, 벽 미확인 overrun 1.5m는
+  실제 장애물·벽과의 안전 여유를 보증하지 않으며 합성 시험 통과를 실주행 인수로 간주하지 않는다.
+  standalone의 creep 기본값 0 및 clearance 기본값과 통합 launch override를 구분한다.
+- `shadow_zone_start_m`의 30m 전진은 planner 전환 정책이며 HD맵의 공식 미션 경계나
+  geometry를 변경한 것이 아니다. NORMAL→JAMMING→복귀와 LiDAR pause/resume을 함께 확인한다.
+
 2026-10-26: 공용 카메라 결과를 기존 frame bridge가 직접 소비한다. 구 Main CPU 변환과
 `camera_bbox_detector.launch`는 제거했고 Main/Msg가 필요 없다. cutoff0.7과 판정/주행 계산은 유지하며
 원본 subpixel bbox를 private frame에 보존한다. 별도 detector 실행 없이 카메라와 아래 launch를 사용한다.
@@ -43,7 +62,8 @@ BBOX 기반 속도 상한도 이 구간에서는 제외하며 변경 속도/곡�
   가까운 내 차로 장애물이 함께 검출되면 변경 시작 전에는 정지한다.
   변경 중에는 `ignore_bbox_during_lane_change=false`일 때만 BBOX로 정지한다.
   중간 차선 gap은 정지한다. 화면 하단 잘림/소실선 위 BBOX 등 UNKNOWN 정지는 변경 중 제외 옵션을 따른다.
-- 장애물까지 미터 거리나 BBOX 크기에 따른 거리 threshold는 사용하지 않는다.
+- 장애물까지 미터 거리나 BBOX 크기에 따른 거리 threshold는 사용하지 않는다. 예외는 아래
+  [중앙선 걸침 장애물 회피](#중앙선-걸침-장애물-회피)의 하단 접점 지면 투영이다.
 - quintic 연결 경로를 생성하고 lookahead 지점을 추종한다. 차량 모서리가 두 차로의
   바깥 경계를 벗어나는 경로는 거부한다. 이 검사는 장애물과의 충돌 거리 검사가 아니다.
 - 변경 시작 시 갱신한 내 차로 index를 classifier에 보낸다. 내 차로 선택, 점유 판정 기준, RViz 초록 중심선은 같은 index를 사용한다. 상대 OWN/ADJ 라벨이 바뀌어도
@@ -80,6 +100,119 @@ BBOX 기반 속도 상한도 이 구간에서는 제외하며 변경 속도/곡�
 장애물 거리, 후방 차량, 맞은편 차량의 미래 움직임을 확인하는 기능이 없다.
 현재 경계 계약은 왕복 2차로 후보라 옆 차로가 반대 방향일 수 있다.
 직선 시뮬레이터에서 차선변경을 시험하는 코드이며 일반 도로 회피 검증 결과가 아니다.
+
+## 중앙선 걸침 장애물 회피
+
+### 선 선택 (기본 `avoid_line_straddle=true`, `/Ego_topic` 속도가 있을 때)
+
+카메라 차선으로 왕복 2차로에 기준선 5개를 둔다. 1 왼쪽 도로 끝, 2 왼쪽 차로 중앙, 3 중앙선, 4 오른쪽 차로 중앙,
+5 오른쪽 도로 끝. **이 중 따라갈 선을 고르는 것이 곧 내 차선 선택**이다. 고른 선이 속한 차로를 내 차선(초록)과
+판정기 기준 차로로 쓴다(선 3 위면 이전 차선 유지). 별도의 차선변경·offset 회피 상태는 없다.
+
+- 장애물(카메라 접점, 켜면 LiDAR)은 덮는 범위를 선 번호로 바꿔 기억하고 속도 적분으로 위치를 옮긴다.
+  `obstacle_confirm_frames`번 확인된 것만 쓰며, 화면 밖으로 나가도 지나갈 때까지 유지한다.
+- 매 주기: 지금 선이 비어 있으면 유지한다. 막히면 지금 선에서 가까운 순서(`avoid_line_step` 0.25, 같으면
+  오른쪽 먼저)로 피할 수 있는 선을 고른다. 앞 장애물의 끝+차량 후방+`avoid_pass_margin`을 모두 지났고
+  가까운 차로 중앙(2 또는 4) 경로가 비어 있으면 복귀한다(옆을 지나는 동안에는 고른 선을 유지). 피할 선이 없으면 `no_clear_line`으로 정지한다.
+- "피할 수 있음": 판단 여유(반폭+`avoid_clearance`+`avoid_plan_margin`), 차체 모서리가 주행 영역 안,
+  차로 중앙 기준 횡이동 `avoid_max_offset` 이하, 그리고 연결 경로(전환거리 1.0~1.6배)가 장애물 영역·곡률 검사 통과.
+- 장애물 영역은 시작·끝 x의 기준선으로 도로 방향에 정렬한다. 차량이 비스듬해도 옆 차로로 번져 보이지 않는다.
+- 진단: `line_mode`, `line_target`, `line_decision`(예: `cover 3.09-4.91 switch to line 2.00`), `line_obstacles`.
+  RViz: 흰 선 1~5, 주황 TARGET, 빨간 사각형(기억한 장애물).
+
+- 차선 유실 유지: 선 선택 중 카메라 차선이 끊기면(회피 중 차량이 도로에 대해 크게 틀어지면 차선 노드가
+  `too_few_observed_roles`로 거부할 수 있음) 마지막 정상 차선을 IMU 회전 각속도·차속 추측 항법으로 옮겨 계속 쓴다.
+  `lane_hold_distance`(15m)·`lane_hold_time`(8s) 안에 차선이 돌아오면 이어서 주행하고, 넘으면 정지한다.
+  관측 범위 밖 차선은 끝 1m 기울기로 직선 연장한다. 진단: `lane_hold_active`, `lane_hold_travelled_m`, `imu_fresh`.
+
+예(3.5m 차로, 내 차로=오른쪽, 선4): 중앙선 걸침이 내 차로로 0.45m → 선 4.25, 1.1m → 4.5, 1.55m → 4.75,
+내 차로 중앙까지 → 선 5, 내 차로 전체 → 선 2(내 차선이 왼쪽 차로로 바뀜), 차로 중앙 0.5m 물체 → 선 5.
+속도 입력이 없으면 아래 기존 동작(카메라 점유 기반 차선변경·정지)을 쓴다.
+
+### 공통
+
+기본 `straddle_avoidance=true`. 내 차로 점유가 확인되고 아래 입력이 모두 있을 때만 동작하며,
+하나라도 없으면 위의 기존 동작(BOTH/옆 차로 검출 시 정지)을 그대로 따른다.
+
+- classifier가 OWN/ADJACENT/BOTH 박스의 하단 양 끝을 지면 homography 역행렬로 투영해
+  `contact_x`, `contact_y_min`, `contact_y_max`(base_link, m)를 낸다. 잘린 박스·연속 추적 박스·
+  UNKNOWN/OUTSIDE/DEFERRED_FAR는 NaN이며, 점유 박스 중 하나라도 NaN이면 회피 판단을 하지 않는다.
+  평지 가정이며 비스듬한 물체의 먼 측면은 자차 중심선 쪽으로 넓게(보수적으로) 추정된다.
+- 차로마다 차량 중심이 들어갈 수 있는 범위를 계산한다. 차선 경계에서 `반폭+obstacle_lateral_margin`,
+  장애물 하단 가장자리에서 `반폭+avoid_clearance`를 뺀 구간 중 차로 중심에 가장 가까운 점이 offset이다.
+- 실제 횡이동량이 작은 차로를 고른다(옆 차로는 두 차로 중심 간격 + 그 차로 offset). 차이가 `avoid_lane_tie` 이하면 내 차로를 유지한다.
+- 기본 `avoid_line_straddle=true`: 일반 구간 Frenet AVOID와 같은 방식이다. 회피는 내 차로 기준 횡 offset
+  (최대 `avoid_max_offset` 3.5m)이며 차선은 넘을 수 있다(페인트는 hard 한계가 아님). 차로 소유권은 바꾸지 않고
+  지나간 뒤 원래 중심으로 복귀한다. hard 한계는 장애물 간격과 주행 가능 영역이다.
+- 주행 가능 영역: 카메라 차선의 도로 바깥 끝. LiDAR가 그 바깥 구조물(벽·기둥·갓길 물체)을 확인한 쪽만
+  구조물 − `avoid_wall_margin`(0.3m)까지, 최대 `avoid_max_shoulder`(2m) 넓힌다. 벽을 확인하지 못한 쪽(카메라만
+  사용할 때 포함)은 차체가 바깥 차선을 `avoid_line_overrun`(1.0m)까지 넘을 수 있다(차량 중심이 선1·선5까지). 중앙선에 걸친 장애물을
+  바깥쪽으로 더 비켜 가기 위한 값이며, 3.5m 차로에서 장애물이 내 차로 중앙 근처까지 들어와도 선1/선5로 지나간다.
+- 전환 길이는 실제 횡이동량과 곡률 한계(조향 한계의 80%)로 정하고, 일반 구간 저속 AVOID처럼 1.0~1.6배 후보 중
+  충돌 없는 가장 짧은 것을 쓴다.
+- 복귀(RETURN): 기억한 모든 장애물의 중심을 지난 뒤 d=0 복귀 경로가 충돌·주행 영역 검사를 통과하면 즉시 복귀한다.
+  통과 거리 적분은 그 밖의 해제 경로로 남긴다.
+- offset 판단에는 `avoid_plan_margin`(0.05m)을 더해 경로 검사와 경계가 맞닿지 않게 한다.
+- 먼 장애물(경로 범위 밖)도 판단에 포함한다. 차선 관측으로 차로에 대응시킬 수 없으면 회피 판단 없이 기존 동작을 따른다.
+- 내 차로 회피 경로가 막히면 `avoid_reconsider_distance`(0.5m) 이동 전에는 회피를 풀고 차로 선택을 다시 하고,
+  이미 진행했다면 장애물 기억을 유지한 채 정지한다. 같은 물체의 재측정은 기록을 교체한다.
+  - 옆 차로가 더 덮임 → 같은 차로에서 중심을 장애물 반대쪽으로 offset만큼 밀어 지나간다.
+  - 내 차로가 더 덮임 → 옆 차로로 변경하고, 옆 차로에도 걸쳐 있으면 그 중심을 바깥쪽으로 민다.
+  - 두 차로 모두 공간이 없으면 기존 정지 동작.
+- 내 차로 겹침이 점유 기준(10%) 미만이라 ADJACENT로 분류된 옆 차로 장애물도 같은 계산을 한다.
+  넘친 만큼 간격이 부족하면(offset≠0) 같은 차로 안에서 중심을 밀고, 확인(`adjacent_clear_frames`) 전에는
+  정지하지 않고 기존 중심선을 따른다. 내 차로에 공간이 없으면 `avoid_lane_space_insufficient`로 정지한다.
+  offset = 넘친 폭 − (차로 반폭 − 차체 반폭 − `avoid_clearance`). 3.5m 차로·기본 간격 0.5m에서는
+  약 0.3m까지의 넘침은 이미 간격 안이라 중심을 옮기지 않는다.
+  - offset 0이고 옆 차로가 NO_DETECTION이면 기존 차선변경 절차를 그대로 쓴다.
+- 시작 조건: 내 차로 검출 `obstacle_confirm_frames`, 같은 차로 선택이 `adjacent_clear_frames`의 새 BBOX frame.
+  확인 중에는 `confirming_straddle_avoidance`로 정지한다.
+- 회피 경로 검사: 장애물을 하단 접점부터 전방 `avoid_obstacle_length`(기본 6m)인 사각형으로 가정하고
+  차량 footprint(방향 포함)와 겹치면 거부한다. 차로변경은 `max_lateral_step`으로 중간에서 끝나는
+  실행 경로가 아니라 재계획으로 수렴할 제한 없는 연결 경로로 검사한다.
+- 기억한 장애물의 횡위치는 회피 차로 중심 기준 상대값으로 저장하고 매 주기 현재 차선 관측으로 되돌린다.
+  종방향 위치는 `/Ego_topic` 속도 적분으로 줄인다. 속도가 `ego_speed_timeout`을 넘게 끊기면
+  `avoid_ego_speed_timeout`으로 정지한다.
+- 장애물 끝 + 차량 후방 + `avoid_pass_margin`을 지나면 offset을 해제하고 차로 중심을 따른다.
+- 회피 중 속도 상한 `avoid_speed_kph`. `ignore_bbox_during_lane_change=true`이면 차선변경과 같이
+  회피 중 BBOX 정지·감속을 제외한다(잘린 박스로 인한 UNKNOWN 포함). 새로 측정된 장애물은 경로 검사에 추가되고,
+  같은 방향으로 더 큰 offset이 필요하면 키운다. 같은 차로 안 이동은 `avoid_shift_length`,
+  추종점은 `avoid_lookahead_distance`를 쓴다.
+
+LiDAR 반영(기본 `use_lidar_obstacles=false`, 실주행에서 LiDAR 오검출로 회피가 막혀 기본 해제. 켜려면 `use_lidar_obstacles:=true`): `Main`을 `enable_common_geometry:=true`로 실행하면 음영에서도
+`/perception/lidar/objects_local`(base_link OBB)이 나온다. 각 물체의 축 정렬 외접 사각형을 현재 카메라 차선으로
+계산한 차도 폭(두 차로 바깥 끝)과 비교해 `lidar_road_min_overlap`(0.2m) 이상 겹치는 것만 차도 위 물체로 쓴다.
+터널 벽·기둥(차도 밖)과 `lidar_max_length`(20m) 초과 벽 조각, 낮은 노면 점(`lidar_min_height`)은 제외한다.
+차도 위 LiDAR 물체는 카메라 접점과 합쳐 offset 판단·경로 검사에 쓰고, 실측 길이로 통과 거리를 계산한다.
+LiDAR가 내 차로와 `lidar_lane_min_overlap` 이상 겹치면 카메라 박스가 없어도(신뢰도 미달·잘림) 점유로 본다.
+LiDAR가 있으면 카메라의 먼 미확정 박스가 있어도 차로 선택을 하고, 잘린 박스 시작 금지 규칙을 적용하지 않는다.
+측정 기준으로 두 차로 모두 공간이 없으면 `avoid_no_room_in_road`로 정지한다(LiDAR를 모르는 기존 차선변경으로
+막힌 차로에 들어가지 않음). LiDAR가 `lidar_timeout`(0.6s)을 넘게 끊기면 카메라만 사용한다.
+회전한 차량은 외접 사각형이라 폭이 넓게(보수적으로) 잡힌다. 장애물 차도 판정은 카메라 차선 기준이다.
+LiDAR 최신 여부는 도착 시점 지연과 수신 간격으로 판단하고(현재 시각 기준 나이는 처리 지연+주기가 겹쳐 흔들림),
+측정 이후 이동 거리(속도×지연)만큼 장애물을 가깝게 보정한다. 벽 등 정적 구조물은 `lidar_structure_hold`(1.5s)
+동안 이동 보정해 유지해 주행 영역이 흔들리지 않게 한다. 경로 거부 이유는 diagnostics `path_block_reason`,
+현재 주행 영역은 `corridor_at_lookahead_m`으로 확인한다.
+
+한계: 차로가 3.5m이면 고른 차로에 장애물이 약 0.8m 이상 침범하면 통과하지 않는다. 회피 차선변경은 연결 경로(10m)와
+차량 앞 길이(약 4.6m) 때문에 장애물이 대략 14m 이상 앞에 있을 때 결정되어야 경로 검사를 통과한다.
+장애물 길이는 보이지 않으므로 가정값이며 버스·트럭은 `avoid_obstacle_length`를 늘려야 한다.
+오프셋 없는 기존 차선변경(장애물이 내 차로 안에만 있음)에는 이 장애물 검사를 적용하지 않는다.
+
+`/planning/camera_bbox_lane_change/diagnostics`의 `avoid_active`, `avoid_lane`, `avoid_offset_m`,
+`avoid_travelled_m`, `measured_obstacles`, `ego_speed_fresh`와 RViz `avoid_obstacle` 주황 상자,
+BBOX 영상의 `x .. y [..]m` 표시로 확인한다. 메시지 필드가 추가되었으므로 classifier와 controller를 함께 재시작한다.
+
+검증(asmc-ros-noetic, 합성 입력): 차선변경 통합 37개(선 선택 구조로 회피 테스트 재작성, 신규 15개: 차선 유실 시 3초 유지 후 정지, 내 차로 막힘+먼 미확정 박스 → 선 2, 중앙선 걸침 1.15m 침범 → 바깥 차선 0.5m 넘어 회피, LiDAR 벽 확인 시 갓길까지 주행 영역 확장 후 회피, LiDAR 단독 차도 위 물체 회피(벽·긴 조각 제외, 실측 길이로 해제), 카메라는 비었다는데 LiDAR가 막힌 옆 차로는 정지, 먼 미확정 박스와 가까운 걸침 장애물, 차로 중앙 0.5m 장애물 → 차선 위 1.75m 회피 후 22m 이동 뒤 복귀, 경로 범위 밖 차로 가로막힘 → 옆 차로 변경, ADJACENT 분류 상태의 0.15m 넘침 → 간격 0.75m에서 -0.10m offset, 옆 차로 쪽 걸침 → 같은 차로 -0.15m offset 후
+18.8m 이동 뒤 해제, 내 차로 쪽 걸침 → BOTH 상태에서 옆 차로 변경 후 완료, 공간 부족 정지, 속도 입력 없음 시 기존 정지),
+차로 판정·절단·ego mask·비활성 lifecycle 테스트 통과. 차량 운동이 없는 합성 입력이며 실제 시뮬레이터 회피는 미검증이다.
+
+## 종방향 제어
+
+기본 `pedal_speed_control=true`: `/Ego_topic` 실제 속도와 목표 속도의 차이로 가속·브레이크 페달을 PI로 계산해
+`longlCmdType=1`로 보낸다(`speed_kp` 0.3, `speed_ki` 0.1, 페달 상한 0.5). 가속과 브레이크를 동시에 밟지 않고,
+정지는 기존처럼 `stop_brake`(1.0)를 쓴다. MORAI 내장 속도 제어(`longlCmdType=2`)는 5km/h 같은 저속 목표에서
+가속 페달을 거의 밟지 않아 1km/h 안팎으로만 움직였다. 속도 입력이 없으면 내장 속도 제어로 대신한다.
 
 ## 실행
 
@@ -138,6 +271,8 @@ ROS `/ctrl_cmd` 발행만으로 실제 차량 수신·이동을 확인할 수는
 
 - `one_lane_change_only=false`: 장애물에 따른 반복 변경 허용. 기존 실행 명령의 `:=true`도 변경해야 한다.
 - `lane_change_cooldown=4.0`: 변경 완료 후 재변경까지 최소 대기 시간(s).
+- `straddle_avoidance=true`, `avoid_clearance=0.5`, `avoid_speed_kph=8`, `avoid_obstacle_length=6`,
+  `avoid_pass_margin=2`, `avoid_lane_tie=0.1`, `ego_topic=/Ego_topic`: 중앙선 걸침 회피(위 절 참고).
 
 - `ignore_bbox_during_lane_change=true`: 변경 중 BBOX 정지·감속 제외. 시작 판단과 완료 후 BBOX 검사는 유지.
 
