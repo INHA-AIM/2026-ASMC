@@ -110,8 +110,8 @@ class PerceptionFacadeContractTest(unittest.TestCase):
     def test_runtime_support_and_config_are_canonically_owned(self):
         canonical_root = PACKAGE_ROOT / "src" / "asmc_camera"
         expected_support = {
-            # Includes GPU/runtime-local engine selection in camera/backends.
-            "camera": 10,
+            # Includes both lane and object GPU/runtime-local engine selectors.
+            "camera": 11,
             # IMU projection, per-frame fit policy and shared comparison geometry
             # are owned by this package alongside the original BEV support code.
             "bev": 23,
@@ -124,6 +124,12 @@ class PerceptionFacadeContractTest(unittest.TestCase):
                 self.assertNotIn("from camera_semantic_perception", body, str(path))
                 self.assertNotIn("from drivable_bev", body, str(path))
                 self.assertNotIn("from data_collection", body, str(path))
+
+        for selector in ("engine_selection.py", "object_engine_selection.py"):
+            self.assertTrue(
+                (canonical_root / "camera" / "backends" / selector).is_file(),
+                "engine selection must stay owned by asmc_camera: " + selector,
+            )
 
         launch_body = self.launch_path.read_text(encoding="utf-8")
         for package in ("camera_semantic_perception", "drivable_bev"):
