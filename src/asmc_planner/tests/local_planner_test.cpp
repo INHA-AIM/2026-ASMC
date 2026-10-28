@@ -1,6 +1,7 @@
 #include "local/journal.hpp"
 #include "local/motion.hpp"
 #include "local/planner.hpp"
+#include "local/speed_profile.hpp"
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
 #include "local/semantic_reference.hpp"
@@ -77,6 +78,35 @@ int main() {
     expect(SemanticReference(s.grid,c).empty(),"unknown semantic area cannot create a reference");
   }
   try {
+    {
+      auto s=empty(); Config c; s.speed=12./3.6; s.acceleration=.8;
+      s.aligned_to_plan=true;
+      const double needed=s.speed*c.delay+BrakingDistance(s.speed,s.acceleration,c);
+      expect(needed>4. && needed<8., "accelerating12kph requires more than4m");
+      for(bool recovery : {false,true}) {
+        Result r; r.recovery=recovery;
+        r.path={{0,0,0,0,0},{4.,0,0,0,4.}};
+        expect(!BuildSpeedProfile(s,c,r) && r.reason=="insufficient_stopping_space",
+               "recovery must retain lag and jerk stopping feasibility");
+        r.path.back()={needed+.3,0,0,0,needed+.3};
+        expect(BuildSpeedProfile(s,c,r),"verified longer geometry accommodates actual braking state");
+        if(recovery) expect(r.chosen_cap<=3./3.6,"longer recovery does not raise crawl cap");
+      }
+    }
+    {
+      auto s=empty(); Config c; c.recovery=true; c.budget_ms=200.;
+      s.speed=10./3.6; s.aligned_to_plan=true;
+      // Bonnet shadow plus a genuinely blocked far row. A5.3m aided sweep
+      // can stop the actual vehicle, while the old fixed4m fallback cannot.
+      for(int row=137;row<220;++row) for(int col=70;col<90;++col)
+        s.grid.coverage[row*160+col]=128;
+      for(int col=0;col<160;++col) s.grid.probability[106*160+col]=0;
+      const auto r=Plan(s,c);
+      std::cerr << "braking fixture: "<<r.reason<<" valid="<<r.valid<<" recovery="<<r.recovery<<" length="<<r.path.back().s<<" required="<<r.required_stopping_m<<" x="<<r.path.back().x<<"\n";
+      expect(r.valid && r.recovery && r.path.back().s<6. &&
+             r.path.back().s>r.required_stopping_m,
+             "braking-feasible aided path below6m must not be discarded for4m recovery");
+    }
     {
       auto s=empty();Config c;c.recovery=true;c.budget_ms=200.;
       s.speed=10./3.6;s.aligned_to_plan=true;

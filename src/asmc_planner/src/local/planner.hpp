@@ -64,6 +64,8 @@ struct Result {
   double blocked_x = 0, blocked_y = 0, minimum_clearance = 1e9, elapsed_ms = 0;
   double raw_cap = 0, curve_cap = 0, space_cap = 0, chosen_cap = 0;
   double stopping_cap = 0;
+  double required_stopping_m = 0, available_stopping_m = 0;
+  double recovery_extension_m = 0;
   bool budget_exhausted = false;
   double reference_end = 0, search_horizon = 0;
   std::string path_source = "new_search";

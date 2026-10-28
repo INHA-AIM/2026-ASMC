@@ -1,4 +1,5 @@
 #include "local/planner.hpp"
+#include "local/speed_profile.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Frenet/Math/Polynomial.hpp"
 #include <algorithm>
@@ -80,33 +81,6 @@ double homeSlope(const Scene &s, double x) {
 }
 double homeSecond(const Scene &s, double x) {
   return (homeAt(s, x + .25) - 2 * homeAt(s, x) + homeAt(s, x - .25)) / .0625;
-}
-// Exact constant-jerk ramp from current acceleration to the configured brake.
-// Positive acceleration is part of stopping distance, not instantaneous
-// braking.
-double brakingDistance(double v, double a, const Config &c) {
-  if (v <= 0)
-    return 0.;
-  a = std::max(-c.decel, a);
-  double ramp = (a + c.decel) / c.jerk;
-  double zero = (a + std::sqrt(a * a + 2 * c.jerk * v)) / c.jerk;
-  double t = std::min(ramp, zero);
-  double d = v * t + .5 * a * t * t - c.jerk * t * t * t / 6.;
-  double rest = std::max(0., v + a * t - .5 * c.jerk * t * t);
-  return d + rest * rest / (2 * c.decel);
-}
-double spaceSpeed(double distance, double acceleration, double delay,
-                  const Config &c) {
-  double lo = 0., hi = std::max(15., c.speed_cap);
-  for (int i = 0; i < 24; ++i) {
-    double v = .5 * (lo + hi);
-    if (v * delay + brakingDistance(v, acceleration, c) <=
-        std::max(0., distance))
-      lo = v;
-    else
-      hi = v;
-  }
-  return lo;
 }
 bool fail(Result &r, const char *reason, double x, double y, int id = -1) {
   ++r.rejected[reason];
@@ -319,6 +293,13 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
   double best_cost = std::numeric_limits<double>::infinity();
   std::vector<Pose> best;
   unsigned best_overlap = 0;
+  const double lag = c.delay + (s.aligned_to_plan ? 0. : s.age);
+  const double required = s.speed * lag + BrakingDistance(s.speed,s.acceleration,c);
+  // A fixed4m arc could not contain an accelerating12km/h state. Extend
+  // only as far as today's full-body road/OBB sweep verifies. The original
+  // near-field soft policy is never extended beyond its existing4m range.
+  const double target = std::max(4., required + .25);
+  if (target > 8.) return false;
   for (const auto &goal : goals) {
     const double requested =
         std::clamp(2 * goal[1] / (goal[0] * goal[0] + goal[1] * goal[1]),
@@ -331,7 +312,8 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
     unsigned overlap = 0;
     int known = 0;
     bool physical_collision = false;
-    for (int step = 1; step <= 40; ++step) {
+    for (int step = 1; step <= int(std::ceil(target/.1)); ++step) {
+      const Pose before = p;
       const double delta=std::atan(c.wheelbase*p.k/c.gain),
                    desired=std::atan(c.wheelbase*requested/c.gain),
                    span=c.max_steer_rate*.1/std::max(1.,s.speed);
@@ -344,6 +326,11 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
       p.k = k;
       if (std::abs(p.yaw) > .65)
         break;
+      if (step > 40) {
+        Result check;
+        Config strict=c; strict.blind_assist=false;
+        if (!CheckSweep(s,strict,before,p,check)) break;
+      }
       path.push_back(p);
       CartesianState state{p.x, p.y, p.yaw, p.k, 0, 0};
       auto body =
@@ -390,7 +377,11 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
       }
     }
     cost += .3 * std::abs(goal[1] - homeAt(s, goal[0])) + .2 * (8. - goal[0]);
-    if (!physical_collision && path.size() > 10 && known >= 10 && cost < best_cost) {
+    Result candidate;
+    candidate.path=path; candidate.assisted=true; candidate.recovery=true;
+    const bool feasible = !physical_collision && path.size()>10 && known>=10 &&
+        BuildSpeedProfile(s,c,candidate);
+    if (feasible && cost < best_cost) {
       best_cost = cost;
       best = std::move(path);
       best_overlap = overlap;
@@ -404,6 +395,7 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
   out.recovery = true;
   out.recovery_cost = best_cost;
   out.recovery_obb_overlap = best_overlap;
+  out.recovery_extension_m = std::max(0.,out.path.back().s-4.);
   return true;
 }
 } // namespace
@@ -733,12 +725,12 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   }
   const double prefix_lag=c.delay+(s.aligned_to_plan?0.:s.age);
   const bool short_for_current_speed=out.path.size()>1 &&
-      s.speed*prefix_lag+brakingDistance(s.speed,s.acceleration,c)>out.path.back().s;
+      s.speed*prefix_lag+BrakingDistance(s.speed,s.acceleration,c)>out.path.back().s;
   // A valid near-zero-speed prefix can otherwise keep a stationary car
   // stationary forever: it no longer violates current stopping distance.
   // Seek a longer alternative, never raise the speed of that short prefix.
   const bool no_crawl_progress=out.path.size()>1 &&
-      std::max(0.,spaceSpeed(out.path.back().s-.1,c.accel,prefix_lag,c)-.35)<
+      std::max(0.,SpaceSpeed(out.path.back().s-.1,c.accel,prefix_lag,c)-.35)<
       std::min(c.speed_cap,3./3.6);
   if ((out.path.size() < 3 || short_for_current_speed || no_crawl_progress) && c.recovery) {
     // Prefer a full-horizon swept path with explicitly bounded near-camera
@@ -754,7 +746,13 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
     aided.budget_ms = std::max(1., c.budget_ms - elapsed(start));
     auto full = PlanPrepared(
         s, aided); // Reuse indexed scene; no second raster copy/index.
-    if (full.valid && full.path.back().x >= 6.) {
+    // BuildSpeedProfile has already checked this candidate against actual
+    // speed/acceleration and lag. An arbitrary6m gate discarded feasible5m
+    // paths and selected an infeasible4m recovery instead (LOCAL-2F fixture).
+    // Beyond4m the front of the physical body necessarily leaves the6.5m
+    // bounded blind patch. A wholly unknown raster must never create crawl
+    // permission merely because a short blind-only prefix can stop at rest.
+    if (full.valid && full.path.back().x >= 4. && full.chosen_cap > .3) {
       full.recovery = true;
       full.reason = "near_field_assisted_sweep";
       full.speed_reason = "near_field_recovery_3kph";
@@ -775,80 +773,10 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
     return out;
   }
   out.search_ms = elapsed(start);
-  double maxk = 0;
-  for (auto &p : out.path)
-    maxk = std::max(maxk, std::abs(p.k));
-  out.raw_cap = c.speed_cap;
-  out.curve_cap = std::sqrt(c.lateral_accel * .95 / std::max(1e-4, maxk));
-  // Path s is already rear-axle travel after a full-body collision check; do
-  // not subtract the front overhang a second time. Reserve jerk ramp +
-  // execution lag.
-  double distance = out.path.back().s;
-  // In aligned scenes the vehicle's source->plan travel already shortens the
-  // available sweep. Keep execution/jerk delay, do not charge that travel
-  // twice.
-  double lag = c.delay + (s.aligned_to_plan ? 0. : s.age);
-  // A braking frame must not instantly raise the cruise cap and restart the
-  // throttle/brake cycle. Keep a positive-acceleration envelope, plus measured
-  // LOCAL-2B tracking overshoot reserve (0.35m/s). Actual-state stopping
-  // feasibility below remains separate and is never relaxed by this governor.
-  out.stopping_cap = spaceSpeed(distance - .1, s.acceleration, lag, c);
-  out.space_cap =
-      std::max(0., spaceSpeed(distance - .1, c.accel, lag, c) - .35);
-  out.chosen_cap = std::min({out.raw_cap, out.curve_cap, out.space_cap});
-  out.speed_reason = out.chosen_cap == out.space_cap ? "verified_stopping_space"
-                     : out.chosen_cap == out.curve_cap ? "curvature"
-                                                       : "requested_cap";
-  if (out.assisted && !out.recovery && out.chosen_cap > 5. / 3.6) {
-    out.chosen_cap = 5. / 3.6;
-    out.speed_reason = "experimental_near_blind_assist";
-  }
-  if (out.recovery) {
-    out.chosen_cap = std::min(3. / 3.6, out.chosen_cap);
-    out.speed_reason = "near_field_recovery_3kph";
-  }
-  if (!out.recovery &&
-      s.speed * lag + brakingDistance(s.speed, s.acceleration, c) > distance) {
-    out.reason = "insufficient_stopping_space";
+  if (!BuildSpeedProfile(s, c, out)) {
     out.elapsed_ms = elapsed(start);
+    out.speed_ms = out.elapsed_ms - out.search_ms;
     return out;
-  }
-  double travelled = 0, v = s.speed, a = std::max(-c.decel, s.acceleration);
-  size_t index = 1;
-  for (int i = 0; i < 400; ++i) {
-    while (index < out.path.size() - 1 && out.path[index].s < travelled)
-      ++index;
-    const auto &left = out.path[index - 1], &right = out.path[index];
-    double q = std::clamp(
-        (travelled - left.s) / std::max(1e-6, right.s - left.s), 0., 1.);
-    out.trajectory.push_back({left.x + q * (right.x - left.x),
-                              left.y + q * (right.y - left.y),
-                              left.yaw + q * (right.yaw - left.yaw),
-                              left.k + q * (right.k - left.k), v, a, i * .05});
-    double remaining = std::max(0., distance - travelled);
-    double cap =
-        std::min(out.chosen_cap, spaceSpeed(remaining - .1, a, lag, c));
-    // LOCAL-2C: scalar SpeedProfiler clips a lower cap immediately and is
-    // deliberately unsuitable for a physical v/a trajectory. Use its shared
-    // analytical transition, retaining endpoint acceleration (not average
-    // delta-v/dt). Otherwise a tiny overspeed provokes a brake/reaccelerate
-    // loop.
-    const auto step =
-        AdvancePhysicalSpeed({cap, v, a, .05}, {c.accel, c.decel, c.jerk});
-    const double new_v = step.target_speed;
-    a = step.target_acceleration;
-    travelled += .5 * (v + new_v) * .05;
-    v = new_v;
-    if (travelled > distance + .05) {
-      out.reason = "terminal_braking_violation";
-      out.trajectory.clear();
-      out.elapsed_ms = elapsed(start);
-      return out;
-    }
-    if (i > 40 && v < .03 && remaining < .4) {
-      out.trajectory.back()[4] = 0;
-      break;
-    }
   }
   out.valid = true;
   out.reason = out.recovery ? "near_field_recovery" : "ok";

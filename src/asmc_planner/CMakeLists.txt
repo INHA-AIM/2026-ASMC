@@ -994,7 +994,7 @@ configure_file(scripts/dashboard_startup.py
   ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_startup.py COPYONLY)
 install(FILES scripts/dashboard_startup.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 # LOCAL-1 is opt-in; reuse the existing pure geometry/speed implementation.
-add_library(asmc_local_planner_core src/local/planner.cpp)
+add_library(asmc_local_planner_core src/local/planner.cpp src/local/speed_profile.cpp)
 target_include_directories(asmc_local_planner_core PUBLIC src)
 target_compile_options(asmc_local_planner_core PRIVATE -O2 -Wall -Wextra)
 target_link_libraries(asmc_local_planner_core asmc_planner_frenet_core)

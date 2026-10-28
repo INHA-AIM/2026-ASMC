@@ -290,6 +290,9 @@ class Node {
       << ",\"curve_kph\":" << r.curve_cap * 3.6
       << ",\"space_kph\":" << r.space_cap * 3.6
       << ",\"actual_state_stopping_kph\":" << r.stopping_cap * 3.6
+      << ",\"required_stopping_m\":" << r.required_stopping_m
+      << ",\"available_stopping_m\":" << r.available_stopping_m
+      << ",\"recovery_extension_m\":" << r.recovery_extension_m
       << ",\"selected_kph\":" << r.chosen_cap * 3.6 << ",\"speed_reason\":\""
       << r.speed_reason << "\",\"assisted\":" << (r.assisted ? "true" : "false")
       << ",\"recovery\":" << (r.recovery ? "true" : "false")
