@@ -14,7 +14,7 @@ class DrivableClearance {
     if(spec.rows<1||spec.cols<1||spec.rows>1000||spec.cols>1000||!std::isfinite(spec.resolution)||spec.resolution<=0||
        !std::isfinite(spec.x_max)||!std::isfinite(spec.y_max)||probability.size()!=size_t(spec.rows*spec.cols)||coverage.size()!=probability.size())return false;
     prefix_.assign(size_t(spec.rows)*(spec.cols+1),0);
-    assisted_.assign(prefix_.size(),0);
+    assisted_.assign(prefix_.size(),0);observed_blocked_.assign(probability.size(),0);
     for(int r=0;r<spec.rows;++r)for(int c=0;c<spec.cols;++c){
       const double x=spec.x_max-r*spec.resolution,y=spec.y_max-c*spec.resolution;
       // The current inflated ego region is not NEW swept space. Camera blind
@@ -32,6 +32,7 @@ class DrivableClearance {
       const bool assisted=near_ego_lidar_assist &&
           ((coverage[k]==128 && std::abs(y)<=2.5) || (coverage[k]==0 && std::abs(y)<=1.6)) &&
           x>=-vehicle.rear-vehicle.longitudinal_margin-.25 && x<=6.5; // r06 mask extent max6.3m +2 grid cells; trial only
+      observed_blocked_[k]=coverage[k]==255 && probability[k]<threshold;
       const bool bad=!initial && !assisted && (coverage[k]!=255 || probability[k]<threshold);
       assisted_[base+c+1]=assisted_[base+c]+unsigned(assisted && !initial);
       prefix_[base+c+1]=prefix_[base+c]+unsigned(bad);
@@ -80,12 +81,13 @@ class DrivableClearance {
           auto first=std::upper_bound(begin+c0,begin+c1+2,prefix_[base+c0]);
           const int column=int(first-begin)-1;
           result.blocked_x=x;result.blocked_y=spec_.y_max-column*spec_.resolution;
+          result.reason=observed_blocked_[size_t(r)*spec_.cols+column]?"semantic_nonroad":"semantic_unobserved";
           return result;
         }
       }
     }
     result.clear=true;result.reason="semantic_swept_space_clear";return result;
   }
- private:GridSpec spec_;bool valid_=false;std::vector<unsigned> prefix_,assisted_;
+ private:GridSpec spec_;bool valid_=false;std::vector<unsigned> prefix_,assisted_;std::vector<uint8_t> observed_blocked_;
 };
 } // namespace lane_boundary_adapter::clearance

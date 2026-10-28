@@ -1788,6 +1788,8 @@ std::string updateSemanticPathPlan() {
     if(supported_end<3.)return fail("semantic_full_body_horizon_short");
     if(semantic_home<0)semantic_home=follower_state.selected_lane.lane_index;
     if(semantic_target<0)semantic_target=semantic_home;
+    const double full_end=std::min(15.,supported_end);
+    bool home_obstacle=false;
     struct Candidate {LaneChain lane;std::vector<FamilyPoint2d> path;double offset=0.,length=0.,curvature=0.;unsigned assisted=0;};
     auto find=[&](int index,double end,Candidate& found){
         const auto* original=getPlanningLane(index,geometry,horizon);if(!original)return false;
@@ -1800,32 +1802,42 @@ std::string updateSemanticPathPlan() {
             }
             std::vector<cc::Point> points;for(const auto& p:path)points.push_back({p.x,p.y});
             const auto space=grid->check(points,vehicle,params.path_sample_step);
-            if(!space.clear){if(!bev_rejected){semantic_blocked_x=space.blocked_x;semantic_blocked_y=space.blocked_y;}++bev_rejected;continue;}
+            if(!space.clear){
+                if(index==semantic_home && end>=full_end-1e-6 && std::string(space.reason)=="semantic_nonroad")home_obstacle=true;
+                if(!bev_rejected){semantic_blocked_x=space.blocked_x;semantic_blocked_y=space.blocked_y;}++bev_rejected;continue;}
             if(!cc::pathClearOfPolygons(points,occupied,vehicle,horizon,params.path_sample_step)){
+                if(index==semantic_home && end>=full_end-1e-6)home_obstacle=true;
                 ++contact_collision_rejected;continue;
             }
             found={std::move(lane),std::move(path),offset,length,change_state.maximum_path_curvature,space.assisted};return true;
         }return false;
     };
     Candidate chosen;int target=-1;
-    // Prefer longer verified progress, then retained maneuver side, then home.
-    // Partial paths do not require an unseen return endpoint. They must still
-    // contain the entire inflated body and a stopping prefix in observed space.
-    for(double requested:{15.,8.,5.,3.}){
-        const double end=std::min(requested,supported_end);
-        if(target>=0)break;
-        if(find(semantic_target,end,chosen))target=semantic_target;
-        else if(find(1-semantic_target,end,chosen))target=1-semantic_target;
-    }
-    if(target<0)return fail("semantic_all_paths_blocked_or_unobserved");
     const bool fresh=stamp!=semantic_last_decision;
-    if(target!=semantic_home){
-        Candidate returning;
-        if(find(semantic_home,chosen.path.back().x,returning)){
+    semantic_last_decision=stamp;
+    // A short home prefix before an obstacle is not a return corridor. Only
+    // the full currently supported horizon may authorize return, on3 sources.
+    Candidate returning;bool return_ready=false;
+    if(semantic_target!=semantic_home){
+        if(find(semantic_home,full_end,returning)){
             if(fresh)++semantic_confirm;
-            if(semantic_confirm>=3){chosen=std::move(returning);target=semantic_home;}
+            return_ready=semantic_confirm>=3;
         }else if(fresh)semantic_confirm=0;
     }else semantic_confirm=0;
+    if(return_ready){chosen=std::move(returning);target=semantic_home;}
+    if(target<0 && find(semantic_target,full_end,chosen))target=semantic_target;
+    if(target<0 && semantic_target==semantic_home && find(1-semantic_target,full_end,chosen))target=1-semantic_target;
+    // If observed non-road/positive local geometry blocks the long home path,
+    // choose a checked lateral prefix before creeping straight toward it.
+    // Unknown-only truncation does not itself request a lane change.
+    for(double requested:{8.,5.,3.}){
+        if(target>=0)break;
+        const double end=std::min(requested,supported_end);
+        const int preferred=(semantic_target==semantic_home && home_obstacle)?1-semantic_home:semantic_target;
+        if(find(preferred,end,chosen))target=preferred;
+        else if(preferred!=semantic_target && find(semantic_target,end,chosen))target=semantic_target;
+    }
+    if(target<0)return fail("semantic_all_paths_blocked_or_unobserved");
     semantic_last_decision=stamp;semantic_target=target;semantic_selected_stamp=stamp;
     contact_geometry_ready=true;semantic_safe_length=chosen.path.back().x;semantic_assisted_cells=chosen.assisted;
     contact_maneuver_length=chosen.length;
