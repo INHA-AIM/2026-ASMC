@@ -174,5 +174,21 @@ int main(){
  ego.x=70;ego.y=-1;ego.v=2;objects.push_back(box(8,84,-4.3,1));
  fixed.PlanCommittedAvoid(ego,objects,fixed_cmd,p,r);
  Expect(fixed_commit&&(!r.candidate_valid||std::fabs(r.selected_target_d+2.7)<1e-6),"same-side reconnection preserves explicit target poses");
+ // The only permitted bypass runs along solid paint for longer than the old
+ // 2.5 s cutoff. The public planner must keep this complete, collision-free
+ // option rather than repeatedly publishing its waiting approach.
+ {std::ofstream f(dir/"lines.json");f<<R"({"map_id":"kcity2025_competition_route_curation_candidate_v14","frame":{"local_origin_in_global":[302595,4124145]},"features":[{"feature_type":"lane_marking","attributes":{"pattern":"solid","functional_role":"lane_boundary_paint","line_width_m":0.15},"geometry":{"coordinates":[[0,2.2],[200,2.2]]}}]})";}
+ write_config(.08);FrenetPlanner painted;painted.Init((dir/"params.yaml").string());
+ PlannerCommand painted_cmd=cmd;painted_cmd.has_avoid_target_d=true;painted_cmd.avoid_target_d=2.2;
+ ego={};ego.x=50;ego.v=4;objects={box(1,150,0,1)};
+ bool painted_ready=false;
+ for(int i=0;i<80&&!painted_ready;++i){painted.PrepareAvoid(ego,objects,painted_cmd,p,r);painted_ready=r.candidate_valid;}
+ AvoidRoadMap paint_map;std::string paint_error;
+ Expect(paint_map.Load((dir/"drivable.json").string(),(dir/"lines.json").string(),paint_error),"long-paint synthetic map loads");
+ const auto paint_eval=paint_map.EvaluatePath(r.candidate_path,shape,.1,true);
+ Expect(painted_ready&&paint_eval.drivable&&paint_eval.longest_paint_contact_seconds>2.5,
+        "a complete road-safe bypass remains READY beyond the former paint-duration cutoff");
+ Expect(painted_ready&&CartesianAvoidTrajectoryClear(r.candidate_path,objects,shape,margin,.1),
+        "long paint contact never exempts the bypass from physical obstacle checks");
  std::filesystem::remove_all(dir);return failures?1:0;
 }

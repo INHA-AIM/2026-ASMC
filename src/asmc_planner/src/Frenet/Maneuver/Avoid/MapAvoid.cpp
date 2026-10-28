@@ -284,6 +284,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     bool selected_fresh_entry=false;
     bool selected_direct_return=returning;
     double best=std::numeric_limits<double>::infinity();
+    bool best_touches_paint=true;
     if(!result.direction_conflict&&!result.target_behind_ego&&(committed||static_confirmed)) {
         std::vector<double> targets;
         if(committed) targets.push_back(returning?0.0:v2_avoidance_.target_d);
@@ -360,7 +361,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                         double cost=delay+transition+(direct_return?0.0:return_distance);
                         if(!committed && ((target_d<v2_avoidance_.obstacle_d)!=avoid_cfg_.prefer_right_when_equal))
                             cost+=avoid_cfg_.direction_tiebreak_cost;
-                        if(cost>=best)continue;
+                        if(!best_touches_paint&&cost>=best)continue;
                         CartesianPath candidate;++result.generated_candidate_count;
                         int blocking=-1;bool margin_recovery=false;
                         double return_start=0,return_end=0;
@@ -375,7 +376,11 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                         if(!clear){if(blocking>=0)result.blocking_object_id=blocking;continue;}
                         ++result.valid_candidate_count;
                         cost+=AvoidRoadMap::PaintCost(road_evaluation);
-                        if(cost>=best)continue;
+                        const bool touches_paint=road_evaluation.paint_contact_seconds>0.0;
+                        if(result.candidate_valid&&
+                           ((touches_paint&&!best_touches_paint)||
+                            (touches_paint==best_touches_paint&&cost>=best)))continue;
+                        best_touches_paint=touches_paint;
                         selected_search_index=index;
                         indexed_candidate_selected=true;
                         selected_direct_return=direct_return;

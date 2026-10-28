@@ -186,8 +186,7 @@ bool AvoidRoadMap::TouchesPaint(double x,double y,double yaw,const VehicleShape&
                                 bool all_solids) const {
   const double c=std::cos(yaw),s=std::sin(yaw);
   const double rear=shape.rear_overhang,front=shape.length-rear;
-  // AVOID counts the exterior body as a conservative proxy for the referee's
-  // wheel contacts. The 0.5 s duration reserve handles tracking/sampling error.
+  // AVOID counts the exterior body as a conservative proxy for wheel contacts.
   const double half=(all_solids?std::max(shape.width,shape.road_outer_width):shape.width)*.5;
   // Clip actual paint segments against the body rectangle. Do not bridge gaps
   // or infer paint from them; broken guides are absent from protected_lines_.
@@ -264,9 +263,6 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
   if(recovery&&(recovery_distance_m<=0||initial.maximum>overlap_limit_m||initial.fraction>.10))return result;
   result.initial_overlap_m=initial.maximum;
   double continuous=0,travel=0,elapsed_total=0,settled_travel=0;
-  // The referee penalizes a wheel on solid paint after 3 s. The planner uses
-  // the larger body footprint and reserves 0.5 s for tracking/sampling error.
-  constexpr double kAvoidContinuousPaintLimitS=2.5;
   // Credit actual settled travel from this episode only while the enlarged
   // body is still inside. Replanning must not restart the 0.5 m confirmation,
   // nor renew the original distance/overlap limits.
@@ -331,15 +327,20 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
                  path.yaw[i-1]+f*angle,dt/count))return result;
     }
   }
-  const bool over_budget=budget_paint&&
-      result.longest_paint_contact_seconds>=kAvoidContinuousPaintLimitS;
-  // Once actual contact has already consumed the planning reserve, refusing
-  // every exit would hold the body on paint indefinitely. Keep only a path
-  // which clears this same episode and stays clear; PaintCost makes it lose to
-  // every compliant path. Road and collision checks still apply at the caller.
-  result.best_effort_paint_exit=over_budget&&prior_contact_s>0&&
+  // A stopped endpoint remains on paint after its last sample. Charge that
+  // continuation over a common minimum scoring horizon; this does not append
+  // executable samples or certify road/collision safety beyond this path.
+  constexpr double kMinimumPaintCostHorizonS=5.0;
+  const bool stopped=path.v.empty()||
+      (std::isfinite(path.v.back())&&std::fabs(path.v.back())<=.1);
+  if(budget_paint&&previous_contact&&stopped&&elapsed_total<kMinimumPaintCostHorizonS){
+    const double remaining=kMinimumPaintCostHorizonS-elapsed_total;
+    result.paint_contact_seconds+=remaining;continuous+=remaining;
+    result.longest_paint_contact_seconds=std::max(result.longest_paint_contact_seconds,continuous);
+  }
+  result.best_effort_paint_exit=prior_contact_s>0&&
       initial_contact&&left_initial_contact&&!reentered_paint&&!previous_contact;
-  result.drivable=recovered&&(!over_budget||result.best_effort_paint_exit);
+  result.drivable=recovered;
   return result;
 }
 
@@ -353,10 +354,9 @@ bool AvoidRoadMap::PathClear(const CartesianPath& path,const VehicleShape& shape
 }
 
 double AvoidRoadMap::PaintCost(const PathEvaluation& evaluation) {
-  // Prefer no contact; duration-limited AVOID paths are still possible when a
-  // strict no-contact route would leave the vehicle stopped in the corridor.
-  const double prolonged=std::max(0.0,evaluation.longest_paint_contact_seconds-2.5);
-  return (evaluation.best_effort_paint_exit?1e6:0.0)+
-      20.0*evaluation.paint_contact_seconds+100.0*prolonged*prolonged
+  // Longer continuous contact becomes progressively more expensive. Observed
+  // contact age participates without imposing a fixed disqualification time.
+  return 20.0*evaluation.paint_contact_seconds+
+      100.0*evaluation.longest_paint_contact_seconds*evaluation.longest_paint_contact_seconds
       +100.0*evaluation.maximum_overlap_m+20.0*evaluation.recovery_seconds;
 }
