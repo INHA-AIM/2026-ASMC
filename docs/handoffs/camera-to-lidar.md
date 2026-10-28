@@ -24,7 +24,8 @@ asmc_camera/camera.launch
 
 ## 모델과 분류
 
-YOLO 기본은 `detector:=e3`(collect v5 E3, 15종, RTX5070 TensorRT FP16)다.
+이번 배포에서는 기존 YOLO를 `detector:=e3`(collect v5 E3, 15종)로 교체한다.
+패키지의 기본 engine은 RTX4060 TensorRT FP16용이다.
 전방544×960 B1·측방480×640 B2, 목표15Hz·confidence0.40·NMS0.50이다.
 이전 E8과 `detector:=pretrained`는 명시적으로 선택한다. 배포 파일은
 [모델 목록 v3](../../config/models/camera_object_models_v3.json)를 따른다.
@@ -61,7 +62,9 @@ roslaunch asmc_lidar lidar.launch
 ```
 
 각 명령은 별도 터미널이다. 저장소 루트 workspace만 빌드/source한다. 폐기한 nested workspace는 사용하지 않는다.
-위 카메라 명령은 객체 모델만 실행한다. RTX5070의 E3 엔진을 유지하며 기존 TwinLite 엔진의 GPU 검사도 유지한다.
+위 카메라 명령은 객체 모델만 실행하며 패키지의 RTX4060용 E3 engine을 읽는다.
+다른 GPU는 같은 E3 checkpoint로 engine을 별도 생성·검증한다.
+[교체·GPU별 실행 안내](../operations/camera-deployment.md#모델-선택파일-배포)를 따른다.
 `models:=all`은 별도로 호환되는 차선 엔진이 필요하다. 모델을 중복 시작하지 않는다.
 카메라 없는 비교는 LiDAR의 `fusion:=false`를 사용한다.
 현재3뷰 matching은 뷰별 원본 보정·시각·관측 ID를 사용하며 느린 뷰를 기다리거나 같은 근거를 중복 확인 횟수로 세지 않는다.

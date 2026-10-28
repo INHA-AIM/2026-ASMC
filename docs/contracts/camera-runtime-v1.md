@@ -42,7 +42,7 @@ PREPARE는 서비스로 요청한다. ACTIVE는 새로운 영상만 처리하며
 mask·보정·입력·모델 경로·상세 설정을 소유한다. 공개 옵션으로 매번 지정할 필요가 없다.
 ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다.
 `lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
-YOLO 배포 checkpoint2개·engine2개는 패키지 models의 실제 Git 파일이다.
+YOLO26l E3·E8·사전학습의 배포 checkpoint3개·engine3개는 패키지 models의 실제 Git 파일이다.
 [모델 배포 안내](../../src/asmc_camera/models/README.md)의 지원 GPU/runtime과 SHA를 따른다.
 TwinLite Large v7 E8 checkpoint·전용 engine과 기존 Medium v6 복구본을 패키지에 포함한다. 2026-10-18 사용자 결정으로 기본 모델을 Large v7 E8로 전환했다. SUNNY freshness·공급 지연 제한과 자동 수락 실패는 보존한다.
 기본 backend는 `lane_runtime.yaml`의 TensorRT

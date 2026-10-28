@@ -1,5 +1,8 @@
 # Collect v5 E3 객체 모델 교체 — 2026-10-28
 
+현재 패키지 배포 대상은 **RTX4060**이다. 아래 RTX5070 변환·검증 내용은 최초 배포 기록이며,
+이후 RTX4060 재생성과 검증은 이 문서 마지막 절에서 구분한다.
+
 사용자가 선택한 `asmc_yolo26l_collect_v5_mission15`의 완료된 3에포크 EMA를
 현재 객체 검출 기본으로 설정한다. 선택 근거는 고정 검증셋의 클래스별 macro F1이며,
 `best.pt`의 mAP 선택이나 11에포크 micro F1 선택과 구분한다.
@@ -144,3 +147,92 @@ roslaunch asmc_lidar lidar.launch
 설정·실행파일을 읽는다. 같은 토픽의 detector를 두 개 띄우지 않는다.
 이전 E8로 비교할 때는 GPU에 맞는 engine을 준비하고 카메라/시각화 `detector:=e8`,
 LiDAR 설정 파일의 `fusion.camera_class_profile: mission16_v1`을 함께 지정한다.
+
+## RTX4060 재배포 — 2026-10-28
+
+`feature/yolo-e3-mission15-three-view-rtx50`의 E3 교체 커밋 `6c9b844f`에서 진행한다.
+조회한 최신 `origin/main`은 `3b0bc98f`이며 이미 이 브랜치의 조상이므로 추가 병합은 필요 없다.
+E3 PT의 SHA `95cbc4eda62644b6f913c126d784e6b6d99078c20ee628c64b3b878b979429e2`,
+15종 이름·순서, stroller ID14, cone 제외, 소비 그룹과 기존 3뷰 계약을 유지한다.
+
+생성·배포 대상은 NVIDIA GeForce RTX4060 8GB(SM8.9), Linux x86_64,
+기본 `asmc-ros-noetic` 컨테이너다. Python3.8.10, PyTorch2.1.2+cu118,
+Ultralytics8.4.150, TensorRT10.13.0.35 CUDA11을 사용한다.
+RTX50 전용 Dockerfile·requirements와 최초 검증 기록은 보존한다.
+이 결과의 실기 검증 범위는 RTX4060이며, 다른 GPU나 TensorRT 버전에 대한 실기 검증을 뜻하지 않는다.
+[NVIDIA 엔진 호환성 문서](https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/engine-compatibility.html)를 따른다.
+
+컨테이너 `/root/ws`에서 사용한 변환 명령은 다음과 같다. 빌드 전용 ONNX Runtime은
+기존 로컬 export 의존성 디렉터리에서만 읽고, 운영 Python 패키지는 변경하지 않는다.
+
+```bash
+export YOLO_AUTOINSTALL=false
+export PYTHONPATH="/root/ws/tools/scen_runner/.runtime/engine_build_python:/root/ws/src/asmc_camera/src${PYTHONPATH:+:$PYTHONPATH}"
+E3_ARTIFACTS=tools/scen_runner/.runtime/camera_engines/e3-rtx4060-20261028
+python3 tools/perception/prepare_coco7_models.py \
+  --directory "$E3_ARTIFACTS/objects" --model yolo26l \
+  --head-profile mission15_one2one_nms --stage onnx \
+  --checkpoint src/asmc_camera/models/object_detection/yolo26l-mission15-e3.pt
+python3 tools/perception/prepare_coco7_models.py \
+  --directory "$E3_ARTIFACTS/objects" --model yolo26l \
+  --head-profile mission15_one2one_nms --stage engine
+```
+
+패키지 파일명과 공개 launch 경로는 유지하고 engine 바이트·YAML의 `expected_sha256`·
+`camera_object_models_v3.json`의 engine 크기/SHA/환경/provenance를 함께 교체한다.
+전방544×960·좌우480×640, 2+1 batch, FP16 내부 연산, confidence0.4·NMS0.5는 유지한다.
+
+생성 결과는 58,139,932B이며 SHA256은
+`5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00`이다.
+변환 시간은 약697초다. 기존 RTX5070 engine과 v3 목록, 이전 E8 로컬 실행 선택은
+위 artifact 폴더의 `previous-*` 파일로 보관했다. `scen_runner` 로컬 선택도 새 패키지
+E3 engine의 SHA·경로로 갱신했으며, 기존 RTX4060용 로컬 차선 engine 선택은 유지했다.
+
+[RTX4060 검증 요약](../../../config/baselines/evidence/camera_mission15_e3_deployment_v1/rtx4060-verification.json)을 따른다.
+
+- detection90건, 모델 선택·공개 launch·LiDAR 설정 계약26건, 로컬 엔진 선택3건: 총119건 통과.
+- [ROS smoke](../../../config/baselines/evidence/camera_mission15_e3_deployment_v1/rtx4060-ros-smoke.json):
+  별도 master11529에서 실제 공개 `camera.launch models:=objects`로 저장 RGB를 입력했다.
+  전방·좌측·우측 각각298프레임과 동일 수의 `CameraObjectObservation`을 받았다.
+  클래스명·소비 그룹·원본 좌표·stamp·식별자 오류0건, 새 engine SHA 전달,
+  두 출력 토픽 각각 단일 생산자를 확인했다. 시험 노드와 private master는 종료했다.
+- [PT/engine 비교](../../../config/baselines/evidence/camera_mission15_e3_deployment_v1/rtx4060-engine-parity.json):
+  2026-10-16 주행 bag5개에서 뷰별50장, 총150장을 균등 추출했다.
+  같은 마스크·confidence·NMS로78개 박스가 연결됐고, 엔진 쪽에0.401855의 경계 검출1개가 추가됐다.
+  기존 엄격한 기준(IoU≥0.98, confidence 차이≤0.02)은 **4건 미통과**다.
+  3건은 작은 박스의 좌표 차이, 1건은 confidence 차이0.021484다.
+  전체 매칭 박스의 최대 좌표 차이는1픽셀이었다. 검사 기준과 `passed:false`를 그대로 보존했다.
+  전방 단독·좌우 배치·혼합 요청·3뷰 요청은 모두 실행됐다.
+- 수치 비교 표본에서 실제 검출된 클래스는6종이다. 모델 메타데이터의15종 이름·순서 검증과
+  모든 클래스의 영상 정확도 검증은 구분한다. 정답 라벨이 없는 로컬 주행 영상이므로
+  정확도/F1 재평가, LiDAR 수신부 실행, 실제 주행 검증은 수행하지 않았다.
+  이전 RTX5070 전체 검증셋 결과를 이 RTX4060 생성본의 결과로 간주하지 않는다.
+
+ROS smoke는 기본 패키지 engine을 직접 읽으며, 실행 중인 주행 ROS master와 연결하지 않았다.
+변경은 로컬 작업 트리에만 있고 커밋·푸시·원격 배포는 하지 않았다.
+
+### YOLO 모델 교체 범위 재확인
+
+사용자 정정에 따라 검증 범위를 YOLO 모델 교체의 실행 호환성으로 한정했다.
+통합 주행 조사 중 추가했던 차선 engine·manifest, BEV 테스트, frame bridge,
+시나리오 완주 판정 수정은 전부 브랜치 HEAD로 되돌렸다. 기존 로컬 차선 선택도 복원했다.
+원래 YOLO RTX4060 engine·SHA 설정·배포 문서와 검증 근거만 남겼다.
+
+되돌린 상태에서 공개 `roslaunch asmc_camera camera.launch models:=objects`를
+private master로 다시 실행하여 저장된 전방·좌우 RGB를 입력했다.
+[YOLO 단독 재검사](../../../config/baselines/evidence/camera_mission15_e3_deployment_v1/rtx4060-yolo-only-recheck.json)에
+뷰별 수신 수·클래스/그룹/좌표/식별자 계약·단일 생산자·실제 engine SHA 검사를 기록했다.
+기존 detection 테스트90건도 재통과했다. 실행 코드 변경 없이 교체 모델이 로드되고
+검출과 공용 관측이 발행되는 범위의 통과이며, 앞의 PT 수치 비교4건 미통과는 그대로다.
+전체 주행 성공 또는 다른 모델의 하드웨어 호환성을 이 결과로 주장하지 않는다.
+검사 프로세스는 종료했고 커밋·푸시는 하지 않았다.
+
+### 최신 main 반영 후 PR 검증
+
+`d518b7c9`(PR #127)까지 병합하고 E3 RTX4060 교체 파일을 복원했다.
+추가된 `scripts/run/C_camera_objects.sh`도 기존 YOLO11m 지정 대신 공개 E3 launch를 사용한다.
+[PR 검증 기록](../../../config/baselines/evidence/camera_mission15_e3_deployment_v1/rtx4060-pr-validation.json):
+`catkin_make -j4 -l4` 전체 빌드, 모델 선택·launch·LiDAR 계약·로컬 변환 도구29건,
+LiDAR fusion policy/front camera fusion/runtime CTest3개 대상, 실행 문서 검사 모두 통과했다.
+기존 메인의 engine6개와 E3 원본 PT를 보존했다. 최신 병합본 전체 주행·다른 GPU 실행과
+라벨 기반 정확도 검증은 수행하지 않았으며, 앞의 PT 엄격 수치 비교 실패4건은 유지한다.

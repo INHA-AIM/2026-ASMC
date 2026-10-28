@@ -17,16 +17,18 @@
     {
       "profile": "collect_e3",
       "path": "object_detection/yolo26l-mission15-e3.engine",
-      "sha256": "bd559145725498ca1a9e812d01d8e60b343f31994c19b0b53bf33c836c7f3df4",
-      "bytes": 60663252,
+      "sha256": "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00",
+      "bytes": 58139932,
       "source_sha256": "b272d096633553151540866309d854d133a4386c4c8790a5149a65175b8a89cd",
       "source_epoch": 3,
       "transformation": "TensorRT FP16 rebuilt from packaged E3 PT",
       "engine_environment": {
-        "gpu": "NVIDIA GeForce RTX 5070",
+        "gpu": "NVIDIA GeForce RTX 4060",
+        "compute_capability": "8.9",
         "tensorrt": "10.13.0.35",
-        "cuda": "12.8",
-        "platform": "Linux x86_64"
+        "cuda": "11.8",
+        "platform": "Linux x86_64",
+        "container": "asmc-ros-noetic"
       }
     },
     {
@@ -97,10 +99,10 @@
   ],
   "runtime": {
     "container": "asmc-ros-noetic",
-    "gpu": "NVIDIA GeForce RTX 5070",
+    "gpu": "NVIDIA GeForce RTX 4060",
     "tensorrt": "10.13.0.35",
     "ultralytics": "8.4.150",
-    "torch": "2.7.1+cu128",
+    "torch": "2.1.2+cu118",
     "front_tensor": [
       544,
       960
@@ -113,7 +115,9 @@
     "target_hz": 15,
     "confidence": 0.4,
     "nms_iou": 0.5,
-    "ego_mask": true
+    "ego_mask": true,
+    "python": "3.8.10",
+    "cuda": "11.8"
   },
   "checkpoint_provenance": {
     "source": "/data/training_runs/asmc_yolo26l_collect_v5_mission15/best-f1.pt",
@@ -145,8 +149,8 @@
   },
   "export_provenance": {
     "checkpoint_sha256": "95cbc4eda62644b6f913c126d784e6b6d99078c20ee628c64b3b878b979429e2",
-    "onnx_sha256": "31beb6a2bb4811a3055417e39162a533636638f48d11dad3919e8356aef0fda5",
-    "engine_sha256": "bd559145725498ca1a9e812d01d8e60b343f31994c19b0b53bf33c836c7f3df4",
+    "onnx_sha256": "339931b9080e6f59b9b340d8f0e7f48549a7238540251838989fdf04ab73c9e8",
+    "engine_sha256": "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00",
     "tensorrt": "10.13.0.35",
     "minimum": [
       1,
@@ -171,7 +175,7 @@
     "metadata": {
       "description": "Ultralytics YOLO26l model ",
       "author": "Ultralytics",
-      "date": "2026-10-28T17:03:10.080351+09:00",
+      "date": "2026-10-28T18:27:12.118633+09:00",
       "version": "8.4.150",
       "license": "AGPL-3.0 License (https://ultralytics.com/license)",
       "docs": "https://docs.ultralytics.com",
@@ -216,9 +220,9 @@
     "model": "yolo26l",
     "task": "detect",
     "stage": "engine",
-    "elapsed_sec": 804.3937804519664,
+    "elapsed_sec": 697.2893642950803,
     "head_profile": "mission15_one2one_nms"
   },
   "previous_manifest": "config/models/camera_object_models_v2.json",
-  "engine_portability": "E3 tested on RTX5070; retained E8/pretrained engines were built for RTX4060Ti"
+  "engine_portability": "E3 rebuilt and inference-tested on RTX4060 with TensorRT10.13.0.35 CUDA11, Linux x86_64; other GPU/runtime combinations are not validated. Retained E8/pretrained engines were built for RTX4060Ti."
 }

@@ -11,9 +11,37 @@
 
 ## 모델 선택·파일 배포
 
+**이번 배포를 적용하는 팀원은 기존 YOLO를 신버전 collect v5 E3(15종)로 교체한다.**
+기존 실행 설정에 `detector:=e8` 또는 `detector:=pretrained`가 있으면 `detector:=e3`로 변경하고,
+구형 YOLO11m이나 이전 가중치 경로를 직접 지정한 실행도 E3 공개 실행 경로로 전환한다.
+이미 기본 `camera.launch`를 사용하는 경우 E3가 기본 선택이다. 기존 객체 인식 노드를 종료한 뒤
+업데이트한 루트 workspace를 빌드/source하고 재시작한다. E8·사전학습·YOLO11m 파일은
+비교·복구용으로 보존하며 이번 배포의 기본 모델로 사용하지 않는다.
+호스트 실행 도우미 `scripts/run/C_camera_objects.sh`도 아래 E3 명령을 실행한다.
+메인에서 가져온 `coco7_three_view_pytorch_rtx50.yaml`은 구형 YOLO11m 비교·복구용이며,
+현재 E3 배포 실행에는 사용하지 않는다.
+
+```bash
+roslaunch asmc_camera camera.launch models:=objects detector:=e3
+```
+
+위 명령은 패키지의 **RTX4060용 E3 engine**을 직접 읽는다. 다른 GPU에서는 같은 E3 `.pt`로
+해당 GPU·TensorRT 환경에 맞는 engine을 생성·검증해야 한다. 실행 시 자동 생성되지는 않는다.
+로컬 생성·선택 도구인 `tools/scen_runner/prepare_camera_engines.sh`는 **YOLO와 차선을 함께**
+생성하며, 선택 결과는 `tools/scen_runner/run_perception.sh`에서 적용된다.
+직접 `roslaunch` 실행에는 이 로컬 선택이 적용되지 않는다. YOLO만 변환할 때는
+[E3 변환 명령](../records/camera/2026-10-28-mission15-e3-deployment.md)의
+`prepare_coco7_models.py --head-profile mission15_one2one_nms`를 사용하고
+실행할 engine 경로와 `expected_sha256`을 생성본에 맞춘다.
+
+현재 저장소는 모델을 일반 Git 파일로 배포하므로 **이번 PR에는 E3 `.pt`·교체한 `.engine`,
+모델 YAML의 SHA, 배포 목록 v3, 검증 기록을 함께 포함한다.** 이미 브랜치에 커밋된 E3 `.pt`는
+그대로 유지한다. engine만 제외하면 새 SHA와 기존 engine이 불일치한다.
+개인 GPU용 생성물과 `.runtime/` 캐시는 PR에 추가하지 않는다.
+
 | 공개 `detector` 선택 | 가중치 | 지원 원본 이름 | 비고 |
 |---|---|---|---|
-| `e3` — 기본 (`collect_e3`) | collect v5의 완전한3epoch `epoch2.pt` EMA | traffic_cone을 제외한15종 | RTX5070에서 새로 만든 engine |
+| `e3` — 기본 (`collect_e3`) | collect v5의 완전한3epoch `epoch2.pt` EMA | traffic_cone을 제외한15종 | RTX4060에서 재생성한 engine |
 | `e8` (`finetuned_e8`) | v11의 완전한8epoch `epoch7.pt` | 이전16종 | 이전 모델 대조용; engine은 RTX4060Ti용 |
 | `pretrained` (`pretrained_coco7`) | 공식 YOLO26l detection | person, dog, bicycle, car, motorcycle, bus, truck | checkpoint는 COCO80, runtime은7종만 출력; 신규 장애물을 지원한다고 표시하지 않음 |
 
@@ -28,7 +56,7 @@ E8은 원본 EMA를 그대로 유지한53.07MB 배포본이며 학습 재개 상
 각 모델 YAML은 `$(find asmc_camera)/models/object_detection/`의 engine을 읽는다.
 기존 [모델 Release](https://github.com/INHAautonav/2026-ASMC/releases/tag/camera-yolo26l-v11-e8-v1)와
 [원본 목록 v1](../../config/models/camera_object_models_v1.json)은 과거 배포·학습 재개용으로 보존한다.
-E3 engine은 RTX5070·TensorRT10.13.0.35 CUDA12에서 생성했다. 기존 E8/사전학습 engine은
+E3 engine은 RTX4060·TensorRT10.13.0.35 CUDA11에서 생성했다. 기존 E8/사전학습 engine은
 RTX4060Ti용이다. 다른 GPU/런타임에 같은 engine을
 무조건 적용하지 않으며, 제공한 checkpoint와 `prepare_coco7_models.py --head-profile`로 다시 생성한다.
 E8은 one2one+외부 same-class NMS이고, 사전학습 복구 engine은 검증된 one2many 경로다.
@@ -36,7 +64,10 @@ checkpoint·가중치 라이선스는 Ultralytics AGPL-3.0이며 저장소 코�
 
 지원 GPU·컨테이너에서 패키지를 pull·빌드하면 YOLO를 별도 다운로드하지 않아도 된다.
 아래 명령은 **과거 release 재현·원본 checkpoint 확보용**이며 현재 실행의 필수 단계가 아니다.
-RTX50 런타임 의존성은 `docker/ros-noetic/requirements-yolo-runtime-rtx50.txt`에 고정한다.
+현재 RTX4060 배포는 `docker/ros-noetic/Dockerfile`과
+`docker/ros-noetic/requirements-yolo-runtime.txt`의 PyTorch2.1.2+cu118·TensorRT10.13.0.35를 사용한다.
+RTX50 런타임 의존성은 `docker/ros-noetic/requirements-yolo-runtime-rtx50.txt`에 별도로 보존하며,
+RTX50에서 실행하려면 해당 GPU용 engine을 다시 생성해야 한다.
 
 ```bash
 gh release download camera-yolo26l-v11-e8-v1 --repo INHAautonav/2026-ASMC --dir /tmp/asmc-camera-models-v1

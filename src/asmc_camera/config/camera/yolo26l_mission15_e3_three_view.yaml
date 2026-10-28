@@ -36,5 +36,5 @@ device: cuda:0
 require_cuda: true
 weights: $(find asmc_camera)/models/object_detection/yolo26l-mission15-e3.engine
 runtime_backend: tensorrt
-expected_sha256: bd559145725498ca1a9e812d01d8e60b343f31994c19b0b53bf33c836c7f3df4
+expected_sha256: 5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00
 deployment_profile: collect_e3

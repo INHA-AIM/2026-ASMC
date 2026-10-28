@@ -1,5 +1,10 @@
 # 모델 파일
 
+**이번 팀 배포는 기존 YOLO를 collect v5 E3(15종)로 교체합니다.**
+이전 모델을 명시한 실행은 `detector:=e3`로 변경하고 노드를 재시작하세요.
+[배포·교체 안내](../../../docs/operations/camera-deployment.md#모델-선택파일-배포)에
+GPU별 engine 생성·선택 범위와 PR에 함께 포함할 파일을 명시합니다.
+
 실행 기본은 YOLO26l collect v5 E3(15종)이며 `camera.launch detector:=e8`로 이전 E8,
 `camera.launch detector:=pretrained`로 사전학습 YOLO26l을
 선택합니다. 사전학습 YOLO26l checkpoint는 COCO80이고 실행에서 원본7종만 선택합니다.
@@ -23,7 +28,8 @@ optimizer·scaler·중복 training_model·scheduler_state를 제거하므로 학
 ROS는 패키지 안의 SHA 고정 `.engine`을 사용합니다. 각 engine은 생성본과 바이트가 같으며
 dynamic profile이 전방544×960·좌우480×640과 batch1/2/3을 지원합니다.
 내부 FP16 계산과 engine I/O dtype은 구분하며 실제 binding dtype을 따릅니다.
-E3 생성 환경은 Linux x86_64·RTX5070 12GB·TensorRT10.13.0.35 CUDA12·`asmc-ros-noetic`입니다.
+E3 배포 engine의 생성 환경은 Linux x86_64·RTX4060 8GB·TensorRT10.13.0.35 CUDA11·`asmc-ros-noetic`입니다.
+PyTorch2.1.2+cu118·Ultralytics8.4.150을 사용하며, 기존 RTX5070 생성본을 같은 E3 checkpoint로 다시 변환합니다.
 기존 E8/사전학습 engine의 생성 환경은 RTX4060Ti 8GB입니다.
 다른 GPU/runtime에서 호환성을 보장하지 않습니다. 불일치는 오류로 드러내고 PyTorch로
 자동 전환하지 않습니다. 다른 환경에서는 패키지 `.pt`로 engine을 별도 생성·검증합니다.

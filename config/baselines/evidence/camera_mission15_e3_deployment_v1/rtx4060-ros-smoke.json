@@ -1,0 +1,568 @@
+{
+  "passed": true,
+  "received": {
+    "front": 298,
+    "left": 298,
+    "right": 298
+  },
+  "typed_observations": {
+    "front": 298,
+    "left": 298,
+    "right": 298
+  },
+  "labels": {
+    "traffic_drum": 210,
+    "box": 18,
+    "person": 18,
+    "car": 204,
+    "concrete_barrier": 18,
+    "plastic_barrier": 6
+  },
+  "errors": {},
+  "publishers": {
+    "/perception/camera/objects": [
+      "/camera_objects"
+    ],
+    "/perception/camera/objects/observations": [
+      "/camera_objects"
+    ]
+  },
+  "model_ids": [
+    "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00"
+  ],
+  "engine_sha256": "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00",
+  "source_manifest_sha256": "49dc09ffb07b0ebf8cb00a486e56bcacd10a004aed31f650d67751322eaaa198",
+  "statuses": [
+    {
+      "prepared": false,
+      "mode": 2,
+      "reason": "input_or_result_stale"
+    },
+    {
+      "prepared": false,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": true,
+      "mode": 2,
+      "reason": "running"
+    },
+    {
+      "prepared": false,
+      "mode": 2,
+      "reason": "input_or_result_stale"
+    },
+    {
+      "prepared": false,
+      "mode": 2,
+      "reason": "input_or_result_stale"
+    },
+    {
+      "prepared": false,
+      "mode": 2,
+      "reason": "input_or_result_stale"
+    },
+    {
+      "prepared": false,
+      "mode": 2,
+      "reason": "input_or_result_stale"
+    }
+  ],
+  "scope": "Recorded unlabelled RGB through public camera.launch and typed observations on private ROS master; no LiDAR receiver, accuracy or driving evaluation"
+}
