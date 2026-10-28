@@ -30,6 +30,11 @@ class ContactTest(unittest.TestCase):
         if hasattr(self,'speed_timer'):self.speed_timer.shutdown()
         legacy.LaneChangeTest.tearDown(self)
         rospy.delete_param('/camera_bbox_lane_change/contact_clearance_enabled')
+    def test_semantic_primary_exact_context_without_yolo(self):
+        executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
+        output=subprocess.check_output([executable,'--semantic-regression'],text=True,timeout=10)
+        self.assertIn('semantic_primary_no_yolo_exact_epoch_unknown_and_partial_avoidance_passed',output)
+
     def test_bev_epoch_and_exact_pairing(self):
         executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
         output=subprocess.check_output([executable,'--bev-regression'],text=True,timeout=5)
