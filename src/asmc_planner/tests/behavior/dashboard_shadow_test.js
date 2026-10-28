@@ -48,3 +48,11 @@ element('sceneMode').value='experiment';assert(p.localExperimentView(), 'explici
 p.updateLocalExperimentPanel();assert(element('localStatus').textContent.includes('STALE'));
 element('sceneMode').value='map';assert(!p.localExperimentView());
 console.log('PASS integrated LOCAL-1 selection, preview/control distinction, monotonic expiry and map isolation');
+
+element('sceneMode').value='auto';
+p.data.localReceived=now;p.data.localReceiveAge=0;
+p.data.localExperiment={valid:false,scene_valid:true,reason:'reverse_control_not_supported',inputs:{alignment:'independent_source_to_plan_once',lidar_age_s:.02}};
+p.updateLocalExperimentPanel();
+assert(element('localExperimentGrid').innerHTML.includes('현재 관측 표시'));
+assert(element('localExperimentGrid').innerHTML.includes('independent_source_to_plan_once'));
+console.log('PASS reverse observations remain independent of forward plan validity');

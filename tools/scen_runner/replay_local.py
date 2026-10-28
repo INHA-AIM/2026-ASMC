@@ -27,6 +27,7 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=False, exist_ok=False)
     probe = socket.socket()
+    probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     probe.bind(("127.0.0.1", args.port))
     probe.close()
     os.environ["ROS_MASTER_URI"] = "http://127.0.0.1:%d" % args.port

@@ -57,7 +57,9 @@ def gallery(root, name='local-gallery'):
             R=np.array([[cp,sp*sr,sp*cr],[0,cr,-sr],[-sp,cp*sr,cp*cr]])
             z=offset/math.sqrt(1+a*a+b*b)
         def pt(x,y):
-            bx,by,_=R.T@np.array([x,y,z]);return int(round((8-by)*30)),int(round((20-bx)*30))
+            dx,dy,angle=debug.get('source_in_plan',[0,0,0])
+            c,s=math.cos(angle),math.sin(angle);x,y=x-dx,y-dy
+            bx,by,_=R.T@np.array([c*x+s*y,-s*x+c*y,z]);return int(round((8-by)*30)),int(round((20-bx)*30))
         v=row.get('vehicle',dict(front=3.845,rear=.79,width=2.160835))
         for x,y,yaw in row['path'][::5]:
             cs,sn=math.cos(yaw),math.sin(yaw)

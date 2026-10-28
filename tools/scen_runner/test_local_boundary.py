@@ -133,6 +133,33 @@ def main():
                 print(name, expected, "PASS")
 
             case("exact epoch-scale stamp", lambda s, p: None, "ok")
+            case("old source cannot be renewed by fresh plan header",
+                 lambda s,p: setattr(p,"scene_stamp",p.header.stamp-rospy.Duration(.8)),
+                 "local_source_stale")
+
+
+            def delayed_state(s, p, delay):
+                import copy
+
+                p.header = copy.deepcopy(p.header)
+                p.ego_at_plan = copy.deepcopy(p.ego_at_plan)
+                s.header.stamp -= rospy.Duration(delay)
+
+            case(
+                "80ms valid sensor cadence",
+                lambda s, p: delayed_state(s, p, 0.08),
+                "ok",
+            )
+            case(
+                "120ms exceeds motion forecast",
+                lambda s, p: delayed_state(s, p, 0.12),
+                "control_motion_extrapolation_limit",
+            )
+            case(
+                "reverse retains observations but no forward command",
+                lambda s, p: setattr(s.twist.twist.linear, "x", -1.0),
+                "reverse_control_not_supported",
+            )
 
             def mismatch(s, p):
                 # Separate header object: one nanosecond was enough to trigger
@@ -210,9 +237,12 @@ def main():
                 log_name = "conflict-%d.log" % i
                 process = start(
                     [
-                        "rosrun", "asmc_controller", "asmc_local_controller_node",
+                        "rosrun",
+                        "asmc_controller",
+                        "asmc_local_controller_node",
                         "__name:=local_conflict_%d" % i,
-                        "_enable_control:=true", "_controller_config:=" + config,
+                        "_enable_control:=true",
+                        "_controller_config:=" + config,
                     ],
                     log_name,
                 )
@@ -229,9 +259,12 @@ def main():
             router = rospy.Publisher("/ctrl_cmd", CtrlCmd, queue_size=1)
             exclusive = start(
                 [
-                    "rosrun", "asmc_controller", "asmc_local_controller_node",
+                    "rosrun",
+                    "asmc_controller",
+                    "asmc_local_controller_node",
                     "__name:=local_exclusive_contract",
-                    "_enable_control:=true", "_controller_config:=" + config,
+                    "_enable_control:=true",
+                    "_controller_config:=" + config,
                 ],
                 "exclusive.log",
             )

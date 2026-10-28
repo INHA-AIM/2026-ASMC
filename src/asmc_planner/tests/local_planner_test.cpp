@@ -38,6 +38,26 @@ int main() {
     epoch = h.epoch;
     h.add(2, 1, 0);
     expect(h.epoch == epoch + 1, "gap resets epoch");
+    MotionHistory reverse;
+    reverse.add(10., -1., 0.);
+    const auto reverse_epoch = reverse.epoch;
+    reverse.add(10.1, -1., 0.);
+    expect(reverse.epoch == reverse_epoch && reverse.at(10.1)->x < -.099,
+           "reverse observations preserve signed motion and epoch");
+    expect(reverse.at(10.19) && !reverse.at(10.201),
+           "motion forecast bounded at100ms, beyond valid83ms IMU cadence");
+    expect(!reverse.add(10.1, -1., 0.) && reverse.epoch == reverse_epoch,
+           "duplicate state does not reset history");
+    Grid aligned;
+    aligned.rotation = GroundRotation(.1, -.04);
+    aligned.source_in_plan = {-1.2, .15, -.08};
+    for (double x : {-1., 3., 15.})
+      for (double y : {-3., 0., 4.}) {
+        const auto q = GridToPlan(aligned, x, y);
+        const auto back = PlanToGrid(aligned, q[0], q[1]);
+        expect(std::hypot(back[0] - x, back[1] - y) < 1e-10,
+               "tilt and relative translation/yaw are inverted once");
+      }
     auto r = GroundRotation(.1, -.05);
     auto normal = Rotate(r, -.1, .05, 1);
     expect(std::hypot(normal[0], normal[1]) < 1e-10,
@@ -62,6 +82,12 @@ int main() {
     expect(!CheckFootprint(s, c, p, check) &&
                check.rejected.count("unobserved"),
            "unknown is not free");
+    // The same source nonroad cell moves behind the current footprint after
+    // a 6m relative displacement; no raster resampling changes its evidence.
+    s.grid.source_in_plan = {-6., 0., 0.};
+    check = {};
+    expect(CheckFootprint(s, c, p, check), "source cell aligned away from ego");
+    s.grid.source_in_plan = {0., 0., 0.};
     c.blind_assist = true;
     check = {};
     expect(CheckFootprint(s, c, p, check) && check.assisted,

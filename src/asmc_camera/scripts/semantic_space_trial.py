@@ -45,7 +45,10 @@ class SemanticSpaceTrial:
         self.publishers = {k: rospy.Publisher('~'+k, Image, queue_size=1)
                            for k in ('drivable_probability','coverage')}
         self.context_pub = rospy.Publisher('~context', CameraGroundProjection, queue_size=1)
-        self.worker = RenderWorker(self.render, max_hz=10., on_error=self.error)
+        # Semantic computation consumes each newest complete bundle. The same
+        # bounded latest-work scheduler is reused without a display-rate cap;
+        # HTTP/RGB/JPEG rendering is not on this input path.
+        self.worker = RenderWorker(self.render, max_hz=0., on_error=self.error)
         self.subs = [rospy.Subscriber('/perception/lane/ground_projection', CameraGroundProjection,
                                      self.context, queue_size=1)]
         self.subs += [rospy.Subscriber(c.drivable_topic, Image, partial(self.semantic,v),

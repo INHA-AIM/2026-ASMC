@@ -387,10 +387,11 @@
       $(id).disabled = localView() || localExperimentView();
     if (localExperimentView()) {
       const invalid=data.localExperiment && !data.localExperiment.valid;
-      const retained=invalid && data.localLastGood?.frame===data.localExperiment.frame && performance.now()-data.localLastTime<1000;
+      const observed=Boolean(data.localExperiment?.scene_valid);
+      const retained=invalid && !observed && data.localLastGood?.frame===data.localExperiment.frame && performance.now()-data.localLastTime<1000;
       $('lidarStatus').textContent='LOCAL OBB '+(data.localExperiment?.scene?.obstacles?.length||0);
-      $('lidarStatus').className='chip '+(localExperimentFresh()&&data.localExperiment?.valid?'ok':'bad');
-      localRenderer.draw(retained?data.localLastGood:data.localExperiment,localExperimentFresh()&&!invalid,
+      $('lidarStatus').className='chip '+(localExperimentFresh()&&(observed||!invalid)?'ok':'bad');
+      localRenderer.draw(retained?data.localLastGood:data.localExperiment,localExperimentFresh()&&(observed||!invalid),
         retained?data.localLastDetail:data.localDetail,{
         road:$('showLocalRoad').checked,family:$('showLocalFamily').checked,
         candidates:$('showLocalCandidates').checked,sweep:$('showLocalSweep').checked,
@@ -751,7 +752,9 @@
       ['callback 대기 family / LiDAR',fmt(r.inputs?.family_callback_queue_ms,1)+' / '+fmt(r.inputs?.lidar_callback_queue_ms,1)+'ms'],
       ['정렬 / 탐색 / 속도 계산',fmt(r.alignment_ms,2)+' / '+fmt(r.search_ms,2)+' / '+fmt(r.speed_ms,2)+'ms'],
       ['노면 대응',data.localDetail?.reason||'같은 시각 격자 대기'],
-      ['무효 시 회색 표시',!r.valid?'최근 유효 기하 최대1초 · 현재 판단은 무효':'현재 계획 기하'],
+      ['관측 / 계획',r.scene_valid?'현재 관측 표시 · '+(r.valid?'전진 계획 유효':'전진 계획 무효'):'관측 무효 · 최근 기하 최대1초 회색'],
+      ['시각 정렬',r.inputs?.alignment||'source 기준'],
+      ['LiDAR 관측 나이',fmt(r.inputs?.lidar_age_s,3)+'s'],
       ['MPC 상태',c?.reason||'대기'],['경로 오차',fmt(c?.tracking_error_m,3)+'m (본차로 오차와 별도)']]);
     $('localExperimentReasons').textContent=JSON.stringify({blocked_object:r.blocking_id,rejections:r.rejected,
       speed_reason:r.speed_reason,recovery_obb_overlap:r.recovery_obb_overlap,candidates_omitted:r.candidates_omitted},null,2);
@@ -930,7 +933,7 @@
         const response=await fetch('../api/local-scene?sequence='+data.localExperiment.plan_sequence,{cache:'no-store'});
         data.localDetail=response.ok?{...await response.json(),plan_sequence:data.localExperiment.plan_sequence}:null;
       }
-      if(data.localExperiment?.valid && data.localDetail?.raster_available){
+      if((data.localExperiment?.scene_valid||data.localExperiment?.valid) && data.localDetail?.raster_available){
         data.localLastGood=data.localExperiment;data.localLastDetail=data.localDetail;data.localLastTime=performance.now();
       }
       updateLocalExperimentPanel();

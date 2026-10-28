@@ -6,6 +6,8 @@ bool valid
 string reason
 string run_id
 uint64 plan_sequence
+# Original camera bundle time: freshness remains relative to this stamp,
+# even after geometry is aligned to the later header (planning) time.
 time scene_stamp
 nav_msgs/Odometry ego_at_plan
 float64 dt

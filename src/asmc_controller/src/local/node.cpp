@@ -79,6 +79,10 @@ class LocalController {
       << ",\"plan_age_s\":"
       << (used_plan ? (ros::Time::now() - used_plan->header.stamp).toSec()
                     : -1.)
+      << ",\"scene_age_s\":"
+      << (used_plan ? (ros::Time::now() - used_plan->scene_stamp).toSec() : -1.)
+      << ",\"motion_age_s\":"
+      << (state ? (ros::Time::now() - state->header.stamp).toSec() : -1.)
       << ",\"incoming_plan_sequence\":" << (plan ? plan->plan_sequence : 0)
       << ",\"incoming_reason\":"
       << std::quoted(plan ? plan->reason : std::string()) << ",\"state_age_s\":"
@@ -121,7 +125,8 @@ class LocalController {
       // follower. Local control owns this slot exclusively. A NORMAL command
       // producer also means an old control stack was started during the trial;
       // refuse our own control instead of running two stacks or killing theirs.
-      // The one selector's /ctrl_cmd publisher is expected and is not a conflict.
+      // The one selector's /ctrl_cmd publisher is expected and is not a
+      // conflict.
       if (topic == command_pub.getTopic() || topic == "/ctrl_cmd/normal") {
         for (int j = 0; j < payload[0][i][1].size(); ++j)
           if (std::string(payload[0][i][1][j]) != ros::this_node::getName())
@@ -168,24 +173,27 @@ class LocalController {
     // 5km/h. Only a previously solved recovery path qualifies; its original
     // jerk-limited speed profile is retained, never re-stamped.
     if ((transient ||
-         (plan->valid && (now - plan->header.stamp).toSec() > .35)) &&
+         (plan->valid && (now - plan->scene_stamp).toSec() > .35)) &&
         last_good && last_good->reason.rfind("near_field_", 0) == 0 &&
         last_good->header.frame_id == state->header.frame_id &&
         state->twist.twist.linear.x <= 5. / 3.6 &&
-        (now - last_good->header.stamp).toSec() >= 0 &&
-        (now - last_good->header.stamp).toSec() <= .55) {
+        (now - last_good->scene_stamp).toSec() >= 0 &&
+        (now - last_good->scene_stamp).toSec() <= .55) {
       candidate = last_good;
       grace = true;
     }
     used_plan = candidate;
-    const double age = (now - candidate->header.stamp).toSec();
-    if (age < 0 || age > (grace ? .55 : .35) || state_age < 0 ||
-        state_age > .15) {
-      stop("local_source_stale");
-      return;
-    }
     if (!candidate->valid || candidate->points.size() < 2) {
       stop(candidate->reason);
+      return;
+    }
+    const double age = (now - candidate->header.stamp).toSec();
+    // Header is now the planning basis, not the perception source. Re-anchoring
+    // geometry must never renew its350ms source freshness (550ms crawl grace).
+    const double source_age = (now - candidate->scene_stamp).toSec();
+    if (age < 0 || age > (grace ? .55 : .35) || source_age < age ||
+        source_age > (grace ? .55 : .35) || state_age < 0 || state_age > .15) {
+      stop("local_source_stale");
       return;
     }
     if (candidate->header.frame_id.rfind("local/", 0) != 0 ||
@@ -225,12 +233,28 @@ class LocalController {
     const double norm =
         orientation.x * orientation.x + orientation.y * orientation.y +
         orientation.z * orientation.z + orientation.w * orientation.w;
-    if (!std::isfinite(ego.x + ego.y + ego.yaw + ego.vx + norm) || ego.vx < 0 ||
+    if (ego.vx < -.05) {
+      stop("reverse_control_not_supported");
+      return;
+    }
+    if (!std::isfinite(ego.x + ego.y + ego.yaw + ego.vx + norm) ||
         std::abs(norm - 1.) > .05) {
       stop("nonfinite_motion");
       return;
     }
-    double offset = (state->header.stamp - candidate->header.stamp).toSec();
+    ego.vx = std::max(0., ego.vx);
+    // State and trajectory have independent source times. Propagate the most
+    // recent odometry once to this control tick, within the same100ms bound as
+    // the planner's MotionHistory. Camera latency was handled by the planner.
+    if (state_age > .10 || !std::isfinite(state->twist.twist.angular.z)) {
+      stop("control_motion_extrapolation_limit");
+      return;
+    }
+    const double turn = state->twist.twist.angular.z * state_age;
+    ego.x += ego.vx * state_age * std::cos(ego.yaw + .5 * turn);
+    ego.y += ego.vx * state_age * std::sin(ego.yaw + .5 * turn);
+    ego.yaw += turn;
+    double offset = (now - candidate->header.stamp).toSec();
     if (offset < 0) {
       stop("state_before_plan");
       return;

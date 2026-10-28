@@ -25,6 +25,38 @@ std::array<double, 9> GroundRotation(double a, double b) {
                           std::atan2(a, std::sqrt(1 + b * b)));
 }
 namespace {
+// One affine transform per footprint check; no trigonometry per raster cell.
+// The raster stays in its original camera plane, including unknown cells.
+struct GridTransform {
+  const Grid &g;
+  double c, s;
+  explicit GridTransform(const Grid &grid)
+      : g(grid), c(std::cos(g.source_in_plan[2])),
+        s(std::sin(g.source_in_plan[2])) {}
+  std::array<double, 3> toPlan(double bx, double by) const {
+    const auto &R = g.rotation;
+    const double bz = (g.ground_z - R[6] * bx - R[7] * by) / R[8];
+    const auto q = Rotate(R, bx, by, bz);
+    return {g.source_in_plan[0] + c * q[0] - s * q[1],
+            g.source_in_plan[1] + s * q[0] + c * q[1], q[2]};
+  }
+  std::array<double, 3> toGrid(double x, double y) const {
+    const double dx = x - g.source_in_plan[0], dy = y - g.source_in_plan[1];
+    const double sx = c * dx + s * dy, sy = -s * dx + c * dy;
+    const auto &R = g.rotation;
+    return {R[0] * sx + R[3] * sy + R[6] * g.ground_z,
+            R[1] * sx + R[4] * sy + R[7] * g.ground_z,
+            R[2] * sx + R[5] * sy + R[8] * g.ground_z};
+  }
+};
+} // namespace
+std::array<double, 3> GridToPlan(const Grid &g, double x, double y) {
+  return GridTransform(g).toPlan(x, y);
+}
+std::array<double, 3> PlanToGrid(const Grid &g, double x, double y) {
+  return GridTransform(g).toGrid(x, y);
+}
+namespace {
 double elapsed(std::chrono::steady_clock::time_point t) {
   return std::chrono::duration<double, std::milli>(
              std::chrono::steady_clock::now() - t)
@@ -64,10 +96,11 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   for (const auto &o : s.obstacles) {
     double distance = geometry::ConvexPolygonDistance(physical, o.polygon);
     r.minimum_clearance = std::min(r.minimum_clearance, distance);
-    if (distance <= clearance_margin)
+    if (distance <= clearance_margin + o.uncertainty)
       return fail(r, "local_obb", p.x, p.y, o.id);
   }
   const auto &g = s.grid;
+  const GridTransform transform(g);
   if (g.rows <= 0 || g.cols <= 0 ||
       g.probability.size() != size_t(g.rows * g.cols) ||
       g.coverage.size() != g.probability.size())
@@ -78,13 +111,12 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   const double pad = clearance_margin + g.resolution * std::sqrt(.5);
   const double front = c.length - c.rear + pad, rear = c.rear + pad,
                half = c.width * .5 + pad;
-  const auto &R = g.rotation;
   int row0 = g.rows, row1 = 0, col0 = g.cols, col1 = 0;
   for (double a : {-rear, front})
     for (double b : {-half, half}) {
       double x = p.x + cs * a - sn * b, y = p.y + sn * a + cs * b;
-      double bx = R[0] * x + R[3] * y + R[6] * g.ground_z,
-             by = R[1] * x + R[4] * y + R[7] * g.ground_z;
+      const auto source = transform.toGrid(x, y);
+      double bx = source[0], by = source[1];
       int row = std::lround((g.xmax - bx) / g.resolution),
           col = std::lround((g.ymax - by) / g.resolution);
       if (row < 0 || row >= g.rows || col < 0 || col >= g.cols)
@@ -110,8 +142,7 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
       double bx = g.xmax - row * g.resolution, by = g.ymax - col * g.resolution;
       // The published grid's points lie on n.p=ground_z. Restore their Z before
       // changing coordinates, rather than applying camera projection twice.
-      double bz = (g.ground_z - R[6] * bx - R[7] * by) / R[8];
-      auto q = Rotate(R, bx, by, bz);
+      auto q = transform.toPlan(bx, by);
       double x = q[0], y = q[1];
       double dx = x - p.x, dy = y - p.y, a = cs * dx + sn * dy,
              b = -sn * dx + cs * dy;
@@ -164,10 +195,9 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
   if (!c.recovery)
     return false;
   const auto &g = s.grid;
-  const auto &R = g.rotation;
   auto cell = [&](double x, double y) {
-    double bx = R[0] * x + R[3] * y + R[6] * g.ground_z,
-           by = R[1] * x + R[4] * y + R[7] * g.ground_z;
+    const auto source = PlanToGrid(g, x, y);
+    double bx = source[0], by = source[1];
     int row = std::lround((g.xmax - bx) / g.resolution),
         col = std::lround((g.ymax - by) / g.resolution);
     return row >= 0 && row < g.rows && col >= 0 && col < g.cols
@@ -238,7 +268,7 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
           MakeEgoFootprint(state, VehicleShape{c.width, c.length, c.rear}, 0.);
       for (auto &o : s.obstacles) {
         double d = geometry::ConvexPolygonDistance(body, o.polygon);
-        if (d <= 0) {
+        if (d <= o.uncertainty) {
           cost += 50.;
           ++overlap;
         } else
@@ -376,7 +406,8 @@ Result Plan(const Scene &input, const Config &c) {
             }))
       lateral_targets.push_back(goal[1] - homeAt(s, goal[0]));
   for (double lateral : lateral_targets)
-    for (double transition : {3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 14., 16.}) {
+    for (double transition :
+         {3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 14., 16.}) {
       if (elapsed(start) > c.budget_ms * .6)
         break;
       // The reference is the measured home strip, not a global straight line.
@@ -607,7 +638,10 @@ Result Plan(const Scene &input, const Config &c) {
   // not subtract the front overhang a second time. Reserve jerk ramp +
   // execution lag.
   double distance = out.path.back().s;
-  double lag = c.delay + s.age + c.decel / c.jerk;
+  // In aligned scenes the vehicle's source->plan travel already shortens the
+  // available sweep. Keep execution/jerk delay, do not charge that travel
+  // twice.
+  double lag = c.delay + (s.aligned_to_plan ? 0. : s.age) + c.decel / c.jerk;
   out.space_cap =
       std::max(0., std::sqrt(c.decel * c.decel * lag * lag +
                              2 * c.decel * std::max(0., distance - .1)) -

@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <memory>
 #include <morai_msgs/EgoVehicleStatus.h>
+#include <mutex>
 #include <nav_msgs/Path.h>
 #include <random>
 #include <ros/ros.h>
@@ -39,6 +40,10 @@ class Node {
   ros::NodeHandle nh, p{"~"};
   Config config;
   MotionHistory motion;
+  // Callbacks own the small input cache. Expensive Plan runs outside this lock;
+  // a second callback thread keeps signed odometry and arrivals current.
+  std::mutex input_mutex, calculation_mutex;
+  uint64_t discarded_plans = 0;
   std::string session, run, frame, camera_epoch, speed_caller, config_id;
   ros::Subscriber speed_sub, imu_sub, prob_sub, cover_sub, context_sub,
       family_sub, objects_sub;
@@ -61,6 +66,7 @@ class Node {
   }
   void
   family(const ros::MessageEvent<asmc_msgs::LaneBoundaryFamily const> &event) {
+    std::lock_guard<std::mutex> lock(input_mutex);
     auto message = event.getMessage();
     arrival(family_arrivals, message->header.stamp.toNSec(), event);
     store(families, message);
@@ -69,7 +75,7 @@ class Node {
     double stamp, value, received;
   };
   std::deque<Speed> speeds;
-  double imu_received = 0, last_plan_receive = 0;
+  double imu_received = 0, next_plan_due = 0;
   ros::SteadyTime last_invalid;
   uint64_t sequence = 0, last_scene = 0;
   std::unique_ptr<Journal> journal;
@@ -104,6 +110,7 @@ class Node {
     return "local/" + session + "/" + std::to_string(motion.epoch);
   }
   void speed(const ros::MessageEvent<morai_msgs::EgoVehicleStatus const> &e) {
+    std::lock_guard<std::mutex> lock(input_mutex);
     if (e.getPublisherName() != speed_caller)
       return;
     const auto m = e.getMessage();
@@ -122,6 +129,7 @@ class Node {
       speeds.pop_front();
   }
   void imu(const sensor_msgs::Imu::ConstPtr &m) {
+    std::lock_guard<std::mutex> lock(input_mutex);
     const double t = m->header.stamp.toSec(),
                  now = ros::SteadyTime::now().toSec();
     auto it = std::find_if(speeds.rbegin(), speeds.rend(),
@@ -173,6 +181,7 @@ class Node {
     return o;
   }
   void context(const asmc_msgs::CameraGroundProjection::ConstPtr &m) {
+    std::lock_guard<std::mutex> lock(input_mutex);
     std::string epoch = m->producer_session_id + ":" +
                         std::to_string(m->generation) + ":" +
                         m->projection_session_id + ":" + m->config_id;
@@ -188,6 +197,7 @@ class Node {
   }
   void lidar(const ros::MessageEvent<asmc_msgs::LidarTrackingObservation const>
                  &event) {
+    std::lock_guard<std::mutex> lock(input_mutex);
     const auto m = event.getMessage();
     const auto &o = m->observation;
     std::string epoch = o.producer_session_id + ":" +
@@ -218,6 +228,7 @@ class Node {
       << ",\"scene\":" << scene_debug << ",\"input_join\":" << join_debug
       << ",\"scene_stamp_ns\":" << stamp
       << ",\"decision_stamp\":" << ros::Time::now().toSec()
+      << ",\"scene_valid\":" << (scene_debug != "{}" ? "true" : "false")
       << ",\"valid\":" << (r.valid ? "true" : "false") << ",\"reason\":\""
       << r.reason << "\",\"age_s\":" << age
       << ",\"processing_ms\":" << r.elapsed_ms
@@ -285,6 +296,7 @@ class Node {
       s << "]}";
     }
     s << "],\"candidates_omitted\":" << r.candidates_omitted;
+    s << ",\"discarded_generation_results\":" << discarded_plans;
     s << ",\"vehicle\":{\"width\":" << config.width
       << ",\"front\":" << config.length - config.rear
       << ",\"rear\":" << config.rear << ",\"margin\":" << config.margin << "}}";
@@ -327,6 +339,11 @@ class Node {
     report(r, 0, 0);
   }
   void tick(const ros::SteadyTimerEvent &) {
+    std::unique_lock<std::mutex> computation(calculation_mutex,
+                                             std::try_to_lock);
+    if (!computation.owns_lock())
+      return;
+    std::unique_lock<std::mutex> lock(input_mutex);
     if (ros::SteadyTime::now().toSec() - imu_received > .15) {
       invalid("motion_unavailable");
       return;
@@ -336,27 +353,15 @@ class Node {
       if (!probs.count(it->first) || !covers.count(it->first) ||
           !families.count(it->first))
         continue;
-      // A fresh explicit invalid family cancels the plan. Mere asynchronous
-      // scan arrival may use the newest complete older bundle within the same
-      // 350ms.
-      if (!families.at(it->first)->valid || !it->second->imu_corrected) {
-        selected = it->first;
-        break;
-      }
-      double stamp = it->first * 1e-9;
-      bool have_scan =
-          std::any_of(objects.begin(), objects.end(), [&](auto &m) {
-            return std::abs(m->observation.objects.header.stamp.toSec() -
-                            stamp) <= .050000001;
-          });
-      if (have_scan) {
-        selected = it->first;
-        break;
-      }
+      // Camera bundle identity stays exact; LiDAR selects its own latest scan.
+      // A newer explicit invalid bundle is not hidden by an older valid one.
+      selected = it->first;
+      break;
     }
     std::ostringstream join;
     join << std::setprecision(17) << "{\"selected_stamp_ns\":" << selected
-         << ",\"nearest_scan_limit_s\":0.05,\"newest_contexts\":[";
+         << ",\"selection_policy\":\"independent_latest_to_plan\",\"newest_"
+            "contexts\":[";
     unsigned joined = 0;
     for (auto it = contexts.rbegin(); it != contexts.rend() && joined < 3;
          ++it, ++joined) {
@@ -385,11 +390,15 @@ class Node {
       invalid("scene_stale");
       return;
     }
-    if (selected == last_scene)
+    if (selected == last_scene ||
+        ros::SteadyTime::now().toSec() < next_plan_due)
       return;
-    auto origin = motion.at(t);
-    if (!origin) {
-      invalid("scene_motion_unavailable");
+    const auto plan_stamp = ros::Time::now();
+    auto camera_origin = motion.at(t);
+    auto origin = motion.at(plan_stamp.toSec());
+    if (!origin || !camera_origin) {
+      invalid(!camera_origin ? "camera_motion_history_unavailable"
+                             : "plan_motion_extrapolation_limit");
       return;
     }
     const auto ctx = contexts.at(selected);
@@ -424,19 +433,22 @@ class Node {
       invalid("grid_contract");
       return;
     }
-    auto chosen = objects.end();
-    double delta = .050000001;
-    for (auto it = objects.begin(); it != objects.end(); ++it) {
-      double d = std::abs((*it)->observation.objects.header.stamp.toSec() - t);
-      if (d < delta) {
-        delta = d;
-        chosen = it;
-      }
-    }
-    if (chosen == objects.end()) {
-      invalid("local_objects_skew");
+    if (objects.empty()) {
+      invalid("local_objects_missing");
       return;
     }
+    // Latest arrived scan, even if INVALID. Never revive an older valid scan
+    // across a failure or choose it merely to match the camera's older stamp.
+    auto chosen = std::prev(objects.end());
+    const double object_age =
+        plan_stamp.toSec() -
+        (*chosen)->observation.objects.header.stamp.toSec();
+    if (object_age < 0 || object_age > .35) {
+      invalid("local_objects_stale");
+      return;
+    }
+    const double delta =
+        std::abs((*chosen)->observation.objects.header.stamp.toSec() - t);
     const auto &array = (*chosen)->observation.objects;
     if (array.header.frame_id != "base_link" ||
         (array.status != array.OBSERVED &&
@@ -464,6 +476,11 @@ class Node {
         << "\",\"lidar_generation\":" << (*chosen)->observation.generation
         << ",\"lidar_scan\":" << (*chosen)->observation.scan_sequence
         << ",\"lidar_stamp_ns\":" << array.header.stamp.toNSec()
+        << ",\"plan_stamp_ns\":" << plan_stamp.toNSec()
+        << ",\"camera_age_s\":" << age << ",\"lidar_age_s\":" << object_age
+        << ",\"alignment\":\"independent_source_to_plan_once\""
+        << ",\"object_motion_compensated\":false"
+        << ",\"unmodeled_object_motion_budget_mps\":5.0"
         << ",\"lidar_skew_s\":" << delta
         << ",\"lidar_minus_family_source_ms\":" << signed_skew * 1000;
     if (fi != family_arrivals.end() && li != lidar_arrivals.end()) {
@@ -485,7 +502,8 @@ class Node {
     const auto alignment_start = ros::SteadyTime::now();
     Scene scene;
     scene.age = age;
-    scene.speed = origin->v;
+    scene.aligned_to_plan = true;
+    scene.speed = std::abs(origin->v) <= .05 ? 0. : origin->v;
     scene.yaw_rate = origin->w;
     scene.acceleration = origin->a;
     auto &g = scene.grid;
@@ -504,6 +522,13 @@ class Node {
     }
     g.rotation = GroundRotation(a, b);
     g.ground_z = c / std::sqrt(1 + a * a + b * b);
+    const double co = std::cos(origin->yaw), so = std::sin(origin->yaw);
+    const double dx = camera_origin->x - origin->x,
+                 dy = camera_origin->y - origin->y;
+    g.source_in_plan = {co * dx + so * dy, -so * dx + co * dy,
+                        camera_origin->yaw - origin->yaw};
+    const double cy = std::cos(g.source_in_plan[2]),
+                 sy = std::sin(g.source_in_plan[2]);
     std::map<int, std::vector<std::array<double, 2>>> bounds;
     for (const auto &bound : family->boundaries) {
       if (bound.support_state.size() != bound.polyline.size())
@@ -521,6 +546,9 @@ class Node {
           return;
         }
         auto q = Rotate(g.rotation, v.x, v.y, v.z);
+        const double qx = q[0], qy = q[1];
+        q[0] = g.source_in_plan[0] + cy * qx - sy * qy;
+        q[1] = g.source_in_plan[1] + sy * qx + cy * qy;
         auto &line = bounds[bound.role];
         if (!line.empty() && q[0] <= line.back()[0]) {
           invalid("family_not_monotonic");
@@ -570,7 +598,6 @@ class Node {
       scene.corridor.push_back({x, at(1, x), at(3, x)});
       scene.home.push_back({x, .5 * (at(home_role, x) + at(home_role + 1, x))});
     }
-    const double co = std::cos(origin->yaw), so = std::sin(origin->yaw);
     for (const auto &o : array.objects) {
       if (o.observation_state != o.OBSERVED)
         continue;
@@ -578,6 +605,20 @@ class Node {
       ob.id = o.track_id;
       ob.camera_class = o.camera_class;
       ob.classification = o.classification;
+      ob.source_age = object_age;
+      // Ego alignment does not move the object itself. Reserve an explicit
+      // experimental motion envelope, including when velocity is UNKNOWN.
+      // Never infer physical immobility from a semantic static group.
+      double budget = 5.;
+      if (o.absolute_velocity_valid) {
+        const auto &v = o.absolute_velocity_mps;
+        if (!std::isfinite(v.x + v.y + v.z)) {
+          invalid("object_velocity_nonfinite");
+          return;
+        }
+        budget = std::max(budget, std::hypot(v.x, v.y));
+      }
+      ob.uncertainty = object_age * budget;
       for (const auto &corner : o.obb_corners) {
         if (!std::isfinite(corner.x + corner.y + corner.z)) {
           invalid("object_nonfinite");
@@ -617,7 +658,10 @@ class Node {
         debug << ',';
       debug << g.rotation[k];
     }
-    debug << "],\"obstacles\":[";
+    debug << "],\"source_in_plan\":[" << g.source_in_plan[0] << ','
+          << g.source_in_plan[1] << ',' << g.source_in_plan[2]
+          << "],\"plan_stamp_ns\":" << plan_stamp.toNSec()
+          << ",\"obstacles\":[";
     for (size_t k = 0; k < std::min(size_t(32), scene.obstacles.size()); ++k) {
       if (k)
         debug << ',';
@@ -625,6 +669,8 @@ class Node {
       debug << "{\"id\":" << ob.id
             << ",\"camera_class\":" << std::quoted(ob.camera_class)
             << ",\"classification\":" << std::quoted(ob.classification)
+            << ",\"source_age_s\":" << ob.source_age
+            << ",\"motion_uncertainty_m\":" << ob.uncertainty
             << ",\"polygon\":[";
       for (size_t j = 0; j < ob.polygon.size(); ++j) {
         if (j)
@@ -657,12 +703,30 @@ class Node {
     scene_debug = debug.str();
     double alignment_ms =
         (ros::SteadyTime::now() - alignment_start).toSec() * 1000;
-    Result result = Plan(scene, config);
+    const auto expected_epoch = motion.epoch;
+    const auto expected_camera = camera_epoch, expected_lidar = lidar_epoch;
+    const auto scheduled = ros::SteadyTime::now().toSec();
+    next_plan_due = next_plan_due == 0
+                        ? scheduled + .1
+                        : std::max(next_plan_due + .1, scheduled);
+    lock.unlock();
+    Result result;
+    if (scene.speed < -.05)
+      result.reason = "reverse_control_not_supported";
+    else
+      result = Plan(scene, config);
+    lock.lock();
+    if (expected_epoch != motion.epoch || expected_camera != camera_epoch ||
+        expected_lidar != lidar_epoch) {
+      ++discarded_plans;
+      return; // Reset/restart cannot publish an already computing old scene.
+    }
     result.alignment_ms = alignment_ms;
     last_scene = selected;
     ++sequence;
     asmc_msgs::LocalTrajectory output;
     output.header = family->header;
+    output.header.stamp = plan_stamp;
     output.header.frame_id = current_frame();
     output.valid = result.valid;
     output.reason = result.reason;
@@ -703,6 +767,7 @@ class Node {
       previous.clear();
   }
   void diagnose(const ros::SteadyTimerEvent &) {
+    std::lock_guard<std::mutex> lock(input_mutex);
     diagnostic_msgs::DiagnosticArray d;
     d.header.stamp = ros::Time::now();
     diagnostic_msgs::DiagnosticStatus s;
@@ -758,10 +823,16 @@ public:
     imu_sub = nh.subscribe("/imu", 64, &Node::imu, this);
     prob_sub = nh.subscribe<sensor_msgs::Image>(
         "/experimental/shadow/semantic_space_trial/drivable_probability", 1,
-        [this](auto m) { store(probs, m); });
+        [this](auto m) {
+          std::lock_guard<std::mutex> lock(input_mutex);
+          store(probs, m);
+        });
     cover_sub = nh.subscribe<sensor_msgs::Image>(
         "/experimental/shadow/semantic_space_trial/coverage", 1,
-        [this](auto m) { store(covers, m); });
+        [this](auto m) {
+          std::lock_guard<std::mutex> lock(input_mutex);
+          store(covers, m);
+        });
     context_sub =
         nh.subscribe("/experimental/shadow/semantic_space_trial/context", 1,
                      &Node::context, this);
@@ -770,8 +841,8 @@ public:
     objects_sub =
         nh.subscribe("/perception/lidar/tracks_local", 4, &Node::lidar, this);
     planner_timer =
-        // Semantic producer is capped at10Hz; only a new source bundle runs
-        // Plan(). Poll readiness more often to avoid a second100ms phase wait.
+        // Poll latest complete input without tying compute supply to display.
+        // Plan at most10Hz; camera processing can finish at its native rate.
         nh.createSteadyTimer(ros::WallDuration(.02), &Node::tick, this);
     diagnostic_timer =
         nh.createSteadyTimer(ros::WallDuration(1.), &Node::diagnose, this);
@@ -782,7 +853,9 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "local_planner");
   try {
     local_planning::Node node;
-    ros::spin();
+    ros::AsyncSpinner spinner(2);
+    spinner.start();
+    ros::waitForShutdown();
   } catch (const std::exception &e) {
     ROS_FATAL("LOCAL: %s", e.what());
     return 1;

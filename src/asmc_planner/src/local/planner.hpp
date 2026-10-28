@@ -15,6 +15,7 @@ struct Obstacle {
   int id = -1;
   geometry::Polygon2D polygon;
   std::string camera_class, classification;
+  double source_age = 0, uncertainty = 0;
 };
 struct Config {
   double length = 4.635, width = 2.160835, rear = .79, margin = .10;
@@ -32,6 +33,9 @@ struct Grid {
   // base_link ground -> gravity-aligned planning plane, no second projection.
   std::array<double, 9> rotation{{1, 0, 0, 0, 1, 0, 0, 0, 1}};
   double ground_z = -.36;
+  // Source level frame -> current planning level frame (x, y, yaw). The raster
+  // remains in original source pixels; no second projection/resampling.
+  std::array<double, 3> source_in_plan{{0, 0, 0}};
 };
 struct Scene {
   Grid grid;
@@ -39,11 +43,13 @@ struct Scene {
   // Current family support: x, left painted line, right painted line. Only its
   // longitudinal support currently limits the horizon. Painted lines are NOT
   // physical walls or footprint clipping bounds; qualified free road can extend
-  // beyond them. Decoupling horizon validity from all three roles is LOCAL-2A/B.
+  // beyond them. Decoupling horizon validity from all three roles is
+  // LOCAL-2A/B.
   std::vector<std::array<double, 3>> corridor;
   std::vector<std::array<double, 2>>
       home; // soft right-home reference, not a discrete lane/target selection
   double speed = 0, yaw_rate = 0, age = 0, acceleration = 0;
+  bool aligned_to_plan = false;
   std::vector<Pose> previous;
 };
 struct Result {
@@ -80,6 +86,8 @@ std::array<double, 3> Rotate(const std::array<double, 9> &, double, double,
                              double);
 std::array<double, 9> GroundRotation(double dzdx, double dzdy);
 std::array<double, 9> AttitudeRotation(double roll, double pitch);
+std::array<double, 3> GridToPlan(const Grid &, double bx, double by);
+std::array<double, 3> PlanToGrid(const Grid &, double x, double y);
 bool CheckSweep(const Scene &, const Config &, const Pose &, const Pose &,
                 Result &);
 } // namespace local_planning

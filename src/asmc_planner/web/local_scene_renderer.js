@@ -28,8 +28,10 @@ window.createLocalExperimentRenderer = canvas => {
     if(row&&raster&&detail?.raster_available&&(options.road!==false)){const R=row.scene?.rotation||[1,0,0,0,1,0,0,0,1],z=row.scene?.ground_z??-.36;
       // Display the producer's plane grid in exactly the planner's level frame.
       // This is an affine display transform, not another camera projection.
-      const A=R[0]-R[2]*R[6]/R[8],B=R[1]-R[2]*R[7]/R[8],D=R[3]-R[5]*R[6]/R[8],E=R[4]-R[5]*R[7]/R[8],r=detail.resolution;
-      const x=A*detail.xmax+B*detail.ymax+R[2]*z/R[8], y=D*detail.xmax+E*detail.ymax+R[5]*z/R[8];
+      const t=row.scene?.source_in_plan||[0,0,0],c=Math.cos(t[2]),s=Math.sin(t[2]);
+      const a=R[0]-R[2]*R[6]/R[8],b=R[1]-R[2]*R[7]/R[8],d=R[3]-R[5]*R[6]/R[8],e=R[4]-R[5]*R[7]/R[8];
+      const A=c*a-s*d,B=c*b-s*e,D=s*a+c*d,E=s*b+c*e,r=detail.resolution;
+      const x=t[0]+A*detail.xmax+B*detail.ymax+(c*R[2]-s*R[5])*z/R[8], y=t[1]+D*detail.xmax+E*detail.ymax+(s*R[2]+c*R[5])*z/R[8];
       const origin=xy(x,y);ctx.save();ctx.transform(30*E*r,30*B*r,30*D*r,30*A*r,origin[0],origin[1]);ctx.imageSmoothingEnabled=false;ctx.drawImage(raster,0,0);ctx.restore();}
     ctx.strokeStyle='#314254';ctx.fillStyle='#94abbd';ctx.font='12px sans-serif';
     for(let x=-2;x<=20;x+=2){const y=xy(x,0)[1];ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(640,y);ctx.stroke();ctx.fillText(x+'m',8,y-4);}

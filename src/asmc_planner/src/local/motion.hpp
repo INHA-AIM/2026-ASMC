@@ -18,7 +18,7 @@ public:
     ++epoch;
   }
   bool add(double t, double v, double w, double roll = 0, double pitch = 0) {
-    if (!std::isfinite(t + v + w + roll + pitch) || t <= 0 || v < -.05 ||
+    if (!std::isfinite(t + v + w + roll + pitch) || t <= 0 ||
         std::abs(w) > 2.) {
       reset();
       return false;
@@ -30,7 +30,9 @@ public:
       reset();
     Motion m;
     m.t = t;
-    m.v = std::max(0., v);
+    // Observation alignment is signed even though the current controller only
+    // plans forward. Reversing must not retire camera/LiDAR epochs or drawings.
+    m.v = v;
     m.w = w;
     m.roll = roll;
     m.pitch = pitch;
@@ -48,8 +50,10 @@ public:
       samples.pop_front();
     return true;
   }
+  // LOCAL-2A arrival audit: valid IMU gaps reached83ms. A100ms short
+  // constant-twist forecast covers that cadence; this is not tunnel map pose.
   std::optional<Motion> at(double t) const {
-    if (samples.empty() || t < samples.front().t || t > samples.back().t + .05)
+    if (samples.empty() || t < samples.front().t || t > samples.back().t + .10)
       return {};
     if (t >= samples.back().t) {
       auto m = samples.back();
