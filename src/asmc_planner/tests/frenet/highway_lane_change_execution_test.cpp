@@ -68,6 +68,10 @@ void exercise(){
     expect(!execution.beginLaneTransition(10+target_index,invalid,ego,true,detail),"nonadjacent/unprepared requests cannot bind");
     expect(execution.beginLaneTransition(10+target_index,command,ego,true,detail),"adjacent request binds common transition engine");
     if(!execution.hasLaneTransition(10+target_index))throw std::runtime_error(detail);
+    expect(execution.transitionZone().following_lanes.size()==2,
+        "optional left/right following scope contains only source and requested target");
+    expect(bool(execution.transitionZone().following_road_footprint),
+        "joining body uses the same runtime road certificate as prepared lane references");
     const auto& target=execution.transitionTarget();
     // A prepared next request can be canceled by KEEP. Its future return
     // context must not replace/destroy the current active lane's return owner.
@@ -129,6 +133,10 @@ void exercise(){
   command.source_link_id=link(*lane,ego);command.target_link_id=network->common->lanes().front().substr(5);
   expect(execution.beginLaneTransition(30,command,ego,false,detail),"downstream merge binds the ACTUAL left lane, not old 445 source");
   if(!execution.hasLaneTransition(30))throw std::runtime_error(detail);
+  expect(execution.transitionZone().following_lanes.size()==2,
+      "mandatory join on the left lane includes its adjacent predecessor, not the far parallel lane");
+  expect(!execution.transitionZone().target_region->coversPoint(ego.x,ego.y),
+      "traffic membership never moves the common-lane handover frontier upstream");
   auto& core=execution.transitionPlanner();result={};
   for(int i=0;i<30&&!result.ready;++i){now+=.05;core.PlanHighwayTransition(*route,execution.transitionZone(),false,ego,{},command,now,now,path,result,now,execution.transitionTarget().line());}
   std::cerr<<"mandatory ready="<<result.ready<<" "<<result.detail<<'\n';

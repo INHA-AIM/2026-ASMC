@@ -4,6 +4,7 @@
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Map/HdLaneMap.hpp"
 #include <memory>
+#include <functional>
 #include <cmath>
 #include <string>
 
@@ -12,6 +13,10 @@
 // target-lane connector and adopt a separately validated lane reference.
 struct HighwayMergeRoute {
     struct Zone {
+        struct FollowingLane {
+            std::shared_ptr<const RefLine> reference;
+            std::shared_ptr<const asmc_planner::lane_reference::LaneRegion> region;
+        };
         HighwayMergeZone config;
         RefLine target_reference;
         std::shared_ptr<const asmc_planner::lane_reference::LaneRegion> target_region;
@@ -26,6 +31,17 @@ struct HighwayMergeRoute {
         // Optional-change admission facts. Each candidate uses its own actual
         // arrival/progress against this bounded rear observation window.
         double admission_rear_observation_m=0,admission_unseen_speed_mps=0;
+        // Traffic membership continues on the prepared predecessor chains.
+        // It is separate from target_region, which owns handover/completion.
+        // Only source and requested/adjacent joining lanes belong to this
+        // certificate; unrelated parallel lanes never inherit a rear role.
+        std::vector<FollowingLane> following_lanes;
+        std::shared_ptr<const asmc_planner::lane_reference::LaneRegion> following_region;
+        // Same runtime raster/physical body used when preparing lane references.
+        // It certifies road containment at microscopic vector-polygon seams;
+        // following membership is still bounded by following_region.
+        asmc_planner::lane_reference::FootprintShape following_road_body;
+        std::function<bool(double,double,double)> following_road_footprint;
     };
     RefLine reference;
     HighwayMergeConfig config;

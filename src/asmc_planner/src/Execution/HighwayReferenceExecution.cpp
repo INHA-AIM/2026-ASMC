@@ -168,6 +168,28 @@ bool HighwayReferenceExecution::beginLaneTransition(std::uint32_t id,const Plann
   zone.source_following_region=route_->map->corridor(network_->lanes[source]->lanes(),error);
   zone.target_region=route_->map->corridor(arrival->lanes(),error);
   if(!zone.source_region||!zone.source_following_region||!zone.target_region){detail="request_corridor_invalid: "+error;return false;}
+  // Prepare following membership once per request, never inside the dense
+  // candidate collision loop. Mandatory completion remains on the common
+  // successor; its joining traffic already occupies predecessor lanes.
+  std::vector<std::string> following_ids=network_->lanes[source]->lanes();
+  for(std::size_t i=0;i<network_->lanes.size();++i) {
+    const auto& lane=network_->lanes[i];
+    const auto contains=[&](const std::string& id) {
+      return !id.empty()&&std::find(lane->lanes().begin(),lane->lanes().end(),id)!=lane->lanes().end();
+    };
+    const bool relevant=optional?(i==source||i==target):
+        (i==source||contains(road->left_adjacent)||contains(road->right_adjacent));
+    if(!relevant||lane->lanes().back()!=network_->common->lanes().front())continue;
+    auto region=route_->map->corridor(lane->lanes(),error);
+    if(!region){detail="following_corridor_invalid: "+error;return false;}
+    zone.following_lanes.push_back({std::shared_ptr<const RefLine>(lane,&lane->line()),region});
+    for(const auto& id:lane->lanes())
+      if(std::find(following_ids.begin(),following_ids.end(),id)==following_ids.end())following_ids.push_back(id);
+  }
+  zone.following_region=route_->map->corridor(following_ids,error);
+  if(!zone.following_region){detail="following_transition_region_invalid: "+error;return false;}
+  zone.following_road_body=options_.vehicle;
+  zone.following_road_footprint=options_.runtime_road_footprint;
   zone.target_reference=arrival->line();
   const auto common_start=arrival->map()->lane(network_->common->lanes().front())->centerline.front();
   const double common_s=FindClosestS(active_->reference(),common_start.x,common_start.y,nullptr,100);

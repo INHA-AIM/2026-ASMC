@@ -569,6 +569,114 @@ void TestHighwayBoundedRearResponse() {
     Expect(poly.size()>=3,"response retains the measured footprint through the shared lane sweep");
 }
 
+void TestJoiningFollowerContinuity() {
+    using namespace asmc_planner::lane_reference;
+    for(double side:{-1.,1.}) {
+        HighwayFixture f;f.cfg.max_rear_decel_mps2=3;
+        LaneMapData data;data.identity={"map","joining","test",std::string(64,'d')};data.complete=true;
+        auto lane=[&](std::string id,double begin,double end,double y) {
+            LaneData l;l.id=l.link_id=id;l.traversable=true;
+            l.centerline={{begin,y},{end,y}};
+            l.polygon={{begin,y-1.75},{end,y-1.75},{end,y+1.75},{begin,y+1.75}};
+            return l;
+        };
+        data.lanes={lane("source",0,100,0),lane("traffic",0,100,side*3.5),lane("common",100,400,side*3.5)};
+        data.areas={{"road",{{0,-6},{400,-6},{400,6},{0,6}},true}};
+        std::string error;f.map=HdLaneMap::create(data,error);
+        Expect(bool(f.map),"joining fixture prepares source, predecessor traffic and separate common successor");
+        if(!f.map)continue;
+        f.zone.source_reference=f.ref;
+        f.zone.source_region=f.map->corridor({"source"},error);
+        f.zone.target_region=f.map->corridor({"common"},error);
+        f.zone.target_reference=f.ref;for(auto& p:f.zone.target_reference.points)p.y=side*3.5;
+        const auto traffic=std::make_shared<const RefLine>(f.zone.target_reference);
+        f.zone.following_lanes={{traffic,f.map->corridor({"traffic","common"},error)}};
+        f.zone.following_region=f.map->corridor({"source","traffic","common"},error);
+        for(std::size_t i=0;i<f.path.x.size();++i) {
+            f.path.y[i]=side*(1.75+1.75*std::min(1.,i*.1/3));
+            f.path.yaw[i]=i<30?std::atan(side*1.75/(3*8)):0;
+        }
+        auto rear=MakeVehicleAt(801,45,side*3.5,0,12);
+        rear.motion_state=ObjectMotionState::DYNAMIC;rear.prediction_lane=traffic;
+        rear.prediction_lane_s=45;rear.prediction_lane_end_s=400;
+        const auto check=[&](const std::vector<TrackedObject>& objects,bool entering=false) {
+            return EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,objects,f.cfg,
+                MakeEgoShape(),MakeCollisionCfg(),.1,entering,0,
+                std::chrono::steady_clock::time_point::max(),true);
+        };
+        const auto continued=check({rear});
+        if(!continued.safe)std::cerr<<"joining side="<<side<<" reason="<<continued.reason<<" blocker="<<continued.blocking_object_id<<'\n';
+        Expect(continued.safe,"left/right committed straddling retains following before the common successor");
+        const auto initial_y=f.path.y.front();f.path.y.front()=0;
+        Expect(!check({rear}).safe,
+            "commitment alone cannot assume a parallel rear vehicle reacts before actual lane occupancy");
+        f.path.y.front()=initial_y;
+        const auto aligned=AdvanceObjectObservation(rear,.08);
+        Expect(check({aligned}).safe,
+            "source-time alignment retains a candidate-local rear response instead of restoring constant speed");
+        Expect(aligned.prediction_origin&&aligned.prediction_origin->vx==rear.vx&&
+            aligned.prediction_origin_offset_s==.08,
+            "rear response never mutates the original observation or drops its alignment age");
+        auto unresolved_origin=aligned;auto origin=*aligned.prediction_origin;
+        origin.prediction_lane.reset();unresolved_origin.prediction_origin=std::make_shared<const TrackedObject>(origin);
+        Expect(!check({unresolved_origin}).safe,
+            "alignment from an unresolved prediction origin cannot inherit a mapped rear response");
+        Expect(!check({rear},true).safe,"new entry still requires the original collision and rear-gap certificate");
+        auto original=f.zone.following_lanes;f.zone.following_lanes.clear();
+        Expect(!check({rear}).safe,"the common-successor-only baseline reproduces rear starvation during the join");
+        f.zone.following_lanes=original;
+        auto unknown=rear;unknown.type=0;
+        Expect(check({unknown}).safe,"a mapped UNKNOWN rear actor has the same geometry-based responsibility");
+        auto unprepared=rear;unprepared.prediction_lane=std::make_shared<const RefLine>(*traffic);
+        Expect(!check({unprepared}).safe,"a foreign parallel reference cannot inherit the prepared joining role");
+        auto cutin=rear;cutin.vy=-side*2;
+        Expect(!check({cutin}).safe,"observed lateral crossing never acquires a joining follower role");
+        auto pedestrian=rear;pedestrian.type=int(asmc_planner::ObjectType::PEDESTRIAN);
+        Expect(!check({pedestrian}).safe,"pedestrians retain collision checks even with a supplied lane pointer");
+        auto front=MakeVehicleAt(802,90,side*3.5,0,2);front.motion_state=ObjectMotionState::DYNAMIC;
+        Expect(!check({rear,front}).safe,"joining followers cannot hide a simultaneous front obstacle");
+        auto close=MakeVehicleAt(803,65,side*3.5,0,20);close.motion_state=ObjectMotionState::DYNAMIC;
+        close.prediction_lane=traffic;close.prediction_lane_s=65;close.prediction_lane_end_s=400;
+        Expect(!check({close}).safe,"near rear impact remains strict throughout the reaction interval");
+        Expect(!check({AdvanceObjectObservation(close,.08)}).safe,
+            "time-aligned close traffic cannot claim a reaction before current commitment");
+        auto contact=MakeVehicleAt(804,70,f.path.y[0],0,12);contact.motion_state=ObjectMotionState::DYNAMIC;
+        contact.prediction_lane=traffic;contact.prediction_lane_s=70;contact.prediction_lane_end_s=400;
+        Expect(!check({contact}).safe,"current physical contact is never exempted after commitment");
+        auto fork=rear;fork.prediction_lane_end_s=60;
+        Expect(!check({fork}).safe,"a rear role cannot extrapolate beyond an unresolved map successor");
+        const auto path=f.path;f.path.y[20]=side*7;
+        Expect(!check({rear}).safe,"leaving then reentering the joining corridor cannot restore the role");
+        f.path=path;f.path.x[20]=f.path.x[19]-1;
+        Expect(!check({rear}).safe,"reverse motion cannot claim forward following responsibility");
+        f.path=path;
+        for(std::size_t i=0;i<f.path.x.size();++i) {
+            const double t=std::min(i*.1,8./3.);
+            f.path.x[i]=70+8*t-1.5*t*t;f.path.y[i]=side*1.75;f.path.yaw[i]=0;
+            f.path.v[i]=std::max(0.,8-3*i*.1);f.path.a[i]=f.path.v[i]>0?-3:0;
+        }
+        Expect(!check({rear}).safe,"ego braking that exceeds the admitted rear response remains unsafe");
+        f.path=path;
+        data.lanes[2]=lane("common",100.02,400,side*3.5);
+        const auto seam=HdLaneMap::create(data,error);
+        f.zone.following_region=seam->corridor({"source","traffic","common"},error);
+        f.zone.following_lanes={{traffic,seam->corridor({"traffic","common"},error)}};
+        Expect(!check({rear}).safe,"a vector seam without a physical road certificate remains unresolved");
+        f.zone.following_road_body={2.25,2.25,.95};
+        f.zone.following_road_footprint=[road=seam->road(),body=f.zone.following_road_body](double x,double y,double yaw){
+            return road->coversFootprint(x,y,yaw,body,0);
+        };
+        Expect(check({rear}).safe,"a validated road body and prepared reference bridge vector membership seams on both sides");
+        data.areas={{"a",{{0,-6},{100,-6},{100,6},{0,6}},true},
+                    {"b",{{102,-6},{400,-6},{400,6},{102,6}},true}};
+        const auto blocked_road=HdLaneMap::create(data,error);
+        f.zone.following_road_footprint=[road=blocked_road->road(),body=f.zone.following_road_body](double x,double y,double yaw){
+            return road->coversFootprint(x,y,yaw,body,0);
+        };
+        Expect(!check({rear}).safe,"a real non-drivable road gap cannot use the vector-seam continuation");
+    }
+}
+
 void TestObservedFastUnknownFragment() {
     HighwayFixture f;
     auto fragment=MakeVehicleAt(1433,70,2.05,0,10);
@@ -596,6 +704,7 @@ int main() {
     TestMappedFollowerOnCurve();
     TestSourceLaneFollowerContinuation();
     TestHighwayBoundedRearResponse();
+    TestJoiningFollowerContinuity();
     TestObservedFastUnknownFragment();
     std::cout<<g_failures<<" failures\n";return g_failures?1:0;
 }
