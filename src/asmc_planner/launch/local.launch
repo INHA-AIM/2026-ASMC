@@ -1,6 +1,9 @@
 <launch>
   <!-- Independent LOCAL-1 experiment. No normal controller, old follower,
-       selector, camera inference or LiDAR producer is started here. -->
+       selector, camera inference or LiDAR producer is started here.
+       Control trials must not also start autonomy_no_bridges_v2.launch.
+       /ctrl_cmd/jamming is only the existing selector routing slot; local
+       control uses one MPC instance, not the old jamming follower. -->
   <arg name="enable_control" default="false"/>
   <arg name="run_id" default="local-preview"/>
   <arg name="journal_path" default=""/>

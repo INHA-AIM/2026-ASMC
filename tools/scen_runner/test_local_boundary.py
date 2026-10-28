@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real local MPC boundary regression on a private master; no control publisher."""
+"""Real local MPC contract/ownership regression on a private ROS master only."""
 import json
 import os
 from pathlib import Path
@@ -21,6 +21,7 @@ def main():
     from nav_msgs.msg import Odometry
     from asmc_msgs.msg import LocalTrajectory, TrajectoryPoint
     from std_msgs.msg import String
+    from morai_msgs.msg import CtrlCmd
 
     children = []
     with tempfile.TemporaryDirectory(prefix="local-boundary-") as folder:
@@ -33,6 +34,16 @@ def main():
                 cmd, stdout=f, stderr=subprocess.STDOUT, start_new_session=True
             )
             children.append(p)
+            return p
+
+        def stop(p):
+            if p.poll() is None:
+                os.killpg(p.pid, signal.SIGINT)
+                try:
+                    p.wait(timeout=8)
+                except subprocess.TimeoutExpired:
+                    os.killpg(p.pid, signal.SIGTERM)
+                    p.wait(timeout=5)
 
         try:
             start(["roscore", "-p", str(port)], "master.log")
@@ -51,7 +62,7 @@ def main():
             config = (
                 rospkg.RosPack().get_path("asmc_controller") + "/config/controller.yaml"
             )
-            start(
+            preview = start(
                 [
                     "rosrun",
                     "asmc_controller",
@@ -183,15 +194,74 @@ def main():
                 for n, _ in master.getSystemState()[0]
             )
             print("preview has no command publisher PASS")
+            stop(preview)
+
+            # Exercise the actual ownership check, including a NORMAL producer
+            # whose commands do not share the local topic. These publishers are
+            # isolated from the operating master and never send a command.
+            for i, topic in enumerate(("/ctrl_cmd/normal", "/ctrl_cmd/jamming")):
+                foreign = rospy.Publisher(topic, CtrlCmd, queue_size=1)
+                for _ in range(30):
+                    if any(t == topic for t, _ in master.getSystemState()[0]):
+                        break
+                    time.sleep(0.05)
+                else:
+                    raise RuntimeError("foreign publisher did not register")
+                log_name = "conflict-%d.log" % i
+                process = start(
+                    [
+                        "rosrun", "asmc_controller", "asmc_local_controller_node",
+                        "__name:=local_conflict_%d" % i,
+                        "_enable_control:=true", "_controller_config:=" + config,
+                    ],
+                    log_name,
+                )
+                process.wait(timeout=8)
+                log = (Path(folder) / log_name).read_text()
+                assert "LOCAL control ownership conflict" in log, log
+                assert topic + " owned by /local_contract_test" in log, log
+                print("conflicting owner", topic, "PASS")
+                foreign.unregister()
+
+            # Our own JAMMING publisher and the single selector output are
+            # allowed. No mode or valid input is sent, so this tests ownership
+            # without requesting actuation even on the private master.
+            router = rospy.Publisher("/ctrl_cmd", CtrlCmd, queue_size=1)
+            exclusive = start(
+                [
+                    "rosrun", "asmc_controller", "asmc_local_controller_node",
+                    "__name:=local_exclusive_contract",
+                    "_enable_control:=true", "_controller_config:=" + config,
+                ],
+                "exclusive.log",
+            )
+            deadline = time.monotonic() + 5
+            registered = False
+            while time.monotonic() < deadline:
+                registered = any(
+                    topic == "/ctrl_cmd/jamming"
+                    and "/local_exclusive_contract" in owners
+                    for topic, owners in master.getSystemState()[0]
+                )
+                if registered or exclusive.poll() is not None:
+                    break
+                time.sleep(0.05)
+            assert registered and exclusive.poll() is None
+            time.sleep(1.2)  # Cover the recurring check as well as startup.
+            assert exclusive.poll() is None, (
+                Path(folder) / "exclusive.log"
+            ).read_text()
+            late = rospy.Publisher("/ctrl_cmd/normal", CtrlCmd, queue_size=1)
+            exclusive.wait(timeout=8)
+            log = (Path(folder) / "exclusive.log").read_text()
+            assert "/ctrl_cmd/normal owned by /local_contract_test" in log, log
+            late.unregister()
+            router.unregister()
+            print("exclusive local owner and selector output PASS")
+            print("late NORMAL owner rejected PASS")
         finally:
             for p in reversed(children):
-                if p.poll() is None:
-                    os.killpg(p.pid, signal.SIGINT)
-                    try:
-                        p.wait(timeout=8)
-                    except subprocess.TimeoutExpired:
-                        os.killpg(p.pid, signal.SIGTERM)
-                        p.wait(timeout=5)
+                stop(p)
             for f in logs:
                 f.close()
 

@@ -280,6 +280,8 @@ def main():
             ],
             "record",
         )
+        # Start only the final command router, never autonomy/map planning or
+        # the old BBox lane follower. Local MPC owns its historical JAMMING slot.
         selector = start(
             [
                 "rosrun",

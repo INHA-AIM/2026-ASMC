@@ -110,25 +110,34 @@ class LocalController {
       command_pub.publish(cmd);
     report(false, cmd);
   }
-  bool hasOtherPublisher() {
+  std::string controlConflict() {
     XmlRpc::XmlRpcValue args, result, payload;
     args[0] = ros::this_node::getName();
     if (!ros::master::execute("getSystemState", args, result, payload, false))
-      return true;
-    for (int i = 0; i < payload[0].size(); ++i)
-      if (std::string(payload[0][i][0]) == command_pub.getTopic()) {
+      return "ROS master ownership unavailable";
+    for (int i = 0; i < payload[0].size(); ++i) {
+      const std::string topic = payload[0][i][0];
+      // /ctrl_cmd/jamming is the existing selector slot, not the old BBox
+      // follower. Local control owns this slot exclusively. A NORMAL command
+      // producer also means an old control stack was started during the trial;
+      // refuse our own control instead of running two stacks or killing theirs.
+      // The one selector's /ctrl_cmd publisher is expected and is not a conflict.
+      if (topic == command_pub.getTopic() || topic == "/ctrl_cmd/normal") {
         for (int j = 0; j < payload[0][i][1].size(); ++j)
           if (std::string(payload[0][i][1][j]) != ros::this_node::getName())
-            return true;
+            return topic + " owned by " + std::string(payload[0][i][1][j]);
       }
-    return false;
+    }
+    return {};
   }
   void tick(const ros::SteadyTimerEvent &) {
     static unsigned cycles = 0;
     if (enabled && cycles++ % 20 == 0) {
-      duplicate = hasOtherPublisher();
+      const auto conflict = controlConflict();
+      duplicate = !conflict.empty();
       if (duplicate) {
-        ROS_FATAL("Other local command producer; refusing control");
+        ROS_FATAL("LOCAL control ownership conflict: %s; refusing control",
+                  conflict.c_str());
         ros::shutdown();
         return;
       }
@@ -282,8 +291,9 @@ public:
       throw std::runtime_error("invalid local MPC tuning");
     InitMPC(params);
     p.param("enable_control", enabled, false);
-    // Node is an exclusive producer in control trials; preview has no command
-    // pub.
+    // Reuse one MPC solver and the selector's historical JAMMING slot. This
+    // never starts the old BBox follower or NORMAL controller. Preview has no
+    // command publisher; control trials must exclude autonomy_no_bridges_v2.
     if (enabled)
       command_pub = nh.advertise<morai_msgs::CtrlCmd>("/ctrl_cmd/jamming", 1);
     diagnostics_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(
