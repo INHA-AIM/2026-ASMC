@@ -151,8 +151,11 @@ private 메시지 갱신 후에는 위 전체 빌드를 수행하고 adapter·�
 
 | 화면 | 기본 실행 | 주소 |
 |---|---|---|
-| 판제 웹 콘솔 | `roslaunch asmc_planner dashboard.launch` | `http://127.0.0.1:8088/web/index_v2.html` |
+| 판제 웹 콘솔 | 통합 `autonomy_no_bridges_v2.launch`에 포함; 별도 launch 불필요 | `http://127.0.0.1:8088/web/index_v2.html` |
 | LiDAR 웹 시각화 | `roslaunch asmc_lidar view.launch` | `http://127.0.0.1:8091/` |
+
+판제는 통합 launch에서 서버와 브라우저 열기가 기본 ON입니다. 브라우저 도구가 없는 컨테이너는
+Windows 브라우저에서 위 주소를 직접 엽니다. `open_dashboard:=false`로 창 열기만 끌 수 있습니다.
 
 LiDAR `view.launch`는 모니터만 시작합니다. 기본 `debug:=false`에서도 발행 객체 수·진단 상태를
 확인할 수 있습니다. 웹의 OBB·점군 그림과 필터 전후·ROI 단계를 보려면 처리 노드의

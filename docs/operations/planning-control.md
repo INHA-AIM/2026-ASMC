@@ -28,7 +28,10 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 각 코어에 남긴다. 원본 입력 변경·누락은 다시 로딩/검증하고 잘못된 입력은 시작을 거부한다.
 [초기화 실측과 검증 한계](../records/repository/2026-10-29-planner-startup-ci.md)를 참고한다.
 
-통합 실행은 대시보드도 기본 실행한다. 이미 별도 대시보드가 있다면 `dashboard:=false`를 사용한다.
+통합 실행은 대시보드 서버와 브라우저 열기를 기본 실행한다(`dashboard:=true`, `open_dashboard:=true`).
+평소에는 별도 `dashboard.launch`를 실행하지 않는다. 브라우저가 없는 컨테이너에서는 Windows
+브라우저에서 `http://127.0.0.1:8088/web/index_v2.html`을 연다. 자동 열기만 끄려면
+`open_dashboard:=false`, 서버까지 끄려면 `dashboard:=false`를 지정한다.
 같은 HTTP 포트로 중복 실행하면 새 대시보드는 ROS 노드 등록 전에 종료해 기존 콘솔을 보존한다.
 `dashboard_port` 변경은 포트 설정이며, 같은 ROS 노드 이름의 다중 콘솔 운영을 보장하지 않는다.
 
@@ -54,8 +57,7 @@ roslaunch asmc_controller controller.launch state_topic:=/planning/vehicle/state
 MPC 입력 누락 시 STOP은 fail-safe 확인이며 정상 추종 증거가 아닙니다.
 
 ```bash
-# 관찰용 dashboard; 새 planner를 실행하지 않음
-roslaunch asmc_planner dashboard.launch state_topic:=/planning/vehicle/state
+# 대시보드는 통합 launch에 포함되므로 별도 실행하지 않음
 rostopic info /ctrl_cmd
 rostopic info /perception/camera/objects
 rostopic hz /planning/vehicle/state

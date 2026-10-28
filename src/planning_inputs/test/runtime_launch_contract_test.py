@@ -20,6 +20,19 @@ class LaunchContracts(unittest.TestCase):
         self.assertTrue(all(n.get('type') not in ('lidar_pipeline_node','asmc_planner_node')
                             for tree in (dashboard,lidar) for n in tree.findall('node')))
 
+    def test_integrated_planning_includes_dashboard_and_opener_by_default(self):
+        launch=ET.parse(ROOT/'src/asmc_planner/launch/autonomy_no_bridges_v2.launch').getroot()
+        args={a.get('name'):a.get('default') for a in launch.findall('arg')}
+        self.assertEqual(args['dashboard'],'true')
+        self.assertEqual(args['open_dashboard'],'true')
+        includes=[node for node in launch.findall('include')
+                  if node.get('file','').endswith('/dashboard.launch')]
+        self.assertEqual(len(includes),1)
+        self.assertEqual(includes[0].get('if'),'$(arg dashboard)')
+        forwarding={a.get('name'):a.get('value') for a in includes[0].findall('arg')}
+        self.assertEqual(forwarding['open_dashboard'],'$(arg open_dashboard)')
+        self.assertEqual(forwarding['dashboard_port'],'$(arg dashboard_port)')
+
     def test_planning_never_starts_a_camera_signal_producer(self):
         for name in ('autonomy_no_bridges_v2.launch', 'mode_control_integration.launch'):
             tree = ET.parse(ROOT / 'src/asmc_planner/launch' / name)

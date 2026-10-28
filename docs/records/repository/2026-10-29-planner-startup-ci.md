@@ -121,3 +121,14 @@ GitHub 보호 규칙 API가 계정 기능 제한(403)으로 조회되지 않아 
 문제가 있으면 고속도로 기능은 명시적 `highway_merge:=false`로 이전 기본 동작을 선택한다.
 초기화 최적화만 되돌릴 때는 `HighwayReferenceExecution`의 세 `InitFromPrepared` 호출을 기존 `Init`로
 복구해 별도 빌드한다. 운영 중 라이브러리를 교체하지 않는다. CI 변경은 런타임 수정과 분리해 되돌릴 수 있다.
+
+
+## 사용자 후속 요청 — 통합 판제 패널
+
+통합 launch 한 번으로 판제 패널도 사용하도록 `dashboard=true`를 유지하고
+`open_dashboard=true`를 기본값으로 바꿨다. 별도 dashboard launch는 기본 운용 절차에서 제외했다.
+자동 브라우저 열기가 필요 없는 headless 실행은 `open_dashboard:=false`로 서버만 유지한다.
+현재 운영 컨테이너에는 브라우저/xdg-open/wslview가 없어 Windows 브라우저에서 8088 주소를
+직접 여는 단계가 필요하다. 이 요청 때문에 공용 컨테이너 마운트·호스트 실행 서비스를 추가하지 않았다.
+위 10개 노드 통합 smoke는 이 후속 변경 전의 `open_dashboard=false` 조건이다. 후속 변경은
+opener 노드 1개를 추가하며, launch 기본값/forwarding 회귀와 ROS parameter/node 전개로 확인한다.
