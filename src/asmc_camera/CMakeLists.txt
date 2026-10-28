@@ -39,6 +39,7 @@ catkin_install_python(PROGRAMS
   scripts/camera_bev_fusion_node.py
   scripts/camera_bev_node.py
   scripts/camera_bev_visualizer_node.py
+  scripts/semantic_space_trial.py
   scripts/lane_vector_visualizer_node.py
   scripts/family_view_node.py
   scripts/lane_vectorizer_node.py
