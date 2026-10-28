@@ -23,8 +23,8 @@
        여유는 줄이고 바깥 한계·추가 밀기는 늘렸다. 필요 여유 = 차폭/2 + max(clearance, margin). -->
   <arg name="jamming_line_edge_expand" default="0.30" doc="[m] 기준선 1·5를 바깥으로 확장(최대 0.5)"/>
   <arg name="jamming_avoid_line_extra" default="1.0" doc="통과 가능한 선에서 바깥으로 더 미는 양(선 번호, 최대 2.0)"/>
-  <arg name="jamming_avoid_clearance" default="0.1" doc="[m] 차체 측면-장애물 최소 간격"/>
-  <arg name="jamming_obstacle_lateral_margin" default="0.1" doc="[m] 차체 좌우 여유(도로 경계 검사 포함)"/>
+  <arg name="jamming_avoid_clearance" default="0.05" doc="[m] 차체 측면-장애물 최소 간격"/>
+  <arg name="jamming_obstacle_lateral_margin" default="0.05" doc="[m] 차체 좌우 여유(도로 경계 검사 포함)"/>
   <arg name="jamming_avoid_line_overrun" default="1.5" doc="[m] 벽 미확인 쪽에서 차량 중심이 끝 차선을 넘을 수 있는 거리"/>
   <!-- 재밍 회피에 LiDAR 물체(카메라가 못 잡은 장애물)와 벽(갓길 한계)을 함께 쓴다.
        asmc_lidar를 skip_lidar_in_jamming:=false(기본)로 띄워야 재밍 중에도 들어온다. -->

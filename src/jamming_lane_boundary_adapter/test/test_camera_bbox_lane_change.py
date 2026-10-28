@@ -800,6 +800,15 @@ class LaneChangeTest(unittest.TestCase):
         self.assertAlmostEqual(line,4.0,delta=0.15)
         self.assertEqual(status['lidar_fresh'],'true',status)
 
+    def test_straddle_lidar_distant_object_beyond_path_does_not_block_near_gap(self):
+        self.feed()
+        # Near gap around line 4 (3.4 m). A distant object (x 27 m, beyond line_obstacle_reach 20 m) on the
+        # right would need y >= 1.3 m, which the near left object forbids. Pass the near gap first.
+        left,right,far=(9.,10.,1.7,3.0,1.),(9.,10.,-3.0,-1.7,1.),(27.,28.,-1.7,-0.2,1.)
+        self.feed(speed=0.,lidar=[left,right,far],duration=.8)
+        self.following()
+        self.assertAlmostEqual(self.line_status()[0],4.0,delta=0.15)
+
     def test_straddle_lidar_blocks_adjacent_that_camera_sees_clear(self):
         self.feed()
         # Camera: own-lane box, adjacent NO_DETECTION. LiDAR: a wide object also filling the adjacent lane.

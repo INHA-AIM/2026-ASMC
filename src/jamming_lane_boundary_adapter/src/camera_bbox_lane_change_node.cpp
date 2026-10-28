@@ -171,6 +171,9 @@ struct Parameters {
     // 5개 기준선(1 왼쪽 끝, 2 왼쪽 차로 중앙, 3 중앙선, 4 오른쪽 차로 중앙, 5 오른쪽 끝) 사이를 이 간격으로 나눈
     // 후보 주행선 중 장애물 간격·주행 영역을 지키며 내 차로 중앙(2 또는 4)에 가장 가까운 선을 고른다.
     double avoid_line_step = 0.25;
+    // [m] 선 선택에 쓰는 장애물의 최대 전방 거리. 한 선으로 먼 장애물까지 함께 피하려 하면 엇갈린 장애물
+    // 사이 통로를 출발하지 못한다. 더 먼 장애물은 가까워지면 그때 다시 선을 고른다. 0 이하면 제한 없음.
+    double line_obstacle_reach = 20.0;
     // 회피 선을 고른 뒤 같은 방향으로 더 밀어 여유를 늘린다. 0이면 기존처럼
     // 통과 가능한 가장 가까운 선(최소 횡이동)을 쓴다. 단위는 선 번호.
     double avoid_line_extra = 0.0;
@@ -1823,6 +1826,7 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("avoid_wall_margin", params.avoid_wall_margin, params.avoid_wall_margin);
     private_nh.param("avoid_line_overrun", params.avoid_line_overrun, params.avoid_line_overrun);
     private_nh.param("avoid_line_step", params.avoid_line_step, params.avoid_line_step);
+    private_nh.param("line_obstacle_reach", params.line_obstacle_reach, params.line_obstacle_reach);
     private_nh.param("avoid_line_extra", params.avoid_line_extra, params.avoid_line_extra);
     private_nh.param("line_edge_expand", params.line_edge_expand, params.line_edge_expand);
     private_nh.param("lane_hold_distance", params.lane_hold_distance, params.lane_hold_distance);
@@ -2646,6 +2650,11 @@ bool lineObstacleConfirmed(const LineObstacle& obstacle) {
     return obstacle.hits >= params.obstacle_confirm_frames;
 }
 
+// line_obstacle_reach보다 먼 장애물은 지금 선 선택(선 간격·틈 중앙)에서 뺀다.
+bool lineObstacleInReach(const LineObstacle& obstacle) {
+    return params.line_obstacle_reach <= 0.0 || lineObstacleX(obstacle) <= params.line_obstacle_reach;
+}
+
 // 이번 관측(카메라 접점, 켜져 있으면 LiDAR)을 선 좌표로 바꿔 기억한다. 같은 물체는 덮는 범위를 합친다.
 // 카메라 박스는 가까워지면 화면 끝에서 잘려 좁게 측정되므로 기억한 범위와 합친다(줄이지 않음).
 // LiDAR는 매 스캔 물체 전체 OBB를 주므로, 이번 스캔에서 보인 물체는 겹치는 이전 기억을 최신 형상으로
@@ -2785,7 +2794,7 @@ bool lineAllowed(double line) {
     const double edge = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
     const double clear = params.vehicle_width / 2.0 + params.avoid_clearance + params.avoid_plan_margin;
     for (const auto& obstacle : line_state.obstacles) {
-        if (!lineObstacleConfirmed(obstacle)) continue;
+        if (!lineObstacleConfirmed(obstacle) || !lineObstacleInReach(obstacle)) continue;
         // 차량 후방까지 완전히 지난 장애물은 선 간격 판단에서 뺀다(경로 footprint 검사는 그대로).
         if (lineObstacleX(obstacle) + obstacle.length + params.vehicle_rear +
             params.obstacle_longitudinal_margin < 0.0) continue;
@@ -2819,7 +2828,7 @@ bool lineGapCentre(double line, double& centre) {
     double left = -std::numeric_limits<double>::infinity();
     double right = std::numeric_limits<double>::infinity();
     for (const auto& obstacle : line_state.obstacles) {
-        if (!lineObstacleConfirmed(obstacle) ||
+        if (!lineObstacleConfirmed(obstacle) || !lineObstacleInReach(obstacle) ||
             lineObstacleX(obstacle) + obstacle.length + params.vehicle_rear + params.avoid_pass_margin <= 0.0) continue;
         if (obstacle.line_right <= line) left = std::max(left, obstacle.line_right);
         else if (obstacle.line_left >= line) right = std::min(right, obstacle.line_left);

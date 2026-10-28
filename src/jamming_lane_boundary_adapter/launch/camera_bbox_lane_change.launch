@@ -102,6 +102,7 @@
   <arg name="avoid_wall_margin" default="0.3"/>
   <arg name="avoid_line_overrun" default="1.0"/>
   <arg name="avoid_line_step" default="0.25"/>
+  <arg name="line_obstacle_reach" default="20.0" doc="[m] 선 선택에 쓰는 장애물 최대 전방 거리. 0 이하면 제한 없음"/>
   <!-- 고른 회피 선을 같은 방향으로 더 밀어 여유를 늘린다(선 번호 단위). 0은 기존 동작. -->
   <arg name="avoid_line_extra" default="0.0"/>
   <!-- [m] 기준선 1·5를 도로 바깥으로 확장. 주행 한계는 corridor가 정한다. -->
@@ -246,6 +247,7 @@
     <param name="avoid_wall_margin" type="double" value="$(arg avoid_wall_margin)"/>
     <param name="avoid_line_overrun" type="double" value="$(arg avoid_line_overrun)"/>
     <param name="avoid_line_step" type="double" value="$(arg avoid_line_step)"/>
+    <param name="line_obstacle_reach" type="double" value="$(arg line_obstacle_reach)"/>
     <param name="avoid_line_extra" type="double" value="$(arg avoid_line_extra)"/>
     <param name="line_edge_expand" type="double" value="$(arg line_edge_expand)"/>
     <param name="lane_hold_distance" type="double" value="$(arg lane_hold_distance)"/>
