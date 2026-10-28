@@ -30,6 +30,11 @@ class ContactTest(unittest.TestCase):
         if hasattr(self,'speed_timer'):self.speed_timer.shutdown()
         legacy.LaneChangeTest.tearDown(self)
         rospy.delete_param('/camera_bbox_lane_change/contact_clearance_enabled')
+    def test_bev_epoch_and_exact_pairing(self):
+        executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
+        output=subprocess.check_output([executable,'--bev-regression'],text=True,timeout=5)
+        self.assertIn('bev_epoch_pairing_freshness_passed',output)
+
     def test_interpolation_equivalence(self):
         executable=roslib.packages.find_node('lane_boundary_adapter','contact_path_probe')[0]
         output=subprocess.check_output([executable,'--interpolation-regression'],text=True,timeout=5)

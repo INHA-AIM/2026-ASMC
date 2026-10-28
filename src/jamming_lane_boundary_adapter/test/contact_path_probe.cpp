@@ -28,7 +28,32 @@ int interpolationRegression(){
  }
  std::cout<<"interpolation_equivalent samples=24220\n";return 0;
 }
+int bevRegression(){
+ ros::Time::init();ros::Time::setNow(ros::Time(100));
+ bev_spec={250,160,20,8,.1};
+ auto status=boost::make_shared<asmc_msgs::InferenceStatus>();
+ status->model="twinlite";status->producer_session_id="one";status->generation=2;status->mode=status->ACTIVE;
+ status->header.stamp=ros::Time(100);status->source_cutoff=ros::Time(99);bevEpoch(status);
+ auto image=boost::make_shared<sensor_msgs::Image>();image->header.stamp=ros::Time(100);image->header.frame_id="base_link";
+ image->encoding="mono8";image->height=250;image->width=image->step=160;image->data.assign(40000,255);
+ bevInput(image,true);if(selectBev(ros::Time(100),ros::Time(100)))return 10;
+ bevInput(image,false);if(!selectBev(ros::Time(100),ros::Time(100)))return 11;
+ if(selectBev(ros::Time(100.051),ros::Time(100)))return 12;
+ auto duplicate=boost::make_shared<sensor_msgs::Image>(*image);duplicate->header.stamp=ros::Time(99.99);
+ bevInput(duplicate,false);if(!selectBev(ros::Time(100),ros::Time(100)))return 13;
+ ros::Time::setNow(ros::Time(100.36));if(selectBev(ros::Time(100),ros::Time(100)))return 14;
+ status->generation++;status->header.stamp=ros::Time(100.36);status->source_cutoff=ros::Time(100.3);bevEpoch(status);
+ if(!bev_frames.empty())return 15;
+ image->header.stamp=ros::Time(100.36);bevInput(image,true);bevInput(image,false);
+ if(!selectBev(ros::Time(100.36),ros::Time(100.36)))return 16;
+ status->producer_session_id="two";status->header.stamp=ros::Time(100.37);bevEpoch(status);
+ if(!bev_frames.empty())return 17;
+ status->producer_session_id="one";status->header.stamp=ros::Time(100.38);bevEpoch(status);
+ if(bev_session!="two")return 18;
+ std::cout<<"bev_epoch_pairing_freshness_passed\n";return 0;
+}
 int main(int argc,char**argv){
+ if(argc==2 && std::string(argv[1])=="--bev-regression")return bevRegression();
  if(argc==2 && std::string(argv[1])=="--interpolation-regression")return interpolationRegression();
  const bool wide=argc==4 && std::string(argv[3])=="--wide-search";
  const bool lengths=argc==4 && std::string(argv[3])=="--length-search";
