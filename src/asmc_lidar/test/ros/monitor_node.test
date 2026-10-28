@@ -7,7 +7,7 @@
   <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml"/>
   <arg name="port" default="18091"/>
 
-  <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="/migration/lidar" output="screen">
+  <node pkg="asmc_lidar" type="lidar_pipeline_node" name="lidar_pipeline" ns="/test/lidar" output="screen">
     <param name="pipeline_config" value="$(arg pipeline_config)"/>
     <param name="package_dir" value="$(find asmc_lidar)"/>
     <!-- Generic transport fixture; automatic GPS routing is covered by test_tunnel_runtime. -->
@@ -21,10 +21,10 @@
 
   <node pkg="asmc_lidar" type="asmc_lidar_monitor_node.py" name="asmc_lidar_monitor" output="screen">
     <!-- Test traffic stays isolated even when direct-run defaults are canonical. -->
-    <param name="debug_topic_prefix" value="/migration/lidar/debug"/>
-    <param name="diagnostics_topic" value="/migration/lidar/diagnostics"/>
-    <param name="objects_local_topic" value="/migration/lidar/objects_local"/>
-    <param name="objects_map_topic" value="/migration/lidar/objects_map"/>
+    <param name="debug_topic_prefix" value="/test/lidar/debug"/>
+    <param name="diagnostics_topic" value="/test/lidar/diagnostics"/>
+    <param name="objects_local_topic" value="/test/lidar/objects_local"/>
+    <param name="objects_map_topic" value="/test/lidar/objects_map"/>
     <param name="port" value="$(arg port)"/>
     <param name="bind_address" value="127.0.0.1"/>
     <param name="web_dir" value="$(find asmc_lidar)/web"/>

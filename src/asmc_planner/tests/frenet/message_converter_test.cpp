@@ -61,6 +61,8 @@ planning_inputs::DetectedObject MakeObject(double center_x, double center_y) {
     planning_inputs::DetectedObject object;
     object.id = 17;
     object.type = 2;
+    object.classification = "dynamic_obstacle";
+    object.camera_class = "bicycle";
     object.motion_state = planning_inputs::DetectedObject::MOTION_DYNAMIC_PENDING;
     object.center.x = center_x;
     object.center.y = center_y;
@@ -274,6 +276,10 @@ int main() {
                objects[0].corners[1].y == 21.0 &&
                objects[0].corners[1].z == 0.0,
            "LiDAR OBB corners are copied unchanged to TrackedObject");
+    Expect(objects[0].classification == "dynamic_obstacle" &&
+           objects[0].camera_class == "bicycle" && objects[0].type == 2 &&
+           objects[0].vx == 2.0 && objects[0].motion_state == ObjectMotionState::DYNAMIC_PENDING,
+           "semantic evidence survives Frenet conversion without altering numeric or motion policy");
 
     auto unmeasured_message = object_message;
     auto& unmeasured = unmeasured_message.objects[0];

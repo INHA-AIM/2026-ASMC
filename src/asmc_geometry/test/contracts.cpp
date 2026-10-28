@@ -20,6 +20,12 @@ int main(){
  require(!WithinAge(ns,ns+120000001,.12));
  require(!WithinAge(ns,ns-1,.12));require(!WithinAge(0,ns,.12));
  require(!WithinAge(ns,ns,std::numeric_limits<double>::quiet_NaN()));
+ require(WithinStampWindow(ns+50000000,ns,.30,.05));
+ require(!WithinStampWindow(ns+50000001,ns,.30,.05));
+ require(WithinStampWindow(ns,ns+300000000,.30,.05));
+ require(!WithinStampWindow(ns,ns+300000001,.30,.05));
+ require(!WithinStampWindow(ns,0,.30,.05));
+ require(!WithinStampWindow(ns,ns,-1,.05));
  std::deque<std::uint64_t> stamps{ns,ns+10,ns+20};auto key=[](auto v){return v;};
  require(LatestAtOrBefore(stamps,ns-1,key)==stamps.end());
  require(*LatestAtOrBefore(stamps,ns+10,key)==ns+10);

@@ -44,6 +44,15 @@ struct ConversionStats {
   std::size_t unsupported_classification = 0;
 };
 
+inline void CopyObservationIdentity(const asmc_msgs::LidarObservation& source,
+                                    DetectedObjectArray* target) {
+  target->producer_session_id = source.producer_session_id;
+  target->generation = source.generation;
+  target->scan_sequence = source.scan_sequence;
+  target->config_id = source.config_id;
+  target->calibration_id = source.calibration_id;
+}
+
 const char* ConversionStatusName(ConversionStatus status);
 
 // Geometry/velocity validation shared with the qualified planning gate. Invalid

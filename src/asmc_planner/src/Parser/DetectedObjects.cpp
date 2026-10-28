@@ -30,6 +30,8 @@ bool DetectedMsgConverter::toTrackedObject(
 
   object->id = message.id;
   object->type = type;
+  object->classification = message.classification;
+  object->camera_class = message.camera_class;
   object->motion_state = static_cast<MotionState>(message.motion_state);
   object->velocity_unavailable = message.velocity_unavailable;
   object->x = message.center.x;

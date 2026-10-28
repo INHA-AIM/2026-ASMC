@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
@@ -27,6 +28,10 @@ class ObjectsNode {
     if (!std::isfinite(source_max_age_s_) || source_max_age_s_ <= 0 ||
         !std::isfinite(source_future_s_) || source_future_s_ < 0)
       throw std::runtime_error("invalid LiDAR source time limits");
+    // Preserve the previous intersection of the configurable outer limit and
+    // the .30/.05 contract gate, but perform one integer-ns check at one now.
+    gate_ = LidarObservationGate(std::min(source_max_age_s_, .30),
+                                std::min(source_future_s_, .05));
     publisher_ = node_.advertise<DetectedObjectArray>(output, 2);
     input_ = node_.subscribe<asmc_msgs::LidarPlanningObservation>(
         input, 1, &ObjectsNode::LidarObjects, this, ros::TransportHints().tcpNoDelay());
@@ -38,13 +43,9 @@ class ObjectsNode {
   void LidarObjects(const asmc_msgs::LidarPlanningObservation::ConstPtr& source) {
     if (!source) return;
     ++received_;
-    const double age = ros::Time::now().toSec() - source->observation.objects.header.stamp.toSec();
-    if (!std::isfinite(age) || age > source_max_age_s_ || age < -source_future_s_) {
-      ++rejected_; source_reason_ = "source_stale_or_future"; return;
-    }
     std::string reason;
     DetectedObjectArray out;
-    if (!gate_.Convert(*source, ros::Time::now().toSec(), &out, &reason)) {
+    if (!gate_.Convert(*source, ros::Time::now(), &out, &reason)) {
       ++rejected_; source_reason_ = reason;
       ROS_WARN_THROTTLE(1., "Withheld common LiDAR input: %s", reason.c_str());
       return;  // invalid/pose-unavailable != an observed-empty free-space frame

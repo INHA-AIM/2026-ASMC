@@ -1,8 +1,14 @@
 # M1 3뷰 fusion·전달 표시·정적 클래스 보조
 
+정본 `/perception/lidar` launch는 활성 fusion의 all·활성 터널의 original_pipeline을 검사한다.
+아래 전방/옛 터널 대조는 운영과 분리한 namespace에서만 실행한다(예: `namespace:=/test/lidar`).
+구 `/migration/lidar` 전환은 완료됐다. 이름 자체를 특별 처리하거나 구 토픽으로 중계하지 않는다.
+현재 음영 판제 후속은 [local 통로·소비 경계](../../../docs/architecture/shadow-planning-refactoring.md)를 따른다.
+
 기준선은 PR #119·#121 병합본 `52017fe2`다. 구현은 `feat/lidar-three-view-fusion`에서
 진행한다. 2026-10-28 사용자 승인에 따라 **최적화한 3뷰 fusion을 기본으로 승격**했다.
 정본 YAML과 코드 기본값은 `fusion.views: all`이다. `motion.semantic_static_enabled: false`는 유지한다.
+semantic 보조의 재개·채택 검증은 [V1 보류 작업표](improvement-milestones.md#v1--semantic-정적-보조-검증)를 따른다.
 기본 선택과 전체 대회 주행 수락은 구분한다. 초기 입력 공백·얇은 물체 소실은 미해결이며,
 [승격 검증과 후속 복구 설계](fusion-recovery.md)를 따른다.
 [시험 결과](../../../docs/records/lidar/2026-10-27-m1-three-view-fusion.md)에서 구현·검증·미수락을 구분한다.
@@ -20,11 +26,11 @@
 | `fusion.views` | `all` — 전방·좌·우 matching와 터널 보호 | `front` — 전방 단독 복구 |
 | `motion.semantic_static_enabled` | `false` | `true` — 확인된 static 클래스 + 연속 기하 근거 |
 
-시험은 `lidar.launch namespace:=/migration/lidar pipeline_config:=<시험 YAML> debug:=true`와
-`view.launch namespace:=/migration/lidar dashboard_port:=8093 pipeline_config:=<같은 YAML>`로 실행한다.
+시험은 `lidar.launch namespace:=/test/lidar pipeline_config:=<시험 YAML> debug:=true`와
+`view.launch namespace:=/test/lidar dashboard_port:=8093 pipeline_config:=<같은 YAML>`로 실행한다.
 이미 같은 입력의 운영 생산자가 있으면 처리 부하를 먼저 확인하며, 동일 정식 출력의 생산자를 추가하지 않는다.
 전방 복구는 정본 YAML을 별도 파일로 복사해 `fusion.views`만 `front`로 바꾸고
-`pipeline_config:=<복구 YAML>`로 실행한다. 다른 임계값·보정은 유지하며 새 config ID로 시작한다. launch 인자에 모델/운동 정책 선택지를 추가하지 않는다.
+`namespace:=/test/lidar pipeline_config:=<복구 YAML>`로 비교 실행한다. 다른 임계값·보정은 유지하며 새 config ID로 시작한다. launch 인자에 모델/운동 정책 선택지를 추가하지 않는다.
 
 ### 빌드와 실제 실행파일 확인
 
@@ -32,24 +38,36 @@ PR #119의 GPS 무효 시 터널 분기와 이번 3뷰 코드는 같은 실행�
 `pipeline_config`는 YAML만 선택한다. 다른 checkout의 YAML을 지정해도 이미 빌드된
 실행파일이 바뀌지 않으며, `debug:=true`도 빌드 선택과 관계없다.
 
-현재 개인 컨테이너에 준비한 M1 overlay를 사용하는 LiDAR·웹 터미널에서는 다음을 확인한다.
-일반 팀 배포는 해당 checkout에서 빌드한 workspace의 `devel/setup.bash`를 사용한다.
+PR #122 병합 후 정본은 `/root/ws`의 빌드다. 이전 개인 `/root/asmc-m1` overlay는
+재현용으로 보존하지만 기본 셸에서 자동 source하지 않는다. 새 터미널과 LiDAR 웹도
+같은 `/root/ws/devel/setup.bash`를 사용한다.
 
 ```bash
+cd /root/ws
 source /opt/ros/noetic/setup.bash
-source /root/asmc-m1/devel/setup.bash
+./scripts/build_ws.sh -j2 -l2 -DCMAKE_BUILD_TYPE=Release
+source /root/ws/devel/setup.bash
 rospack find asmc_lidar
 rosrun --prefix echo asmc_lidar lidar_pipeline_node
+python3 src/asmc_lidar/tools/check_runtime_build.py
 ```
 
-이 개인 배포의 예상 경로는 `/root/asmc-m1/src/asmc_lidar`와
-`/root/asmc-m1/devel/lib/asmc_lidar/lidar_pipeline_node`다. 마지막 명령은 실행파일 경로만
-출력하며 노드를 시작하지 않는다. 이후 `/root/ws/devel/setup.bash`를 다시 source하면
-underlay 실행파일이 선택되므로 M1 환경을 마지막에 적용한다.
-웹도 같은 overlay에서 실행해야 정적 화면과 C++ 생산자 버전이 맞는다.
-기존 프로세스는 새 빌드나 source 적용만으로 교체되지 않는다. 같은 namespace의 기존
-처리 노드를 사용자가 종료한 뒤 원래 launch 명령으로 재실행하며, 두 생산자를 동시에 띄우지 않는다.
-이 overlay는 개인 시험 배포이고, 병합 후에는 main의 최신 빌드로 통일한다.
+예상 경로는 `/root/ws/src/asmc_lidar`와
+`/root/ws/devel/lib/asmc_lidar/lidar_pipeline_node`다. 점검 도구는 노드를 가동하지 않고
+선택된 실행파일의 `--build-info`와 현재 패키지 C++ 소스 SHA를 대조한다.
+`source_matches: true`를 확인한다. 기존 빌드는 식별 기능이 없어 실패하므로 재빌드한다.
+실행 중인 노드의 교체 여부나 의존 패키지 전체의 동일성까지 증명하는 검사는 아니다.
+YAML은 별도 `config_id/config_sha256`로 확인하며, 정책 변경을 C++ 코드 변경으로 취급하지 않는다.
+
+시작 로그와 기존 1Hz diagnostics에서 `build_package_source_sha256`, `fusion_views=all`,
+`original_tunnel_pipeline=true`를 확인한다. `all`은 선택한 모드이고 세 뷰의 실제 수신/매칭 성공은
+기존 `fusion_view_*` 진단으로 확인한다. 상세 debug를 켜지 않아도 빌드 진단은 제공한다.
+시작 로그의 실제 실행파일 경로와 config 경로도 함께 남긴다.
+
+빌드·source만으로 기존 프로세스는 교체되지 않는다. 기존 launch를 종료한 후 기본 명령
+`roslaunch asmc_lidar lidar.launch`로 다시 실행한다. 같은 namespace에 두 생산자를 띄우지 않는다.
+ROS master를 다시 켠 뒤에는 `rosnode list`에 없는 옛 프로세스도 남을 수 있으므로
+`pgrep -af lidar_pipeline_node`로 함께 확인한다. 다른 사용자의 프로세스를 일괄 종료하지 않는다.
 
 ## 관측 선택과 확인 단위
 

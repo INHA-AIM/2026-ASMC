@@ -25,12 +25,12 @@ class LidarLaunchSelection(unittest.TestCase):
                          '/perception/lidar/planning_observations_map')
         self.assertTrue(c.params['/camera_bbox_lane_change/return_to_entry_lane'].value)
     def test_explicit_test_namespace_input(self):
-        p=config('src/asmc_lidar/launch/lidar.launch','namespace:=/migration/lidar')
-        self.assertEqual([n.namespace for n in p.nodes if n.type=='lidar_pipeline_node'],['/migration/lidar/'])
+        p=config('src/asmc_lidar/launch/lidar.launch','namespace:=/test/lidar')
+        self.assertEqual([n.namespace for n in p.nodes if n.type=='lidar_pipeline_node'],['/test/lidar/'])
         c=config('src/asmc_planner/launch/autonomy_no_bridges_v2.launch',
-                 'lidar_input_topic:=/migration/lidar/planning_observations_map')
+                 'lidar_input_topic:=/test/lidar/planning_observations_map')
         self.assertEqual(c.params['/planning_objects_adapter/input_topic'].value,
-                         '/migration/lidar/planning_observations_map')
+                         '/test/lidar/planning_observations_map')
     def test_collection_uses_the_same_typed_contract(self):
         c=config('src/data_collection/launch/capture_collection_planner.launch')
         self.assertEqual(len([n for n in c.nodes if n.type=='lidar_pipeline_node']),1)

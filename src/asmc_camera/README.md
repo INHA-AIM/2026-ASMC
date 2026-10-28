@@ -76,14 +76,14 @@ A126 진입 전 family 준비와 신호등 범위를 정리했습니다. 차선�
 새 실행과 동시에 켜서 생산자를 중복으로 만들지 않습니다.
 
 학습·데이터 감사·수집 도구는 오프라인 경로입니다. 실행 구조는 데이터·차량 제어·
-LiDAR fusion 정책을 바꾸지 않습니다. 3뷰 관측 메시지는 후속 LiDAR 인계를 위한 생산자 계약이며
-현재 3뷰 LiDAR fusion이 연결됐다는 의미는 아닙니다.
+LiDAR fusion 정책을 바꾸지 않습니다. 현재 asmc_lidar는 3뷰 관측을 수신해 실제 matching·분류를 수행합니다.
 
-LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다. Main은 별도 실행하며 전방 어댑터만 소유한다.
+LiDAR 연결은 [현재 인계](../../docs/handoffs/camera-to-lidar.md)와
+[3뷰 계약](../asmc_lidar/docs/three-view-fusion.md)을 따릅니다. 구 Main은 폐기됐으며 별도 실행하지 않습니다.
 
 정본 상태/모드 타입은 `asmc_msgs/InferenceStatus`, `asmc_msgs/SetInferenceMode`다.
 상태의 session UUID는 객체 관측과 같으며 기존 `asmc_camera` 타입은 구형 노드 제어 경로에 보존한다.
-정본 경로 소비자는 공용 타입으로 재빌드하고 카메라·Main과 함께 재시작한다.
+정본 경로 소비자는 공용 타입으로 재빌드하고 카메라·LiDAR 소비자와 함께 재시작한다.
 
 공식 BDD100K Large의 추가학습 전 결과는 [별도 추론 실험](docs/bdd-pretrained-experiment.md)으로
 확인한다. `bdd_lane.launch`·`bdd_lane_view.launch`는 이진 drivable/lane 시각화만 제공하며

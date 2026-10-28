@@ -1,0 +1,8 @@
+<launch>
+  <!-- Isolated-master fixture: observation publishers only, no vehicle control. -->
+  <include file="$(find asmc_planner)/launch/dashboard.launch">
+    <arg name="dashboard_port" value="18088"/>
+  </include>
+  <test pkg="asmc_planner" type="dashboard_shadow_ros_test.py"
+        test-name="dashboard_shadow_ros" time-limit="30"/>
+</launch>

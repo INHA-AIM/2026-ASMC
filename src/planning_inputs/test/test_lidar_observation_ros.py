@@ -45,7 +45,7 @@ class ObservationTest(unittest.TestCase):
         self.assertEqual(received[-1].header.frame_id, 'map')
         newborn = packet(5, p.observation.objects.OBSERVED)
         b = LidarObject(track_id=7, observation_state=LidarObject.OBSERVED,
-                        length=4., width=2., height=1., classification='vehicle')
+                        length=4., width=2., height=1., classification='vehicle', camera_class='truck')
         b.center.x=100.; b.center.y=100.; b.center.z=.5
         for i in range(8):
             b.obb_corners[i].x=102. if i & 1 else 98.
@@ -56,6 +56,13 @@ class ObservationTest(unittest.TestCase):
         self.assertEqual(len(received), 3)
         self.assertEqual(len(received[-1].objects), 1)
         self.assertTrue(received[-1].objects[0].velocity_unavailable)
+        self.assertEqual(received[-1].objects[0].classification, 'vehicle')
+        self.assertEqual(received[-1].objects[0].camera_class, 'truck')
+        self.assertEqual(received[-1].producer_session_id, 'integration')
+        self.assertEqual(received[-1].scan_sequence, 5)
+        self.assertEqual(received[-1].generation, 1)
+        self.assertEqual(received[-1].config_id, 'config')
+        self.assertEqual(received[-1].calibration_id, 'calibration')
         self.assertEqual(received[-1].objects[0].motion_state, newborn.UNKNOWN)
         sub.unregister()
 

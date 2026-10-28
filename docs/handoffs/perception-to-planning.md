@@ -37,7 +37,7 @@ YOLO 소비 경계는 2026-10-28 main `56433579`을 포함한 PR #122 작업 기
 |---|---|---|
 | 카메라 관측 | 원본 영상 픽셀 bbox·header와 camera ID, confidence·그룹·원본 이름 | tensor 좌표로 다시 확대하거나 원본 보정을 축소하지 않음. LiDAR의 미터 좌표와 직접 비교하지 않음 |
 | LiDAR fusion | 공용 CameraObjectObservation의 원본 픽셀·confidence·그룹·식별자를 수신. PR #122 작업에서는 3뷰가 기본 | 동일 track·scan의 중복 확인을 늘리지 않음. 클래스 유지와 최신 양성 근거는 다름. [3뷰 계약](../../src/asmc_lidar/docs/three-view-fusion.md) 참조 |
-| 판제 숫자 enum | 현재 어댑터 출력은 `vehicle/pedestrian/unknown`. 원본 person은 pedestrian, 나머지 dynamic/static은 unknown | **unknown 형상을 삭제하지 않음**. 판제 내부에는 STATIC_OBSTACLE=3도 있지만 현재 어댑터는 생산하지 않음. 세 그룹·원본 이름을 별도로 보존할 후속 작업 필요 |
+| 판제 숫자 enum | 현재 어댑터 출력은 `vehicle/pedestrian/unknown`. 원본 person은 pedestrian, 나머지 dynamic/static은 unknown | **unknown 형상을 삭제하지 않음**. 판제 내부에는 STATIC_OBSTACLE=3도 있지만 현재 어댑터는 생산하지 않음. 별도 classification/camera_class 문자열은 이제 private 객체와 Behavior/Frenet까지 보존 |
 | 운동 상태 | semantic 그룹과 `motion_state`·속도 validity는 별개. 공용 추적 관측은 기존 적용 절대속도·4단계 상태와 각각의 유효성을 제공 | unknown·미계산을 정지 속도0으로 해석하지 않음. 정본 공용 관측의 상태와 validity를 확인 |
 | 입력 유지 | 새 관측의 빈 결과와 stale/무효/미수신을 구분 | 미션 밖 입력 토픽을 끊거나 빈 배열을 타이머로 만들어 장애를 숨기지 않음 |
 | 음영 family | `base_link` xyz·support·freshness, 같은 영상의 IMU 지면 context | 좌/우 역할을 home/opposing으로 고정하지 않음. stale·SHA·세대 불일치와 GPS 복귀 정책 인수 |
@@ -78,9 +78,9 @@ YOLO 소비 경계는 2026-10-28 main `56433579`을 포함한 PR #122 작업 기
 이는 LiDAR가 해당 객체를 버린다는 뜻이 아니다.
 `planning_observations_map.observation.objects.objects[]`에는 그룹
 `classification`과 원본 `camera_class`가 함께 있지만,
-[private DetectedObject](../../src/planning_inputs/msg/DetectedObject.msg)에 해당 필드가 없어
-변환 이후에는 형상·속도·운동 상태만 남는다. 별도 `tracks_map`을 시각으로 다시 결합할 필요 없이
-**동일 관측의 문자열을 손실 없이 전달**하는 것이 첫 개선이다.
+[private DetectedObject](../../src/planning_inputs/msg/DetectedObject.msg)에도 같은 문자열을 전달한다.
+Behavior/Frenet 내부까지 보존하며, 별도 tracks_map을 시각으로 다시 결합하지 않는다.
+숫자 type의 기존 정책을 유지하므로 이름별 행동은 아직 새로 추가하지 않았다.
 
 현재 행동에서 확인한 범위:
 
@@ -103,11 +103,11 @@ YOLO 소비 경계는 2026-10-28 main `56433579`을 포함한 PR #122 작업 기
 - LiDAR의 semantic 정적 보조는 현재 `semantic_static_enabled: false`다.
   정적 라벨만으로 순간 속도 튐을 억제하는 기능이 기본 적용됐다고 안내하지 않는다.
 
-**제안하는 다음 작업 — 아직 행동 변경 미구현**
+**구현한 전달 경계와 남은 행동 검토**
 
-1. 안승현: 같은 공용 관측의 그룹·원본 이름을 private DetectedObject와 Behavior/Frenet 내부
-   객체까지 보존한다. 기존 type·OBB·운동 상태·속도·필터 결과는 먼저 그대로 유지한다.
-   메시지 필드 추가 시 private MD5와 전체 소비자 재빌드·bag 호환 영향을 명시한다.
+1. 구현됨: 같은 관측의 그룹·원본 이름과 배열의 생산자/scan 식별자를 보존한다.
+   기존 type·OBB·운동 상태·속도·필터 정책은 유지한다. private MD5 변경으로 전체 소비자 재빌드와
+   재시작이 필요하다. 공용 asmc_msgs는 불변이다. [전환·후속 계획](../architecture/shadow-planning-refactoring.md)을 따른다.
 2. 안승현이 판제 담당과 대조: 사람 전용 정책을 유지하며 dog/deer/bicycle/stroller의
    점유·진입 대응을 어느 범위에서 공유할지 결정한다. 정지 차량/자전거/사람의 추종·정지·회피는
    그룹 이름만으로 결정하지 않는다. static을 enum3으로 바로 바꾸는 작업도 행동 변경이다.
@@ -118,7 +118,8 @@ YOLO 소비 경계는 2026-10-28 main `56433579`을 포함한 PR #122 작업 기
 관측 문자열 보존과 정책 변경은 별도 커밋·검증으로 진행한다.
 분류가 유지된 객체를 매 scan 새 YOLO 확인으로 계산하지 않는다. 정책에 최신 카메라 근거가
 필요하면 기존 fusion의 신규/유지/만료 의미부터 연결하며 객체 header만으로 새 검출을 추정하지 않는다.
-이번 감사의 코드 변경은 주석뿐이며 메시지·분류 매핑·임계값·운동 상태·행동은 변경하지 않았다.
+PR #122의 감사는 주석 변경이었다. 이번 후속은 private 메시지와 전달·콘솔을 변경했고,
+숫자 분류 매핑·임계값·운동 상태·행동은 변경하지 않았다.
 
 ## 검토한 소비 범위
 

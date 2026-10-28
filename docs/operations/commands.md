@@ -22,7 +22,7 @@ LiDAR·판제·수집은 outer workspace만 빌드합니다. 주행 중 containe
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
-./scripts/build_ws.sh -j2
+./scripts/build_ws.sh -j2 -l2 -DCMAKE_BUILD_TYPE=Release
 source devel/setup.bash
 ```
 
@@ -33,10 +33,18 @@ source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
 ```
 
-위 환경은 main 배포 기준입니다. PR #122의 work 3뷰 LiDAR를 시험하는 처리·LiDAR 웹
-터미널은 [M1 빌드·실행파일 확인](../../src/asmc_lidar/docs/three-view-fusion.md#빌드와-실제-실행파일-확인)에
-따라 준비된 overlay 환경을 마지막에 적용합니다. `pipeline_config`로 work YAML만 선택해도
-main 실행파일이 3뷰 코드로 바뀌지는 않습니다. 기존 프로세스는 자동 교체하지 않습니다.
+PR #122의 터널 최적화·3뷰 fusion도 위 `/root/ws` 빌드에 포함됩니다.
+개인 M1 overlay를 자동 source하는 과거 설정은 해제하고 같은 workspace로 통일합니다.
+병합·설정 파일 변경만으로 기존 실행파일이나 실행 중인 노드가 갱신되지는 않습니다.
+재빌드 후 다음 점검이 `source_matches: true`인지 확인합니다.
+
+```bash
+python3 /root/ws/src/asmc_lidar/tools/check_runtime_build.py
+```
+
+이 점검은 ROS 노드를 시작하지 않습니다. 실행 후에는 기존 LiDAR diagnostics의
+`build_package_source_sha256`, `fusion_views=all`, `original_tunnel_pipeline=true`로 확인합니다.
+[빌드·실행파일 확인과 재시작 주의](../../src/asmc_lidar/docs/three-view-fusion.md#빌드와-실제-실행파일-확인)를 따릅니다.
 
 ### 터미널별 실행
 
@@ -125,6 +133,12 @@ rostopic echo -n 1 /morai_sensor_bridge/diagnostics
 ```
 
 웹 화면은 아래 기본 명령 중 필요한 것을 별도 터미널에서 실행하고 주소를 직접 엽니다.
+판제 웹은 모드에 따라 map/local을 자동 선택하며 수동 선택도 가능합니다. 음영 패널에 실제 선택 제어기,
+정지 사유, bbox 판정, family·실제 선택 경로·local LiDAR 참조 객체를 표시합니다.
+GPS 무효 때 마지막 map 위치로 올리지 않으며 debug OFF에서도 typed 기하를 볼 수 있습니다.
+local 객체를 현재 음영 제어기가 회피에 사용한다는 의미는 아닙니다.
+private 메시지 갱신 후에는 위 전체 빌드를 수행하고 adapter·판제·웹을 함께 재시작합니다.
+[표시·시간 계약과 후속 계획](../architecture/shadow-planning-refactoring.md)을 참고하세요.
 
 | 화면 | 기본 실행 | 주소 |
 |---|---|---|
@@ -412,19 +426,22 @@ xhost -local:docker
 ## LiDAR 병행 비교 실행
 
 일반 주행은 앞의 기본 명령과 `/perception/lidar` namespace를 사용합니다.
+구 이관용 `/migration/lidar`는 운영 경로·별칭이 아니며 더 이상 현행 실행 예시로 사용하지 않습니다.
+과거 bag·실험 기록의 토픽 이름은 당시 근거로 보존합니다. `/test/lidar`는 아래 격리 시험의 예시 이름일 뿐,
+새 파이프라인이나 자동 실행 노드를 추가하는 기능이 아닙니다.
 운영 LiDAR와 별도 시험 처리를 **동시에 비교할 때만** 아래처럼 시험 namespace를 명시합니다.
 여기서는 출력 격리를 위한 인자가 필수입니다. 센서·카메라 입력은 기존 정본을 공유하며
 판제는 운영 namespace를 계속 소비합니다.
 
 ```bash
-roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar
+roslaunch asmc_lidar lidar.launch namespace:=/test/lidar
 ```
 
 이 시험 결과를 웹으로 볼 때는 기존 웹 launch를 종료한 뒤 같은 namespace로 실행합니다.
 포트가 같은 웹 서버를 중복 실행하지 않습니다.
 
 ```bash
-roslaunch asmc_lidar view.launch namespace:=/migration/lidar
+roslaunch asmc_lidar view.launch namespace:=/test/lidar
 ```
 
 선택 옵션은 앞의 표와 동일합니다. `fusion:=false`는 카메라 연결 없는 비교,
@@ -434,7 +451,7 @@ OBB·ID·분류와 ego box 표시입니다. 원본 `/velodyne_points`와 처리 
 processing generation이 증가합니다.
 
 ```bash
-rosservice call /migration/lidar/lidar_pipeline/reset "{}"
+rosservice call /test/lidar/lidar_pipeline/reset "{}"
 ```
 
 보정·시간·터널 비교 등의 내부 옵션과 관측·진단 규칙은

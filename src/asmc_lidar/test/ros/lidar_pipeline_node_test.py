@@ -22,6 +22,7 @@ import hashlib
 import json
 import math
 import subprocess
+import tempfile
 import threading
 import time
 import unittest
@@ -148,13 +149,13 @@ class LidarPipelineNodeTest(unittest.TestCase):
         cls.local, cls.map, cls.diagnostics, cls.tf, cls.traces = [], [], [], [], []
         cls.local_observations, cls.map_observations = [], []
         cls.planning_observations = []
-        rospy.Subscriber('/migration/lidar/planning_observations_map', LidarPlanningObservation,
+        rospy.Subscriber('/test/lidar/planning_observations_map', LidarPlanningObservation,
                          cls.store(cls.planning_observations), queue_size=50)
-        rospy.Subscriber("/migration/lidar/observations_local", LidarObservation, cls.store(cls.local_observations), queue_size=50)
-        rospy.Subscriber("/migration/lidar/observations_map", LidarObservation, cls.store(cls.map_observations), queue_size=50)
-        rospy.Subscriber('/migration/lidar/objects_local', LidarObjectArray, cls.store(cls.local), queue_size=50)
-        rospy.Subscriber('/migration/lidar/objects_map', LidarObjectArray, cls.store(cls.map), queue_size=50)
-        rospy.Subscriber('/migration/lidar/diagnostics', DiagnosticArray, cls.store(cls.diagnostics),
+        rospy.Subscriber("/test/lidar/observations_local", LidarObservation, cls.store(cls.local_observations), queue_size=50)
+        rospy.Subscriber("/test/lidar/observations_map", LidarObservation, cls.store(cls.map_observations), queue_size=50)
+        rospy.Subscriber('/test/lidar/objects_local', LidarObjectArray, cls.store(cls.local), queue_size=50)
+        rospy.Subscriber('/test/lidar/objects_map', LidarObjectArray, cls.store(cls.map), queue_size=50)
+        rospy.Subscriber('/test/lidar/diagnostics', DiagnosticArray, cls.store(cls.diagnostics),
                          queue_size=5)
         rospy.Subscriber('/tf', TFMessage, cls.store(cls.tf), queue_size=50)
         cls.pub = dict(
@@ -477,6 +478,9 @@ class LidarPipelineNodeTest(unittest.TestCase):
         values = {kv.key: kv.value for kv in diagnostics.status[0].values}
         self.assertEqual(values['velocity_status'], 'unproven_moving_sensor_derivative')
         self.assertTrue(values['config_sha256'])
+        self.assertRegex(values['build_package_source_sha256'], r'^[0-9a-f]{64}$')
+        self.assertEqual(values['fusion_views'], 'all')
+        self.assertIn('original_tunnel_pipeline', values)
         self.assertEqual(values['roll_leveling'], 'true')
         self.assertEqual(values['tunnel_filter'], 'false')
         self.assertEqual(values['camera_fusion'], 'enabled')
@@ -485,7 +489,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
             self.assertIn(key, values)
 
         traces = []
-        subscriber = rospy.Subscriber('/migration/lidar/trace', String, traces.append, queue_size=5)
+        subscriber = rospy.Subscriber('/test/lidar/trace', String, traces.append, queue_size=5)
         try:
             self.wait_for(lambda: traces, 5.0, 'trace message while subscribed')
         finally:
@@ -679,7 +683,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         allowed = {'/rosout'} | ({'/tf'} if self.expect_tf else set())
         self.assertTrue(published)
         for topic in published:
-            self.assertTrue(topic.startswith('/migration/lidar/') or topic in allowed, topic)
+            self.assertTrue(topic.startswith('/test/lidar/') or topic in allowed, topic)
         self.assertEqual(sorted(s for s, providers in services if self.node in providers),
                          sorted([self.node + '/get_loggers', self.node + '/set_logger_level', self.node + '/reset']))
 
@@ -689,11 +693,11 @@ class LidarPipelineNodeTest(unittest.TestCase):
             executable = roslib.packages.find_node(PKG, 'lidar_pipeline_node')[0]
         cases = [
             ['_objects_local_topic:=/perception/lidar/objects_local'],
-            ['/migration/lidar/objects_map:=/perception/lidar/objects_map'],
-            ['/migration/lidar/objects_local:=/last_lidar'],
+            ['/test/lidar/objects_map:=/perception/lidar/objects_map'],
+            ['/test/lidar/objects_local:=/last_lidar'],
             ['_diagnostics_topic:=/perception/lidar/diagnostics'],
             ['_observations_local_topic:=/last_lidar'],
-            ['/migration/lidar/observations_map:=/perception/lidar/observations_map'],
+            ['/test/lidar/observations_map:=/perception/lidar/observations_map'],
             ['_trace_topic:=/planning/shadow_trace'],
             ['_tf_child_frame:=lidar_leveled'],
             ['_objects_local_topic:=/perception/lidar/objects'],
@@ -705,7 +709,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         master = rosgraph.Master('/lidar_pipeline_node_test')
         for index, case in enumerate(cases):
             name = 'lidar_pipeline_guard_%d' % index
-            command = [executable, '__name:=' + name, '__ns:=/migration/lidar', '_pipeline_config:=' + self.pipeline_config,
+            command = [executable, '__name:=' + name, '__ns:=/test/lidar', '_pipeline_config:=' + self.pipeline_config,
                        '_enable_camera_fusion:=false'] + case
             try:
                 result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -729,6 +733,28 @@ class LidarPipelineNodeTest(unittest.TestCase):
                 return matching[-1]
             time.sleep(.02)
         self.fail('no matching LiDAR observation')
+
+    def test_08_canonical_profile_refuses_legacy_algorithms(self):
+        executable = rospy.get_param('~node_executable', '') or roslib.packages.find_node(PKG, 'lidar_pipeline_node')[0]
+        package_dir = roslib.packages.get_pkg_dir(PKG)
+        for field in ('front_only', 'old_tunnel'):
+            with open(self.pipeline_config) as stream:
+                config = yaml.safe_load(stream)
+            if field == 'front_only':
+                config['fusion']['views'] = 'front'
+            else:
+                config['experimental']['tunnel_filter']['original_pipeline'] = False
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as temporary:
+                yaml.safe_dump(config, temporary)
+                temporary.flush()
+                command = [executable, '__name:=canonical_profile_guard', '__ns:=/test/lidar',
+                           '_pipeline_config:=' + temporary.name, '_package_dir:=' + package_dir,
+                           '_require_optimized_pipeline:=true', '_enable_camera_fusion:=true',
+                           '_experimental_tunnel_filter:=true']
+                result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                        timeout=30, universal_newlines=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('canonical runtime requires', result.stdout)
 
     def test_09_observation_identity_and_explicit_reset(self):
         first = self.observation_after(lambda m: m.objects.status == OBSERVED)
@@ -803,7 +829,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
     def test_11_hd_map_decisions_match_delivery_mode(self):
         from collections import deque
         traces = deque(maxlen=100)
-        subscriber = rospy.Subscriber('/migration/lidar/trace', String, traces.append, queue_size=1)
+        subscriber = rospy.Subscriber('/test/lidar/trace', String, traces.append, queue_size=1)
         try:
             self.wait_for(lambda: traces, 5.0, 'trace for HD-map audit')
             row = json.loads(traces[-1].data)
@@ -852,7 +878,7 @@ class LidarPipelineNodeTest(unittest.TestCase):
         self.assertEqual(cfg.get('hd_map_audit',{}).get('mode'),'filter',
                          'this delivery suite requires the filter profile')
         traces=deque(maxlen=100)
-        sub=rospy.Subscriber('/migration/lidar/trace',String,traces.append,queue_size=1)
+        sub=rospy.Subscriber('/test/lidar/trace',String,traces.append,queue_size=1)
         cls=type(self);old=(cls.lat,cls.lon)
         try:
             # Same local box/points, deliberately outside the road. Reset only

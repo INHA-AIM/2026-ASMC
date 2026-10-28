@@ -4,6 +4,7 @@
 #define PLANNER_COMMON_OBJECT_TYPES_HPP
 
 #include <cstdint>
+#include <string>
 #include "Global/Global.hpp"
 #include <limits>
 
@@ -22,6 +23,8 @@ using ObjectMotionState = asmc_planner::MotionState;
 struct TrackedObject {
     int id = -1;
     int type = 0;
+    // Semantic prior only; keep motion_state and velocity validity independent.
+    std::string classification, camera_class;
     ObjectMotionState motion_state = ObjectMotionState::UNKNOWN;
     double x = 0.0;
     double y = 0.0;

@@ -66,7 +66,10 @@ jobs:
         with:
           node-version: '20'
       - name: Check dashboard motion rendering
-        run: node src/asmc_planner/tests/behavior/dashboard_motion_test.js
+        run: |
+          node src/asmc_planner/tests/behavior/dashboard_motion_test.js
+          node src/asmc_planner/tests/behavior/dashboard_shadow_test.js
+          python3 src/asmc_planner/tests/behavior/dashboard_observation_test.py
       - name: Build ROS workspace
         run: |
           source /opt/ros/noetic/setup.bash

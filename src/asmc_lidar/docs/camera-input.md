@@ -142,4 +142,4 @@ rostopic echo /lidar_camera_probe/diagnostics
 ```
 
 Probe는 자신의 diagnostics만 발행한다. `/YOLO/BBox`, `/last_lidar`, 차량 제어를 발행하지 않는다.
-구 Main 이관은 완료했다. 현재 [공동 작업표](migration-tasks.md)와 [F1 진단·재현](fusion-verification.md)을 따른다. 최적화한3뷰 matching이 기본이며 전방 단독은 내부 복구 설정으로 남는다. [카메라→LiDAR 인계](../../../docs/handoffs/camera-to-lidar.md)에서 현재3뷰 경로와 local/map 경계를 확인한다.
+구 Main 이관은 완료했다. 현재 [공동 작업표](migration-tasks.md)와 [F1 진단·재현](fusion-verification.md)을 따른다. 최적화한3뷰 matching이 기본이며 전방 단독은 명시적인 `namespace:=/test/lidar` 비교 설정으로 남는다. [카메라→LiDAR 인계](../../../docs/handoffs/camera-to-lidar.md)에서 현재3뷰 경로와 local/map 경계를 확인한다.

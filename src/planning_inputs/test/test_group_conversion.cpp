@@ -70,6 +70,35 @@ TEST(MissionGroupConversion, ObstacleGroupDoesNotInventMotionOrDropGeometry) {
     EXPECT_EQ(0u, stats.unsupported_classification);
   }
 }
+TEST(MissionGroupConversion, AllMissionLabelsSurviveBothBoundariesWithoutMotionPolicyChange) {
+  const std::vector<std::pair<std::string, std::string>> labels = {
+    {"car","vehicle"},{"bus","vehicle"},{"truck","vehicle"},
+    {"person","dynamic_obstacle"},{"dog","dynamic_obstacle"},{"deer","dynamic_obstacle"},
+    {"bicycle","dynamic_obstacle"},{"stroller","dynamic_obstacle"},
+    {"motorcycle","static_obstacle"},{"bollard","static_obstacle"},{"box","static_obstacle"},
+    {"concrete_barrier","static_obstacle"},{"steel_barricade","static_obstacle"},
+    {"traffic_drum","static_obstacle"},{"plastic_barrier","static_obstacle"},{"traffic_cone","static_obstacle"}};
+  for (const auto& label : labels) {
+    auto input = Frame(label.second, label.first);
+    planning_inputs::DetectedObjectArray out;
+    ASSERT_EQ(planning_inputs::ConversionStatus::OK,
+      planning_inputs::ConvertLidarObservation(input, &out));
+    EXPECT_EQ(out.producer_session_id, input.observation.producer_session_id);
+    EXPECT_EQ(out.generation, input.observation.generation);
+    EXPECT_EQ(out.scan_sequence, input.observation.scan_sequence);
+    EXPECT_EQ(out.config_id, input.observation.config_id);
+    EXPECT_EQ(out.calibration_id, input.observation.calibration_id);
+    EXPECT_EQ(out.objects[0].classification, label.second);
+    EXPECT_EQ(out.objects[0].camera_class, label.first);
+    EXPECT_DOUBLE_EQ(out.objects[0].vx, 2.5);
+    EXPECT_EQ(out.objects[0].motion_state, planning_inputs::kMotionUnknown);
+    EXPECT_EQ(out.objects[0].type, label.second == "vehicle" ? 1 : label.first == "person" ? 2 : 0);
+    ASSERT_EQ(planning_inputs::ConversionStatus::OK,
+      planning_inputs::ConvertPlanningGeometry(input.observation.objects, &out));
+    EXPECT_EQ(out.objects[0].classification, label.second);
+    EXPECT_EQ(out.objects[0].camera_class, label.first);
+  }
+}
 }  // namespace
 
 int main(int argc, char** argv) {

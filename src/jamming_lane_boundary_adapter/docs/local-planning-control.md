@@ -1,33 +1,25 @@
-# Planning/Control
+# 음영 Planning/Control 연결
 
-현재 Behavior Planner, Frenet Planner와 MPC Controller는 ROS1/catkin package이며 내부
-`asmc_msgs` topic으로 연결된다. MORAI UDP는 bridge package만 소유한다. 자세한 현재 구조는
-[Planning/Control 개발 가이드](../../../docs/architecture/planning-control.md), 실행은
-[운영 규약](../../../docs/operations/planning-control.md)을 따른다.
-
-아래 `lane_boundary_adapter`의 기존 monitor는 camera 관측 계약 검토용 read-only ROS pilot이다.
-별도 추가한 [카메라·BBOX 차선변경 노드](bbox-lane-change.md)는
-명시적으로 활성화하면 MORAI `/ctrl_cmd`를 발행한다. 기존 planner/controller와 동시 실행하지 않는다.
-외부 차선 경계와 YOLO 판정을 사용해 차로 중심을 추종하고 장애물에 따라 반복 변경한다.
-
-| 프로젝트 | 담당 | 빌드 |
-|---|---|---|
-| `src/asmc_planner/` | 이강태 | Catkin, C++17 ROS runtime + core |
-| `src/asmc_controller/` | 정윤태·양서준 | Catkin, C++17 ROS runtime + core |
-| `src/asmc_planner/` | 정윤태·양서준 | Catkin, v2 Behavior/FSM runtime |
-| `src/jamming_lane_boundary_adapter/` | 안승현·판제 공동 검토 | Catkin, C++17, monitor + opt-in 카메라 추종 |
+ROS 패키지 이름은 `lane_boundary_adapter`이며 현재 autonomy launch가 이 패키지의
+family→영상 경계→전방 bbox 차로 분류→차선변경/추종 경로를 실행한다.
+일반 MPC는 `/ctrl_cmd/normal`, 음영 추종기는 `/ctrl_cmd/jamming`을 제공하고,
+ControlSelector만 `/ctrl_cmd`를 발행한다. 별도 차선변경 제어 launch를 추가하지 않는다.
 
 ```bash
-./scripts/build_ws.sh
+./scripts/build_ws.sh -j2 -l2 -DCMAKE_BUILD_TYPE=Release
 source devel/setup.bash
 roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
-위 launch는 개발 `/Object_topic` adapter를 사용하므로 본선 sensor-only launch가 아니다.
-이전 standalone helper는 현재 executable과 맞지 않으므로 사용하지 않는다.
+bridge·camera·LiDAR는 각각 실행한다. 현재 일반 객체 입력은
+`/perception/lidar/planning_observations_map`이며 개발 GT `/Object_topic` adapter가 아니다.
+GPS 무효 map 입력은 보류한다. local LiDAR 객체는 제공되지만 현재 음영 제어기의 회피 입력은 아니다.
 
-카메라 경계 관측을 제어와 분리해 확인하려면
-[lane boundary adapter README](../README.md)를 따른다. 해당 출력은
-Marker/diagnostics 전용이며 canonical 판제 입력 토픽은 공동 검증 후 별도 합의한다. 음영
-왕복 2차로에서 관측 중앙선이 잠깐 누락될 때의 inferred-center 출력도 명시적 degraded WARN
-상태일 뿐 현재 planner/controller 입력이 아니다.
+읽기 전용 boundary monitor와 실제 제어 노드를 구별한다. 기존 private 메시지와 내부
+영상 투영은 현재 실행에 필요하다. 폴더를 `asmc_planner/src/jamming`으로 흡수하는 변경과
+local 통로·기존 planner/controller 재사용은 **다음 단위 제안**이며 아직 실행을 바꾸지 않았다.
+
+[현재 구현·정지 원인·통합 계획](../../../docs/architecture/shadow-planning-refactoring.md),
+[카메라·BBOX 차선변경](bbox-lane-change.md), [판제 실행](../../../docs/operations/commands.md)을 따른다.
+판제 웹 `dashboard.launch`의 음영 local 화면은 실제 선택 경로와 입력을 관측할 뿐,
+새 경로를 계산하거나 차량을 제어하지 않는다.

@@ -154,6 +154,8 @@ ConversionStatus ConvertDetectedObjects(
         TrackedObject object;
         object.id = message_object.id;
         object.type = message_object.type;
+        object.classification = message_object.classification;
+        object.camera_class = message_object.camera_class;
         object.motion_state =
             static_cast<ObjectMotionState>(message_object.motion_state);
         object.velocity_unavailable = message_object.velocity_unavailable;

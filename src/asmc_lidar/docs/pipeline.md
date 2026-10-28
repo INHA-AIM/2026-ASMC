@@ -2,9 +2,9 @@
 
 현재 구조·이름·식별 계약은 [첫 단위 정리](structure-contract-refactor.md)와 [이전표](name-mapping.md)가 정본이다. 아래 PR #103 수치·실패와 비교 기준선은 당시 근거를 보존한다.
 
-**B4 현행:** `asmc_lidar`가 정본이며 판제 기본은 공용 `tracks_map` 직접 입력이다.
+**B4 현행:** `asmc_lidar`가 정본이며 판제 기본은 공용 `planning_observations_map` 직접 입력이다.
 수집·시나리오도 같은 런타임을 쓰고 구 Main/Msg는 폐기했다. 기본 namespace는 `/perception/lidar`,
-병행 비교는 `/migration/lidar`다. [현재 실행·메시지·제한](planning-runtime.md)을 먼저 읽는다.
+병행 비교는 `/test/lidar`다. [현재 실행·메시지·제한](planning-runtime.md)을 먼저 읽는다.
 
 아래 PR #103–105 비교 기준선·수치와 미수락은 당시 근거다. 구 Main 실행은 삭제 전 고정 revision에서만 재현한다.
 
@@ -22,7 +22,7 @@
 
 ## 현재 상태와 제한
 
-- 구현 완료: 독립 LiDAR pipeline(아래 처리 흐름)과 전방(`camera_front`) class fusion.
+- 구현 완료: 독립 LiDAR pipeline과 PR #122의3뷰 class fusion. 아래 Main 이식 비교는 당시 전방 기준이다.
 - 검증 완료: roll·pitch 수평화와 local/map 출력. 일반·터널 bag replay가 Main `8f93c22e` 기준선과 bit 단위로
   같았고, GPS 무효·중단·복구와 IMU stale·무효를 실제 노드 rostest로 시험했다.
 - B4에서 판제·수집·시나리오의 구 입력 분기와 중복 필터를 제거했다.
@@ -31,8 +31,8 @@
 - PR #108은 v7 HD맵·높이 ROI·상부 전달 필터를 추가했다. 구 known-static·structure catalog·relevance와 OBB clipping을 그대로 이식한 것은 아니다([편입 경계](filter-migration.md)).
 - 웹 화면은 별도 `view.launch`, 단계 샘플은 `lidar.launch debug:=true`로 요청한다. [웹 모니터](web-monitor.md)를 따른다.
 - 상대속도 validity는 false이며 절대 적용 추정값·운동 validity는 유효 map/계산 근거에 따른다. UNKNOWN의 수치0은 정지 확인이 아니다.
-- 실제 카메라 bag에서의 fusion 성능과 실시간 처리 성능은 수락하지 않았다.
-- TunnelFilter는 기본 OFF이며 ON 성능은 수락하지 않았다.
+- F1·M1 bag/실시간 비교와 기본 승격은 [3뷰 계약](three-view-fusion.md)에 기록했다. 전 미션·최대 공백의 미수락 항목은 별도로 남긴다.
+- 현재 터널 최적화 original_pipeline은 기본 ON이다. 전처리·구간 조건과 객체 보존 한계는 [현재 설정](../config/lidar_pipeline.yaml)을 따른다.
 
 ## 기준선과 저장소 Main과의 의도적 차이
 
@@ -58,8 +58,8 @@ Main 공통의 의도적 차이는 따로 있다. 운영 출력은 제외했고(
 /velodyne_points ─┐                     /imu, /Ego_topic(CAN) → scan 시각 local 입력(≤120ms, 최대 50ms 대기)
                   ▼                     /gps → sanity·HD맵 원점 검사 → bounded map pose(300ms, 3회 복구)
  ROI·자차 제거 → Voxel 0.1m → roll·pitch 수평화(행렬을 scan Context에 저장)
- → IMU 수평 지면 기준 높이 ROI(2.5m) → RANSAC 지면 제거 → [실험 TunnelFilter, 기본 OFF] → 적응 군집 → centroid·L-shape OBB
- → CA Kalman/Hungarian 추적(local) → 전방 카메라 class fusion → typed local/map 구성
+ → IMU 수평 지면 기준 높이 ROI(2.5m) → RANSAC 지면 제거 → [최적화 터널 처리, 구간 조건부] → 적응 군집 → centroid·L-shape OBB
+ → CA Kalman/Hungarian 추적(local) → 3뷰 카메라 class fusion → typed local/map 구성
  → HD맵·상부 전달 필터(원본 track 보존) → 배열·관측 발행
 ```
 
@@ -109,10 +109,10 @@ bag 비교의 동등성 경계는 **추적 결과와 typed local/map 배열**이
 
 | 토픽 (기본값, `~*_topic` 또는 remap으로 변경) | 타입 | 내용 |
 |---|---|---|
-| `/migration/lidar/objects_local` | `asmc_msgs/LidarObjectArray` | frame `base_link`(후륜축), 관측 scan의 source stamp |
-| `/migration/lidar/objects_map` | `asmc_msgs/LidarObjectArray` | frame `map`, 같은 객체·ID를 관측 시각 pose로 변환 |
-| `/migration/lidar/diagnostics` | `diagnostic_msgs/DiagnosticArray` | 1Hz. 처리·무효·덮어쓴 scan 수, 처리시간 p50/p95, map·카메라 사유 |
-| `/migration/lidar/trace` | `std_msgs/String` | 구독자가 있을 때만 scan별 JSON ([형식](scan-trace-schema.md), debug 필드 제외) |
+| `/perception/lidar/objects_local` | `asmc_msgs/LidarObjectArray` | frame `base_link`(후륜축), 관측 scan의 source stamp |
+| `/perception/lidar/objects_map` | `asmc_msgs/LidarObjectArray` | frame `map`, 같은 객체·ID를 관측 시각 pose로 변환 |
+| `/perception/lidar/diagnostics` | `diagnostic_msgs/DiagnosticArray` | 1Hz. 처리·무효·덮어쓴 scan 수, 처리시간 p50/p95, map·카메라 사유 |
+| `/perception/lidar/trace` | `std_msgs/String` | 구독자가 있을 때만 scan별 JSON ([형식](scan-trace-schema.md), debug 필드 제외) |
 
 - `OBSERVED`/`OBSERVED_EMPTY`: 정상 처리. 두 배열 모두 `INPUT_INVALID`(객체 0)인 경우는
   (a) scan 시각의 IMU/CAN이 없거나 stale·무효(reason=pose 사유), (b) 점 0개 scan
@@ -153,13 +153,14 @@ frame을 보내지 않아 0.35초 후 비활성), `successful_batches`/`source_i
 보관량 8개·350ms(Main 128개). ACTIVE 상태에서 전방 관측이 아직 없으면(`missing`) Main처럼 활성·관측 없음으로
 scan 2개까지 대기시키고, 관측이 있던 뒤의 `missing`(세션/세대 전환으로 Receiver가 view를 비움)은 즉시 epoch를 바꾼다.
 
-## 실험 TunnelFilterCore
+## 터널 처리와 과거 비교 stage
 
-`experimental.tunnel_filter.enabled` 기본 false다(노드 `~experimental_tunnel_filter`, launch 인자,
-replay `--tunnel-filter on|off`를 주면 그 값이 설정 파일보다 우선한다). OFF이면
-stage를 만들지 않고 호출하지 않는다. ON이면 GPS와 무관하게 모든 scan에서 RANSAC 뒤·군집 앞에
-core를 호출하고, core가 천장/벽으로 표시한 voxel 점만 지면 제거 결과에서 뺀다.
-`IsGpsDenied`/`ShouldRunExperiment`는 사용하지 않는다. ON의 필터 성능은 수락하지 않았다.
+현재 정본은 `experimental.tunnel_filter.enabled: true`와 `original_pipeline: true`다.
+실제 scan의 map pose가 무효일 때 최적화 터널 경로를 선택하며, 상세 조건은
+[3뷰·터널 실행 정본](three-view-fusion.md#터널-연산-최적화)을 따른다.
+이관 초기의 `original_pipeline: false` 독립 stage는 비교용으로만 보존한다.
+해당 stage의 GPS와 무관한 호출 특성을 현재 정본 실행으로 해석하지 않는다.
+운영 namespace에서는 구 비교 설정을 거부하며, 임의 pitch-only/옛 터널 조합을 기본 실행 예시로 안내하지 않는다.
 
 ## 실행
 
@@ -169,18 +170,14 @@ source /opt/ros/noetic/setup.bash
 cd <repo> && catkin_make -DCATKIN_WHITELIST_PACKAGES=""
 source devel/setup.bash
 
-# 이관 검증 노드 (기존 bridge/카메라가 발행 중인 ROS 입력을 구독)
-roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar
+# 정본 처리 노드 (기존 bridge/카메라의 ROS 입력 구독)
+roslaunch asmc_lidar lidar.launch
 # LiDAR 단독 (카메라 구독 없음)
 roslaunch asmc_lidar lidar.launch fusion:=false
-# pitch-only 수평화 / 실험 TunnelFilter ON (인자를 주지 않으면 config/lidar_pipeline.yaml 값)
-roslaunch asmc_lidar lidar.launch lidar_level_roll:=false
-roslaunch asmc_lidar lidar.launch experimental_tunnel_filter:=true
-
 # local/map 상태 확인
-rostopic echo -n1 /migration/lidar/objects_local/status
-rostopic echo -n1 /migration/lidar/objects_map/reason
-rostopic echo /migration/lidar/diagnostics
+rostopic echo -n1 /perception/lidar/objects_local/status
+rostopic echo -n1 /perception/lidar/objects_map/reason
+rostopic echo /perception/lidar/diagnostics
 
 # bag 재생 (ROS master 불필요, 지정한 토픽만 읽음)
 rosrun asmc_lidar lidar_replay --bag in.bag --output out.jsonl \

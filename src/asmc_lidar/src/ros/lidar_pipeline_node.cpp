@@ -1,8 +1,8 @@
-// lidar_pipeline_node: ROS adapter of the asmc_lidar shadow pipeline.
+// lidar_pipeline_node: ROS adapter of the canonical asmc_lidar pipeline.
 //
 // Inputs: PointCloud2, sensor_msgs/Imu, morai EgoVehicleStatus and GPSMessage,
 // and the canonical camera observation/status topics (camera::Receiver).
-// Outputs, by default only under /migration/lidar/*: typed local/map
+// lidar.launch defaults to /perception/lidar/*; outputs are namespace-relative: typed local/map
 // LidarObjectArray, 1 Hz diagnostics, a per-scan JSON trace (serialized only
 // while subscribed), with ~publish_tf base_link -> ~tf_child_frame and, with
 // ~debug_enabled (default false), rate-limited stage clouds and a scan JSON
@@ -27,6 +27,8 @@
 #include <asmc_lidar/ros/runtime.hpp>
 #include <asmc_lidar/ros/planning_output.hpp>
 #include <asmc_lidar/ros/debug_publisher.hpp>
+#include <asmc_lidar/build_info.hpp>
+#include <iostream>
 
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
@@ -156,6 +158,8 @@ class LidarPipelineNode {
 
   // Ported from Main src/main.cpp:648-688 (threads, waitForShutdown, joins) (8f93c22e).
   int Run() {
+    std::error_code executable_error;
+    const auto executable = std::filesystem::read_symlink("/proc/self/exe", executable_error);
     worker_ = std::thread([this] { Work(); });
     ros::AsyncSpinner spinner(spinner_threads_);
     spinner.start();
@@ -163,6 +167,11 @@ class LidarPipelineNode {
                     << diagnostics_topic_ << ", " << trace_topic_ << (publish_tf_ ? ", /tf" : "")
                     << "; camera fusion " << (camera_ ? std::string("on") : "off (" + camera_reason_ + ")")
                     << "; debug stages " << (debug_ ? "on under " + debug_config_.topic_prefix : std::string("off")));
+    ROS_INFO_STREAM("lidar_pipeline build: executable=" << (executable_error ? "unavailable" : executable.string())
+                    << "; package_source_sha256=" << build::kSourceSha256
+                    << "; fusion_views=" << config_.fusion.views
+                    << "; original_tunnel_pipeline=" << config_.pipeline.tunnel_route.original_pipeline
+                    << "; config=" << config_.config_path);
     ros::waitForShutdown();
     spinner.stop();  // joins the callback threads: no callback touches the runtime after this
     {
@@ -362,6 +371,14 @@ class LidarPipelineNode {
     if (pnh_.getParam("lidar_level_roll", flag)) config_.pipeline.use_roll = flag;
     if (pnh_.getParam("enable_camera_fusion", flag)) config_.enable_camera_fusion = flag;
     if (pnh_.getParam("experimental_tunnel_filter", flag)) config_.pipeline.tunnel.enabled = flag;
+    // Canonical launch must not silently run an old comparison YAML. Explicit
+    // comparisons use an explicit test namespace; no algorithm fallback.
+    bool require_optimized = false;
+    pnh_.param("require_optimized_pipeline", require_optimized, false);
+    if (require_optimized &&
+        ((config_.enable_camera_fusion && config_.fusion.views != "all") ||
+         (config_.pipeline.tunnel.enabled && !config_.pipeline.tunnel_route.original_pipeline)))
+      throw StartupRefused("canonical runtime requires fusion.views=all and optimized tunnel original_pipeline=true; use an isolated test namespace for comparison profiles");
     // The trace topic never carries the debug payload (detections/clusters/digests).
     config_.pipeline.capture_debug = false;
   }
@@ -821,6 +838,10 @@ class LidarPipelineNode {
       number("processing_ms_max", window.empty() ? 0. : *std::max_element(window.begin(), window.end()));
     }
     value("producer_session_id", epoch_.session());
+    value("build_package_source_sha256", build::kSourceSha256);
+    value("build_type", build::kBuildType);
+    value("fusion_views", config.fusion.views);
+    value("original_tunnel_pipeline", config.pipeline.tunnel_route.original_pipeline ? "true" : "false");
     number("generation", epoch_.generation());
     number("retired_results", retired_results_.load());
     value("config_id", config.config_id);
@@ -910,6 +931,25 @@ class LidarPipelineNode {
 }  // namespace asmc
 
 int main(int argc, char** argv) {
+  // No master, subscribers, parameters or GPU are needed for build inspection.
+  if (argc == 2 && std::string(argv[1]) == "--build-info") {
+    using namespace asmc::lidar;
+    const std::map<std::string, std::string> info{{"schema", "asmc.lidar.build.v1"},
+        {"package_source_sha256", build::kSourceSha256},
+        {"source_directory", build::kSourceDirectory},
+        {"build_type", build::kBuildType}, {"compiler", build::kCompiler}};
+    std::cout << '{';
+    bool first = true;
+    for (const auto& entry : info) {
+      if (!first) std::cout << ',';
+      first = false;
+      runtime::trace::Str(std::cout, entry.first);
+      std::cout << ':';
+      runtime::trace::Str(std::cout, entry.second);
+    }
+    std::cout << "}\n";
+    return 0;
+  }
   ros::init(argc, argv, "lidar_pipeline");
   ros::NodeHandle nh, pnh("~");
   try {

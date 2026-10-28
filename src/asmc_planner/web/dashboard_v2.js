@@ -29,7 +29,7 @@
     links: [], nodes: [], route: [], lights: {}, command: null, feedback: null,
     feature: null, trajectory: null, ego: null, lidarObjects: null,
     lidarMotionDebug: null, debugConfig: null, planningMarkers: null,
-    recentPlanningIssue: null, receivedAt: {}
+    recentPlanningIssue: null, receivedAt: {}, shadow: {}, shadowReceived: 0
   };
   const view = {scale: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0, follow: false};
   const tracks = new Map();
@@ -40,12 +40,17 @@
   let lidarChanges = {appeared: [], disappeared: [], typeChanged: []};
   let motionDebugById = new Map();
 
-  const finite = value => Number.isFinite(Number(value));
+  const finite = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
   const fmt = (value, digits = 1) => finite(value) && Math.abs(Number(value)) < 1e8 ? Number(value).toFixed(digits) : '∞';
-  const esc = value => String(value ?? '').replace(/[&<>]/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[character]));
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
   const worldToScreen = point => ({x: point[0] * view.scale + view.x, y: -point[1] * view.scale + view.y});
   const screenToWorld = (x, y) => [(x - view.x) / view.scale, -(y - view.y) / view.scale];
   const typeInfo = value => objectTypes[Number(value)] || {name: `TYPE ${value}`, css: 'unknown', color: '#a8b6c0'};
+  // Camera/fusion semantics are separate from the planner's legacy policy enum.
+  // For example box/static_obstacle may intentionally retain type=0 (UNKNOWN).
+  // Display the current typed observation; never infer class from motion/debug history.
+  const semanticLabel = object => [object?.camera_class, object?.classification]
+    .map(value => typeof value === 'string' && value.trim() ? value.trim() : 'unknown').join(' · ');
   const motionName = value => {
     if (value === null || value === undefined || value === '') return 'UNKNOWN';
     const labels = ['UNKNOWN', 'LOW_THREAT', 'PENDING', 'DYNAMIC'];
@@ -262,13 +267,14 @@
     if ($('showVelocity').checked) velocityArrows(object, debug);
     if ($('showLabels').checked && finite(object.center?.x) && finite(object.center?.y)) {
       const point = worldToScreen([object.center.x, object.center.y]);
-      ctx.font = 'bold 11px ui-monospace, monospace';
+      ctx.font = 'bold 11px ui-monospace, "Malgun Gothic", "Noto Sans CJK KR", monospace';
       ctx.fillStyle = selectedAvoidTarget ? '#ffffff' : motion.color;
       const target = selectedAvoidTarget ? ' AVOID TARGET' : '';
       const roadRatio = Number(debug?.road_ratio);
       const road = Number.isFinite(roadRatio) && roadRatio >= 0
         ? ` road ${Math.round(roadRatio * 100)}%` : '';
-      ctx.fillText(`ID ${object.id} ${info.name}/${motion.name}${road}${target}`, point.x + 7, point.y - 7);
+      ctx.fillText(`ID ${object.id} ${semanticLabel(object)}${target}`, point.x + 7, point.y - 21);
+      ctx.fillText(`policy ${info.name} · motion ${motion.name}${road}`, point.x + 7, point.y - 7);
     }
   }
 
@@ -311,7 +317,7 @@
       ctx.restore();
       if ($('showVelocity').checked) velocityArrows(object, debug);
       if ($('showLabels').checked) {
-        ctx.font = 'bold 11px ui-monospace, monospace';
+        ctx.font = 'bold 11px ui-monospace, "Malgun Gothic", "Noto Sans CJK KR", monospace';
         ctx.fillStyle = '#ffffff';
         const roadRatio = Number(debug?.road_ratio);
         const road = Number.isFinite(roadRatio) && roadRatio >= 0
@@ -375,6 +381,9 @@
   }
 
   function draw() {
+    for (const id of ['fit','follow','showDroppedObjects','showVelocity','showCorridor','showSignals'])
+      $(id).disabled = localView();
+    if (localView()) { drawLocalScene(); return; }
     if (view.follow) centerEgo();
     const rect = canvas.getBoundingClientRect();
     ctx.clearRect(0, 0, rect.width, rect.height);
@@ -511,15 +520,15 @@
       ['Road mask', !data.lidarMotionDebug ? '진단 없음' : boundary.available === false ? 'FAIL-OPEN' : `margin ${fmt(boundary.margin_m)}m · ≥${fmt(Number(boundary.road_ratio_threshold) * 100, 0)}%`],
       ['Fixed filters', !data.lidarMotionDebug ? '진단 없음' : `catalog ${knownStatic.available ? 'ON' : 'OFF'} · zones ${staticZone.available ? staticZone.zone_count ?? 0 : 'OFF'}`],
       ['Output objects', objects.length],
-      ['Vehicle / Ped', `${counts.vehicle} / ${counts.pedestrian}`],
-      ['Unknown', counts.unknown],
+      ['Policy vehicle / ped', `${counts.vehicle} / ${counts.pedestrian}`],
+      ['Policy unknown', counts.unknown],
       ['Motion U/L/P/D', `${stateCounts.UNKNOWN}/${stateCounts.LOW_THREAT}/${stateCounts.PENDING}/${stateCounts.DYNAMIC}`],
       ['Debug ↔ object stamp', finite(stampDeltaMs) ? `${fmt(stampDeltaMs, 1)} ms` : '–'],
       ['AVOID corridor', finite(corridorHalfWidth) ? `±${fmt(corridorHalfWidth, 2)} m` : '–'],
       ['AVOID target', avoidTargetId === null ? 'NONE' : `ID ${avoidTargetId}`],
       ['Appeared IDs', changeText(lidarChanges.appeared)],
       ['Disappeared IDs', changeText(lidarChanges.disappeared)],
-      ['Type changes', changeText(lidarChanges.typeChanged)],
+      ['Policy type changes', changeText(lidarChanges.typeChanged)],
       ['Yaw rate', '0 assumed / unmeasured']
     ]);
     const filterSummary = !data.lidarMotionDebug
@@ -573,7 +582,7 @@
         : '–';
       return `<div class="object-row ${info.css} ${motion.css} ${row.keep ? 'filter-kept' : 'filter-dropped'} ${isAvoidTarget ? 'avoid-selected' : ''}">
         <span class="object-id">ID ${esc(row.id)}${isAvoidTarget ? '<b>AVOID</b>' : ''}</span>
-        <span class="object-type">${esc(info.name)}</span>
+        <span class="object-type">${esc(semanticLabel(object))}<br>policy ${esc(info.name)}</span>
         <span class="motion-state">${esc(motion.name)}</span>
         <span class="filter-state">${row.keep ? 'KEEP' : 'DROP'}</span>
         <span class="object-detail" title="${esc(geometry)}">${esc(geometry)}</span>
@@ -661,6 +670,7 @@
     }).join('');
     $('reasons').innerHTML = `<div>${esc(command.reason || feature.decision_reason || '–')}</div><div class="hard">${esc(feedback.result_detail || feature.hard_rule_reason || '–')}</div>`;
     updateLidarPanel();
+    updateShadowPanel();
     updateHealth();
   }
 
@@ -691,8 +701,89 @@
     ]);
   }
 
+  function sceneEntry(key) {
+    const entry = data.shadow?.[key];
+    if (!entry) return null;
+    const elapsed = Math.max(0, (performance.now() - data.shadowReceived) / 1000);
+    const limit = entry.freshness_limit_s ?? (['family', 'path', 'objects'].includes(key) ? .35 : ['selector', 'mode'].includes(key) ? 2.5 : .5);
+    return {...entry, available: Boolean(entry.available && entry.receive_age_s + elapsed <= limit)};
+  }
+
+  function localView() {
+    const choice = $('sceneMode').value || 'auto';
+    return choice === 'local' || (choice === 'auto' &&
+      (data.shadow?.selector?.payload?.mode === 'JAMMING' || data.shadow?.mode?.payload?.mode === 1));
+  }
+
+  function updateShadowPanel() {
+    const selector = sceneEntry('selector');
+    const control = sceneEntry('controller');
+    const c = control?.payload || {};
+    const f = sceneEntry('family'), o = sceneEntry('objects'), b = sceneEntry('bbox');
+    const state = e => !e ? '미수신' : !e.valid ? `무효: ${e.reason}` : e.available ? '유효/최신' : 'STALE';
+    const ages = e => e ? `source ${fmt(e.source_age_s, 3)}s / 수신 후 ${fmt(e.receive_age_s, 3)}s` : '–';
+    const selected = selector?.available ? selector.payload.selected_source : '확인 불가/STALE';
+    $('selectedMode').textContent = selector?.available ? selector.payload.mode : 'WAIT/STALE';
+    $('shadowGrid').innerHTML = kv([
+      ['현재 선택 제어', selected],
+      ['명령 수신 freshness', selector?.available ? selector.payload.command_fresh : '확인 불가'],
+      ['음영 제어 상태', control?.available ? c.reason : state(control)],
+      ['음영 활성', c.mode_active ?? '–'],
+      ['변경 단계 / 복귀', `${c.change_state || '–'} / ${c.returning_to_entry || '–'}`],
+      ['진입 / 현재 / 목표 차로', `${c.entry_lane ?? '–'} / ${c.active_lane ?? '–'} / ${c.target_lane ?? '–'}`],
+      ['차선변경 명령 / 정지 누적', `${c.change_drive_time_sec ?? '–'} / ${c.change_pause_time_sec ?? '–'} s`],
+      ['명령 속도 / 조향', `${c.velocity_kph ?? '–'} km/h / ${c.steering_rad ?? '–'} rad`],
+      ['BBOX 검사 생략 중', c.bbox_stop_suppressed ?? '–'],
+      ['BBOX 입력 사유', c.bbox_input_error || b?.payload?.reason || '–'],
+      ['family', `${state(f)} · ${ages(f)}`],
+      ['local LiDAR', `${state(o)} · ${ages(o)}`],
+      ['LiDAR/family source 차이', f && o ? `${fmt((o.stamp_ns-f.stamp_ns)/1e6,1)} ms (운동 정렬 없음)` : '비교 불가'],
+      ['local 생략 객체', o?.payload?.omitted_objects ?? '–'],
+      ['일반 MPC 경고', selector?.payload?.mode === 'JAMMING' ? '비선택 제어기 — 음영 정지 이유와 별도' : '일반 실행 패널 참조']
+    ]);
+    const boxes = b?.available ? b.payload.boxes || [] : [];
+    $('shadowBoxes').innerHTML = boxes.length ? boxes.map(box =>
+      `<div>${esc(box.label)} · ${esc(['UNKNOWN','OWN','ADJACENT','BOTH','OUTSIDE','DEFERRED_FAR'][box.assignment] || 'UNKNOWN')} · ${esc(box.reason)}</div>`).join('') : `BBOX: ${esc(state(b))}`;
+  }
+
+  function drawLocalScene() {
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = '#071018'; ctx.fillRect(0, 0, rect.width, rect.height);
+    const scale = Math.min(rect.width / 26, rect.height / 35);
+    const pixel = p => [rect.width/2 - p[1]*scale, rect.height*.86 - p[0]*scale];
+    const line = (points, color, width=1.5, dashed=false) => {
+      if (points.length < 2) return;
+      ctx.beginPath(); points.forEach((p,i) => { const q=pixel(p); i ? ctx.lineTo(...q) : ctx.moveTo(...q); });
+      ctx.strokeStyle=color; ctx.lineWidth=width; ctx.setLineDash(dashed ? [5,4] : []); ctx.stroke(); ctx.setLineDash([]);
+    };
+    for (let x=0; x<=30; x+=5) {
+      line([[x,-12],[x,12]], '#20313d', 1);
+      ctx.fillStyle='#87939b'; const p=pixel([x,0]); ctx.fillText(`${x}m`,p[0]+5,p[1]-3);
+    }
+    const f=sceneEntry('family'), paths=sceneEntry('path'), objects=sceneEntry('objects');
+    const reference = f?.available ? f : paths?.available ? paths : objects;
+    const aligned = e => e?.available && reference?.available && Math.abs(e.stamp_ns-reference.stamp_ns)<=200000000;
+    if (aligned(f)) for (const l of f.payload.lines) line(l.points, '#7ab8ff', 2, l.support===2);
+    if (aligned(paths) && $('showTrajectory').checked) for (const l of paths.payload.lines)
+      line(l.points, l.kind==='selected_centerline' ? '#20e6d0' : '#697c8c', l.kind==='selected_centerline' ? 3 : 1);
+    if (aligned(objects) && $('showObjects').checked) for (const o of objects.payload.objects) {
+      // Convex hull of all eight projected corners; corner numbering is not a polygon order.
+      const points=o.corners.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+      const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+      const half=ps=>{const h=[];for(const p of ps){while(h.length>1&&cross(h[h.length-2],h[h.length-1],p)<=0)h.pop();h.push(p);}return h;};
+      const hull=half(points).slice(0,-1).concat(half(points.slice().reverse()).slice(0,-1));
+      if(hull.length)line(hull.concat([hull[0]]),'#e5b96e',1.5);
+      if ($('showLabels').checked && hull.length) { const p=pixel(hull[0]);ctx.fillStyle='#e5b96e';ctx.fillText(`#${o.id} ${semanticLabel(o)}`,p[0],p[1]-4); }
+    }
+    line([[-1,-.95],[3.8,-.95],[3.8,.95],[-1,.95],[-1,-.95]], '#fff', 2);
+    ctx.fillStyle='#c9d8e2';ctx.fillText('base_link · 전방 ↑ / 차량 좌측 ← · 관측 간 최대 200ms (정렬 아님)',12,20);
+    ctx.fillText('GPS/map을 사용하지 않는 관측 보기 · stale/다른 frame/시각 불일치 기하 숨김',12,38);
+  }
+
   canvas.addEventListener('wheel', event => {
     event.preventDefault();
+    if (localView()) return;
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
@@ -705,6 +796,7 @@
     draw();
   }, {passive: false});
   canvas.addEventListener('mousedown', event => {
+    if (localView()) return;
     view.dragging = true;
     view.lastX = event.clientX;
     view.lastY = event.clientY;
@@ -712,6 +804,13 @@
   window.addEventListener('mouseup', () => { view.dragging = false; });
   window.addEventListener('mousemove', event => {
     const rect = canvas.getBoundingClientRect();
+    if (localView()) {
+      const scale = Math.min(rect.width/26, rect.height/35);
+      const x = (rect.height*.86 - (event.clientY-rect.top))/scale;
+      const y = (rect.width/2 - (event.clientX-rect.left))/scale;
+      $('cursor').textContent = `base_link x ${x.toFixed(1)}  y ${y.toFixed(1)} m`;
+      return;
+    }
     const [worldX, worldY] = screenToWorld(event.clientX - rect.left, event.clientY - rect.top);
     $('cursor').textContent = `x ${worldX.toFixed(1)}  y ${worldY.toFixed(1)}`;
     if (!view.dragging) return;
@@ -722,6 +821,7 @@
     view.follow = false;
     draw();
   });
+  $('sceneMode').onchange = draw;
   $('fit').onclick = fitMap;
   $('follow').onclick = () => {
     view.follow = !view.follow;
@@ -765,7 +865,13 @@
 
   async function pollSnapshot() {
     try {
-      const snapshot = await fetch('../api/snapshot', {cache: 'no-store'}).then(response => response.json());
+      const abort = new AbortController();
+      const timer = setTimeout(() => abort.abort(), 1500);
+      let snapshot;
+      try { snapshot = await fetch('../api/snapshot', {cache: 'no-store', signal: abort.signal}).then(response => response.json()); }
+      finally { clearTimeout(timer); }
+      data.shadow = snapshot.shadow || {};
+      data.shadowReceived = performance.now();
       data.command = snapshot.command || data.command;
       data.feedback = snapshot.feedback || data.feedback;
       data.feature = snapshot.feature || data.feature;
@@ -792,11 +898,13 @@
       $('rosStatus').textContent = 'ROS OFFLINE';
       $('rosStatus').className = 'chip bad';
       console.warn('dashboard snapshot unavailable', error);
+    } finally {
+      setTimeout(pollSnapshot, 100);
     }
   }
 
-  setInterval(updateHealth, 500);
-  setInterval(pollSnapshot, 100);
+  setInterval(() => { updateHealth(); updateShadowPanel(); if (localView()) draw(); }, 200);
+  // Schedule after completion: a slow HTTP response must not build an overlapping queue.
   loadMap();
   pollSnapshot();
   updatePanel();

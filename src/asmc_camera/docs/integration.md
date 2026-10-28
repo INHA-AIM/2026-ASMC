@@ -54,7 +54,8 @@ GC를 끄거나 freshness350ms를 늘려 순간 공백을 통과시키지 않습
 source_class_name은 모델 이름, class_name은 소비 그룹이며 실제 이동 여부/정확한 API 에셋명은 아닙니다.
 관측에는 session/generation·보정/모델/설정 ID가 있습니다. source stamp를 유지하고
 빈 정상 결과·무효·미수신·stale을 구분합니다.
-Main은 전방 CPU 어댑터만 가지고 YOLO를 실행하지 않습니다. 3뷰 fusion은 [LiDAR 후속](../../../docs/handoffs/camera-to-lidar.md)입니다.
+현재 asmc_lidar가 3뷰 실제 matching과 분류를 수행합니다. YOLO 추론은 카메라만 소유합니다.
+[카메라→LiDAR 인계](../../../docs/handoffs/camera-to-lidar.md)를 따르며 구 Main을 실행하지 않습니다.
 
 ## 검증과 제한
 

@@ -25,6 +25,8 @@ HD맵·상부 객체 전달 필터가 적용된다. 동일 scan의 두 좌표계
 debug의 원본 tracker/점군은 검수를 위해 남긴다. 판제 기본 입력은 `planning_observations_map`의 공용 KF 품질 관측이다. 구 패키지·wire/JSON 중계는 폐기했다.
 
 - [M1 3뷰 fusion·웹 전달 표시·정적 클래스 보조](docs/three-view-fusion.md) — 3뷰 기본값과 수락/복구 경계.
+- [보류 과제 인수 단위](docs/improvement-milestones.md#보류-과제-인수-단위) — 터널·얇은 물체·OBB·추적/속도·semantic 보조의 재개 조건과 완료 기준.
+- [기본 빌드·실행파일 일치 점검](docs/three-view-fusion.md#빌드와-실제-실행파일-확인) — PR #122 병합 후 `/root/ws` 정본, 개인 시험 overlay 자동 선택 해제.
 
 ## 구조
 

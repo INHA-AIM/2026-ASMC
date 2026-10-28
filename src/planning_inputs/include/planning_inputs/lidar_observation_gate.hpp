@@ -1,5 +1,6 @@
 #pragma once
 #include <asmc_msgs/LidarPlanningObservation.h>
+#include <asmc_geometry/time.hpp>
 #include <planning_inputs/converter.hpp>
 #include <cmath>
 #include <limits>
@@ -13,16 +14,17 @@ namespace planning_inputs {
 // the existing planner freshness/STOP policy.
 class LidarObservationGate {
  public:
-  bool Convert(const asmc_msgs::LidarPlanningObservation& packet, double now,
+  explicit LidarObservationGate(double maximum_age = .30, double future = .05)
+      : maximum_age_(maximum_age), future_(future) {}
+  bool Convert(const asmc_msgs::LidarPlanningObservation& packet, const ros::Time& now,
                DetectedObjectArray* output, std::string* reason) {
     const auto reject = [&](const char* message) { *reason = message; return false; };
     const auto& o = packet.observation;
     const auto& a = o.objects;
     const auto stamp = a.header.stamp.toNSec();
-    const double age = now - a.header.stamp.toSec();
     if (o.producer_session_id.empty() || o.config_id.empty() || o.calibration_id.empty())
       return reject("missing_observation_identity");
-    if (!stamp || !std::isfinite(now) || age < -.05 || age > .30)
+    if (!asmc::geometry::WithinStampWindow(stamp, now.toNSec(), maximum_age_, future_))
       return reject("observation_timestamp_invalid");
     if (stamp <= last_stamp_) return reject("duplicate_or_regressing_stamp");
     if (session_ != o.producer_session_id) {
@@ -58,6 +60,7 @@ class LidarObservationGate {
     }
     DetectedObjectArray converted;
     if (ConvertPlanningGeometry(a, &converted, nullptr, reason) != ConversionStatus::OK) return false;
+    CopyObservationIdentity(o, &converted);
     // Globally unique private IDs prevent planner caches reusing a retired
     // producer's track after reset/restart. Raw IDs remain in the public packet.
     for (std::size_t i = 0; i < converted.objects.size(); ++i) {
@@ -78,6 +81,7 @@ class LidarObservationGate {
     *output = std::move(converted); *reason = "accepted"; return true;
   }
  private:
+  double maximum_age_, future_;
   std::string session_, config_, calibration_;
   std::set<std::string> retired_;
   std::map<int32_t, int32_t> ids_;

@@ -1,7 +1,7 @@
 # Scan trace 형식 (`asmc_lidar_scan_trace_v1`)
 
 입력 PointCloud2 한 개당 JSON 객체 한 개다. `lidar_replay`는 JSONL 파일로 쓰고
-`lidar_pipeline_node`는 구독자가 있을 때만 `/migration/lidar/trace`(`std_msgs/String`)로 보낸다.
+`lidar_pipeline_node`는 구독자가 있을 때만 `/perception/lidar/trace`(`std_msgs/String`)로 보낸다.
 직렬화 코드는 `include/asmc_lidar/ros/scan_trace.hpp`이며 [shadow 파이프라인](pipeline.md)의
 bag 비교에 사용한다.
 
