@@ -14,7 +14,9 @@ PR #124의 기반 변경은 아래와 같다. 이어진 PR #125에서는 사용�
 [접점/local 관측 기반 실험](../records/planning/2026-10-28-shadow-contact-clearance.md)을 구분해 읽는다.
 운영 기본 행동은 유지하며 새 clearance 정책은 내부 시험 설정이다. timeout 완화는 하지 않았다.
 후속 [S2 회전 OBB·BEV 검사](../records/planning/2026-10-28-shadow-footprint-bev.md)는
-형상 과대 확장과 고정 평면/본네트 한계를 확인했다. BEV는 audit만 허용하며 운영 승격하지 않았다.
+형상 과대 확장과 고정 평면/본네트 한계를 확인했다. 당시 BEV는 audit만 허용했다.
+이후 [S3 공유 IMU semantic 경로 실험](../records/planning/2026-10-28-shadow-semantic-space.md)은
+별도 opt-in `semantic_trial`로 반복 검증한다. 근거리 가림 보조는 미수락이며 운영 승격하지 않았다.
 
 - 같은 공용 관측의 `classification/camera_class`를 private 객체와 Behavior/Frenet 내부 객체까지 보존한다.
   숫자 type, 운동 상태, 속도 validity, 형상과 기존 행동 분기는 유지한다.
