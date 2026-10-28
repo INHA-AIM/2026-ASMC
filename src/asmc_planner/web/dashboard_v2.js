@@ -734,7 +734,7 @@
   }
   function updateLocalExperimentPanel(){
     const r=data.localExperiment,c=data.localControl,fresh=localExperimentFresh();
-    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL ACTIVE':r.phase==='prepare'?'LOCAL PREPARE':r.phase==='idle'?'LOCAL IDLE':'LOCAL PREVIEW'):'LOCAL-1 STALE'):'LOCAL-1 WAIT';
+    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL CONTROL · ACTIVE':r.phase==='prepare'?'LOCAL PREPARE':r.phase==='idle'?'LOCAL IDLE':'LOCAL PREVIEW'):'LOCAL-1 STALE'):'LOCAL-1 WAIT';
     $('localStatus').className='chip '+(fresh?'ok':'bad');
     $('localExperimentPanel').hidden=!r;
     if(!r)return;

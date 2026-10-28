@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One bounded LOCAL-1 MORAI trial using scen_runner's owned replay fixture.
 
-Explicit opt-in simulation control. Existing bridge/camera/LiDAR are reused;
+Explicit opt-in simulation control. A private master owns bridge/camera/LiDAR;
 existing command or mode producers are a hard conflict. Only child processes and
 fixture actors created here are stopped. Native collision evidence is evaluation
 only and never published as a planner input. Every run uses a new registered root.
@@ -22,15 +22,18 @@ def main():
     p.add_argument("root", type=Path)
     p.add_argument("--scene", type=Path, required=True)
     p.add_argument("--seconds", type=float, default=40)
-    p.add_argument("--cap", type=float, default=5)
+    p.add_argument("--cap", type=float, default=10)
+    p.add_argument("--master-port", type=int, default=11348)
+    p.add_argument("--integrated", action="store_true", help="exercise real NORMAL/JAMMING mode transitions")
+    p.add_argument("--bridge-invert-steer", choices=("true", "false"), default="false")
     p.add_argument("--distance", type=float, default=35)
     p.add_argument("--near-blind-assist", action="store_true")
     p.add_argument("--empty", action="store_true")
     p.add_argument("--lidar-config", type=Path)
     p.add_argument(
         "--start-perception",
-        action="store_true",
-        help="start owned camera/LiDAR only while holding the shared validation lease",
+        action="store_true", default=True,
+        help="owned camera/LiDAR start under the shared simulation lease",
     )
     p.add_argument(
         "--park-prop",
@@ -46,9 +49,9 @@ def main():
     ):
         raise RuntimeError("new registered run required")
     if (
-        not 0 < args.seconds <= 60
+        not 0 < args.seconds <= 120
         or not 0 < args.cap <= 25
-        or not 0 < args.distance <= 100
+        or not 0 < args.distance <= 300
     ):
         raise ValueError("bounded duration/cap required")
     if args.near_blind_assist and args.cap > 5:
@@ -59,8 +62,9 @@ def main():
     definition = raw["replay"]["tunnel"]
     import rospy
     import rosgraph
-    from std_msgs.msg import UInt8, String
-    from asmc_msgs.msg import LocalTrajectory
+    from std_msgs.msg import Bool, UInt8, String
+    from morai_msgs.msg import CtrlCmd
+    from asmc_msgs.msg import LocalTrajectory, FrenetFeedback
     from google.protobuf.json_format import MessageToDict
     from scen_runner.config import load_config
     from scen_runner.runtime.validation_episode import EpisodeLink
@@ -192,7 +196,26 @@ def main():
         control_rows.write(message.data + "\n")
         control_rows.flush()
 
+    def commands(topic, name):
+        stream = (root / name).open("x")
+        handles.append(stream)
+        def write(m):
+            stream.write(json.dumps(dict(received_steady=time.monotonic(), ros_time=rospy.Time.now().to_sec(),
+                steering=m.steering, accel=m.accel, brake=m.brake)) + "\n")
+        return rospy.Subscriber(topic, CtrlCmd, write, queue_size=100)
+
     subscriptions = [
+        rospy.Subscriber('/planning/frenet_feedback_v2', FrenetFeedback,
+                         lambda m: latest.update(normal_feedback=m), queue_size=1),
+        commands("/ctrl_cmd", "wire.jsonl"),
+        commands("/ctrl_cmd/normal", "normal-commands.jsonl"),
+        commands("/ctrl_cmd/jamming", "mpc-commands.jsonl"),
+        rospy.Subscriber('/planning/mode', UInt8,
+            lambda m: emit(dict(event='mode', value=int(m.data))), queue_size=10),
+        rospy.Subscriber('/planning/mode/local_prepare', Bool,
+            lambda m: emit(dict(event='prepare', value=bool(m.data))), queue_size=10),
+        rospy.Subscriber('/planning/control_selector/diagnostics', String,
+            lambda m: emit(dict(event='selector', value=m.data)), queue_size=10),
         rospy.Subscriber(
             "/planning/local/control_trace", String, control, queue_size=100
         ),
@@ -203,6 +226,28 @@ def main():
             queue_size=1,
         ),
     ]
+    from diagnostic_msgs.msg import DiagnosticArray
+    from scen_runner.records.local_resources import LocalResources
+    resources = LocalResources(root)
+    delivery_file = (root / 'deliveries.jsonl').open('x')
+    timing_file = (root / 'timings.jsonl').open('x')
+    handles += [delivery_file, timing_file]
+    timing_seen = set()
+    def delivery(m):
+        delivery_file.write(json.dumps(dict(sequence=m.plan_sequence, valid=m.valid,
+            reason=m.reason, frame=m.header.frame_id, source=m.scene_stamp.to_sec(),
+            stamp=m.header.stamp.to_sec(), received=rospy.Time.now().to_sec(),
+            received_steady=time.monotonic()))+'\n')
+    def diagnostics(m):
+        for status in m.status:
+            if status.name != 'planning/local': continue
+            values = {v.key:v.value for v in status.values}
+            for row in json.loads(values.get('timings','[]')):
+                if row[0] not in timing_seen:
+                    timing_seen.add(row[0]); timing_file.write(json.dumps(row)+'\n')
+    subscriptions += [
+        rospy.Subscriber('/planning/local/trajectory', LocalTrajectory, delivery, queue_size=100),
+        rospy.Subscriber('/planning/local/diagnostics', DiagnosticArray, diagnostics, queue_size=10)]
 
     def start(cmd, name):
         f = (root / (name + ".log")).open("x")
@@ -220,7 +265,14 @@ def main():
     last = None
     speedmax = 0.0
     cleanup_errors = []
+    mutated = False
     try:
+        from scen_runner.runtime.private_master import require_udp_ports_free
+        require_udp_ports_free([9099, 9798, 7505, 9092, 9291, 9293, 9295, 9297, 9299, 9301, 9303])
+        start(["roslaunch", "asmc_bridge", "bridge.launch", "transport_profile:=local",
+               "invert_steer:=" + args.bridge_invert_steer], "bridge")
+        rospy.wait_for_message("/Ego_topic", __import__("morai_msgs.msg", fromlist=["EgoVehicleStatus"]).EgoVehicleStatus, timeout=15)
+        rospy.wait_for_message("/imu", __import__("sensor_msgs.msg", fromlist=["Imu"]).Imu, timeout=10)
         if args.start_perception:
             # LOCAL-2C: acquire the shared simulator lease BEFORE any producer
             # startup. A concurrent worktree remains an exclusive owner.
@@ -259,6 +311,7 @@ def main():
         missing = set(args.park_prop) - {s.actor_info.id.value for s in states}
         if missing:
             raise RuntimeError("fixture IDs changed before trial: " + str(missing))
+        mutated = True
         for aid in args.park_prop:
             found = next(s for s in states if s.actor_info.id.value == aid)
             link.actor_scopes[aid] = found.actor_info.client_key
@@ -322,6 +375,10 @@ def main():
             "/planning/local/control_trace",
             "/planning/local/diagnostics",
             "/planning/mode",
+            "/planning/mode/local_prepare",
+            "/planning/control_selector/diagnostics",
+            "/planning/frenet_feedback_v2",
+            "/ctrl_cmd/normal",
             "/ctrl_cmd",
             "/ctrl_cmd/jamming",
             "/CollisionData",
@@ -342,36 +399,56 @@ def main():
             ],
             "record",
         )
-        # Start only the final command router, never autonomy/map planning or
-        # the old BBox lane follower. Local MPC owns its historical JAMMING slot.
-        selector = start(
-            [
-                "rosrun",
-                "asmc_planner",
-                "asmc_control_selector_node",
-                "__name:=local_trial_selector",
-            ],
-            "selector",
-        )
-        local = start(
-            [
-                "roslaunch",
-                "asmc_planner",
-                "local.launch",
-                "enable_control:=true",
-                "run_id:=" + run_id,
-                "journal_path:=" + str(root / "decisions.jsonl"),
-                "speed_cap_kph:=" + str(args.cap),
-                "near_blind_assist:=" + str(args.near_blind_assist).lower(),
-            ],
-            "local",
-        )
-        mode = rospy.Publisher("/planning/mode", UInt8, queue_size=1, latch=True)
-        mode.publish(UInt8(1))
+        if args.integrated:
+            start(["roslaunch", "asmc_planner", "autonomy_no_bridges_v2.launch",
+                   "jamming_planner:=local", "dashboard:=false",
+                   "local_speed_cap_kph:=" + str(args.cap), "local_run_id:=" + run_id,
+                   "local_journal_path:=" + str(root / "decisions.jsonl")], "autonomy")
+        else:
+            # Start only the final command router, never autonomy/map planning or
+            # the old BBox lane follower. Local MPC owns its historical JAMMING slot.
+            selector = start(
+                [
+                    "rosrun",
+                    "asmc_planner",
+                    "asmc_control_selector_node",
+                    "__name:=local_trial_selector",
+                ],
+                "selector",
+            )
+            local = start(
+                [
+                    "roslaunch",
+                    "asmc_planner",
+                    "local.launch",
+                    "enable_control:=true",
+                    "semantic_input:=true",
+                    "run_id:=" + run_id,
+                    "journal_path:=" + str(root / "decisions.jsonl"),
+                    "speed_cap_kph:=" + str(args.cap),
+                    "near_blind_assist:=" + str(args.near_blind_assist).lower(),
+                ],
+                "local",
+            )
+            mode = rospy.Publisher("/planning/mode", UInt8, queue_size=1, latch=True)
+            mode.publish(UInt8(1))
         # Sensor orientation is stale while paused. Settle with P before D.
         link.gear_ego(False)
         link.pause_ego(False)
         time.sleep(3)
+        ready_until = time.monotonic()+10
+        while True:
+            plan = latest.get('plan')
+            normal_feedback = latest.get('normal_feedback')
+            local_ready = plan and plan.valid and 0 <= (rospy.Time.now()-plan.scene_stamp).to_sec() <= .35
+            normal_ready = args.integrated and normal_feedback and normal_feedback.plan_valid and normal_feedback.command_accepted
+            if local_ready or normal_ready: break
+            if any(child.poll() is not None for child in children):
+                raise RuntimeError('owned producer exited before control readiness')
+            if time.monotonic() > ready_until:
+                reason = 'input_or_plan_not_ready'
+                raise RuntimeError('no fresh usable trajectory before enabling auto control')
+            time.sleep(.05)
         r = VehicleControlModeParam()
         r.actor_info.CopyFrom(link.ego_info())
         r.mode = VehicleControlMode.VEHICLE_CONTROL_AUTO_MODE
@@ -381,6 +458,7 @@ def main():
         )
         link.release()
         started = time.monotonic()
+        emit(dict(event='driving_started'))
         reason = "time_limit"
         stationary = started
         while time.monotonic() - started < args.seconds:
@@ -394,6 +472,7 @@ def main():
                 reason = "external_stop_request"
                 break
             state = actor_state(link.ego())
+            resources.sample()
             native = [
                 x for x in state.get("native_contacts", []) if x and x != link.ego_id
             ]
@@ -428,10 +507,13 @@ def main():
                 break
             time.sleep(0.1)
     finally:
-        try:
-            link.hold()
-        except Exception as e:
-            cleanup_errors.append("hold: " + str(e))
+        if started is not None: emit(dict(event='driving_ended'))
+        resources.close()
+        if mutated:
+            try:
+                link.hold()
+            except Exception as e:
+                cleanup_errors.append("hold: " + str(e))
         if mode:
             mode.unregister()
         for proc in reversed(children):
@@ -447,48 +529,49 @@ def main():
                 section.cleanup()
             except Exception as e:
                 cleanup_errors.append("section: " + str(e))
-        try:
-            fixture.restore()
-        except Exception as e:
-            cleanup_errors.append("fixture: " + str(e))
-        try:
-            link.reset(original["pose"])
-            link.gear_ego(False)
-            link.pause_ego(False)
-            restore_control = VehicleControlModeParam()
-            restore_control.actor_info.CopyFrom(link.ego_info())
-            restore_control.mode = original_control.mode
-            link.check(
-                link._require()._actor_stub.SetVehicleControlMode(
-                    restore_control, timeout=3
-                ),
-                "restore control mode",
-            )
-            w = type(weather)()
-            w.CopyFrom(weather)
-            w.instantly = True
-            t = type(timestamp)()
-            t.CopyFrom(timestamp)
-            t.instantly = True
-            t.data_only = False
-            link.check(
-                link._require()._environment_stub.SetWeather(w, timeout=3),
-                "restore weather",
-            )
-            link.check(
-                link._require()._environment_stub.SetTime(t, timeout=3), "restore time"
-            )
-            (root / "sim-after.json").write_text(
-                json.dumps(
-                    dict(
-                        ego=actor_state(link.ego()),
-                        actors=[actor_state(x) for x in link.states()],
+        if mutated:
+            try:
+                fixture.restore()
+            except Exception as e:
+                cleanup_errors.append("fixture: " + str(e))
+            try:
+                link.reset(original["pose"])
+                link.gear_ego(False)
+                link.pause_ego(False)
+                restore_control = VehicleControlModeParam()
+                restore_control.actor_info.CopyFrom(link.ego_info())
+                restore_control.mode = original_control.mode
+                link.check(
+                    link._require()._actor_stub.SetVehicleControlMode(
+                        restore_control, timeout=3
                     ),
-                    indent=2,
+                    "restore control mode",
                 )
-            )
-        except Exception as e:
-            cleanup_errors.append("environment: " + str(e))
+                w = type(weather)()
+                w.CopyFrom(weather)
+                w.instantly = True
+                t = type(timestamp)()
+                t.CopyFrom(timestamp)
+                t.instantly = True
+                t.data_only = False
+                link.check(
+                    link._require()._environment_stub.SetWeather(w, timeout=3),
+                    "restore weather",
+                )
+                link.check(
+                    link._require()._environment_stub.SetTime(t, timeout=3), "restore time"
+                )
+                (root / "sim-after.json").write_text(
+                    json.dumps(
+                        dict(
+                            ego=actor_state(link.ego()),
+                            actors=[actor_state(x) for x in link.states()],
+                        ),
+                        indent=2,
+                    )
+                )
+            except Exception as e:
+                cleanup_errors.append("environment: " + str(e))
         link.disconnect()
         lease.release()
         emit(dict(event="finish", reason=reason, cleanup_errors=cleanup_errors))
@@ -518,4 +601,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    owner = argparse.ArgumentParser(add_help=False)
+    owner.add_argument("root", type=Path)
+    owner.add_argument("--master-port", type=int, default=11348)
+    selected, _ = owner.parse_known_args()
+    if not (selected.root / "registration.json").is_file():
+        raise RuntimeError("registered output required before master startup")
+    from scen_runner.runtime.private_master import PrivateMaster
+    with PrivateMaster(selected.root, selected.master_port):
+        main()

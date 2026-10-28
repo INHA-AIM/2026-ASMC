@@ -10,8 +10,8 @@
 #include <sstream>
 using namespace asmc::lidar::pipeline;
 int main(int argc, char **argv) {
-  if (argc != 3) {
-    std::cerr << "ground_fit_audit stage.csv fit_band_m (0=baseline)\n";
+  if (argc != 3 && argc != 4) {
+    std::cerr << "ground_fit_audit stage.csv fit_band_m (0=baseline) [remove_below_plane=true|false]\n";
     return 2;
   }
   CloudPtr cloud(new Cloud), out(new Cloud);
@@ -35,6 +35,11 @@ int main(int argc, char **argv) {
   }
   GroundConfig c;
   c.fit_threshold_m = std::stod(argv[2]);
+  if (argc == 4) {
+    const std::string policy = argv[3];
+    if (policy != "true" && policy != "false") return 2;
+    c.remove_below_plane = policy == "true";
+  }
   if (!std::isfinite(c.fit_threshold_m) || c.fit_threshold_m < 0 ||
       c.fit_threshold_m > c.far_threshold_m)
     return 2;
@@ -52,6 +57,7 @@ int main(int argc, char **argv) {
   for (int i : keep)
     count[labels[i]].second++;
   std::cout << std::setprecision(17) << "{\"fit_band_m\":" << c.fit_threshold_m
+            << ",\"remove_below_plane\":" << (c.remove_below_plane ? "true" : "false")
             << ",\"valid\":" << (plane.valid ? "true" : "false")
             << ",\"coefficients\":[";
   for (int i = 0; i < 4; i++)

@@ -1,6 +1,10 @@
 <launch>
   <!-- LOCAL input projection from existing inference. Uses family context, no second IMU decision. -->
   <node pkg="asmc_camera" type="semantic_space_trial.py" name="semantic_space_trial" ns="/experimental/shadow" output="screen" required="true">
+    <!-- Small three-camera matrices share CPUs with inference and control.
+         Avoid BLAS worker oversubscription; projection geometry is unchanged. -->
+    <env name="OPENBLAS_NUM_THREADS" value="1"/>
+    <env name="MKL_NUM_THREADS" value="1"/>
     <rosparam command="load" file="$(find asmc_camera)/config/bev/bev_grid.yaml"/>
     <rosparam command="load" file="$(find asmc_camera)/config/cameras_v3.yaml"/>
     <param name="managed" value="true"/>

@@ -14,7 +14,7 @@ def quantiles(values):
     }
 
 
-def analyze(root):
+def analyze(root, output_name="summary.json"):
     root = Path(root)
     reasons = Counter()
     reject = Counter()
@@ -22,6 +22,9 @@ def analyze(root):
     timing = []
     caps = []
     gaps = []
+    valid_gaps = []
+    last_valid = None
+    last_valid_frame = None
     count = valid = assisted = dropped = discontinuities = 0
     last = None
     last_frame = None
@@ -40,6 +43,9 @@ def analyze(root):
             timing.append(row["processing_ms"])
         if row["valid"]:
             caps.append(row["selected_kph"])
+            if last_valid_frame == row['frame'] and last_valid is not None and row['decision_stamp'] >= last_valid:
+                valid_gaps.append((row['decision_stamp']-last_valid)*1000)
+            last_valid, last_valid_frame = row['decision_stamp'], row['frame']
         t = row["decision_stamp"]
         frame = row["frame"]
         if frame == last_frame and last is not None:
@@ -68,13 +74,61 @@ def analyze(root):
         planning_ms=quantiles(timing),
         selected_kph=quantiles(caps),
         plan_gap_ms=quantiles(gaps),
+        plan_decision_gap_ms=quantiles(gaps),
+        valid_plan_gap_ms=quantiles(valid_gaps),
+        plan_gap_definition="consecutive decision records, including invalid; not actuator command gap",
         clock_discontinuities=discontinuities,
         mpc_ms=quantiles(control),
         journal_dropped=dropped,
         examples=list(examples.values()),
         acceptance="analysis only; closed-loop and physical contact require simulator evidence",
     )
-    target = root / "summary.json"
+    # Detail-OFF diagnostics are sampled at1Hz. Supply metrics use every
+    # LocalTrajectory delivery, not the number of detailed JSON records.
+    result['decision_records'] = count
+    deliveries = root / 'deliveries.jsonl'
+    if deliveries.exists():
+        delivered = [json.loads(line) for line in deliveries.read_text().splitlines()]
+        result['plans'] = len(delivered)
+        result['valid'] = sum(bool(row['valid']) for row in delivered)
+        result['reasons'] = dict(Counter(row['reason'] for row in delivered))
+        def gaps_of(rows):
+            times = [row['received_steady'] for row in rows]
+            return quantiles([(b-a)*1000 for a,b in zip(times,times[1:]) if b>=a])
+        result['plan_decision_gap_ms'] = gaps_of(delivered)
+        result['valid_plan_gap_ms'] = gaps_of([row for row in delivered if row['valid']])
+        result['delivery_metric_clock'] = 'monotonic subscriber receipt; no actuation in preview'
+    timings = root / 'timings.jsonl'
+    if timings.exists():
+        rows = [json.loads(line) for line in timings.read_text().splitlines()]
+        valid_rows = [row for row in rows if row[1]]
+        result['timing_sample_count'] = len(rows)
+        for name, index in [('input_lock_wait_ms',2),('input_lock_hold_ms',3),
+                ('critical_path_ms',4),('debug_geometry_ms',5),('serialization_ms',6),('index_ms',7)]:
+            result[name] = quantiles([row[index] for row in valid_rows])
+    for name, filename in [('mpc_command_receive_gap_ms','mpc-commands.jsonl'),
+                            ('wire_command_receive_gap_ms','wire.jsonl')]:
+        file = root / filename
+        rows = [json.loads(line) for line in file.read_text().splitlines()] if file.exists() else []
+        result[name] = quantiles([(b['received_steady']-a['received_steady'])*1000 for a,b in zip(rows,rows[1:])])
+        # Startup/cleanup are not steady driving. Preserve the full metric above
+        # and report the explicitly marked drive window separately.
+        events = root / 'events.jsonl'
+        if events.exists():
+            markers = {r['event']:r['monotonic'] for r in map(json.loads,events.read_text().splitlines())
+                       if r['event'] in ('driving_started','driving_ended')}
+            if len(markers) == 2:
+                active = [r for r in rows if markers['driving_started'] <= r['received_steady'] <= markers['driving_ended']]
+                result['driving_'+name] = quantiles([(b['received_steady']-a['received_steady'])*1000 for a,b in zip(active,active[1:])])
+    resources = root / 'resources.jsonl'
+    if resources.exists():
+        by_process = {}
+        for row in map(json.loads, resources.read_text().splitlines()):
+            for proc in row['processes']:
+                by_process.setdefault(proc['name'], []).append(proc['rss_kib'])
+        result['rss_kib'] = {name:dict(first=values[0], last=values[-1], maximum=max(values), samples=len(values))
+                             for name,values in by_process.items()}
+    target = root / output_name
     with target.open("x") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     return {k: v for k, v in result.items() if k != "examples"}

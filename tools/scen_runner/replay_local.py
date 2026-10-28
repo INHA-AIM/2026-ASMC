@@ -24,13 +24,12 @@ def main():
     parser.add_argument("--port", type=int, default=11348)
     parser.add_argument("--cap", type=float, default=25.0)
     parser.add_argument("--recovery", action="store_true")
+    parser.add_argument("--detail", choices=("on", "off"), default="on")
     parser.add_argument("--near-blind-assist", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=False, exist_ok=False)
-    probe = socket.socket()
-    probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    probe.bind(("127.0.0.1", args.port))
-    probe.close()
+    from scen_runner.runtime.private_master import available_port
+    args.port = available_port(args.port)
     os.environ["ROS_MASTER_URI"] = "http://127.0.0.1:%d" % args.port
     os.environ["ROS_HOSTNAME"] = "127.0.0.1"
     # Import only after selecting the isolated master.
@@ -54,6 +53,8 @@ def main():
     handles = []
     output = []
     counts = {}
+    from scen_runner.records.local_resources import LocalResources
+    resources = LocalResources(args.output)
 
     def start(command, name):
         log = (args.output / (name + ".log")).open("x")
@@ -65,13 +66,15 @@ def main():
         return p
 
     try:
-        start(["roscore", "-p", str(args.port)], "master")
+        master_process = start(["roscore", "-p", str(args.port)], "master")
         import rosgraph
 
         master = rosgraph.Master("/local_replay_launcher")
         for attempt in range(80):
             try:
-                master.getPid()
+                from scen_runner.runtime.private_master import descendant
+                if not descendant(master.getPid(), master_process.pid):
+                    raise RuntimeError("foreign master port race")
                 break
             except Exception:
                 time.sleep(0.1)
@@ -106,7 +109,7 @@ def main():
                 "local.launch",
                 "run_id:=" + args.run_id,
                 "speed_cap_kph:=" + str(args.cap),
-                "journal_path:=" + str(args.output / "decisions.jsonl"),
+                "journal_path:=" + (str(args.output / "decisions.jsonl") if args.detail == "on" else ""),
                 "recovery:=" + str(args.recovery).lower(),
                 "near_blind_assist:=" + str(args.near_blind_assist).lower(),
             ],
@@ -119,9 +122,34 @@ def main():
             control_file.write(m.data + "\n")
             control_file.flush()
 
-        sub = rospy.Subscriber(
-            "/planning/local/control_trace", String, control, queue_size=100
-        )
+        from diagnostic_msgs.msg import DiagnosticArray
+        timing_file = (args.output / "timings.jsonl").open("x")
+        handles.append(timing_file)
+        plan_file = (args.output / "deliveries.jsonl").open("x")
+        handles.append(plan_file)
+        decision_file = (args.output / "decisions.jsonl").open("x") if args.detail == "off" else None
+        if decision_file: handles.append(decision_file)
+        timing_seen, decision_seen = set(), set()
+        def diagnostics(message):
+            for status in message.status:
+                if status.name != 'planning/local': continue
+                values = {v.key:v.value for v in status.values}
+                for row in json.loads(values.get('timings','[]')):
+                    if row[0] not in timing_seen:
+                        timing_seen.add(row[0]);timing_file.write(json.dumps(row)+'\n')
+                if decision_file:
+                    row=json.loads(values['decision'])
+                    if row['plan_sequence'] not in decision_seen:
+                        decision_seen.add(row['plan_sequence']);decision_file.write(json.dumps(row)+'\n')
+        def delivery(message):
+            plan_file.write(json.dumps(dict(sequence=message.plan_sequence, valid=message.valid,
+                reason=message.reason, frame=message.header.frame_id, source=message.scene_stamp.to_sec(),
+                stamp=message.header.stamp.to_sec(), received=rospy.Time.now().to_sec(),
+                received_steady=time.monotonic()))+'\n')
+        subscriptions = [
+            rospy.Subscriber('/planning/local/control_trace', String, control, queue_size=100),
+            rospy.Subscriber('/planning/local/diagnostics', DiagnosticArray, diagnostics, queue_size=10),
+            rospy.Subscriber('/planning/local/trajectory', LocalTrajectory, delivery, queue_size=100)]
         time.sleep(2.0)
         # Publisher warmup cannot advance simulated time before the first input.
         started = time.monotonic()
@@ -135,12 +163,13 @@ def main():
                     time.sleep(wait)
                 clock.publish(Clock(receipt))
                 pubs[topic].publish(m)
+                resources.sample()
                 last = receipt.to_sec()
                 counts[topic] = counts.get(topic, 0) + 1
                 if children[-1].poll() is not None:
                     raise RuntimeError("local launch exited")
         # Let callbacks drain. No old sensor is replayed as a fresh measurement.
-        time.sleep(0.3)
+        time.sleep(1.1)
         if any(
             name in ("/ctrl_cmd", "/ctrl_cmd/jamming")
             for name, _ in master.getSystemState()[0]
@@ -149,18 +178,21 @@ def main():
         (args.output / "input-summary.json").write_text(
             json.dumps(
                 dict(
+                    master_uri=os.environ["ROS_MASTER_URI"],
                     bag=str(args.bag),
                     counts=counts,
                     begin=begin,
                     end=last,
                     near_blind_assist=args.near_blind_assist,
                     command_publishers=0,
+                    detail=args.detail,
                     interpretation="recorded arrival order, real boundary replay; not closed-loop trajectory validation",
                 ),
                 indent=2,
             )
         )
     finally:
+        resources.close()
         for p in reversed(children):
             if p.poll() is None:
                 os.killpg(p.pid, signal.SIGINT)
