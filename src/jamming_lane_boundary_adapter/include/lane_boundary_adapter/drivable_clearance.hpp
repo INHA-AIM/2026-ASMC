@@ -5,24 +5,34 @@
 #include <cstdint>
 namespace lane_boundary_adapter::clearance {
 struct GridSpec { int rows=0,cols=0;double x_max=0,y_max=0,resolution=0; };
-struct GridResult { bool clear=false; unsigned cells=0,blocked=0;const char* reason="invalid_grid"; };
+struct GridResult { bool clear=false; unsigned cells=0,blocked=0,assisted=0;const char* reason="invalid_grid"; };
 class DrivableClearance {
  public:
   bool prepare(GridSpec spec,const std::vector<uint8_t>& probability,const std::vector<uint8_t>& coverage,
-               const Vehicle& vehicle,uint8_t threshold=166) {
+               const Vehicle& vehicle,uint8_t threshold=166,bool physical_ego_only=false,bool near_ego_lidar_assist=false) {
     valid_=false;spec_=spec;
     if(spec.rows<1||spec.cols<1||spec.rows>1000||spec.cols>1000||!std::isfinite(spec.resolution)||spec.resolution<=0||
        !std::isfinite(spec.x_max)||!std::isfinite(spec.y_max)||probability.size()!=size_t(spec.rows*spec.cols)||coverage.size()!=probability.size())return false;
     prefix_.assign(size_t(spec.rows)*(spec.cols+1),0);
+    assisted_.assign(prefix_.size(),0);
     for(int r=0;r<spec.rows;++r)for(int c=0;c<spec.cols;++c){
       const double x=spec.x_max-r*spec.resolution,y=spec.y_max-c*spec.resolution;
       // The current inflated ego region is not NEW swept space. Camera blind
       // cells here cannot certify free space; positive local/image geometry
       // still checks the whole body, including this region, independently.
-      const bool initial=x>=-vehicle.rear-vehicle.longitudinal_margin && x<=vehicle.front+vehicle.longitudinal_margin+.25 &&
-          std::abs(y)<=vehicle.half_width+vehicle.lateral_margin;
+      const double longitudinal=physical_ego_only?0.:vehicle.longitudinal_margin;
+      const double lateral=physical_ego_only?0.:vehicle.lateral_margin;
+      const bool initial=x>=-vehicle.rear-longitudinal && x<=vehicle.front+longitudinal+(physical_ego_only?0.:.25) &&
+          std::abs(y)<=vehicle.half_width+lateral;
       const size_t k=size_t(r)*spec.cols+c,base=size_t(r)*(spec.cols+1);
-      const bool bad=!initial && (coverage[k]==0 || probability[k]<threshold);
+      // Explicit S3 sensitivity candidate, never "observed free": only
+      // original-camera ego masks in the calibrated near blind region may
+      // defer to a fresh, paired local LiDAR health/positive-footprint check.
+      // Low-probability OBSERVED shadow pixels never enter this exception.
+      const bool assisted=near_ego_lidar_assist && coverage[k]==128 &&
+          x>=-vehicle.rear && x<=6.0 && std::abs(y)<=1.6;
+      const bool bad=!initial && !assisted && (coverage[k]!=255 || probability[k]<threshold);
+      assisted_[base+c+1]=assisted_[base+c]+unsigned(assisted && !initial);
       prefix_[base+c+1]=prefix_[base+c]+unsigned(bad);
     }
     valid_=true;return true;
@@ -62,11 +72,12 @@ class DrivableClearance {
         if(c0<0||c1>=spec_.cols){result.reason="outside_grid";return result;}
         const size_t base=size_t(r)*(spec_.cols+1);result.cells+=c1-c0+1;
         result.blocked+=prefix_[base+c1+1]-prefix_[base+c0];
+        result.assisted+=assisted_[base+c1+1]-assisted_[base+c0];
         if(result.blocked)return result;
       }
     }
     result.clear=true;result.reason="semantic_swept_space_clear";return result;
   }
- private:GridSpec spec_;bool valid_=false;std::vector<unsigned> prefix_;
+ private:GridSpec spec_;bool valid_=false;std::vector<unsigned> prefix_,assisted_;
 };
 } // namespace lane_boundary_adapter::clearance

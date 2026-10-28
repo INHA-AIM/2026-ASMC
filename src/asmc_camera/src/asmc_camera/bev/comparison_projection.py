@@ -79,7 +79,7 @@ class ComparisonProjection:
             raise ValueError('drivable requires all views and visibility masks')
         projectors, quality = self.geometry(planes)
         size = (self.grid.width_px, self.grid.height_px)
-        values, weights = [], []
+        values, weights, original_support = [], [], []
         for view, projector in projectors.items():
             camera = self.cameras[view]
             p = projector._validate_source(probabilities[view], 'drivable')
@@ -94,11 +94,16 @@ class ComparisonProjection:
             values.append(cv2.warpPerspective(p, projector.homography.bev_from_image,
                 size, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT))
             weights.append(weight)
+            original_support.append(quality[view] > 1e-6)
         weights = np.stack(weights)
         strongest = np.max(weights, axis=0)
         usable = (weights > 1e-6) & (weights >= .25*strongest)
         observed = np.any(usable, axis=0)
         fused = np.min(np.where(usable, np.stack(values), 255), axis=0).astype(np.uint8)
         fused[~observed] = 0
-        return dict(drivable=fused, coverage=observed.astype(np.uint8)*255,
+        #128 is specifically ego-occluded, not observed free.0 is outside
+        # usable camera support. A semantic obstacle/shadow remains coverage255
+        # with low probability and cannot use an ego-occlusion exception.
+        coverage=np.where(observed,255,np.where(np.any(original_support,axis=0),128,0)).astype(np.uint8)
+        return dict(drivable=fused, coverage=coverage,
                     source_count=np.sum(usable, axis=0).astype(np.uint8))
