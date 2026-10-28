@@ -36,9 +36,13 @@ struct Grid {
 struct Scene {
   Grid grid;
   std::vector<Obstacle> obstacles;
-  std::vector<std::array<double, 3>> corridor; // x, left outer, right outer
+  // Current family support: x, left painted line, right painted line. Only its
+  // longitudinal support currently limits the horizon. Painted lines are NOT
+  // physical walls or footprint clipping bounds; qualified free road can extend
+  // beyond them. Decoupling horizon validity from all three roles is LOCAL-2A/B.
+  std::vector<std::array<double, 3>> corridor;
   std::vector<std::array<double, 2>>
-      home; // current geometric role, not map lane
+      home; // soft right-home reference, not a discrete lane/target selection
   double speed = 0, yaw_rate = 0, age = 0, acceleration = 0;
   std::vector<Pose> previous;
 };

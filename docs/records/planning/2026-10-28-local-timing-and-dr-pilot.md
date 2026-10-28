@@ -118,7 +118,7 @@ native SDK evaluation 파일만 허용하며 별도 기록을 합쳐 동시 데�
 | 단위 | 범위 | 완료 기준 |
 |---|---|---|
 | LOCAL-2A: 상태·입력 분리 | signed 상대 이동, 관측용 웹을 전진 planner validity와 분리. 최신 완료 camera bundle과 별도 LiDAR snapshot을 공통 기준시각에 정렬. 실제 근거 부족과 단순 join 실패를 구분 | 후진에도 관측 유지, 전진 시간 역행/재시작·고속 source 결합 회귀. 불필요50ms join 때문에 전체 장면이 무효가 되는 사례 제거, 근거 age는 그대로 기록 |
-| LOCAL-2B: 무장애25km/h 기준선 | 정상 GPS 때 entry route를 캐시해 local odometry로 표현하는 reference와 family reference를 같은 planner/MPC 경계에서 비교. 필요 시 family로 횡오차 보조. 가림/제동·지연 정책을 관측 범위에 맞게 정리 | 실제 터널 길이에서5→10→15→20→25 단계, 반복3회 횡오차·조향·불필요 제동·접촉·명령 공백 측정.25 미달 제한 사유 수치화 |
+| LOCAL-2B: 무장애25km/h 기준선 | 우측 본차로를 부드러운 reference로 두고, 실제 주행가능 공간에서 연속 후보 탐색.3/5개 추종선 선택을 도입하지 않음. family 공통 support와 물리 통로를 분리하고 prepared scene 재사용. entry route/DR은 같은 planner/MPC 경계의 보조 대조. 가림/제동·지연 정책 정리 | 실제 터널 길이에서5→10→15→20→25 단계, 반복3회 횡오차·조향·불필요 제동·접촉·명령 공백 측정.25 미달 제한 사유 수치화 |
 | LOCAL-2C: 인지 노이즈 응답 | 벽/천장·가짜 OBB의 점 지지·높이·지속성·semantic 모순을 분석. 위험 단계와 속도 응답을 나누고 실제 객체 보존 확인 | 무장애 오탐 주입에서 불필요 급제동 억제, 실제 차량/사람/드럼/얇은 barrier 누락0. unknown이라는 이유로 제거하지 않음 |
 | LOCAL-2D: 단일 정적 회피·복귀 | 검증한 reference 위에서 기존 Frenet candidate/collision/speed 및 MPC 재사용. 현재 local 메시지 경계 유지 | 좌우 각3회, 관측 시각·회피 시작·차체 최저 여유·복귀 오차를 검수 |
 | 조건부 성능 단위 | family association/fit·projection와 planner 반복 sweep의 hot path를 개별 최적화 | 같은 입력의 기하/역할·support 보존, p95 개선을 비교하고 새 공급 공백0 |
@@ -163,9 +163,38 @@ map 도로 형상을 알고 있다는 사실을 장애물 없는 공간의 증�
 무효화 제거, 원본 시각·세션·무효 의미 보존,20Hz preview 제어 공급과
 계산 p95≤50ms 유지다. 실제25km/h 주행 수락은2B에서 한다.
 
-2B의 entry-route 방식은 정상 GPS가 있는 A448 접근 때 전역경로를 세션 local
+2B의 기본 reference는 사용자가 지정한 **우측 본차로**다. 외곽 흰선을 물리 도로
+경계로 쓰지 않는다. 연결된 노면 공간마다 목표를 만들고 본차로 근접·복귀는
+비용으로 평가한다. 전체 노면 무게중심이나3/5개 선 선택을 제어 목표로 고정하지
+않는다. [실행 단일성과 자유공간 설계 정본](../../architecture/shadow-planning-refactoring.md#local-실행-단일성과-기준-경로자유공간-설계)에
+기존 코어 재사용·구 제어 배제·터널폭 활용·남은 내부 반복 계산을 정리했다.
+
+조건부 entry-route 대조는 정상 GPS가 있는 A448 접근 때 전역경로를 세션 local
 frame으로 한 번 가져오고 signed 차속+IMU로 진행한다. family의 횡방향 근거를
 보조로 쓸 수 있다. 같은 LocalTrajectory/MPC 경계와 기존 Frenet 수학을
 재사용하며 별도의 전체 NORMAL/DR planner를 두 벌 실행하지 않는다.
 실제 GPS 복귀와 mode 전환은 명시적으로 인수한다. 원래 map 상태를 유효한
 GPS처럼 위장해서 공급하지 않는다.
+
+## 실행 분리·흰선 경계 회귀
+
+위 pilot 이후 사용자 설계 조건을 반영하여 새 local의 실행 경계를 점검했다.
+현재 ROS graph는 새 local 두 노드만 실행하는 preview이며 구 map/BBox 제어는
+실행하지 않았다. `local.launch`는 그 구 노드를 include하지 않는다.
+제어 활성 시 기존 JAMMING 슬롯의 중복 생산자뿐 아니라 NORMAL 제어 생산자도
+거부하도록 검사 범위를 보완했다. 판제 행동·경로·속도·MPC 수학은 바꾸지 않았다.
+
+컨테이너의 `asmc_local_controller_node`·`local_planner_test`를 재빌드하고 다음을 확인했다.
+
+- 독립 master11349에서 기존 시각·유효성·저속 grace·preview 비발행 회귀 통과.
+- 다른 NORMAL/JAMMING 생산자가 있을 때 local 자신이 제어를 거부함.
+- local 자신과 최종 selector 출력만 있을 때 정상 실행하며, 나중에 NORMAL
+  생산자가 추가돼도 거부함. 운영 master에 시험 제어 토픽을 발행하지 않음.
+- 코어에서 가용 노면±3.5m·표시 흰선±1.75m·중앙 OBB를 주었을 때 흰선을
+  넘는 차체 sweep의 유효 경로 생성·충돌 검사 통과. 실제 터널 외곽의 가용 폭을
+  검증하거나 물리 통로를 측정한 결과는 아님.
+- 문서 보존 검사와 현재 실행 명령 검사 통과. hosted CI는 실행하지 않음.
+
+이 보완은 LOCAL-2A/B의 시각 정렬·공통 support 분리·단일 scene 재사용을
+구현한 것이 아니며25km/h 폐루프 수락도 아니다. 이번에는 새 시뮬 주행·녹화를
+추가하지 않았고 frozen pilot/run을 수정하지 않았다.

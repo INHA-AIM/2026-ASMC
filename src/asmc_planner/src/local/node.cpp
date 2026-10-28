@@ -561,6 +561,10 @@ class Node {
     // LOCAL-1's explicit tunnel mission is right-strip travel (centre/right
     // outer). The producer's roles are geometric, not universal road policy.
     // Do not switch home strip just because the vehicle straddles the centre.
+    // This is a navigation/return preference only: Plan checks semantic road
+    // and local OBBs, never clips the footprint at these painted boundaries.
+    // The all-three-role support dependency above is a remaining input limit,
+    // not evidence that the painted lines delimit the physical tunnel corridor.
     home_role = 2;
     for (double x = begin; x <= end; x += .25) {
       scene.corridor.push_back({x, at(1, x), at(3, x)});

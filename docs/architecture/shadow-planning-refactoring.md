@@ -79,25 +79,98 @@ family의 실제 관측은 실선, inferred는 점선, invalid support는 끊는
   전송 제한 수량을 표시하며 geometry/JSON을 잠금 안에서 다시 계산하지 않는다.
 - `debug:=false`로도 typed local 객체·family·실제 경로를 확인한다. LiDAR 단계별 점군은 별도 view/debug 책임이다.
 
-## 패키지 흡수 판단: 가능하나 다음 단위에서 수행
+## 구 jamming 패키지와 새 local의 경계
 
-`asmc_planner/src/jamming`으로 판제 책임을 모으는 방향은 타당하다.
-단순 폴더 이동만으로 bbox→차로 분류 실패나 일반 MPC의 map 의존성이 해결되지는 않는다.
-현재 패키지의 메시지·launch·시험·설치 경로와 planner의 실행 의존성도 함께 전환해야 한다.
-기존 동작과 연결을 먼저 고정하고, 계산과 ROS 경계를 나눠 한 번에 하나의 제어 경로만 활성화한다.
+이전의 `asmc_planner/src/jamming` 흡수안은 직접 실행하지 않는다. LOCAL-1은
+`asmc_planner/src/local`과 `asmc_controller/src/local`에 독립 입력·실행 경계를
+구현했다. 기존 BBox 차로 선택 알고리즘을 새 local의 내부 단계로 호출하지 않는다.
+구 패키지는 기존 autonomy의 운영 경로와 이강태의 별도 개선을 위해 유지한다.
+단순 폴더 이동으로 합치거나 기존 map 상태의 GPS 유효성 검사를 풀지 않는다.
 
 | 책임 | 남길 위치·범위 |
 |---|---|
 | YOLO/TwinLite 추론, family, 실제 선택한 IMU 지면 context | asmc_camera |
 | 점군·OBB·추적·벽/천장 근거·3뷰 연결·인지 유효성 | asmc_lidar |
-| family/객체 입력 context, 통로, 행동·회피/복귀 reference와 path | asmc_planner/src/jamming (제안, 아직 생성하지 않음) |
-| 궤적 추종과 차량 제한 | asmc_controller의 재사용 가능한 코어 |
+| family/객체 입력 context, 통로, 회피/복귀 reference와 path | asmc_planner/src/local (LOCAL-1 구현; 전체 주행 수락 전) |
+| 궤적 추종과 차량 제한 | asmc_controller/src/local 입력 경계와 재사용 MPC 코어 |
 | 최종 제어권·stale 차단 | 기존 ControlSelector 단일 경계 |
 | 외부 인지 관측 계약 | asmc_msgs; 내부 계산과 파일 I/O를 메시지 패키지로 옮기지 않음 |
 
 영상 BBox용 private 메시지를 그대로 공용 메시지로 승격하거나 동일 이름 wrapper를 만들지 않는다.
 새 local 경로가 영상 투영 단계를 대체할지 먼저 결정한다. 전환 중 비교는 읽기 전용이고
 두 제어기가 동시에 /ctrl_cmd를 발행하지 않는다. 폐기 전 옛 package API·MD5/bag 재현 revision을 남긴다.
+
+## LOCAL 실행 단일성과 기준 경로·자유공간 설계
+
+2026-10-28의 실제 master 조회에서는 `/local_planner → /planning/local/trajectory →
+/local_controller`만 연결돼 있었다. `enable_control=false`, `/ctrl_cmd` 발행자0,
+`/ctrl_cmd/normal`과 `/ctrl_cmd/jamming` 발행자0인 **preview 상태**다. 기존 map
+planner/controller·BBox lane classifier/follower·selector는 실행돼 있지 않았다.
+이는 조회 순간의 실행 근거이며 모든 사용자의 launch 조합이 배타적이라는 뜻은 아니다.
+
+| 경계 | 현재 실행·재사용과 제한 |
+|---|---|
+| `local.launch` | 새 planner/controller 두 노드만 시작. 구 autonomy·BBox follower·센서 생산자·selector를 include하지 않음 |
+| 계산 코어 | 기존 Frenet quintic·충돌 기하·속도 수학과 MPC solver를 링크해서 호출. 기존 ROS planner·행동 판단 루프·BBox 차선변경 루프는 호출하지 않음 |
+| 제어 시험 | `run_local_trial.py`가 기존 제어/모드 발행자를 먼저 거부하고 selector 하나와 local만 시작 |
+| `/ctrl_cmd/jamming` | 기존 selector의 선택 슬롯을 재사용한 이름. 새 local 제어를 연결할 때 구 follower도 가동한다는 뜻이 아님 |
+| 실행 중 충돌 | local 제어 활성 상태에서 같은 슬롯의 다른 생산자 또는 NORMAL 제어 생산자를1초마다 확인. 충돌 시 새 local 자신을 종료하며 상대 프로세스를 종료하지 않음. 이 검사는 원자적 실행 lease나 즉시 차단을 보장하지 않음 |
+| dashboard | 구 BBox 결과와 새 local 결과를 읽어 표시. 구 제어 알고리즘·경로 계산을 실행하지 않음 |
+
+**local 제어 시험과 `autonomy_no_bridges_v2.launch`를 함께 실행하지 않는다.** 후자는
+map planner/controller와 구 BBox follower 및 selector를 시작한다. preview는 명령을
+발행하지 않아 읽기 전용 대조에 사용할 수 있지만, 이번 성능 시험에서는 구 계산 노드도
+제외하여 부하 원인을 분리한다. 기존 운영 기본 launch는 변경하지 않았다.
+
+사용자가 확정한 새 local의 탐색 규약은 다음과 같다.
+
+1. **출발 상태는 실제 후륜축**, 우측 본차로 중심은 복귀용 기준 경로다. 현재 기하
+   role2(중앙선)와 role3(우측 흰선)의 중간을 사용한다. 중앙선 근처로 이동했다고
+   본차로를 다시 선택하지 않는다. 본차로 편차는 비용이며 충돌 회피를 막는 강제 제약이 아니다.
+2. 무장애에서는 본차로 reference와 이전 경로 주변에 후보를 우선 배치한다. 장애물이
+   있으면 연결 가능한 주행가능 공간별 중심·가까운 reference 지점에 목표를 추가한다.
+   서로 떨어진 양쪽 공간을 합쳐 무게중심 하나를 만들지 않는다. 각 목표까지 차체 전체의
+   연속 swept footprint·조향·곡률·속도 유효성을 검사한다.
+3. **3개/5개 추종선 중 하나를 선택하는 정책을 만들지 않는다.** 현재 목표 x=6/9/12m는
+   세 개의 전방 단면이며 차선 번호가 아니다. 횡방향은 연속 곡선으로 탐색한다. family의
+   경계·차로 중심은 방향과 복귀의 보조 근거다. 외곽 흰선을 넘어도 검증된 노면·벽·객체와
+   차체 충돌이 없으면 허용하며 차선 침범 비용을 추가하지 않는다.
+4. 노면 확률·coverage, 물리 통로, 객체 충돌을 분리한다. 노면의 검은 영역에는 장애물과
+   뒤쪽 가림이 섞인다. LiDAR가 빈 배열이거나 통로폭을 알고 있다는 이유로 구멍을 전부
+   자유공간으로 채우지 않는다. 노면이 불안정할 때 family는 진행 방향을 보완한다.
+
+이는 reference와 drivable area를 나누고 후보 생성→충돌/곡률 검사→reference 이탈 등의
+비용 평가로 분리하는 [Autoware Path Sampler 공식 구조](https://autowarefoundation.github.io/autoware_universe/main/planning/sampling_based_planner/autoware_path_sampler/)를
+현재 입력에 맞춰 해석한 설계다. 외부 ROS2 노드나 해당 구현의 정지 정책을 그대로
+도입했다는 뜻은 아니다. 현재 우리 속도·근거리 회복 정책의 제한은 LOCAL-1 결과에 유지한다.
+
+### 거의 일정한 터널폭의 활용
+
+외곽 흰선과 실제 터널 벽/통과 가능한 노면 끝은 다른 경계다. 좌우 각각의 여유를 실제
+센서와 시뮬 장면으로 측정하고 곡선·입출구·벽 소실·오차를 검수한 뒤 통로 사전값으로
+사용한다. 차선폭을 단순히 두 배 해서 벽 위치로 고정하거나 흰선 밖을 미리 차단하지 않는다.
+현재 통로폭은 측정·수락하지 않았으므로 새 상수를 추가하지 않았다.
+
+연산은 한 번 만든 scene·grid index를 재사용하고, 물리 통로로 명백히 불가능한 후보를
+먼저 줄인 뒤 필요한 차체 footprint에서 노면·OBB를 상세 검사하는 방향이 적절하다.
+현재40,000셀 grid를 쓴다는 사실만으로 전체 mask가 병목이라고 결론내리지 않는다.
+벽 검출/RANSAC은 LiDAR가 소유하고 planner에 두 번째 벽 인식기를 만들지 않는다.
+
+### 남은 구현 차이와 다음 작은 단위
+
+- 현재 footprint 검사는 외곽 흰선의 y값으로 자르지 않는다. 흰선 바깥의 유효 노면으로
+  장애물을 피하는 코어 회귀를 추가했다. 이것은 실제 터널 통과나 외곽 노면 수락이 아니다.
+- 아직 입력 노드는 **3경계 공통 support**를 요구하고 horizon도 그 끝에 종속된다.
+  family 전체 support와 실제 노면/물리 통로 유효 범위를 분리해야 한다. 보조 경계 하나의
+  누락을 전체 자유공간 무효로 확대하지 않되 관측하지 못한 도로를 외삽해 만들지 않는다.
+- strict 실패 뒤 보조 조건으로 `Plan()`을 다시 호출하여 같은 grid index·후보 검사를
+  반복한다. 이는 구 jamming 중복 실행과 다른 **새 local 내부의 중복 계산**이다.
+  동일 prepared scene에서 후보와 근거 등급을 평가하도록 정리할 대상이다.
+
+다음 구현은 [LOCAL-2A](../records/planning/2026-10-28-local-timing-and-dr-pilot.md#local-2a의-첫-구현-경계)의
+시각·상태/관측 분리를 먼저 수행한다. 이어2B에서 위 우측 reference·자유공간 역할과
+단일 scene 재사용을 적용하고 무장애 추종을 검증한다. entry-route/DR 대조는 같은
+입력·MPC 경계의 보조 후보이며 전체 map planner를 두 번째로 실행하는 방식은 사용하지 않는다.
 
 ## 두 개선 방향의 비교
 

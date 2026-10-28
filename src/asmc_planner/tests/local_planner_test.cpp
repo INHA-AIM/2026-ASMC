@@ -99,6 +99,12 @@ int main() {
            "family tangent and lateral position survive the transition");
     // An obstacle splits free-space: do not target the mean through its centre.
     s = empty();
+    // Family paint is a navigation reference, not the physical road edge. The
+    // measured free road below is wider; avoidance may cross either white line.
+    for (auto &paint : s.corridor) {
+      paint[1] = 1.75;
+      paint[2] = -1.75;
+    }
     s.obstacles.push_back({9, {{8.5, -.4}, {9.3, -.4}, {9.3, .4}, {8.5, .4}}});
     for (int row = 0; row < 250; ++row)
       for (int col = 0; col < 160; ++col)
@@ -120,6 +126,11 @@ int main() {
              "selected path continuous collision validation");
     }
     expect(avoid.goals.size() >= 2, "split openings produce separate goals");
+    bool beyond_paint = false;
+    for (const auto &q : avoid.path)
+      beyond_paint |= std::abs(q.y) + c.width * .5 > 1.75;
+    expect(beyond_paint,
+           "valid swept avoidance can cross paint inside measured free road");
     // Reusing an old path must not carry a stale 100m arc-length into speed
     // cap.
     s = empty();
