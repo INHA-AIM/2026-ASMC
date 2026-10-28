@@ -10,6 +10,7 @@
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
 #include <std_msgs/Int8.h>
 #include <asmc_msgs/LaneBoundaryFamily.h>
+#include <asmc_msgs/InferenceStatus.h>
 #include <limits>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
@@ -259,16 +260,34 @@ struct BevEntry {
 std::deque<sensor_msgs::Image::ConstPtr> bev_probability,bev_coverage;
 std::deque<BevEntry> bev_frames;
 lane_boundary_adapter::clearance::GridSpec bev_spec;
-ros::Time bev_last_stamp;
+ros::Time bev_last_stamp,bev_cutoff,bev_status_stamp;
+ros::SteadyTime bev_status_received;
+std::string bev_session;
+uint64_t bev_generation=0;
+bool bev_active=false;
+std::deque<std::string> bev_retired;
 std::string bev_status="off";
 unsigned bev_rejected=0,bev_invalid=0;
 double bev_pair_skew=0.;
 void clearBev(){bev_probability.clear();bev_coverage.clear();bev_frames.clear();bev_last_stamp=ros::Time();}
+void bevEpoch(const asmc_msgs::InferenceStatus::ConstPtr& m){
+    if(m->producer_session_id.empty()||m->header.stamp.isZero()||m->model!="twinlite")return;
+    if(std::find(bev_retired.begin(),bev_retired.end(),m->producer_session_id)!=bev_retired.end())return;
+    if(m->producer_session_id==bev_session && (m->generation<bev_generation || m->header.stamp<=bev_status_stamp))return;
+    const bool active=m->mode==m->ACTIVE;
+    if(m->producer_session_id!=bev_session || m->generation!=bev_generation || active!=bev_active || m->source_cutoff!=bev_cutoff){
+        if(!bev_session.empty()&&m->producer_session_id!=bev_session){bev_retired.push_back(bev_session);while(bev_retired.size()>8)bev_retired.pop_front();}
+        clearBev();
+    }
+    bev_session=m->producer_session_id;bev_generation=m->generation;bev_cutoff=m->source_cutoff;bev_active=active;
+    bev_status_stamp=m->header.stamp;bev_status_received=ros::SteadyTime::now();
+}
 void bevInput(const sensor_msgs::Image::ConstPtr& m,bool probability) {
     const auto now=ros::Time::now();const double age=(now-m->header.stamp).toSec();
+    if(!bev_active || m->header.stamp<bev_cutoff)return;
     if(m->header.stamp.isZero() || age<-.05 || age>.35 || m->header.frame_id!="base_link" || m->encoding!="mono8" ||
        m->width!=unsigned(bev_spec.cols)||m->height!=unsigned(bev_spec.rows)||m->step<m->width||m->data.size()!=size_t(m->height)*m->step){++bev_invalid;return;}
-    if(!bev_last_stamp.isZero() && m->header.stamp<bev_last_stamp){clearBev();++bev_invalid;return;}
+    if(!bev_last_stamp.isZero() && m->header.stamp<bev_last_stamp){++bev_invalid;return;}
     if(m->header.stamp==bev_last_stamp)return;
     auto& queue=probability?bev_probability:bev_coverage;queue.push_back(m);while(queue.size()>4)queue.pop_front();
     for(const auto& p:bev_probability)for(const auto& c:bev_coverage)if(p->header.stamp==c->header.stamp){
@@ -285,6 +304,8 @@ void bevInput(const sensor_msgs::Image::ConstPtr& m,bool probability) {
     }
 }
 std::shared_ptr<lane_boundary_adapter::clearance::DrivableClearance> selectBev(ros::Time image,ros::Time lane) {
+    if(!bev_active || bev_session.empty() || (ros::SteadyTime::now()-bev_status_received).toSec()>1.5 ||
+       (ros::Time::now()-bev_status_stamp).toSec()>1.5 || image<bev_cutoff || lane<bev_cutoff)return nullptr;
     std::shared_ptr<lane_boundary_adapter::clearance::DrivableClearance> best;double distance=.050000001;
     for(const auto& e:bev_frames){double age=(ros::Time::now()-e.stamp).toSec();
         if(age<-.05||age>.35||(ros::SteadyTime::now()-e.received).toSec()>.35||std::abs((lane-e.stamp).toSec())>.050000001)continue;
@@ -1209,7 +1230,8 @@ void initializeRosInterface(ros::NodeHandle& nh) {
         bev_spec.rows=std::lround((bev_spec.x_max-xmin)/bev_spec.resolution);
         bev_spec.cols=std::lround((bev_spec.y_max-ymin)/bev_spec.resolution);
         if(bev_spec.rows<1||bev_spec.rows>1000||bev_spec.cols<1||bev_spec.cols>1000)throw std::runtime_error("invalid camera BEV grid dimensions");
-        static ros::Subscriber probability,coverage;
+        static ros::Subscriber probability,coverage,epoch;
+        epoch=nh.subscribe("/perception/camera/lane/status",1,bevEpoch);
         probability=nh.subscribe<sensor_msgs::Image>("/perception/bev/camera/drivable_probability",1,
             +[](const sensor_msgs::Image::ConstPtr& m){bevInput(m,true);});
         coverage=nh.subscribe<sensor_msgs::Image>("/perception/bev/camera/coverage",1,
