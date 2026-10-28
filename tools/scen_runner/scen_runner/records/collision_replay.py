@@ -137,7 +137,7 @@ class ReplaySection(Section):
                 self.status='재현 · MORAI 생성점 배치 거부 · 같은 설정으로 대기';return False
             self.baseline.pop(0);return False
         self.map_statics()
-        self.prepared=self.ready_live(states)
+        self.prepared=(self.definition.get('allow_empty_scene') is True and not self.actors and not self.events) or self.ready_live(states)
         self.status='저장된 구간 진입 상태 준비 완료' if self.prepared else '재현 객체 상태 수신 대기'
         return self.prepared
 

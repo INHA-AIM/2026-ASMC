@@ -59,7 +59,7 @@ def saved_runs(root=SAVE_ROOT):
                 run_start=record['run_started']['kst'];datetime.fromisoformat(run_start)
                 ids=set(event.get('counterpart_ids',()));environment=event['environment']
                 for section,definition in sorted(record['replay'].items()):
-                    if not definition.get('baseline'):continue
+                    if not definition.get('baseline') and not (record.get('schema')==TRIAL_SCHEMA and definition.get('allow_empty_scene') is True):continue
                     models=sorted({r['model'] for r in record.get('all_section_settings',())
                                    if r.get('section')==section and (kind!='collision' or r.get('native_id') in ids)})
                     cases.append(ReplayCase(path,section,stamp,record['episode'],', '.join(models),

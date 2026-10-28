@@ -380,7 +380,12 @@ def load_collision(path,section=None,check_maps=True):
             source=repo_path(name)
             if str(source.resolve()) in map_files and (not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest()!=expected):
                 raise ValueError('저장 당시와 현재 맵 파일이 다릅니다: '+name)
-    if not selected.get('baseline'):raise ValueError('재현할 객체의 구간 진입 상태가 없습니다.')
+    if not selected.get('baseline'):
+        # An explicitly authored empty control trial is different from a lost
+        # collision snapshot. Missing baseline never silently becomes clear.
+        if not (record.get('schema')==TRIAL_SCHEMA and selected.get('allow_empty_scene') is True
+                and selected.get('baseline')==[] and selected.get('events',[])==[]):
+            raise ValueError('재현할 객체의 구간 진입 상태가 없습니다.')
     for key in ('x','y','z','roll','pitch','yaw'):
         value=selected.get('start_pose',{}).get(key)
         if not isinstance(value,(int,float)) or not math.isfinite(value):raise ValueError('재현 ego 위치/방향 값이 유효하지 않습니다.')

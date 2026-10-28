@@ -39,6 +39,18 @@ def crossing_definition():
 
 
 class ArchiveTest(unittest.TestCase):
+    def test_empty_control_trial_requires_explicit_intent(self):
+        self.archive.checkpoint(self.engine,'ready');saved=self.finish()
+        selected=saved['replay']['static'];selected['baseline']=[];selected['events']=[]
+        self.archive.last_file.write_text(json.dumps(saved))
+        with self.assertRaises(ValueError):load_collision(self.archive.last_file,check_maps=False)
+        selected['allow_empty_scene']=True
+        self.archive.last_file.write_text(json.dumps(saved))
+        self.assertEqual(load_collision(self.archive.last_file,check_maps=False)[0]['baseline'],[])
+        saved['schema']=SCHEMA
+        self.archive.last_file.write_text(json.dumps(saved))
+        with self.assertRaises((ValueError,KeyError)):load_collision(self.archive.last_file,check_maps=False)
+
     def test_trial_checkpoint_is_replayable_and_does_not_consume_later_collision(self):
         self.now[0]=2.
         self.assertTrue(self.archive.checkpoint(self.engine,'ready'))
