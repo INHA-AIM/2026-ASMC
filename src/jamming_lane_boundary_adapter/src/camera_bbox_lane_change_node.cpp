@@ -1195,7 +1195,7 @@ void initializeRosInterface(ros::NodeHandle& nh) {
         throw std::runtime_error("control_topic and preview_topic must differ");
     }
 
-    private_nh.param<std::string>("bev_mode",params.bev_mode,"off");
+    ros::NodeHandle("~").param<std::string>("bev_mode",params.bev_mode,"off");
     if(params.bev_mode!="off" && params.bev_mode!="audit" && params.bev_mode!="guard")throw std::runtime_error("invalid bev_mode");
     if(params.bev_mode!="off") {
         if(!params.contact_clearance_enabled || !params.contact_local_required)throw std::runtime_error("BEV trial requires measured local clearance");
@@ -1211,9 +1211,9 @@ void initializeRosInterface(ros::NodeHandle& nh) {
         if(bev_spec.rows<1||bev_spec.rows>1000||bev_spec.cols<1||bev_spec.cols>1000)throw std::runtime_error("invalid camera BEV grid dimensions");
         static ros::Subscriber probability,coverage;
         probability=nh.subscribe<sensor_msgs::Image>("/perception/bev/camera/drivable_probability",1,
-            [](const sensor_msgs::Image::ConstPtr& m){bevInput(m,true);});
+            +[](const sensor_msgs::Image::ConstPtr& m){bevInput(m,true);});
         coverage=nh.subscribe<sensor_msgs::Image>("/perception/bev/camera/coverage",1,
-            [](const sensor_msgs::Image::ConstPtr& m){bevInput(m,false);});
+            +[](const sensor_msgs::Image::ConstPtr& m){bevInput(m,false);});
     }
     bbox_subscriber = nh.subscribe(params.bbox_topic, 1, bboxCallback);
     reference_lane_publisher = nh.advertise<std_msgs::Int8>(params.reference_lane_topic, 1);
