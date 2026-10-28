@@ -35,6 +35,7 @@ class LocalController {
   ros::Time evaluation_time;
   ros::SteadyTime last_solved;
   bool command_published = false;
+  bool deferred_entry_tick = false;
   bool steering_cadence_limited = false;
   asmc_local::ExecutionHistory execution_history;
   asmc_local::ExecutionHistory::Snapshot execution_snapshot;
@@ -56,6 +57,8 @@ class LocalController {
     bool next = m->data == 1;
     const bool changed = next != selected;
     if (changed) {
+      deferred_entry_tick = false;
+      timer.setPeriod(ros::WallDuration(.05),true);
       ResetMPCOnFailSafe();
       execution_history.Pending();
       // A mode change is not a producer/frame reset. A freshly prepared
@@ -72,8 +75,13 @@ class LocalController {
       // Single-threaded spin serializes this callback with tick. Reset the
       // timer phase so this does not create a second sub-period solve/command.
       // No solve runs while NORMAL owns control and no stamp is refreshed.
-      timer.setPeriod(ros::WallDuration(.05), true);
-      tick(ros::SteadyTimerEvent());
+      const double lead=(state->header.stamp-ros::Time::now()).toSec();
+      if (lead>0 && lead<=.005) {
+        // A measured microsecond clock handoff is not a future observation
+        // to solve from. Wait for its real time, then restore the20Hz phase.
+        deferred_entry_tick=true;
+        timer.setPeriod(ros::WallDuration(lead+.001),true);
+      } else tick(ros::SteadyTimerEvent());
     }
   }
   void issued(const morai_msgs::CtrlCmd::ConstPtr &m) {
@@ -189,6 +197,10 @@ class LocalController {
     report(false, cmd);
   }
   void tick(const ros::SteadyTimerEvent &) {
+    if (deferred_entry_tick) {
+      deferred_entry_tick=false;
+      timer.setPeriod(ros::WallDuration(.05),true);
+    }
     evaluation_time = ros::Time::now();
     command_published = false;
     steering_cadence_limited = false;

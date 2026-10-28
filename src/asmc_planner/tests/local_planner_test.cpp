@@ -86,6 +86,20 @@ int main() {
       auto r=Plan(s,c);
       expect(r.valid && r.recovery && r.path.back().x>=6.,
              "short stopping prefix attempts a longer bounded crawl sweep");
+      s.speed=0.;
+      for(int col=0;col<160;++col) s.grid.coverage[153*160+col]=128;
+      for(int row=0;row<=120;++row) for(int col=0;col<160;++col)
+        s.grid.probability[row*160+col]=0;
+      r=Plan(s,c);
+      expect(r.valid && r.recovery && r.chosen_cap>.3 && r.path.back().s>3.,
+             "stationary short prefix explores crawl instead of a permanent zero target");
+      for(size_t i=1;i<r.path.size();++i) {
+        const auto& a=r.path[i-1];const auto& b=r.path[i];
+        const double ds=std::hypot(b.x-a.x,b.y-a.y),
+                     turn=std::abs(std::atan(c.wheelbase*b.k/c.gain)-std::atan(c.wheelbase*a.k/c.gain));
+        expect(turn<=c.max_steer_rate*ds/std::max(1.,s.speed)+1e-8,
+               "crawl generation obeys the same steering slew as normal local candidates");
+      }
       s.obstacles.push_back({55,{{5.,-8.},{6.,-8.},{6.,8.},{5.,8.}}});
       r=Plan(s,c);
       if(r.valid) for(const auto& p:r.path) {

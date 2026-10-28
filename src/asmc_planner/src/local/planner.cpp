@@ -328,7 +328,10 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
     int known = 0;
     bool physical_collision = false;
     for (int step = 1; step <= 40; ++step) {
-      double k = p.k + std::clamp(requested - p.k, -.015, .015),
+      const double delta=std::atan(c.wheelbase*p.k/c.gain),
+                   desired=std::atan(c.wheelbase*requested/c.gain),
+                   span=c.max_steer_rate*.1/std::max(1.,s.speed);
+      double k = c.gain*std::tan(std::clamp(desired,delta-span,delta+span))/c.wheelbase,
              turn = .05 * (p.k + k);
       p.x += .1 * std::cos(p.yaw + turn * .5);
       p.y += .1 * std::sin(p.yaw + turn * .5);
@@ -721,7 +724,13 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   const double prefix_lag=c.delay+(s.aligned_to_plan?0.:s.age);
   const bool short_for_current_speed=out.path.size()>1 &&
       s.speed*prefix_lag+brakingDistance(s.speed,s.acceleration,c)>out.path.back().s;
-  if ((out.path.size() < 3 || short_for_current_speed) && c.recovery) {
+  // A valid near-zero-speed prefix can otherwise keep a stationary car
+  // stationary forever: it no longer violates current stopping distance.
+  // Seek a longer alternative, never raise the speed of that short prefix.
+  const bool no_crawl_progress=out.path.size()>1 &&
+      std::max(0.,spaceSpeed(out.path.back().s-.1,c.accel,prefix_lag,c)-.35)<
+      std::min(c.speed_cap,3./3.6);
+  if ((out.path.size() < 3 || short_for_current_speed || no_crawl_progress) && c.recovery) {
     // Prefer a full-horizon swept path with explicitly bounded near-camera
     // unknown assistance over a short centroid arc. Known nonroad and OBBs
     // still veto this candidate, so a distant barrier causes early avoidance.
@@ -748,7 +757,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   // Try the separately labelled3km/h near-field recovery before turning a
   // short prefix into full STOP. Its actual-OBB veto above is unconditional;
   // terminal speed integration below must still fit the new path length.
-  const bool recovered=(out.path.size()<3 || short_for_current_speed) &&
+  const bool recovered=(out.path.size()<3 || short_for_current_speed || no_crawl_progress) &&
       Recovery(s,c,out);
   if (out.path.size() < 3 && !recovered) {
     out.reason = "no_verified_prefix";
