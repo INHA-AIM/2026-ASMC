@@ -46,6 +46,7 @@ struct Parameters {
     // Internal trial profile. Legacy lane-occupancy policy is the recovery path.
     bool contact_clearance_enabled = false;
     bool contact_local_required = false;
+    bool semantic_near_ego_lidar_assist=false; // explicit experiment, not free-space certification
     std::string bev_mode="off"; // off / audit / semantic_trial; no operational promotion
     double contact_speed_kph = 5.0;
     double contact_max_skew = 0.15; // no ego-motion alignment is claimed
@@ -318,7 +319,7 @@ void bevInput(const sensor_msgs::Image::ConstPtr& m,bool probability) {
         auto grid=std::make_shared<lane_boundary_adapter::clearance::DrivableClearance>();
         const lane_boundary_adapter::clearance::Vehicle vehicle{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,
             params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
-        if(!grid->prepare(bev_spec,a,b,vehicle)){++bev_invalid;return;}
+        if(!grid->prepare(bev_spec,a,b,vehicle,166,params.bev_mode=="semantic_trial",params.bev_mode=="semantic_trial" && params.semantic_near_ego_lidar_assist)){++bev_invalid;return;}
         bev_frames.push_back({p->header.stamp,ros::SteadyTime::now(),grid});while(bev_frames.size()>8)bev_frames.pop_front();
         bev_last_stamp=p->header.stamp;
     }
@@ -1203,6 +1204,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status,"bev_mode",params.bev_mode);
     addDiagnosticValue(status,"bev_coordinate_policy",params.bev_mode=="semantic_trial"?"exact_family_imu_context":"fixed_plane_sensitivity_only");
     addDiagnosticValue(status,"semantic_safe_length_m",std::to_string(semantic_safe_length));
+    addDiagnosticValue(status,"semantic_near_ego_lidar_assist",params.semantic_near_ego_lidar_assist?"true":"false");
     addDiagnosticValue(status,"semantic_home_lane",std::to_string(semantic_home));
     addDiagnosticValue(status,"semantic_target_lane",std::to_string(semantic_target));
     addDiagnosticValue(status,"bev_status",bev_status);
@@ -1315,6 +1317,7 @@ void handleShutdownSignal(int) {
 void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("contact_clearance_enabled",params.contact_clearance_enabled,false);
     private_nh.param("contact_local_required",params.contact_local_required,false);
+    private_nh.param("semantic_near_ego_lidar_assist",params.semantic_near_ego_lidar_assist,false);
     private_nh.param("contact_speed_kph",params.contact_speed_kph,5.0);
     if(!std::isfinite(params.contact_speed_kph)||params.contact_speed_kph<=0||params.contact_speed_kph>5.0)
         throw std::runtime_error("contact_speed_kph must be in (0,5]");

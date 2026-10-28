@@ -25,7 +25,8 @@ class SemanticSpaceTest(unittest.TestCase):
         p,m=self.data()
         for v in m:m[v][:]=True
         out=self.renderer.drivable(self.planes,p,m)
-        self.assertFalse(np.any(out['coverage']))
+        self.assertFalse(np.any(out['coverage']==255))
+        self.assertTrue(np.any(out['coverage']==128))
         self.assertFalse(np.any(out['drivable']))
     def test_low_probability_is_not_filled_by_other_views(self):
         p,m=self.data();p['front'][:]=0
