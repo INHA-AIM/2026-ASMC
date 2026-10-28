@@ -71,9 +71,11 @@ class CameraObjectsContractTest(unittest.TestCase):
         self.assertEqual(set(groups), {'vehicle', 'dynamic_obstacle', 'static_obstacle'})
         labels = [name for values in groups.values() for name in values]
         e8 = read_yaml(CAMERA / 'config/camera/yolo26l_mission16_e8_three_view.yaml')
+        e3 = read_yaml(CAMERA / 'config/camera/yolo26l_mission15_e3_three_view.yaml')
         pretrained = read_yaml(CAMERA / 'config/camera/yolo26l_pretrained_mission_three_view.yaml')
         self.assertEqual(len(labels), len(set(labels)))
-        self.assertEqual(set(labels), set(e8['allowed_names']))
+        self.assertEqual(set(labels), set(e3['allowed_names']))
+        self.assertEqual(tuple(e3['allowed_names']), tuple(n for n in e8['allowed_names'] if n != 'traffic_cone'))
         tree = ast.parse((CAMERA / 'src/asmc_camera/detection/mission.py').read_text())
         classes = next(ast.literal_eval(node.value) for node in tree.body if isinstance(node, ast.Assign)
                        and any(isinstance(target, ast.Name) and target.id == 'CLASSES' for target in node.targets))
@@ -82,10 +84,13 @@ class CameraObjectsContractTest(unittest.TestCase):
         self.assertIn('motorcycle', groups['static_obstacle'])
         self.assertTrue({'bicycle', 'stroller'} <= set(groups['dynamic_obstacle']))
 
-    def test_receiver_does_not_claim_or_depend_on_runtime_fusion(self):
-        self.assertEqual(self.config['implementation_status'], 'receiver_buffer_projection_ready_fusion_not_implemented')
+    def test_three_view_consumer_matches_runtime_without_inference_dependency(self):
+        self.assertEqual(self.config['implementation_status'], 'three_view_fusion_enabled')
         compatibility = self.config['current_consumer']
-        self.assertEqual(compatibility['camera_scope'], 'front')
+        self.assertEqual(compatibility['camera_scope'], 'all')
+        runtime = read_yaml(ROOT / 'src/asmc_lidar/config/lidar_pipeline.yaml')
+        self.assertEqual(runtime['fusion']['views'], 'all')
+        self.assertEqual(runtime['fusion']['camera_class_profile'], 'mission15_no_cone_v1')
         self.assertEqual(compatibility['output_topic'], '/perception/lidar/tracks_map')
         package = ET.parse(ROOT / 'src/asmc_lidar/package.xml').getroot()
         dependencies = {node.text for node in package if node.tag.endswith('depend')}

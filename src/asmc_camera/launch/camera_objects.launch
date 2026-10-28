@@ -5,9 +5,9 @@
   <arg name="managed" default="true"/>
   <arg name="initial_mode" default="0"/>
   <arg name="target_hz" default="15.0"/>
-  <arg name="config" default="$(find asmc_camera)/config/camera/yolo26l_mission16_e8_three_view.yaml"/>
+  <arg name="config" default="$(find asmc_camera)/config/camera/yolo26l_mission15_e3_three_view.yaml"/>
   <arg name="conf_thres" default="" doc="Optional startup confidence override; empty keeps the config value. Restart to lower the producer cutoff."/>
-  <arg name="class_groups_config" default="$(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml"/>
+  <arg name="class_groups_config" default="$(find asmc_camera)/config/camera/object_classes_mission15_v1.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
   <arg name="objects_side_ego_mask" default="true"/>
   <arg name="objects_left_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml"/>

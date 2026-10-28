@@ -6,7 +6,7 @@
 #
 # 아래 버전 조합은 RTX 5070(sm_120)에서 torch 2.7.1+cu128 / torchvision
 # 0.22.1+cu128 과 함께 yolo11m.pt 로딩과 CUDA 추론까지 실제로 확인한 값이다.
-ultralytics==8.4.146
+ultralytics==8.4.150
 numpy==1.26.4
 opencv-python==4.10.0.84
 

@@ -1,0 +1,30 @@
+{
+  "base_main": "d518b7c9fdf9af57c6a3dabf799802829bb2b703",
+  "tested_merge_head": "3267a98cd5fe0e5a7f76aed0182cf705a814e886",
+  "working_tree_includes_rtx4060_model_and_e3_launch_script": true,
+  "workspace_build": {
+    "command": "catkin_make -j4 -l4",
+    "passed": true
+  },
+  "focused_checks": {
+    "model_profiles_entrypoints_lidar_contract_local_export_tests": 29,
+    "lidar_ctest_targets": [
+      "asmc_lidar_test_fusion_policy",
+      "asmc_lidar_test_front_camera_fusion",
+      "asmc_lidar_test_runtime"
+    ],
+    "lidar_ctest_passed": 3,
+    "runtime_documentation": {
+      "passed": true,
+      "launches": 27,
+      "literal_commands": 91
+    },
+    "script_bash_syntax": true
+  },
+  "engine_sha256": "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00",
+  "inference_evidence": "rtx4060-yolo-only-recheck.json",
+  "numeric_parity_evidence": "rtx4060-engine-parity.json",
+  "numeric_parity_passed": false,
+  "merged_revision_full_driving_evaluated": false,
+  "multi_gpu_execution_evaluated": false
+}

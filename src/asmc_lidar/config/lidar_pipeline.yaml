@@ -137,7 +137,7 @@ fusion:
   # M1 optimized three-view default; front is the explicit internal rollback.
   views: all
   enable_sensor_fusion: true
-  camera_class_profile: mission16_v1   # legacy | mission16_v1
+  camera_class_profile: mission15_no_cone_v1   # legacy | mission16_v1 | mission15_no_cone_v1
   fusion_yolo_policy: unique            # unique | bounded_reuse
   fusion_max_time_offset_sec: 0.05
   fusion_sync_wait_timeout_sec: 0.20

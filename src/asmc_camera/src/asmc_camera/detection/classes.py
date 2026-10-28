@@ -46,12 +46,13 @@ def _names(values: object, label: str) -> FrozenSet[str]:
 def load_class_groups(config: Mapping[str, object]) -> ClassGroups:
     """Build groups from the ``object_classes.yaml`` mapping."""
     groups = config.get("groups")
-    if config.get("profile") == "mission16_v1":
-        from .mission import GROUPS as mission_groups
+    if config.get("profile") in ("mission16_v1", "mission15_no_cone_v1"):
+        from .mission import GROUPS as MISSION_GROUPS, GROUPS_NO_CONE
+        mission_groups = MISSION_GROUPS if config['profile'] == 'mission16_v1' else GROUPS_NO_CONE
         expected = {g: frozenset(names) for g, names in mission_groups.items()}
         actual = {g: _names(v, g) for g, v in groups.items()} if isinstance(groups, Mapping) else {}
         if actual != expected or config.get('default_group') != 'unknown':
-            raise ValueError('mission16_v1 requires the fixed approved mapping and unknown default')
+            raise ValueError(config['profile']+' requires the fixed approved mapping and unknown default')
         return ClassGroups(frozenset(), frozenset(), frozenset(), 'unknown', explicit=actual)
     if not isinstance(groups, Mapping) or set(groups) not in (
         {"person", "vehicle"}, {"person", "animal", "vehicle"}

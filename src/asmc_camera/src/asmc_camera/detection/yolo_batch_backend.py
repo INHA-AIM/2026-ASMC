@@ -34,15 +34,15 @@ class BatchedYoloDetector:
         self.mode, self.shapes = batch_mode, shapes_for_front(front_width)
         batch_groups(['front', 'left', 'right'], batch_mode)
         self.allowed = list(allowed_names)
-        from .mission import CLASSES
-        self.mission = head_profile == 'mission16_one2one_nms'
-        if head_profile not in ('legacy_coco7', 'mission16_one2one_nms'):
+        from .mission import profile_classes
+        self.mission = head_profile in ('mission16_one2one_nms', 'mission15_one2one_nms')
+        if head_profile not in ('legacy_coco7', 'mission16_one2one_nms', 'mission15_one2one_nms'):
             raise DetectorStartupError('unknown head profile')
         self.inference_quantize = inference_quantize
         self.nms_iou = float(nms_iou)
         if not 0 <= self.nms_iou <= 1:
             raise DetectorStartupError('invalid NMS IoU')
-        expected_names = CLASSES if self.mission else COCO7
+        expected_names = profile_classes(head_profile) if self.mission else COCO7
         if task not in ('detect', 'segment') or set(self.allowed) != set(expected_names) or (self.mission and task != 'detect'):
             raise DetectorStartupError('runtime vocabulary/task differs from the selected head profile')
         if not require_cuda or not device.startswith('cuda'):
@@ -97,8 +97,8 @@ class BatchedYoloDetector:
         self.allowed_ids = [i for i, name in self.names.items() if name in self.allowed]
         if len(self.allowed_ids) != len(expected_names):
             raise DetectorStartupError('checkpoint vocabulary does not contain the selected allowed names')
-        if self.mission and tuple(self.names[i] for i in sorted(self.names)) != CLASSES:
-            raise DetectorStartupError('mission16 checkpoint class ID order differs')
+        if self.mission and tuple(self.names[i] for i in sorted(self.names)) != expected_names:
+            raise DetectorStartupError('mission checkpoint class ID order differs from '+head_profile)
         load_ms = (time.monotonic()-start)*1000
         warm = time.monotonic()
         for views in (['front'], ['left'], ['left', 'right'], ['front', 'left', 'right']):

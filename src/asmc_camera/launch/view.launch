@@ -2,11 +2,12 @@
   <!-- Public visualization entrypoint. Select renderers only; inference modes
        are controlled by camera.launch. rqt is opened separately by the user. -->
   <arg name="models" default="all"/>
+  <arg name="detector" default="e3" doc="e3 | e8 | pretrained"/>
   <arg name="valid_models" default="$(eval {True: True}[arg('models') == 'all' or (arg('models') != '' and arg('models').replace('objects','').replace('traffic_light','').replace('lane','').replace(',','') == '' and len(arg('models').split(',')) == arg('models').split(',').count('objects') + arg('models').split(',').count('lane') + arg('models').split(',').count('traffic_light') and arg('models').split(',').count('objects') &lt;= 1 and arg('models').split(',').count('lane') &lt;= 1 and arg('models').split(',').count('traffic_light') &lt;= 1)])"/>
   <include file="$(find asmc_camera)/launch/visualization.launch">
     <arg name="camera_objects" value="$(eval arg('models') == 'all' or 'objects' in arg('models').split(','))"/>
     <arg name="camera_lane" value="$(eval arg('models') == 'all' or 'lane' in arg('models').split(','))"/>
     <arg name="traffic_light" value="$(eval arg('models') == 'all' or 'traffic_light' in arg('models').split(','))"/>
-    <arg name="objects_config" value="$(find asmc_camera)/config/camera/yolo26l_mission16_e8_three_view.yaml"/>
+    <arg name="objects_config" value="$(eval find('asmc_camera') + '/config/camera/' + {'e3':'yolo26l_mission15_e3_three_view.yaml','e8':'yolo26l_mission16_e8_three_view.yaml','pretrained':'yolo26l_pretrained_mission_three_view.yaml'}[arg('detector')])"/>
   </include>
 </launch>

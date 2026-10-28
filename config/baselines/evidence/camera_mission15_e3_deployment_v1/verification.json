@@ -1,0 +1,289 @@
+{
+  "deployment_profile": "collect_e3",
+  "epoch": 3,
+  "class_profile": "mission15_no_cone_v1",
+  "verified_at": "2026-10-28T08:26:31.068915+00:00",
+  "cpp_tests_passed": 84,
+  "python_tests_passed": 58,
+  "ros_smoke": {
+    "passed": true,
+    "inputs": 224,
+    "received": {
+      "front": 224,
+      "left": 224,
+      "right": 224
+    },
+    "forwarded_front": 224,
+    "errors": {},
+    "publishers": {
+      "/YOLO/BBox": [
+        "/camera_objects_yolo_bbox_adapter"
+      ],
+      "/perception/camera/objects": [
+        "/camera_objects"
+      ]
+    }
+  },
+  "strict_sample_parity": {
+    "passed": false,
+    "images": 166,
+    "paired_boxes": 479,
+    "failures": 8,
+    "threshold_boundary": 1,
+    "note": "Not bit-equivalent; full runtime-view GT evaluation performed instead of hiding strict failures"
+  },
+  "quality": {
+    "images": 4126,
+    "pt": {
+      "tp": 10065,
+      "fp": 572,
+      "gt": 11464,
+      "precision": 0.9462254395036195,
+      "recall": 0.8779658060013956,
+      "micro_f1": 0.9108185149993213,
+      "macro_f1": 0.9147459561702627
+    },
+    "engine": {
+      "tp": 10068,
+      "fp": 576,
+      "gt": 11464,
+      "precision": 0.9458850056369785,
+      "recall": 0.8782274947662247,
+      "micro_f1": 0.9108015198118328,
+      "macro_f1": 0.9147698077333738
+    },
+    "delta_pp": {
+      "precision": -0.034043386664095454,
+      "recall": 0.026168876482912662,
+      "micro_f1": -0.0016995187488544339,
+      "macro_f1": 0.0023851563111132457
+    },
+    "classes": [
+      {
+        "class_name": "dog",
+        "gt": 581,
+        "pt": {
+          "precision": 0.9716981132075472,
+          "recall": 0.8864027538726333,
+          "f1": 0.9270927092709271
+        },
+        "engine": {
+          "precision": 0.9717514124293786,
+          "recall": 0.8881239242685026,
+          "f1": 0.9280575539568345
+        }
+      },
+      {
+        "class_name": "bollard",
+        "gt": 600,
+        "pt": {
+          "precision": 0.9199372056514914,
+          "recall": 0.9766666666666667,
+          "f1": 0.9474535165723524
+        },
+        "engine": {
+          "precision": 0.9213836477987422,
+          "recall": 0.9766666666666667,
+          "f1": 0.948220064724919
+        }
+      },
+      {
+        "class_name": "steel_barricade",
+        "gt": 829,
+        "pt": {
+          "precision": 0.9947848761408083,
+          "recall": 0.9203860072376358,
+          "f1": 0.956140350877193
+        },
+        "engine": {
+          "precision": 0.9947848761408083,
+          "recall": 0.9203860072376358,
+          "f1": 0.956140350877193
+        }
+      },
+      {
+        "class_name": "concrete_barrier",
+        "gt": 606,
+        "pt": {
+          "precision": 0.9890710382513661,
+          "recall": 0.8960396039603961,
+          "f1": 0.9402597402597402
+        },
+        "engine": {
+          "precision": 0.9908759124087592,
+          "recall": 0.8960396039603961,
+          "f1": 0.9410745233968805
+        }
+      },
+      {
+        "class_name": "traffic_drum",
+        "gt": 886,
+        "pt": {
+          "precision": 0.9728453364817001,
+          "recall": 0.9300225733634312,
+          "f1": 0.9509521061742643
+        },
+        "engine": {
+          "precision": 0.9716981132075472,
+          "recall": 0.9300225733634312,
+          "f1": 0.9504036908881199
+        }
+      },
+      {
+        "class_name": "bicycle",
+        "gt": 466,
+        "pt": {
+          "precision": 0.9443207126948775,
+          "recall": 0.9098712446351931,
+          "f1": 0.926775956284153
+        },
+        "engine": {
+          "precision": 0.9422222222222222,
+          "recall": 0.9098712446351931,
+          "f1": 0.925764192139738
+        }
+      },
+      {
+        "class_name": "person",
+        "gt": 1768,
+        "pt": {
+          "precision": 0.9489096573208723,
+          "recall": 0.8614253393665159,
+          "f1": 0.903053661428995
+        },
+        "engine": {
+          "precision": 0.9483509645301804,
+          "recall": 0.8619909502262444,
+          "f1": 0.9031111111111111
+        }
+      },
+      {
+        "class_name": "box",
+        "gt": 712,
+        "pt": {
+          "precision": 0.9601100412654745,
+          "recall": 0.9803370786516854,
+          "f1": 0.9701181375955524
+        },
+        "engine": {
+          "precision": 0.9601648351648352,
+          "recall": 0.9817415730337079,
+          "f1": 0.9708333333333333
+        }
+      },
+      {
+        "class_name": "motorcycle",
+        "gt": 626,
+        "pt": {
+          "precision": 0.9962616822429906,
+          "recall": 0.8514376996805112,
+          "f1": 0.9181739879414298
+        },
+        "engine": {
+          "precision": 0.9962616822429906,
+          "recall": 0.8514376996805112,
+          "f1": 0.9181739879414298
+        }
+      },
+      {
+        "class_name": "stroller",
+        "gt": 436,
+        "pt": {
+          "precision": 0.9711538461538461,
+          "recall": 0.926605504587156,
+          "f1": 0.9483568075117371
+        },
+        "engine": {
+          "precision": 0.9711538461538461,
+          "recall": 0.926605504587156,
+          "f1": 0.9483568075117371
+        }
+      },
+      {
+        "class_name": "plastic_barrier",
+        "gt": 345,
+        "pt": {
+          "precision": 0.9784615384615385,
+          "recall": 0.9217391304347826,
+          "f1": 0.9492537313432836
+        },
+        "engine": {
+          "precision": 0.9784615384615385,
+          "recall": 0.9217391304347826,
+          "f1": 0.9492537313432836
+        }
+      },
+      {
+        "class_name": "deer",
+        "gt": 477,
+        "pt": {
+          "precision": 0.9941860465116279,
+          "recall": 0.7169811320754716,
+          "f1": 0.833130328867235
+        },
+        "engine": {
+          "precision": 0.9941860465116279,
+          "recall": 0.7169811320754716,
+          "f1": 0.833130328867235
+        }
+      },
+      {
+        "class_name": "bus",
+        "gt": 1020,
+        "pt": {
+          "precision": 0.8855813953488372,
+          "recall": 0.9333333333333333,
+          "f1": 0.9088305489260143
+        },
+        "engine": {
+          "precision": 0.8856877323420075,
+          "recall": 0.9343137254901961,
+          "f1": 0.9093511450381679
+        }
+      },
+      {
+        "class_name": "truck",
+        "gt": 1032,
+        "pt": {
+          "precision": 0.9936204146730463,
+          "recall": 0.6036821705426356,
+          "f1": 0.7510548523206751
+        },
+        "engine": {
+          "precision": 0.9936102236421726,
+          "recall": 0.6027131782945736,
+          "f1": 0.7503015681544029
+        }
+      },
+      {
+        "class_name": "car",
+        "gt": 1080,
+        "pt": {
+          "precision": 0.8446843853820598,
+          "recall": 0.9416666666666667,
+          "f1": 0.8905429071803853
+        },
+        "engine": {
+          "precision": 0.8425849212924607,
+          "recall": 0.9416666666666667,
+          "f1": 0.8893747267162221
+        }
+      }
+    ],
+    "policy": "same 4126 runtime camera images, same GT/masks/map-ignore, conf0.4, same-class NMS0.5; original PT 960 cache vs deployed engine"
+  },
+  "files": {
+    "src/asmc_camera/config/camera/yolo26l_mission15_e3_three_view.yaml": "133976f7af33d6dbe0230f0a32d53b529921e6c03e138910a3e1fe6f0956f3f2",
+    "config/models/camera_object_models_v3.json": "22954910c956d721af955d718510075983d3a20a4f118000334fafae9809ce68",
+    "src/asmc_camera/models/object_detection/yolo26l-mission15-e3.pt": "95cbc4eda62644b6f913c126d784e6b6d99078c20ee628c64b3b878b979429e2",
+    "src/asmc_camera/models/object_detection/yolo26l-mission15-e3.engine": "bd559145725498ca1a9e812d01d8e60b343f31994c19b0b53bf33c836c7f3df4"
+  },
+  "limitations": [
+    "No live driving or full perception-stack load test",
+    "Main fuses front camera only; other views publish independently",
+    "Existing TwinLite and old YOLO engines target RTX4060Ti, not validated for RTX5070"
+  ],
+  "verification_scope": "pre-main-integration snapshot; see main-integration.json for current three-view runtime",
+  "source_base_commit": "a63727c57d1c4665cf1dea92cce5c841f54c337a",
+  "current_integration_report": "main-integration.json"
+}

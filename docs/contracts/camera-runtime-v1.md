@@ -2,7 +2,7 @@
 
 현재 실행 정본은 `asmc_camera/camera.launch`, 시각화 정본은 `view.launch`다.
 음영 lane의 실행·수요와 최신 검증 상태는 [family 공급 최적화 인계](../records/camera/camera-family-supply-optimization.md)를 따른다.
-E8와 사전학습 YOLO26l을 실행 시 선택하며 가중치 교체에는 노드 재시작이 필요하다.
+E3(기본)·E8·사전학습 YOLO26l을 실행 시 선택하며 가중치 교체에는 노드 재시작이 필요하다.
 기계 정본은 `config/contracts/camera_object_observation_v1.yaml`이다.
 
 ## 실행과 소유권
@@ -21,7 +21,9 @@ roslaunch asmc_camera camera.launch mode:=active
 ```
 
 공개 옵션은 `mode:=off/standby/active`, `models:=all` 또는 쉼표로 연결한
-`objects,lane,traffic_light`, `detector:=e8/pretrained`, `confidence`, `nms_iou`다.
+`objects,lane,traffic_light`, `detector:=e3/e8/pretrained`, `confidence`, `nms_iou`다.
+객체 기본은 collect v5 E3의15종 모델이다. `traffic_cone`을 제외하고 `stroller`는 모델 ID14다.
+외부 소비에는 숫자 ID 대신 원본 이름과 기존 세 그룹을 전달한다.
 현재 정본은 YOLO15Hz·TwinLite15Hz·ResNet10Hz, confidence0.40·동일 클래스 NMS0.50이다.
 2026-10-15 사용자 요청에 따라 전방 tensor는 YOLO/TwinLite 모두544×960으로 변경했다.
 현재 TwinLite 좌우480×640과 YOLO의 B1/B2 shape가 같다.
@@ -40,7 +42,7 @@ PREPARE는 서비스로 요청한다. ACTIVE는 새로운 영상만 처리하며
 mask·보정·입력·모델 경로·상세 설정을 소유한다. 공개 옵션으로 매번 지정할 필요가 없다.
 ResNet은 camera4의 기존 PIL RGB·GPU resize·bfloat16 경로를 유지한다.
 `lane_input.yaml`은 TwinLite와 model-grid 투영이 함께 읽는 단일 입력 크기 설정이다.
-YOLO 배포 checkpoint2개·engine2개는 패키지 models의 실제 Git 파일이다.
+YOLO26l E3·E8·사전학습의 배포 checkpoint3개·engine3개는 패키지 models의 실제 Git 파일이다.
 [모델 배포 안내](../../src/asmc_camera/models/README.md)의 지원 GPU/runtime과 SHA를 따른다.
 TwinLite Large v7 E8 checkpoint·전용 engine과 기존 Medium v6 복구본을 패키지에 포함한다. 2026-10-18 사용자 결정으로 기본 모델을 Large v7 E8로 전환했다. SUNNY freshness·공급 지연 제한과 자동 수락 실패는 보존한다.
 기본 backend는 `lane_runtime.yaml`의 TensorRT
@@ -127,10 +129,10 @@ ROS가 발행 순번으로 할당하며, 새 관측의 내부 header는 발행 �
 - 생산자 종료·입력 중단은 status/source freshness timeout으로 확인한다. 새 세션·세대는 과거 결과를 버리는 경계다.
 - stamp 회귀는 기존 상태 머신이 세대를 바꾼다. 이전 세대의 진행 중 결과는 발행하지 않는다.
 
-후속 LiDAR 버퍼의 키는 session·generation·카메라·stamp·calibration을 포함해야 한다.
-동일 LiDAR 객체의 여러 카메라 관측을 여러 번의 시간적 분류 확인으로 세지 않는 것은
-후속 LiDAR 구현의 책임이다. 이 변경은 3뷰 fusion을 구현하거나 검증했다고 주장하지 않는다.
-기존 전방 bbox adapter와 단일 `/YOLO/BBox` 생산자 규칙은 유지한다.
+현재 LiDAR 버퍼의 키는 session·generation·카메라·stamp·calibration을 포함한다.
+`asmc_lidar`의 기본은 3뷰 matching이며 동일 객체의 여러 뷰를 scan별로 통합해
+분류 확인 횟수를 중복 계산하지 않는다. 구 전방 bbox adapter와 `/YOLO/BBox`는 폐기했다.
+자세한 소비·검증 범위는 [3뷰 융합 문서](../../src/asmc_lidar/docs/three-view-fusion.md)를 따른다.
 
 ## 시각화
 

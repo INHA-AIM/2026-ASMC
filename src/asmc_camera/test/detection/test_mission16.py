@@ -4,6 +4,19 @@ from asmc_camera.detection.classes import load_class_groups
 from asmc_camera.detection.output_nms import suppress
 
 class MissionTests(unittest.TestCase):
+    def test_mission15_stroller_id_and_consumer_mapping(self):
+        from asmc_camera.detection.mission import CLASSES_NO_CONE, GROUPS_NO_CONE, profile_classes
+        self.assertEqual(profile_classes('mission15_one2one_nms'), CLASSES_NO_CONE)
+        self.assertEqual(len(CLASSES_NO_CONE), 15)
+        self.assertEqual(CLASSES_NO_CONE[14], 'stroller')
+        groups = load_class_groups(dict(profile='mission15_no_cone_v1',
+            groups={k:list(v) for k,v in GROUPS_NO_CONE.items()}, default_group='unknown'))
+        self.assertIsNone(groups.group_of('traffic_cone'))
+        for name in CLASSES_NO_CONE:
+            self.assertEqual(groups.group_of(name), group_of(name))
+        with self.assertRaises(ValueError):
+            load_class_groups(dict(profile='mission15_no_cone_v1',
+                groups={k:list(v) for k,v in GROUPS.items()}, default_group='unknown'))
     def test_fixed_mapping_and_unknown(self):
         c=load_class_groups(dict(profile='mission16_v1',groups={k:list(v) for k,v in GROUPS.items()},default_group='unknown'))
         self.assertEqual(len(CLASSES),16)

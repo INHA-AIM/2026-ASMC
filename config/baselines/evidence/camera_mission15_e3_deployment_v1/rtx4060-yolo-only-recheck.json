@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "received": {
+    "front": 298,
+    "left": 298,
+    "right": 298
+  },
+  "typed_observations": {
+    "front": 298,
+    "left": 298,
+    "right": 298
+  },
+  "labels": {
+    "traffic_drum": 210,
+    "box": 18,
+    "person": 18,
+    "car": 204,
+    "concrete_barrier": 18,
+    "plastic_barrier": 6
+  },
+  "errors": {},
+  "publishers": {
+    "/perception/camera/objects": [
+      "/camera_objects"
+    ],
+    "/perception/camera/objects/observations": [
+      "/camera_objects"
+    ]
+  },
+  "model_ids": [
+    "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00"
+  ],
+  "engine_sha256": "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00",
+  "source_manifest_sha256": "49dc09ffb07b0ebf8cb00a486e56bcacd10a004aed31f650d67751322eaaa198",
+  "scope": "YOLO engine replacement only: unchanged public camera.launch models:=objects, recorded three-view RGB, original class/group/coordinate/identity/output contracts. No driving acceptance claim.",
+  "static_detection_tests_passed": 90,
+  "out_of_scope_edits_reverted": true,
+  "unchanged_from_branch_head": [
+    "lane model/config",
+    "bridge",
+    "LiDAR",
+    "planner",
+    "controller",
+    "frame bridge",
+    "scenario runner",
+    "non-YOLO tests"
+  ]
+}

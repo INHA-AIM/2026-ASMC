@@ -41,6 +41,10 @@ def nested_params(flat):
 
 
 def camera_params():
+    # ROS Noetic remains on Python 3.8; the RTX50 build/inference venv is 3.9.
+    if Path(sys.executable).absolute() != Path('/usr/bin/python3'):
+        return json.loads(subprocess.check_output(
+            ['/usr/bin/python3', str(Path(__file__).resolve()), '--print-camera-params'], text=True))
     import roslaunch.config
     launch = roslaunch.config.load_config_default(
         [str(ROOT/'src/asmc_camera/launch/camera.launch')], None)
@@ -50,6 +54,25 @@ def camera_params():
         return nested_params({k[len(prefix):]: v.value
                               for k, v in launch.params.items() if k.startswith(prefix)})
     return params('object_detection_node.py'), params('semantic_inference_node.py')
+
+
+def object_source(obj, manifest, models_root):
+    """Resolve the active deployment, never silently export an older model."""
+    profiles = {'collect_e3': 'mission15_one2one_nms',
+                'finetuned_e8': 'mission16_one2one_nms',
+                'pretrained_coco7': 'legacy_coco7'}
+    profile = obj['deployment_profile']
+    if profile not in profiles or obj['head_profile'] != profiles[profile]:
+        raise RuntimeError('Unsupported object deployment/head profile')
+    sources = [row for row in manifest['files']
+               if row['profile'] == profile and row['path'].endswith('.pt')]
+    if len(sources) != 1:
+        raise RuntimeError('Expected exactly one pinned checkpoint for '+profile)
+    source = sources[0]
+    checkpoint = models_root/source['path']
+    if sha(checkpoint) != source['sha256']:
+        raise RuntimeError('Object checkpoint checksum mismatch: '+profile)
+    return checkpoint
 
 
 def smoke(kind, directory):
@@ -83,17 +106,17 @@ def main():
                         help='reuse completed engines in this artifact directory; repeat smoke and selection only')
     parser.add_argument('--smoke', choices=['lane', 'objects'], help=argparse.SUPPRESS)
     parser.add_argument('--directory', type=Path, help=argparse.SUPPRESS)
+    parser.add_argument('--print-camera-params', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.print_camera_params:
+        print(json.dumps(camera_params()))
+        return
     if args.smoke:
         smoke(args.smoke, args.directory)
         return
     obj, lane = camera_params()
-    model_manifest = json.loads((ROOT/'config/models/camera_object_models_v2.json').read_text())
-    source = next(row for row in model_manifest['files']
-                  if row['profile'] == 'finetuned_e8' and row['path'].endswith('.pt'))
-    checkpoint = ROOT/'src/asmc_camera/models'/source['path']
-    if sha(checkpoint) != source['sha256'] or obj['deployment_profile'] != 'finetuned_e8':
-        raise RuntimeError('Expected the pinned E8 object model; no other model is substituted')
+    model_manifest = json.loads((ROOT/'config/models/camera_object_models_v3.json').read_text())
+    checkpoint = object_source(obj, model_manifest, ROOT/'src/asmc_camera/models')
     if (obj['front_width'] != 960 or obj['batch_mode'] != '2plus1' or
             lane['model_config'] != 'large' or lane['backend'] != 'twinlite_tensorrt'):
         raise RuntimeError('Camera deployment profile changed; review export shapes/settings first')
@@ -139,9 +162,9 @@ def main():
     converter = ROOT/'tools/perception/prepare_coco7_models.py'
     if not args.resume:
         run(converter, '--directory', directory/'objects', '--model', 'yolo26l',
-            '--head-profile', 'mission16_one2one_nms', '--stage', 'onnx', '--checkpoint', checkpoint)
+            '--head-profile', obj['head_profile'], '--stage', 'onnx', '--checkpoint', checkpoint)
         run(converter, '--directory', directory/'objects', '--model', 'yolo26l',
-            '--head-profile', 'mission16_one2one_nms', '--stage', 'engine')
+            '--head-profile', obj['head_profile'], '--stage', 'engine')
     rows = original_lane['engines']
     if len({(r['output_mode'], r['precision'], r['fp32_sensitive']) for r in rows}) != 1:
         raise RuntimeError('Mixed lane export settings require review')

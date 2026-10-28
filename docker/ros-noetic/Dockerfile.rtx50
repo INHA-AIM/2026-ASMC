@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-yolo-gpu.txt /tmp/requirements-inference-rtx50.txt
+COPY requirements-yolo-runtime-rtx50.txt /tmp/requirements-runtime-rtx50.txt
 RUN python3.9 -m venv /opt/yolo-venv && \
     /opt/yolo-venv/bin/python -m pip install --no-cache-dir \
       "pip==26.0.1" "setuptools==82.0.1" "wheel==0.48.0" && \
@@ -20,9 +21,11 @@ RUN python3.9 -m venv /opt/yolo-venv && \
       torch==2.7.1 torchvision==0.22.1 && \
     /opt/yolo-venv/bin/python -m pip install --no-cache-dir \
       -r /tmp/requirements-inference-rtx50.txt && \
-    rm -f /tmp/requirements-inference-rtx50.txt && \
+    /opt/yolo-venv/bin/python -m pip install --no-cache-dir \
+      -r /tmp/requirements-runtime-rtx50.txt && \
+    rm -f /tmp/requirements-inference-rtx50.txt /tmp/requirements-runtime-rtx50.txt && \
     /opt/yolo-venv/bin/python -c \
-      "import torch,torchvision,ultralytics,cv2,numpy,rospkg,netifaces; assert torch.version.cuda.startswith('12.8'); print('RTX50 inference:',torch.__version__,torchvision.__version__,ultralytics.__version__)"
+      "import torch,torchvision,ultralytics,cv2,numpy,rospkg,netifaces,tensorrt,onnx,onnxslim; assert torch.version.cuda.startswith('12.8'); assert tensorrt.__version__ == '10.13.0.35'; print('RTX50 inference:',torch.__version__,torchvision.__version__,ultralytics.__version__,tensorrt.__version__)"
 
 # docker exec로 실행한 셸과 두 실행 래퍼가 같은 인터프리터를 선택한다.
 ENV ASMC_YOLO_PYTHON=/opt/yolo-venv/bin/python

@@ -1,0 +1,49 @@
+{
+  "base_main": "3b0bc98f26880934d8d1e99cc9248ffb591d402b",
+  "source_branch_commit": "6c9b844f4eedbcdf5245a7c7930e945e4965d2e7",
+  "engine_sha256": "5c09f4f4b1c2698a816f5277c9e398899d0934144943af55a15cb1c2a47dad00",
+  "engine_bytes": 58139932,
+  "checkpoint_sha256": "95cbc4eda62644b6f913c126d784e6b6d99078c20ee628c64b3b878b979429e2",
+  "gpu": "NVIDIA GeForce RTX 4060",
+  "tensorrt": "10.13.0.35",
+  "torch": "2.1.2+cu118",
+  "ultralytics": "8.4.150",
+  "platform": "Linux x86_64",
+  "class_order_preserved": true,
+  "static_tests": {
+    "passed": 119,
+    "scope": "detection 90; model profiles/entrypoints/LiDAR config contract 26; local engine selection 3"
+  },
+  "ros_smoke": {
+    "passed": true,
+    "received": {
+      "front": 298,
+      "left": 298,
+      "right": 298
+    },
+    "typed_observations": {
+      "front": 298,
+      "left": 298,
+      "right": 298
+    },
+    "errors": {}
+  },
+  "numerical_parity": {
+    "passed": false,
+    "images": 150,
+    "paired_boxes": 78,
+    "strict_failures": 4,
+    "threshold_boundary": 1,
+    "maximum_matched_coordinate_difference_pixels": 1.0,
+    "maximum_matched_confidence_difference": 0.021484375,
+    "scope": "Unlabelled recorded three-view images: numeric comparison only. Existing IoU>=0.98/confidence difference<=0.02 checks retained; failed results are not waived."
+  },
+  "accuracy_evaluated": false,
+  "live_driving_evaluated": false,
+  "lidar_receiver_evaluated": false,
+  "local_runtime": {
+    "objects": "packaged RTX4060 E3 engine",
+    "lane": "existing local RTX4060 lane override preserved"
+  },
+  "artifacts": "tools/scen_runner/.runtime/camera_engines/e3-rtx4060-20261028"
+}

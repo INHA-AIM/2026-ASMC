@@ -1,0 +1,138 @@
+{
+  "verified_at_utc": "2026-10-28T09:02:28.653696+00:00",
+  "base_commit": "3b0bc98f26880934d8d1e99cc9248ffb591d402b",
+  "branch": "feature/scen-runner-validation-replay",
+  "integration": "fast-forward to origin/main, reapply uncommitted work, resolve 10 conflicts; no project commit or push",
+  "backup": {
+    "stash": "8d58b4ba019beb1a4a0571fc193637164d4b912e",
+    "snapshot_ref": "refs/backup/pre-main-e3-20261028"
+  },
+  "conflicts_resolved": 10,
+  "full_root_workspace_build_passed": true,
+  "cpp_suites": {
+    "asmc_lidar_test_front_camera_fusion": {
+      "tests": 46,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "asmc_lidar_test_fusion_policy": {
+      "tests": 32,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "asmc_lidar_test_runtime": {
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "asmc_lidar_test_typed_output": {
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "planning_group_conversion_test": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "planning_lidar_companion_test": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    },
+    "planning_lidar_observation_test": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0
+    }
+  },
+  "cpp_tests_passed": 139,
+  "python_checks": {
+    "camera_detection": {
+      "run": 90,
+      "skipped": 0
+    },
+    "camera_runtime": {
+      "run": 124,
+      "skipped": 1
+    },
+    "camera_lidar_contract": {
+      "run": 5,
+      "skipped": 0
+    },
+    "local_engine_selection": {
+      "run": 3,
+      "skipped": 0
+    }
+  },
+  "lidar_ros_integration_tests": {
+    "tests": 19,
+    "failures": 0,
+    "errors": 0
+  },
+  "ros_smoke": {
+    "passed": true,
+    "inputs": 223,
+    "received": {
+      "front": 223,
+      "left": 223,
+      "right": 223
+    },
+    "typed_observations": {
+      "front": 223,
+      "left": 223,
+      "right": 223
+    },
+    "lidar_admitted": {
+      "front": true,
+      "left": true,
+      "right": true
+    },
+    "fusion_all_views": true,
+    "errors": {},
+    "publishers": {
+      "/perception/camera/objects": [
+        "/camera_objects"
+      ],
+      "/perception/camera/objects/observations": [
+        "/camera_objects"
+      ]
+    },
+    "scope": "real three-view ROS/GPU + canonical LiDAR receiver, saved RGB/synthetic cloud; not spatial alignment or live driving"
+  },
+  "deployment": {
+    "profile": "collect_e3",
+    "class_profile": "mission15_no_cone_v1",
+    "class_count": 15,
+    "stroller_id": 14,
+    "excluded": "traffic_cone",
+    "views": [
+      "front",
+      "left",
+      "right"
+    ],
+    "engine": "src/asmc_camera/models/object_detection/yolo26l-mission15-e3.engine",
+    "engine_sha256": "bd559145725498ca1a9e812d01d8e60b343f31994c19b0b53bf33c836c7f3df4",
+    "gpu": "NVIDIA GeForce RTX 5070",
+    "confidence": 0.4,
+    "nms_iou": 0.5
+  },
+  "unchanged_algorithms": [
+    "LiDAR geometry/tracking/motion classification",
+    "planner policy enums",
+    "camera intrinsics"
+  ],
+  "old_local_override_backup": "/data/quality_checks/rebase_main_20261028T174143/camera_runtime.pre-e3.json",
+  "evidence_directory": "/data/quality_checks/rebase_main_20261028T174143",
+  "limitations": [
+    "Saved RGB and synthetic LiDAR/IMU/CAN, no live driving or spatial alignment validation",
+    "Original RTX4060Ti TwinLite GPU compatibility check kept; models:=all on RTX5070 not validated"
+  ]
+}

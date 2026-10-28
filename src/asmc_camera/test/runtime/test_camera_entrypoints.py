@@ -20,6 +20,11 @@ class CameraEntrypointsTest(unittest.TestCase):
             self.assertEqual(config.params['/' + node + '/initial_mode'].value, 2)
         self.assertEqual(config.params['/camera_objects/conf_thres'].value, .4)
         self.assertEqual(config.params['/camera_objects/nms_iou'].value, .5)
+        self.assertEqual(config.params['/camera_objects/deployment_profile'].value, 'collect_e3')
+        self.assertEqual(config.params['/camera_objects/head_profile'].value, 'mission15_one2one_nms')
+        self.assertEqual(config.params['/camera_objects/class_groups/profile'].value, 'mission15_no_cone_v1')
+        self.assertNotIn('traffic_cone', config.params['/camera_objects/allowed_names'].value)
+        self.assertEqual(config.params['/camera_objects/allowed_names'].value[14], 'stroller')
         self.assertEqual(config.params['/camera_lane/target_hz'].value, 15.)
         self.assertEqual(config.params['/camera_bev_fusion/max_fused_hz'].value, 15.)
         self.assertEqual(config.params['/camera_objects/model_kind'].value, 'yolo')
@@ -117,7 +122,7 @@ class CameraEntrypointsTest(unittest.TestCase):
         self.assertEqual({n.name for n in config.nodes}, {'camera_traffic_light'})
 
     def test_package_weights_resolve_without_external_model_mount(self):
-        for detector, filename in [('e8','yolo26l-finetuned_e8.engine'),('pretrained','yolo26l-pretrained_coco7.engine')]:
+        for detector, filename in [('e3','yolo26l-mission15-e3.engine'),('e8','yolo26l-finetuned_e8.engine'),('pretrained','yolo26l-pretrained_coco7.engine')]:
             config = self.config('camera.launch','models:=objects','detector:='+detector)
             path = Path(config.params['/camera_objects/weights'].value)
             self.assertEqual(path, LAUNCH.parent/'models/object_detection'/filename)
@@ -159,6 +164,12 @@ class CameraEntrypointsTest(unittest.TestCase):
         legacy = self.config('visualization.launch','camera_objects:=true','objects_debug_raw:=true')
         self.assertEqual(len(legacy.nodes),4)
         self.assertNotIn('object_view_node.py',{n.type for n in legacy.nodes})
+
+    def test_normal_visualizer_consumes_published_names_without_another_class_id_table(self):
+        for detector in ('e3', 'e8', 'pretrained'):
+            config = self.config('view.launch','models:=objects','detector:='+detector)
+            self.assertEqual([n.type for n in config.nodes], ['object_view_node.py'])
+            self.assertFalse(any(k.endswith('/allowed_names') for k in config.params))
 
 
 if __name__ == '__main__':

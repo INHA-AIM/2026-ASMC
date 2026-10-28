@@ -107,7 +107,7 @@
 |---|---|---|
 | `mode` | `active` | off &#124; standby &#124; active; default continuous inference |
 | `models` | `all` | all or comma-separated objects,lane,traffic_light |
-| `detector` | `e8` | e8 &#124; pretrained; restart to change weights |
+| `detector` | `e3` | e3 &#124; e8 &#124; pretrained; restart to change weights |
 | `confidence` | `0.40` | — |
 | `nms_iou` | `0.50` | — |
 
@@ -118,6 +118,7 @@
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
 | `models` | `all` | — |
+| `detector` | `e3` | e3 &#124; e8 &#124; pretrained |
 
 유효성 검사 전용 내부 인자는 일반 사용자 옵션에서 제외합니다.
 

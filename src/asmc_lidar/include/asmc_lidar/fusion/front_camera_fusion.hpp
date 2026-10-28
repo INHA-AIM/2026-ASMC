@@ -43,11 +43,11 @@ struct FusionConfig {
   int change_confirmations = 3;
   int class_miss_grace = 3;
   double iou_threshold = 0.25;  // Main static double FUSION_IOU_THRESHOLD
-  bool mission_profile = true;  // ~camera_class_profile == mission16_v1
+  bool mission_profile = true;  // mission15_no_cone_v1 or mission16_v1
   // Main adapter defaults (camera_objects_yolo_bbox_adapter.py).
   double confidence_threshold = 0.0;
-  // Adapter ~allowed_names; empty = profile default (mission16_v1: asmc_camera
-  // mission CLASSES, legacy: the 7 COCO names).
+  // Adapter ~allowed_names. Runtime mission15 supplies 15 names explicitly.
+  // Empty retains the older profile default (mission16 or 7 legacy names).
   std::vector<std::string> allowed_names;
   bool exclude_hood_y_band = false;
   int exclude_ymin_px = 637;
