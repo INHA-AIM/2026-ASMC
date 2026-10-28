@@ -118,7 +118,8 @@ class JammingLaunchContractTest(unittest.TestCase):
         integrated=ET.parse(LAUNCH/'autonomy_no_bridges_v2.launch')
         self.assertIsNone(integrated.find("./include[@file='$(find lane_boundary_adapter)/launch/camera_bbox_detector.launch']"))
         change=integrated.find("./include[@file='$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch']")
-        self.assertIsNone(change.find("arg[@name='return_to_entry_lane']"))
+        # PR127 adds the explicit exit/recovery maneuver on top of PR128.
+        self.assertEqual('true', change.find("arg[@name='return_to_entry_lane']").get('value'))
         self.assertEqual('/ctrl_cmd/jamming',change.find("arg[@name='control_topic']").get('value'))
 
     def test_1024_contact_geometry_and_longitudinal_speed_contract(self):
@@ -133,7 +134,21 @@ class JammingLaunchContractTest(unittest.TestCase):
         args=default_arguments(JAMMING/'camera_bbox_lane_change.launch')
         self.assertEqual('true',args['straddle_avoidance'])
         self.assertEqual('false',args['use_lidar_obstacles'])
-        self.assertNotIn('return_to_entry_lane',args)
+        self.assertEqual('false',args['return_to_entry_lane'])  # standalone still opts in explicitly
+
+    def test_highway_dashboard_and_recovery_passthrough_coexist(self):
+        root=ET.parse(LAUNCH/'autonomy_no_bridges_v2.launch')
+        planner=root.find("./include[@file='$(find asmc_planner)/launch/planner_v2.launch']")
+        self.assertEqual('$(arg highway_merge)',planner.find("arg[@name='highway_merge']").get('value'))
+        change=root.find("./include[@file='$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch']")
+        for name,parent in [('use_lidar_obstacles','jamming_use_lidar_obstacles'),
+                            ('creep_speed_kph','jamming_creep_speed_kph'),
+                            ('creep_clear_distance','jamming_creep_clear_distance')]:
+            self.assertEqual('$(arg '+parent+')',change.find("arg[@name='"+name+"']").get('value'))
+        child_args=default_arguments(JAMMING/'camera_bbox_lane_change.launch')
+        self.assertIn('bbox_conf_thres',child_args)
+        self.assertEqual('0.0',child_args['creep_speed_kph'])
+        self.assertEqual('2.0',child_args['creep_clear_distance'])
 
     def test_dashboard_uses_the_same_planning_inputs(self):
         root = ET.parse(LAUNCH / 'autonomy_no_bridges_v2.launch')

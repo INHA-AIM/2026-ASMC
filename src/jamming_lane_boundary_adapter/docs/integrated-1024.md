@@ -1,5 +1,10 @@
 # 통합 재밍 실행
 
+2026-10-28: 아래는 PR #128의 1024 이식 근거다. 이후 PR #127에서 GPS 판정·진입 차로 복귀·
+LiDAR 기억·creep와 통합 launch override를 추가했다. 현재 세부 정책과 격리 시험·재빌드 경계는
+[BBOX 차선변경](bbox-lane-change.md)을 따른다. `velocity.x` 종방향 속도·단일 카메라 소유권·
+고주로/대시보드 연결은 유지하며, 이전 standalone 기본값을 통합 override로 해석하지 않는다.
+
 판단·제어와 BBOX 접지점 생성은 `1024`의
 `d544dd3c8cb401012f89064caea8e5b70e36ba29`에서 가져왔다.
 노드 두 개, `CameraBBoxLaneResult`의 접지점 필드, 제어 launch 기본값을 함께 적용한다.

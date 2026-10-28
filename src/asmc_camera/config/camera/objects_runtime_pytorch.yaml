@@ -1,0 +1,14 @@
+# Shared effective input/publication settings for separate and shared workers.
+# RTX 50(sm_120) 임시 실행용: direct_detect는 TensorRT detect만 지원하므로
+# (yolo_batch_backend.py) PyTorch backend에서는 끈다. 나머지는 동일하다.
+hood_mask: true
+hood_mask_config: $(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml
+side_ego_mask: true
+side_ego_mask_configs:
+  left: $(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml
+  right: $(find asmc_camera)/config/camera/yolo_ego_mask_right_v1.yaml
+calibration_config: $(find asmc_camera)/config/cameras_v3.yaml
+ego_hood_filter: false
+debug_raw: false
+debug_masks: false
+direct_detect: false

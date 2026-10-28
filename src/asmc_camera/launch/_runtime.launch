@@ -30,6 +30,8 @@
     <arg name="traffic_light_device" value="cuda"/>
     <arg name="lane_enable_shared_family_debug" value="false"/>
     <arg name="objects_model_profile" value="$(arg model_profile)"/>
+    <!-- Same default file as the profile mapping; an explicit object_config (e.g. a locally rebuilt engine) also applies to separate workers. -->
+    <arg name="camera_objects_config" value="$(arg object_config)"/>
     <arg name="objects_conf_thres" value="$(arg confidence)"/>
     <arg name="objects_nms_iou" value="$(arg nms_iou)"/>
     <arg name="lane_target_hz" value="$(arg lane_hz)"/>
