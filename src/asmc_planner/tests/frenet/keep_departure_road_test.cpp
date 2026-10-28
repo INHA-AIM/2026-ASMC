@@ -81,11 +81,11 @@ int main() {
         CartesianPath path;const bool ok=planner.Plan(ego,objects,keep,path);
         const bool initial_inside=road.FootprintInside(ego.x,ego.y,ego.yaw,exterior);
         const auto evaluation=initial_inside?road.EvaluatePath(path,exterior,planner.sample_dt()):
-            road.EvaluateRecoveryPath(path,exterior,planner.sample_dt());
+            road.EvaluateDepartureRecoveryPath(path,exterior,planner.sample_dt());
         std::cout<<"[FRAME] t="<<frame["elapsed_s"].as<double>()<<" v="<<ego.v
             <<" ok="<<ok<<" samples="<<path.x.size()<<" road="<<evaluation.drivable
             <<" overlap="<<evaluation.maximum_overlap_m<<'\n';
-        check(!ok||evaluation.drivable,"accepted low-speed KEEP is inside or completes bounded exterior recovery");
+        check(!ok||evaluation.drivable,"accepted low-speed KEEP is inside or completes exterior recovery");
         bool steerable=true;double peak=0;
         for(std::size_t i=1;i<path.kappa.size();++i) {
             const double before=std::atan(mpc.wheelbase*path.kappa[i-1]/mpc.steering_curvature_gain);
@@ -156,14 +156,72 @@ int main() {
             "initial-boundary recovery cannot waive a physical obstacle collision");
     }
     {
+        // The three new reports: two larger KEEP departures and the ordinary
+        // STOP whose old first sample rotated the body by about 37 degrees.
+        const CartesianState recorded[]={
+            {-60.95011186418934,-174.3739479970567,1.2727066809258276,0,0,0},
+            {-73.60611624491803,-220.69647325733857,1.1909298815080442,0,0,0},
+            {-60.340885646314675,-172.60027045877567,1.2727412820788093,0,
+                .09764309311456462,.6513196390120068}};
+        for(int index=0;index<3;++index) {
+            FrenetPlanner planner;check(planner.Init(config.string()),"reported partial departure initializes");
+            auto exterior=planner.vehicle_shape();exterior.width=std::max(exterior.width,exterior.road_outer_width);
+            const auto ego=recorded[index];
+            check(!road.FootprintInside(ego.x,ego.y,ego.yaw,exterior)&&
+                road.IntersectsDrivable(MakeEgoFootprint(ego,exterior,0),true),
+                "reported pose is partially outside, not fully separated");
+            PlannerCommand command;command.mode=index==2?STOP:LANE_KEEPING;
+            command.has_target_speed=true;command.target_speed=index==0||index==2?25./3.6:57.5/3.6;
+            if(index==2)command.stop_position=FindClosestS(planner.reference(),
+                -60.0713284274163,-160.3874670883239,nullptr,100);
+            planner.SetObjectObservationTime(500,500);CartesianPath path;
+            const bool ok=planner.Plan(ego,{},command,path);
+            check(ok&&path.x.size()>1&&road.EvaluateDepartureRecoveryPath(
+                path,exterior,planner.sample_dt(),true).drivable,
+                "reported pose produces a complete departure without the old overlap cutoffs");
+            check(ok&&std::hypot(path.x.front()-ego.x,path.y.front()-ego.y)<1e-6&&
+                std::fabs(std::remainder(path.yaw.front()-ego.yaw,2*std::acos(-1.0)))<1e-6&&
+                PathObeysSteeringRate(path,planner.sample_dt(),mpc.wheelbase,steering_limits),
+                "departure starts at the measured pose and obeys Controller steering slew");
+            if(index==2) {
+                double hint=FindClosestS(planner.reference(),ego.x,ego.y,nullptr,100);bool before=true;
+                for(std::size_t i=0;i<path.x.size();++i){hint=FindClosestS(planner.reference(),
+                    path.x[i],path.y[i],&hint,5);before&=hint<=command.stop_position+1e-6;}
+                check(ok&&before&&std::fabs(path.v.back())<1e-6,
+                    "partial STOP retains its original frontier and reaches zero speed");
+            }
+            auto tracking=ego;auto settled_shape=exterior;settled_shape.width+=.10;
+            settled_shape.length+=.10;settled_shape.rear_overhang+=.05;
+            double settled=0;bool progress=ok;
+            for(int step=0;step<180&&progress&&settled<.5;++step) {
+                planner.SetObjectObservationTime(501+step*.1,501+step*.1);
+                CartesianPath next;progress=planner.Plan(tracking,{},command,next)&&next.x.size()>1;
+                if(!progress)break;
+                const double movement=std::hypot(next.x[1]-tracking.x,next.y[1]-tracking.y);
+                tracking={next.x[1],next.y[1],next.yaw[1],next.kappa[1],next.v[1],next.a[1]};
+                settled=road.FootprintInside(tracking.x,tracking.y,tracking.yaw,settled_shape)
+                    ? settled+movement:0;
+            }
+            check(progress&&settled>=.5,"reported departure replans until settled without a STOP gap");
+            if(index==1) {
+                FrenetPlanner reversed;check(reversed.Init(config.string()),"opposite-heading departure initializes");
+                auto backward=ego;backward.yaw+=std::acos(-1.0);
+                reversed.SetObjectObservationTime(600,600);CartesianPath rejected;
+                check(!reversed.Plan(backward,{},command,rejected)&&rejected.x.empty()&&
+                    reversed.last_failure_reason()==FrenetPlanner::PlanFailureReason::ACTUATION_BLOCKED,
+                    "recovery cannot fabricate a forward-facing body for an opposite heading or reuse an old path");
+            }
+        }
+    }
+    {
         const auto e=fixture["frames"][0]["ego"];
-        CartesianState crossed{e["x"].as<double>(),e["y"].as<double>(),
+        CartesianState crossed{e["x"].as<double>()-10000,e["y"].as<double>(),
             e["yaw"].as<double>()+std::acos(-1.0)/2,0,0,0};
         FrenetPlanner planner;
         check(planner.Init(config.string()),"road-rejection planner initializes");
         auto exterior=planner.vehicle_shape();exterior.width=fixture["road_outer_width"].as<double>();
         check(!road.FootprintInside(crossed.x,crossed.y,crossed.yaw,exterior),
-            "the rotated exterior actually crosses the road boundary");
+            "the fully outside exterior is not covered by departure recovery");
         PlannerCommand keep;keep.mode=LANE_KEEPING;keep.has_target_speed=true;keep.target_speed=10;
         planner.SetObjectObservationTime(200,200);
         CartesianPath path;const bool ok=planner.Plan(crossed,{},keep,path);

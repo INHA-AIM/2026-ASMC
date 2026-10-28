@@ -11,7 +11,7 @@ namespace {
 std::uint64_t BinKey(int x,int y) { return (std::uint64_t(std::uint32_t(x))<<32)|std::uint32_t(y); }
 }
 
-bool AvoidRoadMap::IntersectsDrivable(const geometry::Polygon2D& footprint) const {
+bool AvoidRoadMap::IntersectsDrivable(const geometry::Polygon2D& footprint,bool clip_to_grid) const {
   if(!enabled_ || footprint.size()<3 || footprint.size()>64) return false;
   double xmin=INFINITY,ymin=INFINITY,xmax=-INFINITY,ymax=-INFINITY;
   for(const auto& p:footprint) {
@@ -20,8 +20,9 @@ bool AvoidRoadMap::IntersectsDrivable(const geometry::Polygon2D& footprint) cons
     ymin=std::min(ymin,p.y);ymax=std::max(ymax,p.y);
   }
   const auto hull=geometry::ComputeConvexHull(footprint);
-  if(geometry::PolygonArea(hull)<1e-6 || xmin<grid_x_ || ymin<grid_y_ ||
-      xmax>=grid_x_+grid_width_*grid_resolution_ || ymax>=grid_y_+grid_height_*grid_resolution_) return false;
+  if(geometry::PolygonArea(hull)<1e-6 || (!clip_to_grid&&
+      (xmin<grid_x_ || ymin<grid_y_ ||
+       xmax>=grid_x_+grid_width_*grid_resolution_ || ymax>=grid_y_+grid_height_*grid_resolution_))) return false;
   if(wall_permission_)for(const auto& area:shadow_wall_areas_){
     if(xmax<area.xmin||xmin>area.xmax||ymax<area.ymin||ymin>area.ymax)continue;
     geometry::Polygon2D polygon;for(const auto& p:area.points)polygon.push_back({p.x,p.y});
@@ -191,13 +192,17 @@ bool AvoidRoadMap::DrivablePoseClear(double x,double y,double yaw,const VehicleS
 }
 
 AvoidRoadMap::Overlap AvoidRoadMap::FootprintOverlap(
-    double x,double y,double yaw,const VehicleShape& shape) const {
+    double x,double y,double yaw,const VehicleShape& shape,bool full_footprint_search) const {
   Overlap result;
   if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(yaw)||
      !std::isfinite(shape.width)||!std::isfinite(shape.length)||!std::isfinite(shape.rear_overhang)||
      shape.width<=0||shape.length<=0||shape.rear_overhang<0||shape.rear_overhang>shape.length)
     return {INFINITY,1.0};
   const double c=std::cos(yaw),s=std::sin(yaw);
+  // A partially overlapping body has a free cell within its own diagonal.
+  // This search measures exposure; it does not dilate the road or grant clearance.
+  const int radius=full_footprint_search
+      ? std::max(3,int(std::ceil(std::hypot(shape.length,shape.width)/grid_resolution_))+1) : 3;
   const int nx=static_cast<int>(std::ceil(shape.length/.20)),ny=static_cast<int>(std::ceil(shape.width/.20));
   int outside=0;
   for(int i=0;i<=nx;++i)for(int j=0;j<=ny;++j){
@@ -207,15 +212,21 @@ AvoidRoadMap::Overlap AvoidRoadMap::FootprintOverlap(
     ++outside; double nearest=INFINITY;
     const int ix=static_cast<int>(std::floor((px-grid_x_)/grid_resolution_));
     const int iy=static_cast<int>(std::floor((py-grid_y_)/grid_resolution_));
-    // Distance to the original free-cell rectangles, not a dilated map.
-    for(int row=std::max(0,iy-3);row<=std::min(grid_height_-1,iy+3);++row)
-      for(const auto& run:grid_rows_[row]){
-        if(run.second<=ix-3||run.first>ix+3)continue;
-        const double left=grid_x_+run.first*grid_resolution_,right=grid_x_+run.second*grid_resolution_;
-        const double bottom=grid_y_+row*grid_resolution_,top=bottom+grid_resolution_;
-        const double dx=std::max({left-px,0.0,px-right}),dy=std::max({bottom-py,0.0,py-top});
-        nearest=std::min(nearest,std::hypot(dx,dy));
-      }
+    // Keep the cheap original neighborhood for ordinary shallow overlap.
+    // Cells beyond that square are at least 3*resolution away, so a nearer
+    // result is already exact. Deep partial departures alone need the wider scan.
+    const auto search=[&](int reach) {
+      for(int row=std::max(0,iy-reach);row<=std::min(grid_height_-1,iy+reach);++row)
+        for(const auto& run:grid_rows_[row]){
+          if(run.second<=ix-reach||run.first>ix+reach)continue;
+          const double left=grid_x_+run.first*grid_resolution_,right=grid_x_+run.second*grid_resolution_;
+          const double bottom=grid_y_+row*grid_resolution_,top=bottom+grid_resolution_;
+          const double dx=std::max({left-px,0.0,px-right}),dy=std::max({bottom-py,0.0,py-top});
+          nearest=std::min(nearest,std::hypot(dx,dy));
+        }
+    };
+    search(3);
+    if(full_footprint_search&&nearest>3*grid_resolution_)search(radius);
     result.maximum=std::max(result.maximum,nearest);
   }
   result.fraction=double(outside)/((nx+1)*(ny+1));return result;
@@ -289,17 +300,31 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluateMergeBoundaryBridge(
                   settled_travel,true,std::min(5.0,time));
 }
 
+AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluateDepartureRecoveryPath(
+    const CartesianPath& path,const VehicleShape& shape,double dt,
+    bool continuing_recovery,double settled_travel_m) const {
+  if(!std::isfinite(settled_travel_m)||settled_travel_m<0)return {};
+  return Evaluate(path,shape,dt,0,0,continuing_recovery,settled_travel_m,
+                  false,5.0,false,0,true);
+}
+
+double AvoidRoadMap::DepartureRecoveryCost(const PathEvaluation& evaluation) {
+  return 20.0*evaluation.recovery_seconds+
+      100.0*evaluation.overlap_exposure_m_s+
+      100.0*evaluation.outside_fraction_seconds;
+}
+
 AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
-    const CartesianPath& path,const VehicleShape& shape,double dt,double recovery_distance_m,double overlap_limit_m,bool continuing_recovery,double settled_travel_m,bool allow_initial_excursion,double time_budget_s,bool budget_paint,double prior_contact_s) const {
+    const CartesianPath& path,const VehicleShape& shape,double dt,double recovery_distance_m,double overlap_limit_m,bool continuing_recovery,double settled_travel_m,bool allow_initial_excursion,double time_budget_s,bool budget_paint,double prior_contact_s,bool partial_departure) const {
   PathEvaluation result;
   if(path.x.empty()||path.y.size()!=path.x.size()||path.yaw.size()!=path.x.size()||
      !std::isfinite(dt)||dt<=0||!std::isfinite(prior_contact_s)||prior_contact_s<0)return result;
   if(!enabled_){result.drivable=true;return result;}
-  const auto initial=FootprintOverlap(path.x[0],path.y[0],path.yaw[0],shape);
+  const auto initial=FootprintOverlap(path.x[0],path.y[0],path.yaw[0],shape,partial_departure);
   VehicleShape settled_shape=shape;
   settled_shape.width+=.10;settled_shape.length+=.10;settled_shape.rear_overhang+=.05;
   const bool recovery=initial.fraction>0 || continuing_recovery || allow_initial_excursion;
-  if(recovery&&(recovery_distance_m<=0||initial.maximum>overlap_limit_m||initial.fraction>.10))return result;
+  if(!partial_departure&&recovery&&(recovery_distance_m<=0||initial.maximum>overlap_limit_m||initial.fraction>.10))return result;
   result.initial_overlap_m=initial.maximum;
   double continuous=0,travel=0,elapsed_total=0,settled_travel=0;
   // Credit actual settled travel from this episode only while the enlarged
@@ -320,13 +345,19 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
     if(!DrivablePoseClear(x,y,yaw,shape)){
       if(recovered)return false; // no fresh departure after settled recovery
       settled_travel=0;
-      const auto overlap=FootprintOverlap(x,y,yaw,shape);
-      if(overlap.maximum>((continuing_recovery||allow_initial_excursion)?overlap_limit_m:std::min(overlap_limit_m,initial.maximum+.10))||overlap.fraction>.10||
-         travel>recovery_distance_m||elapsed_total>time_budget_s)return false;
+      if(partial_departure&&!IntersectsDrivable(MakeEgoFootprint(
+             CartesianState{x,y,yaw,0,0,0},shape,0),true))return false;
+      const auto overlap=FootprintOverlap(x,y,yaw,shape,partial_departure);
+      if(!std::isfinite(overlap.maximum))return false;
+      if(!partial_departure&&
+         (overlap.maximum>((continuing_recovery||allow_initial_excursion)?overlap_limit_m:std::min(overlap_limit_m,initial.maximum+.10))||overlap.fraction>.10||
+          travel>recovery_distance_m||elapsed_total>time_budget_s))return false;
       result.maximum_overlap_m=std::max(result.maximum_overlap_m,overlap.maximum);
+      result.overlap_exposure_m_s+=overlap.maximum*elapsed;
+      result.outside_fraction_seconds+=overlap.fraction*elapsed;
       result.recovery_seconds=elapsed_total;
     }else {
-      if(!recovered&&(travel>recovery_distance_m||elapsed_total>time_budget_s))return false;
+      if(!partial_departure&&!recovered&&(travel>recovery_distance_m||elapsed_total>time_budget_s))return false;
       if(DrivablePoseClear(x,y,yaw,settled_shape))settled_travel+=movement;
       else settled_travel=0;
       if(settled_travel>=.5)recovered=true;
