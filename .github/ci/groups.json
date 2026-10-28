@@ -26,6 +26,11 @@
       "name": "bridge",
       "script": ".github/ci/bridge.sh",
       "timeout_s": 600
+    },
+    {
+      "name": "planning",
+      "script": ".github/ci/planning.sh",
+      "timeout_s": 600
     }
   ]
 }

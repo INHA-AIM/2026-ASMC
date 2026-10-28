@@ -1,6 +1,7 @@
 name: Planning integration build
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
@@ -12,6 +13,7 @@ on:
       - 'src/asmc_camera/**'
       - 'src/jamming_lane_boundary_adapter/**'
       - '.github/workflows/planning-integration.yml'
+      - '.github/workflows/ci.yml'
       - '.github/ci/**'
       - 'tools/ci/**'
 
@@ -20,101 +22,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  CCACHE_DIR: ${{ github.workspace }}/.ci-cache/ccache
-  CCACHE_BASEDIR: ${{ github.workspace }}
-  CCACHE_COMPILERCHECK: content
-  CCACHE_MAXSIZE: 400M
-  PIP_CACHE_DIR: ${{ github.workspace }}/.ci-cache/pip
-
 jobs:
-  planning-catkin-build:
-    runs-on: ubuntu-22.04
-    container: ros:noetic
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Install build dependencies
-        run: |
-          # Same signed Ubuntu repositories; avoid observed HTTP download failures.
-          sed -i -e 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' \
-            -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
-          apt-get -o Acquire::Retries=3 update
-          apt-get -o Acquire::Retries=3 install -y --no-install-recommends git ca-certificates ccache libyaml-cpp-dev libopencv-dev libeigen3-dev libssl-dev python3-nose ros-noetic-rostest ros-noetic-rosbag ros-noetic-tf ros-noetic-tf2-ros
-          rm -rf /var/lib/apt/lists/*
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Restore C++ compiler cache
-        id: compiler-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.hpp', 'src/**/*.h', 'src/**/*.cc', 'src/**/CMakeLists.txt', 'src/**/package.xml', 'src/**/*.msg', 'src/**/*.srv') }}
-          restore-keys: |
-            ${{ runner.os }}-noetic-ccache-v2-${{ github.job }}-
-            ${{ runner.os }}-noetic-ccache-v2-
-            ${{ runner.os }}-noetic-ccache-
-      - name: Reset cache statistics
-        run: ccache --zero-stats
-      - name: Check runtime launch contracts
-        run: |
-          python3 src/planning_inputs/test/runtime_launch_contract_test.py
-          python3 src/planning_inputs/test/object_filter_contract_test.py
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Check dashboard motion rendering
-        run: |
-          node src/asmc_planner/tests/behavior/dashboard_motion_test.js
-          node src/asmc_planner/tests/behavior/dashboard_shadow_test.js
-          python3 src/asmc_planner/tests/behavior/dashboard_observation_test.py
-      - name: Build ROS workspace
-        run: |
-          source /opt/ros/noetic/setup.bash
-          ./scripts/build_ws.sh -j2 -l2 -DCATKIN_WHITELIST_PACKAGES="asmc_geometry;asmc_msgs;morai_msgs;planning_inputs;asmc_planner;asmc_controller" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-      - name: Build explicit input and perception-consumer tests
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test detected_msg_converter_test feature_builder_avoid_test dynamic_object_policy_test highway_runtime_test -j2 -l2
-      - name: Save successful compilation before regression tests
-        if: steps.compiler-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
-      - name: Run planning input tests
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          ./devel/lib/planning_inputs/planning_lidar_observation_test
-          ./devel/lib/planning_inputs/planning_group_conversion_test
-          ./devel/lib/planning_inputs/planning_lidar_companion_test
-          ./devel/lib/planning_inputs/planning_gps_recovery_test
-          rostest planning_inputs lidar_observation.test
-
-      - name: Check Behavior and Frenet highway runtime handoff
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          rostest asmc_planner highway_runtime.test
-
-      - name: Check AVOID fixtures and roundabout commit guards
-        run: |
-          source /opt/ros/noetic/setup.bash
-          source devel/setup.bash
-          for regression in command_avoid_target_test roundabout_execution_test avoid_road_constraints_test polygon_collision_test; do
-            test -x "devel/lib/asmc_planner/$regression"
-          done
-          cd build/asmc_planner
-          ctest --output-on-failure -R '^(command_avoid_target_test|roundabout_execution_test|avoid_road_constraints_test|polygon_collision_test|_ctest_asmc_planner_gtest_detected_msg_converter_test|_ctest_asmc_planner_gtest_feature_builder_avoid_test|_ctest_asmc_planner_gtest_dynamic_object_policy_test)$'
-
-      - name: Report compiler cache reuse
-        if: always()
-        run: command -v ccache >/dev/null && ccache --show-stats || true
-
   # Keep the existing check identity while retiring the third heavy ROS build.
   validated-lidar-build:
     runs-on: ubuntu-22.04
@@ -122,3 +30,26 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check canonical LiDAR dependencies and input ownership
         run: python3 tools/audit/check_lidar_canonicalization.py
+
+  # Dependency-isolation audit on demand, not a second build on every PR.
+  planning-standalone-build:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    container: ros:noetic
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install minimal planning dependencies
+        run: |
+          sed -i -e 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' \
+            -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
+          apt-get -o Acquire::Retries=3 update
+          apt-get -o Acquire::Retries=3 install -y --no-install-recommends git ca-certificates libyaml-cpp-dev libopencv-dev libeigen3-dev libssl-dev python3-nose ros-noetic-rostest ros-noetic-rosbag ros-noetic-tf ros-noetic-tf2-ros
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build planning in isolation
+        run: |
+          source /opt/ros/noetic/setup.bash
+          ./scripts/build_ws.sh -j2 -l2 -DCATKIN_WHITELIST_PACKAGES="asmc_geometry;asmc_msgs;morai_msgs;planning_inputs;asmc_planner;asmc_controller"

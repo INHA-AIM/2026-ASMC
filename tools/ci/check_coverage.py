@@ -59,7 +59,7 @@ def audit(root=ROOT):
             actual.update(commands(script.read_text()))
     for command in sorted(expected-actual):
         errors.append('missing former check: '+shlex.join(command))
-    if {g['name'] for g in groups} != {'lane','lidar','camera-unit','camera-ros','bridge'}:
+    if {g['name'] for g in groups} != {'lane','lidar','camera-unit','camera-ros','bridge','planning'}:
         errors.append('required regression group missing')
     if not any(g['name']=='lidar' and g.get('exclusive') is True for g in groups):
         errors.append('wall-time-sensitive HTTP/LiDAR tests must run without parallel test load')
@@ -72,6 +72,46 @@ def audit(root=ROOT):
     bridge = (root/'.github/ci/bridge.sh').read_text()
     if 'asmc_bridge' not in bridge or 'ctest --output-on-failure' not in bridge:
         errors.append('full bridge CTest replacement missing')
+    # The old Planning integration workflow must not regain a duplicate build
+    # or lose unique checks when its tests move into the shared build job.
+    ci = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())
+    gate = ci['jobs'].get('planning-catkin-build', {})
+    if gate.get('needs') != 'catkin-build' or gate.get('if') != 'always()':
+        errors.append('planning check must propagate the shared job result, including failure')
+    if not any(step.get('env', {}).get('BUILD_RESULT') == '${{ needs.catkin-build.result }}'
+               and 'test "$BUILD_RESULT" = success' in step.get('run', '')
+               for step in gate.get('steps', [])):
+        errors.append('planning check must fail unless the shared job succeeded')
+    all_runs = [step.get('run', '') for workflow in workflows
+                for job in workflow['jobs'].values()
+                if job.get('if') != "github.event_name == 'workflow_dispatch'"
+                for step in job.get('steps', [])]
+    if sum(run.count('./scripts/build_ws.sh') for run in all_runs) != 1:
+        errors.append('ROS workspace must be built exactly once per CI revision')
+    planning = (root/'.github/ci/planning.sh').read_text()
+    for required in ('runtime_launch_contract_test.py', 'object_filter_contract_test.py',
+                     'dashboard_motion_test.js', 'dashboard_shadow_test.js',
+                     'dashboard_observation_test.py', 'dashboard_startup_test.py',
+                     'prepared_static_inputs_test', 'rostest asmc_planner highway_runtime.test',
+                     'command_avoid_target_test', 'roundabout_execution_test',
+                     'avoid_road_constraints_test', 'polygon_collision_test',
+                     '_ctest_asmc_planner_gtest_detected_msg_converter_test',
+                     '_ctest_asmc_planner_gtest_feature_builder_avoid_test',
+                     '_ctest_asmc_planner_gtest_dynamic_object_policy_test'):
+        if required not in planning:
+            errors.append('missing former planning check: '+required)
+    standalone = yaml.safe_load((root/'.github/workflows/planning-integration.yml').read_text())['jobs'].get('planning-standalone-build', {})
+    if standalone.get('if') != "github.event_name == 'workflow_dispatch'":
+        errors.append('standalone dependency build must remain manual')
+    if sum(script.count('rostest planning_inputs lidar_observation.test') for script in
+           all_runs + [(root/g['script']).read_text() for g in groups]) != 1:
+        errors.append('planning observation ROS fixture must run exactly once')
+    # These input regressions are owned by lidar.sh and run once, not in each workflow.
+    for test in ('planning_lidar_observation_test', 'planning_group_conversion_test',
+                 'planning_lidar_companion_test', 'planning_gps_recovery_test'):
+        if sum(script.count('/lib/planning_inputs/'+test) for script in
+               all_runs + [(root/g['script']).read_text() for g in groups]) != 1:
+            errors.append('planning input executable must run exactly once: '+test)
     return errors, len(expected)
 
 
