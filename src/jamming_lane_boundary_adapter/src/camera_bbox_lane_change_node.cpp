@@ -154,7 +154,7 @@ struct Parameters {
     // 인식·판단 정지(차선 끊김, 지날 선 없음 등) 대신 마지막 조향을 유지하고 이 속도로 기어간다. 0이면 기존처럼 정지.
     // 비상정지·입력 timeout·사람 정지·차속 없음, 그리고 앞 creep_clear_distance 안의 경로 장애물은 그대로 정지한다.
     double creep_speed_kph = 0.0;
-    double creep_clear_distance = 2.0;      // [m] 앞 범퍼부터 이 거리까지 지금 조향의 경로에 장애물이 없어야 기어간다.
+    double creep_clear_distance = 2.0;      // [m] 앞 범퍼부터 이 거리까지 지금 조향의 경로에 장애물이 없어야 기어간다. 0 이하면 검사 안 함.
     double avoid_obstacle_length = 6.0;     // [m] 보이지 않는 장애물 전후 길이 가정. 하단 접점부터 전방으로 적용.
     double avoid_pass_margin = 2.0;         // [m] 장애물 끝 + 차량 후방을 지난 뒤 추가 이동 거리.
     double avoid_lane_tie = 0.10;           // [m] 두 차로 offset 차이가 이 값 이하면 내 차로 유지.
@@ -1090,6 +1090,7 @@ bool hardStopReason(const std::string& reason) {
 
 // 마지막 조향의 원호를 따라 앞 범퍼부터 creep_clear_distance까지 차체 폭 안에 장애물이 있으면 막힘.
 bool creepPathBlocked() {
+    if (params.creep_clear_distance <= 0.0) return false;  // 장애물로는 멈추지 않는다(사람 정지는 hardStopReason).
     const double curvature = std::tan(follower_state.last_steering) * params.steering_curvature_gain / params.wheelbase;
     const double half_width = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
     const double reach = params.vehicle_front + params.creep_clear_distance;

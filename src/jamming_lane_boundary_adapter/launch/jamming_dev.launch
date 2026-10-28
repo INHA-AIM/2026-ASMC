@@ -40,6 +40,8 @@
   <arg name="avoid_max_shoulder" default="2.0"/>
   <!-- 인식/판단 정지 대신 기어가는 속도[km/h]. 0이면 정지. -->
   <arg name="creep_speed_kph" default="3.0"/>
+  <!-- 0이면 장애물로는 멈추지 않는다(사람·비상정지·입력 timeout만 정지). -->
+  <arg name="creep_clear_distance" default="0.0"/>
 
   <!-- 주행 부드러움 관련. 실주행에서 통과를 확인한 값으로 고정했다(공용
        camera_bbox_lane_change.launch의 기본값은 바꾸지 않았다).
@@ -92,5 +94,6 @@
     <arg name="avoid_line_overrun" value="$(arg avoid_line_overrun)"/>
     <arg name="avoid_max_shoulder" value="$(arg avoid_max_shoulder)"/>
     <arg name="creep_speed_kph" value="$(arg creep_speed_kph)"/>
+    <arg name="creep_clear_distance" value="$(arg creep_clear_distance)"/>
   </include>
 </launch>

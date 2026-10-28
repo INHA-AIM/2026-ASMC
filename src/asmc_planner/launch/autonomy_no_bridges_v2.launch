@@ -29,8 +29,10 @@
   <!-- 재밍 회피에 LiDAR 물체(카메라가 못 잡은 장애물)와 벽(갓길 한계)을 함께 쓴다.
        asmc_lidar를 skip_lidar_in_jamming:=false(기본)로 띄워야 재밍 중에도 들어온다. -->
   <arg name="jamming_use_lidar_obstacles" default="true"/>
-  <!-- 차선 끊김·지날 선 없음 등 인식/판단 정지 대신 이 속도로 기어간다(안전 정지·앞 경로 장애물은 정지 유지). -->
+  <!-- 차선 끊김·지날 선 없음 등 인식/판단 정지 대신 이 속도로 기어간다. 사람 정지·비상정지·입력 timeout은
+       정지를 유지한다. jamming_creep_clear_distance=0이면 LiDAR·카메라 장애물이 앞에 있어도 멈추지 않는다. -->
   <arg name="jamming_creep_speed_kph" default="3.0"/>
+  <arg name="jamming_creep_clear_distance" default="0.0" doc="[m] 0보다 크면 앞 범퍼부터 이 거리 안 경로 장애물에 정지"/>
 
   <!-- 재밍 판정(/planning/mode, asmc_planner 내부 GpsModeSource). 별도 인자 없이 자동이다.
        진입: raw GPS 0 좌표 | no-fix | 1s 이상 끊김 | GPS 위치가 음영 구간 안.
@@ -102,6 +104,7 @@
     <arg name="avoid_max_shoulder" value="2.0"/>
     <arg name="use_lidar_obstacles" value="$(arg jamming_use_lidar_obstacles)"/>
     <arg name="creep_speed_kph" value="$(arg jamming_creep_speed_kph)"/>
+    <arg name="creep_clear_distance" value="$(arg jamming_creep_clear_distance)"/>
     <arg name="target_speed_kph" value="20.0"/>
     <arg name="avoid_speed_kph" value="10.0"/>
     <arg name="avoid_shift_length" value="7.0"/>

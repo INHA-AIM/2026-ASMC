@@ -72,6 +72,7 @@ class LaneChangeTest(unittest.TestCase):
             *(['lane_hold_time:=3.0'] if 'hold' in self._testMethodName else []),
             *(['use_lidar_obstacles:=true'] if 'lidar' in self._testMethodName else []),
             *(['creep_speed_kph:=3.0'] if 'creep' in self._testMethodName else []),
+            *(['creep_clear_distance:=0.0'] if 'without_clear_distance' in self._testMethodName else []),
             *(['avoid_line_overrun:=0.0'] if 'wall' in self._testMethodName else []),
             'lane_change_timeout:='+('10.0' if self._testMethodName.startswith('test_ignore') else '5.0'),
             'return_to_entry_lane:='+('true' if self._testMethodName.startswith('test_return') else 'false'),
@@ -824,6 +825,15 @@ class LaneChangeTest(unittest.TestCase):
         self.feed(speed=0.,lidar=[(5.,6.,-0.5,0.5,1.)],duration=.8)
         self.stopped()
         self.assertNotIn('creep',self.status()[0])
+
+    def test_straddle_lidar_creep_without_clear_distance_keeps_moving(self):
+        self.feed()
+        # creep_clear_distance:=0 (integrated launch): a LiDAR object right ahead does not stop the creep.
+        self.feed(speed=0.,lidar=[(12.,13.,1.3,3.0,1.),(12.,13.,-3.0,-1.3,1.)],duration=.8)
+        self.feed(speed=0.,lidar=[(5.,6.,-0.5,0.5,1.)],duration=.8)
+        message,status=self.status()
+        self.assertTrue(message.startswith('creep:'),status)
+        self.assertGreater(self.command.accel,0.)
 
     def test_creep_does_not_override_emergency_stop(self):
         self.feed()
