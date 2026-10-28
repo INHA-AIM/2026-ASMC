@@ -458,3 +458,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w tools/scen
 실제 MORAI 주행 성공·충돌 재현은 오프라인 검사와 구분해 확인한다. 의존성은 `requirements.txt`와 기존 저장소 gRPC SDK이며, 컨테이너가 이미 준비됐다면 별도 진입 스크립트를 설치할 필요는 없다.
 
 통합·단일 구간 실행에 불필요한 개별 생성 GUI, 경로 추종/PID 시험기, 벤치마크·범위 PNG 생성기, 과거 진단 실행기는 제거했다. 개인 `.logs/`, `.runtime/`, `save_collision_log/`, 이전 개별 실행의 저장 배치 `layouts/`, 빌드 `dll/builds/`, 소스 정리 전 로컬 백업 `.archive/`는 Git에서 제외한다.
+
+### 공유 IMU semantic 경로 실험
+
+PR #126의 내부 후보는 [S3 실행·복구와 한계](../../docs/records/planning/2026-10-28-shadow-semantic-space.md)를 따른다. 기본 판제 정책은 변경하지 않는다. `analyze_semantic`은 exact source grid/family/RGB 갤러리를 생성하며, 관측 불가를 무장애 영역으로 표시하지 않는다.

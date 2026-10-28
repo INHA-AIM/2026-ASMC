@@ -1,6 +1,7 @@
 # S2 — 회전 OBB 보존과 주행가능 BEV 경로 검사
 
 2026-10-28, `08d8fec6` 이후 `feat/shadow-local-footprint`의 2시간 작업이다.
+후속 [S3 공유 IMU semantic 경로 실험](2026-10-28-shadow-semantic-space.md)에서 제어 적용 재확인과 새 후보를 대조한다. 아래는 S2 당시의 근거다.
 선행 [S1 접점/local 실험](2026-10-28-shadow-contact-clearance.md)은 당시 결과로 보존한다.
 운영 기본은 기존 정책이며, S1 clearance와 S2 BEV는 기본 승격하지 않았다.
 
