@@ -784,6 +784,22 @@ class LaneChangeTest(unittest.TestCase):
         self.feed(shift=-1.75,speed=8.,lidar=[],duration=1.5)
         self.assertAlmostEqual(self.line_status()[0],4.0)
 
+    def test_straddle_lidar_memory_follows_latest_scan_in_narrow_gap(self):
+        self.feed()
+        # Objects on both sides leave a 3.4 m gap around line 4 (needs about 3.0 m).
+        left,right=(9.,10.,1.7,3.0,1.),(9.,10.,-3.0,-1.7,1.)
+        self.feed(speed=0.,lidar=[left,right],duration=.8)
+        self.following()
+        self.assertAlmostEqual(self.line_status()[0],4.0)
+        # One wide transient measurement of the left object closes the gap.
+        self.feed(speed=0.,lidar=[(9.,10.,0.3,3.0,1.),right],duration=.3)
+        # The next scans show the true shape again: memory follows them instead of keeping the union.
+        self.feed(speed=0.,lidar=[left,right],duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,4.0,delta=0.15)
+        self.assertEqual(status['lidar_fresh'],'true',status)
+
     def test_straddle_lidar_blocks_adjacent_that_camera_sees_clear(self):
         self.feed()
         # Camera: own-lane box, adjacent NO_DETECTION. LiDAR: a wide object also filling the adjacent lane.

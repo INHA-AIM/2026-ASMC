@@ -345,6 +345,7 @@ struct LineObstacle {
     double line_left, line_right;         // 덮는 범위(선 번호). line_left < line_right.
     double odom_at;
     int hits;                             // 서로 다른 관측 frame에서 확인한 횟수.
+    bool lidar = false;                   // LiDAR 측정. 매 LiDAR 스캔의 형상으로 교체한다(합치지 않음).
 };
 struct LineState {
     double target = 0.0;                  // 따라가는 선(1~5 좌표). 0이면 아직 정하지 않음.
@@ -355,6 +356,7 @@ struct LineState {
     double return_home = 0.0;
     double odom = 0.0;                    // [m] 실제 속도 적분 이동 거리.
     std::vector<LineObstacle> obstacles;  // 선 좌표로 기억한 장애물(화면 밖에서도 유지).
+    unsigned long lidar_sequence = 0;     // 마지막으로 반영한 LiDAR 스캔.
 } line_state;
 bool line_mode_active = false;
 
@@ -2645,15 +2647,36 @@ bool lineObstacleConfirmed(const LineObstacle& obstacle) {
 }
 
 // 이번 관측(카메라 접점, 켜져 있으면 LiDAR)을 선 좌표로 바꿔 기억한다. 같은 물체는 덮는 범위를 합친다.
+// 카메라 박스는 가까워지면 화면 끝에서 잘려 좁게 측정되므로 기억한 범위와 합친다(줄이지 않음).
+// LiDAR는 매 스캔 물체 전체 OBB를 주므로, 이번 스캔에서 보인 물체는 겹치는 이전 기억을 최신 형상으로
+// 교체한다(합치면 근처 물체·일시 측정·이동 중 오차가 누적되어 좁은 통로가 막힌다). 이번 스캔에서
+// 보이지 않은 이전 LiDAR 물체(옆을 지나는 중 가림·추적 끊김)는 지날 때까지 그대로 유지한다.
 void rememberLineObstacles(bool new_scan) {
+    const bool lidar_scan = lidarFresh() && lidar_state.sequence != line_state.lidar_sequence;
+    std::vector<LineObstacle> lidar_scan_obstacles;
     for (const auto& obstacle : planning_obstacles) {
         LineFrame frame;
         if (!lineFrameAt(std::max(obstacle.x, params.planning_start_x), frame)) continue;
-        const LineObstacle measured{obstacle.x, obstacle.x_far - obstacle.x, lineOf(frame, obstacle.y_max),
-                                    lineOf(frame, obstacle.y_min), line_state.odom, 1};
+        LineObstacle measured{obstacle.x, obstacle.x_far - obstacle.x, lineOf(frame, obstacle.y_max),
+                              lineOf(frame, obstacle.y_min), line_state.odom, 1};
+        if (obstacle.lidar) {
+            if (!lidar_scan) continue;  // 같은 LiDAR 스캔을 여러 제어 주기에 다시 반영하지 않는다.
+            measured.lidar = true;
+            // 겹치는 이전 LiDAR 물체의 확인 횟수를 이어받는다.
+            for (const auto& old : line_state.obstacles) {
+                if (!old.lidar) continue;
+                const double old_x = lineObstacleX(old);
+                if (old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
+                    old.line_left < measured.line_right && measured.line_left < old.line_right) {
+                    measured.hits = std::max(measured.hits, std::min(old.hits + 1, params.obstacle_confirm_frames));
+                }
+            }
+            lidar_scan_obstacles.push_back(measured);
+            continue;
+        }
         auto same = std::find_if(line_state.obstacles.begin(), line_state.obstacles.end(), [&](const auto& old) {
             const double old_x = lineObstacleX(old);
-            return old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
+            return !old.lidar && old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
                 old.line_left < measured.line_right && measured.line_left < old.line_right;
         });
         if (same == line_state.obstacles.end()) {
@@ -2666,6 +2689,19 @@ void rememberLineObstacles(bool new_scan) {
         same->length = measured.length;
         same->odom_at = measured.odom_at;
         if (new_scan) same->hits = std::min(same->hits + 1, params.obstacle_confirm_frames);
+    }
+    if (lidar_scan) {
+        line_state.lidar_sequence = lidar_state.sequence;
+        auto& stored = line_state.obstacles;
+        stored.erase(std::remove_if(stored.begin(), stored.end(), [&](const auto& old) {
+            if (!old.lidar) return false;
+            const double old_x = lineObstacleX(old);
+            return std::any_of(lidar_scan_obstacles.begin(), lidar_scan_obstacles.end(), [&](const auto& measured) {
+                return old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
+                    old.line_left < measured.line_right && measured.line_left < old.line_right;
+            });
+        }), stored.end());
+        stored.insert(stored.end(), lidar_scan_obstacles.begin(), lidar_scan_obstacles.end());
     }
     const double passed = params.vehicle_rear + params.avoid_pass_margin;
     auto& obstacles = line_state.obstacles;
