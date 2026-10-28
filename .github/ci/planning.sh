@@ -20,6 +20,7 @@ python3 tools/scen_runner/test_local_alignment.py
 python3 tools/scen_runner/test_local_boundary.py
 python3 tools/scen_runner/test_local_autonomy.py
 python3 tools/scen_runner/test_local_handoff.py
+python3 tools/scen_runner/test_local_entry_phase.py
 python3 tools/scen_runner/test_local_ownership.py
 python3 src/asmc_planner/tests/behavior/local_debug_cache_test.py
 (

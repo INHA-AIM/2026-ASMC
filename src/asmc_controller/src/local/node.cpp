@@ -54,7 +54,8 @@ class LocalController {
   }
   void mode(const std_msgs::UInt8::ConstPtr &m) {
     bool next = m->data == 1;
-    if (next != selected) {
+    const bool changed = next != selected;
+    if (changed) {
       ResetMPCOnFailSafe();
       execution_history.Pending();
       // A mode change is not a producer/frame reset. A freshly prepared
@@ -63,6 +64,17 @@ class LocalController {
       last_solved = ros::SteadyTime();
     }
     selected = next;
+    if (changed && next && enabled && state && plan && plan->valid &&
+        plan->header.frame_id == state->header.frame_id) {
+      // The prepared source can expire before an unrelated 50ms timer phase
+      // (drive26:313ms at mode receipt,363ms at the first timer). Compute once
+      // at the actual handoff, using the same state/source/ownership checks.
+      // Single-threaded spin serializes this callback with tick. Reset the
+      // timer phase so this does not create a second sub-period solve/command.
+      // No solve runs while NORMAL owns control and no stamp is refreshed.
+      timer.setPeriod(ros::WallDuration(.05), true);
+      tick(ros::SteadyTimerEvent());
+    }
   }
   void issued(const morai_msgs::CtrlCmd::ConstPtr &m) {
     if (selected || !enabled || !m || m->longlCmdType != 1 ||
