@@ -116,3 +116,7 @@ src/link_node/out/*
 # GPU-specific reproducible lane engines
 /diagnostics/camera_models/lane_engines/
 
+
+# Source for the workspace build wrapper (not generated build output)
+!tools/build/
+!tools/build/*.py

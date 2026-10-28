@@ -18,7 +18,8 @@ GitHub runner 대기열 지연은 workflow 밖의 대기 시간으로 구분한�
 | `catkin-build` | LiDAR/PCL·vehicle state·카메라 C++·native lane association 빌드, 배포 모델 무결성, frame/time·형상·투영, native parity, 카메라 launch/model/로컬 engine 준비 계약 | 6분 |
 
 빌드할 package/target과 실행 script는 [essential.json](../../.github/ci/essential.json)에 명시한다.
-모든 시험 실행파일을 컴파일하던 `all` 대신 운영 target과 선택한 작은 회귀 target을 빌드한다.
+운영 target과 선택한 작은 회귀 target을 한 `asmc_requested` 그래프에서 빌드한다.
+로컬 운영/전체 시험 빌드 모드는 [빌드 안내](build.md)를 따른다.
 Python/카메라 native 모듈의 실제 import를 확인하며 모듈 누락을 skip으로 처리하지 않는다.
 LiDAR 운영 target은 `ASMC_LIDAR_PIPELINE_REQUIRED=ON`으로 PCL 의존성 누락을 오류로 처리한다.
 카메라 GPU 모델 추론·TensorRT 속도나 MORAI 전 구간 주행을 이 CPU CI의 검증 결과로 해석하지 않는다.
@@ -26,7 +27,7 @@ LiDAR 운영 target은 `ASMC_LIDAR_PIPELINE_REQUIRED=ON`으로 PCL 의존성 누
 ## 필요할 때 실행하는 전체 검사
 
 - [Full regression (manual)](../../.github/workflows/full-regression.yml): Actions에서 대상 ref를 선택해
-  `Run workflow`로 실행한다. 전체 workspace와 기존 시험 target, CPU Torch/Ultralytics 환경,
+  `Run workflow`로 실행한다. `full` 프로필로 전체 workspace의 개발 도구·C++ 시험 target을 한 그래프에서 빌드하고, CPU Torch/Ultralytics 환경과
   [6개 회귀 그룹](../../.github/ci/groups.json)을 보존한다. LiDAR 그룹을 단독 실행한 뒤
   lane·camera-unit·camera-ros·bridge·planning 그룹을 최대 2개씩 실행한다.
 - [Planning integration build](../../.github/workflows/planning-integration.yml): package.xml·CMake·외부

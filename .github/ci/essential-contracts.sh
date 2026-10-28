@@ -2,6 +2,7 @@
 set -euo pipefail
 python3 tools/ci/check_coverage.py
 python3 -m unittest discover -s tools/ci -p 'test_*.py'
+python3 -m unittest discover -s tools/build -p 'test_*.py'
 python3 tools/audit/check_documentation_migration.py
 python3 -m unittest tools/audit/test_documentation_migration.py
 python3 tools/audit/check_runtime_documentation.py

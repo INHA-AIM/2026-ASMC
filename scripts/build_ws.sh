@@ -12,6 +12,4 @@ fi
 # bash -u: ROS_MASTER_URI may be unset when sourcing noetic setup
 export ROS_MASTER_URI="${ROS_MASTER_URI:-http://127.0.0.1:11311}"
 source /opt/ros/noetic/setup.bash
-catkin_make "$@"
-echo "[build_ws] done. source devel/setup.bash"
-echo "[build_ws] planning/control catkin packages included"
+exec python3 tools/build/build_workspace.py "$@"

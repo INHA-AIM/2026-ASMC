@@ -67,7 +67,8 @@ cd /root/ws
 source devel/setup.bash
 ```
 
-Behavior/Frenet/MPC도 현재 catkin package이므로 `build_ws.sh`에서 함께 빌드한다.
+기본 `build_ws.sh`는 `runtime` 모드로 Behavior/Frenet/MPC·인지 운영 target을 함께 빌드한다.
+전체 시험·개발 도구는 `./scripts/build_ws.sh full`로 빌드한다. [빌드 모드 안내](../operations/build.md)를 참고한다.
 이전 standalone planning/control build script는 P4-C6에서 제거했다. 정상적인 Docker
 상태는 network mode가 `host`이고 published port가 없는 상태다.
 
