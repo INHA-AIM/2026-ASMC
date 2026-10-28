@@ -24,9 +24,9 @@
   <arg name="camera_calibration_config" default=""/>
   <arg name="experimental_tunnel_filter" default=""/>
   <arg name="publish_tf" default="false"/>
-  <!-- 재밍 원인이 있는 동안(/planning/mode/lidar_pause) 스캔 처리를 멈춘다.
-       재밍 제어는 카메라만 쓰며, GPS가 돌아오면 NORMAL 전환 전에 먼저 재개한다. -->
-  <arg name="skip_lidar_in_jamming" default="true"/>
+  <!-- true면 재밍 원인이 있는 동안(/planning/mode/lidar_pause) 스캔 처리를 멈춘다.
+       기본 false: 재밍 회피도 LiDAR 물체·벽을 쓰므로(jamming_use_lidar_obstacles) 계속 처리한다. -->
+  <arg name="skip_lidar_in_jamming" default="false"/>
   <arg name="tf_child_frame" default="lidar_pipeline/lidar_leveled"/>
 
   <!-- Monitoring only: subscribers and rate limit still gate each snapshot. -->
