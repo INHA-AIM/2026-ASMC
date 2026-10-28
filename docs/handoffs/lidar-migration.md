@@ -2,7 +2,12 @@
 
 **현재 후속:** 3뷰 matching은 PR #122에서 기본 적용됐다. 이제 구 패키지 이관을 다시 하지 않는다.
 [클래스·시각 전달/음영 콘솔과 다음 작업](../architecture/shadow-planning-refactoring.md)을 따른다.
-음영 local 객체는 제공하지만 현재 bbox 회피 제어기가 이를 소비한 상태는 아니다.
+음영 local 객체는 별도 LOCAL 실험 planner가 충돌 검사에 소비한다. 기존 bbox 방식과
+동시에 제어하지 않으며 운영 기본 전환·전체 음영 주행 수락과는 구분한다.
+
+LOCAL-2C에서 재호에게 인계할 [긴 노면 OBB 원인·fitting 후보·실제 barrier 대조](../records/planning/2026-10-28-local-speed-continuity.md)를 추가했다.
+기본 지면 설정은 유지하고 planner의 길이/나이 기반 일괄 삭제는 도입하지 않았다.
+노면 평면 아래 잔류점과 낮은 실제 장애물의 구분이 다음 품질 검토 대상이다.
 
 `asmc_lidar`가 판제·수집·시나리오의 LiDAR 정본이다. 브릿지와 카메라는 각각 실행하고,
 판제는 `/perception/lidar/planning_observations_map`의 공용 추적 관측을 직접 소비한다. 구 Main/Msg/nested workspace는

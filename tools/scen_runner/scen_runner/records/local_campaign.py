@@ -90,27 +90,45 @@ def summarize(root):
     return result
 
 
-def build(output, roots):
+def build(output, roots, title="LOCAL-2B 경로·속도·실패 검수"):
     output = Path(output)
     if not any((p / "registration.json").is_file() for p in output.parents):
         raise ValueError("output must be within a registered run")
     output.mkdir(exist_ok=False)
-    completed = [r for r in roots if (Path(r) / "trial-result.json").is_file()]
-    aborted = [
-        dict(run_id=Path(r).name, **json.loads((Path(r) / "aborted.json").read_text()))
-        for r in roots
-        if (Path(r) / "aborted.json").is_file()
-    ]
-    if len(completed) + len(aborted) != len(roots):
-        raise ValueError("unfinished or unidentified trial: not silently omitted")
+    completed, aborted = [], []
+    for root in map(Path, roots):
+        if (root / "aborted.json").is_file():
+            aborted.append(
+                dict(
+                    run_id=root.name, **json.loads((root / "aborted.json").read_text())
+                )
+            )
+        elif (root / "trial-result.json").is_file():
+            if any(
+                r.get("event") == "native_sample" for r in rows(root / "events.jsonl")
+            ):
+                completed.append(root)
+            else:
+                aborted.append(
+                    dict(
+                        run_id=root.name,
+                        reason="no_native_drive",
+                        result=json.loads((root / "trial-result.json").read_text()),
+                    )
+                )
+        else:
+            raise ValueError(
+                "unfinished or unidentified trial: not silently omitted: " + str(root)
+            )
     results = [summarize(Path(r)) for r in completed]
     for result, root in zip(results, completed):
         stability = Path(root) / "path-stability.json"
         if stability.exists():
             result["path_stability"] = json.loads(stability.read_text())
-        result["link"] = os.path.relpath(
-            Path(root) / "local-gallery/index.html", output
-        )
+        gallery = Path(root) / "local-gallery/index.html"
+        if not gallery.is_file():
+            gallery = Path(root) / "local-gallery-v2/index.html"
+        result["link"] = os.path.relpath(gallery, output)
     (output / "aborted.json").write_text(
         json.dumps(aborted, ensure_ascii=False, indent=2)
     )
@@ -119,9 +137,9 @@ def build(output, roots):
     )
     data = json.dumps(results, ensure_ascii=False).replace("<", "\\u003c")
     page = """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LOCAL-2B 경로 안정화 · 주행/실패 대조</title>
+<title>__TITLE__</title>
 <style>body{background:#101a24;color:#e9f3fb;font:16px system-ui;margin:24px auto;max-width:1250px;padding:0 16px}a{color:#61dcff}select{padding:10px;font-size:16px;max-width:100%}svg{width:100%;background:#142432}table{border-collapse:collapse;width:100%;margin:18px 0}td,th{text-align:left;padding:8px;border-bottom:1px solid #405064}pre{white-space:pre-wrap}article{padding:16px;background:#182d3b;margin:16px 0}</style>
-<h1>LOCAL-2B 경로·속도·실패 검수</h1>
+<h1>__TITLE__</h1>
 <p>실제 주행 구간만 집계합니다. 시작 준비·정차 입력도 원본 로그에 보존했습니다. 횡오차는 family 내부 일관성이며 독립 차선 GT가 아닙니다. 빈 터널 시험은 장애물 회피·전체 터널·25km/h 수락을 의미하지 않습니다.</p>
 <p>파랑: 실측 속도(km/h), 청록: 선택 경로(m), 점선: 탐색 한계(m), 노랑: 속도 상한(km/h), 빨강: 브레이크×20. 세로축은 비교를 위한 공통 눈금입니다.</p>
 <p><a href="aborted.json">시작 전 차단/준비 실패도 확인</a></p>__SUPPLEMENTS__
@@ -137,7 +155,7 @@ for(let v=0;v<=30;v+=5)s+=`<path d="M50 ${Y(v)}H1060" stroke="#354a59"/><text x=
 for(const [k,color,dash] of [['speed','#54b9ff',''],['path','#40e4ba',''],['horizon','#80aaa5','6 4'],['cap','#ffe081',''],['brake','#ff7777','']]) s+=`<polyline fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="${dash}" points="${r.series[k].map(p=>X(p[0])+','+Y(p[1])).join(' ')}"/>`;
 s+=`<text x="50" y="328" fill="white">0s</text><text x="990" y="328" fill="white">${num(seconds)}s</text>`;plot.innerHTML=s;
 detail.innerHTML=`<article><a href="${esc(r.link)}">RGB·노면·선택/탈락 경로·실패 갤러리 열기</a><p>접촉 ${r.native_contacts.length}, ${num(r.travel_m)}m, 급제동 명령 ${r.hard_brake_ticks}tick · 계산 p95 ${num(r.planning_ms.p95)}ms · MPC p95 ${num(r.mpc_ms.p95)}ms · 명령 공백 최대 ${num(r.command_gap_ms.max)}ms</p><pre>${esc(JSON.stringify({계획:r.plan_reasons,제어:r.control_reasons,실패:r.failures},null,2))}</pre></article>`;}
-comparison.innerHTML='<tr><th>기록</th><th>설정/실측 중앙속도</th><th>횡오차 p95</th><th>급제동 명령 tick</th><th>경로 p50</th><th>접촉</th></tr>'+data.map(r=>`<tr><td>${esc(r.run_id)}</td><td>${r.cap_kph} / ${num(r.following.actual_speed_kph?.p50)}km/h</td><td>${num((r.following.home_error_abs_m?.p95??NaN)*100)}cm</td><td>${r.hard_brake_ticks}</td><td>${num(r.selected_length_m.p50)}m</td><td>${r.native_contacts.length}</td></tr>`).join('');pick.onchange=draw;pick.value=data.length-1;draw();</script>"""
+comparison.innerHTML='<tr><th>기록</th><th>설정/실측 중앙속도</th><th>횡오차 p95</th><th>급제동 명령 tick</th><th>경로 p50</th><th>접촉</th></tr>'+data.map(r=>`<tr><td>${esc(r.run_id)}</td><td>${r.cap_kph} / ${num(r.following.actual_speed_kph?.p50)}km/h</td><td>${num((r.following.home_error_abs_m?.p95??NaN)*100)}cm</td><td>${r.hard_brake_ticks}</td><td>${num(r.selected_length_m.p50)}m</td><td>${r.native_contacts.length}</td></tr>`).join('');if(data.length){pick.onchange=draw;pick.value=data.length-1;draw();}else{pick.disabled=true;detail.textContent="주행 시작 전 실패만 있습니다. 원본 준비 실패를 확인하십시오.";}</script>"""
     supplements = "".join(
         '<p><a href="'
         + html.escape(os.path.relpath(Path(r) / "local-gallery-v2/index.html", output))
@@ -148,7 +166,9 @@ comparison.innerHTML='<tr><th>기록</th><th>설정/실측 중앙속도</th><th>
         if (Path(r) / "local-gallery-v2/index.html").is_file()
     )
     (output / "index.html").write_text(
-        page.replace("__DATA__", data).replace("__SUPPLEMENTS__", supplements),
+        page.replace("__DATA__", data)
+        .replace("__SUPPLEMENTS__", supplements)
+        .replace("__TITLE__", html.escape(title)),
         encoding="utf-8",
     )
     print(output / "index.html")
@@ -158,5 +178,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("output", type=Path)
     p.add_argument("roots", nargs="+", type=Path)
+    p.add_argument("--title", default="LOCAL-2B 경로·속도·실패 검수")
     a = p.parse_args()
-    build(a.output, a.roots)
+    build(a.output, a.roots, a.title)

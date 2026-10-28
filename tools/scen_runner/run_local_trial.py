@@ -26,6 +26,12 @@ def main():
     p.add_argument("--distance", type=float, default=35)
     p.add_argument("--near-blind-assist", action="store_true")
     p.add_argument("--empty", action="store_true")
+    p.add_argument("--lidar-config", type=Path)
+    p.add_argument(
+        "--start-perception",
+        action="store_true",
+        help="start owned camera/LiDAR only while holding the shared validation lease",
+    )
     p.add_argument(
         "--park-prop",
         action="append",
@@ -39,10 +45,16 @@ def main():
         or (root / "trial-result.json").exists()
     ):
         raise RuntimeError("new registered run required")
-    if not 0 < args.seconds <= 60 or not 0 < args.cap <= 25 or not 0 < args.distance <= 100:
+    if (
+        not 0 < args.seconds <= 60
+        or not 0 < args.cap <= 25
+        or not 0 < args.distance <= 100
+    ):
         raise ValueError("bounded duration/cap required")
     if args.near_blind_assist and args.cap > 5:
         raise ValueError("unvalidated blind assist requires <=5km/h")
+    if args.lidar_config and not args.start_perception:
+        raise ValueError("a trial config requires owned perception startup")
     raw = json.loads(args.scene.read_text())
     definition = raw["replay"]["tunnel"]
     import rospy
@@ -82,6 +94,7 @@ def main():
             "src/asmc_planner/src/local/planner.hpp",
             "src/asmc_planner/src/local/road_memory.hpp",
             "src/asmc_planner/src/local/motion.hpp",
+            "src/asmc_planner/src/Frenet/Speed/SpeedProfiler.cpp",
             "src/asmc_controller/src/local/node.cpp",
             "src/asmc_planner/launch/local.launch",
             "src/asmc_planner/config/local_planner.yaml",
@@ -89,14 +102,23 @@ def main():
             "src/asmc_controller/config/local_controller.yaml",
         )
     ]
+    if args.lidar_config:
+        files.append(args.lidar_config)
     (root / "runtime-provenance.json").write_text(
         json.dumps(
             dict(
-                options=dict(vars(args), root=str(root), scene=str(args.scene)),
+                options=dict(
+                    vars(args),
+                    root=str(root),
+                    scene=str(args.scene),
+                    lidar_config=str(args.lidar_config) if args.lidar_config else None,
+                ),
                 sha256={
-                    str(f.relative_to(workspace)): hashlib.sha256(
-                        f.read_bytes()
-                    ).hexdigest()
+                    (
+                        str(f.relative_to(workspace))
+                        if workspace in f.parents
+                        else str(f)
+                    ): hashlib.sha256(f.read_bytes()).hexdigest()
                     for f in files
                     if f.is_file()
                 },
@@ -199,6 +221,41 @@ def main():
     speedmax = 0.0
     cleanup_errors = []
     try:
+        if args.start_perception:
+            # LOCAL-2C: acquire the shared simulator lease BEFORE any producer
+            # startup. A concurrent worktree remains an exclusive owner.
+            occupied = {
+                "/perception/lidar/lidar_pipeline",
+                "/yolo_node",
+                "/twinlite_node",
+                "/traffic_light_node",
+            } & set(get_node_names())
+            pubs = dict(master.getSystemState()[0])
+            sensor_outputs = [
+                "/perception/camera/objects/observations",
+                "/perception/lane/boundary_family",
+                "/perception/lidar/tracks_local",
+            ]
+            if occupied or any(pubs.get(t) for t in sensor_outputs):
+                raise RuntimeError("perception already owned; omit --start-perception")
+            start(["roslaunch", "asmc_camera", "camera.launch"], "camera")
+            lidar_command = ["roslaunch", "asmc_lidar", "lidar.launch"]
+            if args.lidar_config:
+                lidar_command.append("pipeline_config:=" + str(args.lidar_config))
+            start(lidar_command, "lidar")
+            # Actual delivery rather than a ROS advertised name is required.
+            rospy.wait_for_message(
+                "/perception/lane/boundary_family",
+                __import__(
+                    "asmc_msgs.msg", fromlist=["LaneBoundaryFamily"]
+                ).LaneBoundaryFamily,
+                timeout=60.0,
+            )
+            # Warm all inference workers before moving the fixture. Cold-start
+            # gaps remain in camera/lidar logs, not mixed with a driving trial.
+            time.sleep(8.0)
+            if any(child.poll() is not None for child in children):
+                raise RuntimeError("owned perception exited during warmup")
         missing = set(args.park_prop) - {s.actor_info.id.value for s in states}
         if missing:
             raise RuntimeError("fixture IDs changed before trial: " + str(missing))

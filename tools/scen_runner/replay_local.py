@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--seconds", type=float, default=0)
     parser.add_argument("--port", type=int, default=11348)
+    parser.add_argument("--cap", type=float, default=25.0)
     parser.add_argument("--recovery", action="store_true")
     parser.add_argument("--near-blind-assist", action="store_true")
     args = parser.parse_args()
@@ -104,6 +105,7 @@ def main():
                 "asmc_planner",
                 "local.launch",
                 "run_id:=" + args.run_id,
+                "speed_cap_kph:=" + str(args.cap),
                 "journal_path:=" + str(args.output / "decisions.jsonl"),
                 "recovery:=" + str(args.recovery).lower(),
                 "near_blind_assist:=" + str(args.near_blind_assist).lower(),
