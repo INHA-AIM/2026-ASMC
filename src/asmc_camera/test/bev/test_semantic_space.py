@@ -34,6 +34,14 @@ class SemanticSpaceTest(unittest.TestCase):
         r,c=map(int,[100,80]) # x10,y0, strong front support
         self.assertEqual(out['coverage'][r,c],255)
         self.assertEqual(out['drivable'][r,c],0)
+    def test_visibility_margin_only_removes_support(self):
+        p,m=self.data();m['front'][580:]=True
+        narrow=self.renderer.drivable(self.planes,p,m,1)
+        wide=self.renderer.drivable(self.planes,p,m,4)
+        self.assertTrue(np.all((wide['coverage']!=255)|(narrow['coverage']==255)))
+        self.assertTrue(np.any((narrow['coverage']==255)&(wide['coverage']!=255)))
+        with self.assertRaises(ValueError):self.renderer.drivable(self.planes,p,m,100)
+
     def test_masks_and_camera_shape_rejected(self):
         p,m=self.data();m['front']=m['front'][:-1]
         with self.assertRaises(ValueError):self.renderer.drivable(self.planes,p,m)
