@@ -30,6 +30,7 @@ python3 src/asmc_planner/tests/behavior/local_debug_cache_test.py
 
 PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_private_master.py'
 PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_local_delivery_metrics.py'
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_local_model_audit.py'
 (
   cd "$ASMC_CI_BUILD/asmc_controller"
   ctest --output-on-failure -R 'local_execution_history_test'

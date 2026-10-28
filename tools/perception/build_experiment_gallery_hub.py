@@ -127,7 +127,7 @@ CATEGORIES = [
 
 def category(row):
     path=row['path'].lower()
-    if path.startswith(('local1-', 'local2a-', 'local2b-', 'local2c-', 'local2d-', 'local2e-', 'shadow-')):return 'planning'
+    if path.startswith(('local1-', 'local2a-', 'local2b-', 'local2c-', 'local2d-', 'local2e-', 'local2f-', 'shadow-')):return 'planning'
     if path.startswith('lidar') or 'fusion' in path:return 'fusion'
     if any(v in path for v in ('training-data','data-expansion','teacher','dataset','supervision','background-full','validation16','capture-size','tiny-gt','training-audit','source-coverage','capture-restoration','v11-preflight')):return 'data'
     if any(v in path for v in ('bbox-main','bbox-pilot','bbox-regression','vehicle-diagnostic','epoch8-decision')):return 'training'
@@ -137,6 +137,7 @@ def category(row):
 
 
 def friendly_group(group):
+    if group.startswith('local2f-'):return 'LOCAL-2F · 제동·복구 경로 검수 · '+group[len('local2f-'):]
     if group.startswith('local2e-'):return 'LOCAL-2E · 전환·장애물 회피 개선 · '+group[len('local2e-'):]
     if group.startswith('local2d-'):return 'LOCAL-2D · 공급·전환·주행 검수 · '+group[len('local2d-'):]
     if group.startswith('local2c-'):return 'LOCAL-2C · 속도 연속성·지면 OBB · '+group[len('local2c-'):]
@@ -184,7 +185,9 @@ def main():
     prepared_review='camera-v11-preflight-20261013-r1/index.html'
     local2d=next((r for r in pages if r['path'].startswith('local2d-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
     local2e=next((r for r in pages if r['path'].startswith('local2e-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
-    wishes=[('LOCAL-2E 전환·장애물 회피 검수',local2e['path'] if local2e else None),
+    local2f=next((r for r in pages if r['path'].startswith('local2f-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
+    wishes=[('LOCAL-2F 제동·복구 경로 검수',local2f['path'] if local2f else None),
+            ('LOCAL-2E 전환·장애물 회피 검수',local2e['path'] if local2e else None),
             ('LOCAL-2D 공급·전환·주행 검수',local2d['path'] if local2d else None),
             ('LOCAL-2C 속도·노면 OBB 검수',local2c['path'] if local2c else None),
             ('LOCAL-2B 주행·실패 검수',local['path'] if local else None),
