@@ -61,7 +61,7 @@ roslaunch asmc_camera camera.launch
 검사한다. 완료된 `.runtime/camera_runtime.json`의 로컬 객체 엔진은 일반 `camera.launch`에서도
 사용한다. 원본 배포 엔진 SHA, 로컬 엔진 SHA, GPU, TensorRT, head와 검사 결과가 맞아야 한다.
 객체 노드의 시작 정보 `source_weights`, `weights`, `weights_sha256`으로 실제 선택을 확인한다.
-E8 또는 pretrained를 명시적으로 선택하면 E3 로컬 엔진으로 대체하지 않는다.
+E8을 명시적으로 선택하면 E3 로컬 엔진으로 대체하지 않는다.
 이미 시나리오 실행기가 선택한 로컬 엔진도 backend에서 GPU·TensorRT·head를 다시 검사한다.
 공용 관측의 `model_id`는 실제 선택 엔진 SHA다. launch의 `expected_sha256`은 원본 배포
 파일 검증값으로 남을 수 있으므로 실제 엔진 판독에 이 파라미터만 사용하지 않는다.
