@@ -303,10 +303,11 @@ void bevInput(const sensor_msgs::Image::ConstPtr& m,bool probability) {
     for(const auto& p:bev_probability)for(const auto& c:bev_coverage)if(p->header.stamp==c->header.stamp){
         if(p->header.stamp<=bev_last_stamp)continue;
         if(params.bev_mode=="semantic_trial"){
-            if(p->header.seq!=c->header.seq)continue;
+            // rospy assigns transport seq separately per publisher; lineage
+            // uses exact source stamp plus the authenticated current epoch.
             bool exact=false;
             for(const auto& context:semantic_contexts)
-                exact |= context->header.stamp==p->header.stamp && context->header.seq==p->header.seq &&
+                exact |= context->header.stamp==p->header.stamp &&
                     context->producer_session_id==bev_session && context->generation==bev_generation &&
                     context->imu_corrected && context->config_id==params.expected_config_sha256;
             if(!exact)continue;

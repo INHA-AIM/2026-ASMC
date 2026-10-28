@@ -52,7 +52,51 @@ int bevRegression(){
  if(bev_session!="two")return 18;
  std::cout<<"bev_epoch_pairing_freshness_passed\n";return 0;
 }
+int semanticRegression(){
+ ros::Time::init();ros::Time::setNow(ros::Time(100));
+ params.contact_clearance_enabled=true;params.contact_local_required=true;params.bev_mode="semantic_trial";
+ params.path_horizon=15.;params.expected_config_sha256="fixture";
+ bev_spec={250,160,20,8,.1};
+ auto status=boost::make_shared<asmc_msgs::InferenceStatus>();status->model="twinlite";
+ status->producer_session_id="one";status->generation=2;status->mode=status->ACTIVE;
+ status->header.stamp=ros::Time(100);status->source_cutoff=ros::Time(99);bevEpoch(status);
+ std::vector<LaneChain> lanes;
+ for(int index=0;index<2;++index){LaneChain l;l.lane_index=index;l.monotonic_x=true;
+  for(int i=4;i<=80;++i){double x=i*.25,y=index==1?0.:3.5;
+   l.centerline.push_back({x,y});l.left_boundary.push_back({x,y+1.75});l.right_boundary.push_back({x,y-1.75});}lanes.push_back(l);}
+ follower_state.selected_lane=lanes[1];follower_state.locked_lane=1;
+ contact_lane_history.push_back({ros::Time(100),lanes});
+ auto local=boost::make_shared<asmc_msgs::LidarTrackingObservation>();auto& o=local->observation;
+ o.producer_session_id="lidar";o.config_id="c";o.calibration_id="k";o.scan_sequence=1;
+ o.objects.header.frame_id="base_link";o.objects.header.stamp=ros::Time(100);o.objects.status=o.objects.OBSERVED_EMPTY;
+ semantic_local.accept(local,ros::Time(100),ros::SteadyTime::now());
+ auto context=boost::make_shared<asmc_msgs::CameraGroundProjection>();context->header.stamp=ros::Time(100);
+ context->header.seq=900;context->producer_session_id="one";context->generation=2;context->config_id="fixture";context->imu_corrected=true;
+ auto image=boost::make_shared<sensor_msgs::Image>();image->header.stamp=ros::Time(100);image->header.frame_id="base_link";
+ image->encoding="mono8";image->height=250;image->width=image->step=160;image->data.assign(40000,255);
+ bevInput(image,true);bevInput(image,false);
+ if(selectBev(ros::Time(100),ros::Time(100)))return 30; // no context
+ semantic_contexts.push_back(context);bevInput(image,true);
+ if(selectBev(ros::Time(100.01),ros::Time(100.01)))return 31; // no nearest family
+ auto result=updateSemanticPathPlan();if(!result.empty()){std::cerr<<result;return 32;}
+ if(!contact_geometry_ready || bool(contact_result) || semantic_target!=1)return 33;
+ if(semantic_safe_length<14.)return 34;
+ // The same algorithm must refuse an all-unknown grid, even with EMPTY LiDAR.
+ auto grid=std::make_shared<lane_boundary_adapter::clearance::DrivableClearance>();
+ std::vector<uint8_t> zeros(40000,0),free(40000,255);
+ grid->prepare(bev_spec,free,zeros,{});bev_frames.back().grid=grid;
+ if(updateSemanticPathPlan()!="semantic_all_paths_blocked_or_unobserved")return 35;
+ // An own-lane semantic shadow begins at12m and extends indefinitely; the
+ // adjacent observed corridor permits a prefix, without requiring a return.
+ for(int r=0;r<81;++r)for(int c=70;c<90;++c)free[r*160+c]=0;
+ grid->prepare(bev_spec,free,image->data,{});bev_frames.back().grid=grid;
+ result=updateSemanticPathPlan();if(!result.empty() || semantic_target!=0){std::cerr<<result<<" target="<<semantic_target;return 36;}
+ ros::Time::setNow(ros::Time(100.36));
+ if(updateSemanticPathPlan()!="semantic_exact_family_space_unavailable")return 37;
+ std::cout<<"semantic_primary_no_yolo_exact_epoch_unknown_and_partial_avoidance_passed\n";return 0;
+}
 int main(int argc,char**argv){
+ if(argc==2 && std::string(argv[1])=="--semantic-regression")return semanticRegression();
  if(argc==2 && std::string(argv[1])=="--bev-regression")return bevRegression();
  if(argc==2 && std::string(argv[1])=="--interpolation-regression")return interpolationRegression();
  const bool wide=argc==4 && std::string(argv[3])=="--wide-search";
