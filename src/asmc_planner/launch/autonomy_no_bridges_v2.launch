@@ -19,6 +19,13 @@
        default="2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <arg name="rviz" default="false" doc="재밍 카메라 차선변경 RViz(BBOX·차선·경로) 표시"/>
+  <!-- 재밍 회피 튜닝(jamming_dev.launch와 같은 값). 좁은 틈 통과와 바깥쪽 회피선을 위해
+       여유는 줄이고 바깥 한계·추가 밀기는 늘렸다. 필요 여유 = 차폭/2 + max(clearance, margin). -->
+  <arg name="jamming_line_edge_expand" default="0.30" doc="[m] 기준선 1·5를 바깥으로 확장(최대 0.5)"/>
+  <arg name="jamming_avoid_line_extra" default="1.0" doc="통과 가능한 선에서 바깥으로 더 미는 양(선 번호, 최대 2.0)"/>
+  <arg name="jamming_avoid_clearance" default="0.1" doc="[m] 차체 측면-장애물 최소 간격"/>
+  <arg name="jamming_obstacle_lateral_margin" default="0.1" doc="[m] 차체 좌우 여유(도로 경계 검사 포함)"/>
+  <arg name="jamming_avoid_line_overrun" default="1.5" doc="[m] 벽 미확인 쪽에서 차량 중심이 끝 차선을 넘을 수 있는 거리"/>
 
   <!-- 재밍 판정(/planning/mode, asmc_planner 내부 GpsModeSource). 별도 인자 없이 자동이다.
        진입: raw GPS 0 좌표 | no-fix | 1s 이상 끊김 | GPS 위치가 음영 구간 안.
@@ -79,11 +86,11 @@
     <arg name="use_rviz" value="$(arg rviz)"/>
     <!-- jamming_dev.launch에서 실주행 통과를 확인한 재밍 튜닝값. 두 곳을 함께 바꾼다. -->
     <arg name="straddle_avoidance" value="true"/>
-    <arg name="line_edge_expand" value="0.10"/>
-    <arg name="avoid_line_extra" value="0.5"/>
-    <arg name="avoid_clearance" value="0.2"/>
-    <arg name="obstacle_lateral_margin" value="0.2"/>
-    <arg name="avoid_line_overrun" value="1.0"/>
+    <arg name="line_edge_expand" value="$(arg jamming_line_edge_expand)"/>
+    <arg name="avoid_line_extra" value="$(arg jamming_avoid_line_extra)"/>
+    <arg name="avoid_clearance" value="$(arg jamming_avoid_clearance)"/>
+    <arg name="obstacle_lateral_margin" value="$(arg jamming_obstacle_lateral_margin)"/>
+    <arg name="avoid_line_overrun" value="$(arg jamming_avoid_line_overrun)"/>
     <arg name="avoid_max_shoulder" value="2.0"/>
     <arg name="target_speed_kph" value="20.0"/>
     <arg name="avoid_speed_kph" value="10.0"/>
