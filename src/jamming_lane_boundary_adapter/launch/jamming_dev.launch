@@ -5,8 +5,7 @@
        포함:
          1) /planning/mode=1 강제 발행 (force_jamming)
          2) asmc_control_selector  — /ctrl_cmd/jamming -> /ctrl_cmd
-         3) BBOX 변환 어댑터        — 카메라 객체 결과 -> jamming yolo 토픽
-         4) 재밍 노드 + BBOX 판정 + frame bridge + RViz
+         3) 재밍 노드 + BBOX 판정 + frame bridge(카메라 객체 결과 직접 소비) + RViz
 
        포함하지 않음 (별도 터미널):
          - bridge            : ./scripts/udp_bridge.sh
@@ -55,9 +54,6 @@
   <arg name="max_accel_pedal" default="0.5"/>
   <arg name="max_brake_pedal" default="0.5"/>
 
-  <!-- 이미 camera_bbox_detector.launch를 띄웠다면 false로 중복을 막는다. -->
-  <arg name="start_bbox_adapter" default="true"/>
-
   <!-- latched: 늦게 올라오는 selector/재밍 노드도 즉시 JAMMING을 받는다. -->
   <node if="$(arg force_jamming)" pkg="rostopic" type="rostopic"
         name="forced_jamming_mode" output="screen"
@@ -68,11 +64,6 @@
   <node pkg="asmc_planner" type="asmc_control_selector_node"
         name="asmc_control_selector" output="screen" required="true"/>
 
-  <include if="$(arg start_bbox_adapter)"
-           file="$(find lane_boundary_adapter)/launch/camera_bbox_detector.launch">
-    <arg name="conf_thres" value="$(arg conf_thres)"/>
-  </include>
-
   <!-- 회피·차선변경 인자는 camera_bbox_lane_change.launch의 기본값을 쓴다
        (one_lane_change_only=false, ignore_bbox_during_lane_change=true,
         pedal_speed_control=true, obstacle_confirm_frames=2, adjacent_clear_frames=3).
@@ -80,6 +71,7 @@
   <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
     <arg name="enable_control" value="$(arg enable_control)"/>
     <arg name="use_rviz" value="$(arg use_rviz)"/>
+    <arg name="bbox_conf_thres" value="$(arg conf_thres)"/>
     <arg name="straddle_avoidance" value="$(arg straddle_avoidance)"/>
     <arg name="line_edge_expand" value="$(arg line_edge_expand)"/>
     <arg name="avoid_line_extra" value="$(arg avoid_line_extra)"/>
