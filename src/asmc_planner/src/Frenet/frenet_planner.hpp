@@ -1202,8 +1202,16 @@ private:
         const CartesianState& ego, double s, double d,
         double resolved_target_speed, CartesianPath& out_path,
         double duration_s = 2.0, bool* road_blocked = nullptr,
-        bool* actuation_blocked = nullptr, double minimum_path_distance = -1.0) const;
+        bool* actuation_blocked = nullptr, double minimum_path_distance = -1.0);
     bool KeepDepartureRoadClear(const CartesianPath& path) const;
+    // One bounded departure episode. Replanning must neither lose recovery
+    // at the first inside raster cell nor renew its original distance budget.
+    struct KeepRoadRecovery {
+        bool active = false;
+        double last_x = 0.0, last_y = 0.0;
+        double travel_m = 0.0, settled_travel_m = 0.0;
+        double overlap_limit_m = 0.0;
+    } keep_road_recovery_;
 
     // FSM이 지정한 FOLLOW 대상의 확보 결과.
     enum class FollowTargetStatus {

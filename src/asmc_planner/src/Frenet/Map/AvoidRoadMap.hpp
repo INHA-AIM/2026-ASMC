@@ -8,7 +8,7 @@
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 
 // Pinned reviewed map-frame polygons/lanes and their official 0.2m raster.
-// Raster footprint containment is hard. AVOID additionally bounds predicted
+// Raster footprint containment is hard. AVOID additionally scores predicted
 // continuous solid-paint contact; dashed markings are not protected.
 class AvoidRoadMap {
  public:
@@ -27,15 +27,17 @@ class AvoidRoadMap {
     bool drivable = false;
     double paint_contact_seconds = 0.0;
     double longest_paint_contact_seconds = 0.0;
-    // An already-running contact exceeded the target, but this road-safe path
-    // exits the paint instead of holding the vehicle on it.
+    // An already-running contact exits the paint and stays clear. Diagnostic
+    // only: paint duration is a cost, never a road/collision exemption.
     bool best_effort_paint_exit = false;
     double initial_overlap_m = 0.0;
     double maximum_overlap_m = 0.0;
     double recovery_seconds = 0.0;
   };
-  // AVOID bounds continuous body/solid-paint contact below the 3 s referee
-  // window when budget_paint=true. Other maneuvers retain their paint policy.
+  // AVOID scores continuous body/solid-paint contact when budget_paint=true.
+  // Include the observed contact age; there is no paint-duration rejection.
+  // A stopped endpoint on paint is scored over at least five seconds, so a
+  // one-point hold cannot appear cheaper than leaving the same paint.
   PathEvaluation EvaluatePath(const CartesianPath& path, const VehicleShape& shape,
                               double dt, bool budget_paint = false,
                               double prior_contact_s = 0.0) const;
