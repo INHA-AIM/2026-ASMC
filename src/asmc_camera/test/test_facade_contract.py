@@ -110,7 +110,8 @@ class PerceptionFacadeContractTest(unittest.TestCase):
     def test_runtime_support_and_config_are_canonically_owned(self):
         canonical_root = PACKAGE_ROOT / "src" / "asmc_camera"
         expected_support = {
-            "camera": 9,
+            # Includes GPU/runtime-local engine selection in camera/backends.
+            "camera": 10,
             # IMU projection, per-frame fit policy and shared comparison geometry
             # are owned by this package alongside the original BEV support code.
             "bev": 23,

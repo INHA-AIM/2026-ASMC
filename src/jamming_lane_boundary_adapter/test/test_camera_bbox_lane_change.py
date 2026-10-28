@@ -460,7 +460,7 @@ class LaneChangeTest(unittest.TestCase):
         target=fixture.camera_box(200,480,280,560,'car')
         self.feed(raw_boxes=[target])
         self.stopped('target_lane_detected')
-        target.yMax=568
+        target.ymax=568
         self.feed(raw_boxes=[target])
         self.assertTrue(self.classification.valid,self.classification)
         self.assertEqual(list(self.classification.clipped_association),[True])
@@ -473,7 +473,7 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(self.status()[1]['change_completed'],'true')
         normal=fixture.camera_box(600,480,680,560,'car')
         self.feed(raw_boxes=[normal],shift=-3.5)
-        normal.yMax=568
+        normal.ymax=568
         self.feed(raw_boxes=[normal],shift=-3.5)
         self.assertEqual(list(self.classification.clipped_association),[True])
         self.stopped('clipped_obstacle_cannot_start_change')
