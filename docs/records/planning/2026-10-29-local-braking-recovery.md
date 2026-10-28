@@ -92,3 +92,17 @@ unknown/vehicle/dynamic/motorcycle을 정적 객체로 간주하지 않고, publ
 retained인지 여부를 새 YOLO 양성 확인으로 해석하지 않는다. 웹에는 과거 측정 사용과
 원래 나이를 구분한다. 필요한 객체를 줄이는 필터가 아니라 일시 소실 중 가속·복귀를
 늦추는 planning 보조다. false OBB를 지우는 방법과 혼동하지 않는다.
+
+## 정지 실패의 짧은 재배치 후보
+
+`drive07`은9.82m에서 정지해12초stationary 판정이 났다. 실패는 보존한다.
+새 관측이 들어와도 가까운barrier 앞의 짧은aided prefix를4m 조건으로 버렸다.
+추가 후보는 후륜축0.6m 이상의 경로와 미래 차체 앞부분의 현재 노면 셀3개 이상을
+요구한다. 이미 점유한 차체 내부나unknown은 근거로 세지 않는다. 현재 속도의 제동
+가능성·기존sweep의 비노면/OBB 거부·3km/h 상한을 유지하고
+`near_field_assisted_prefix`, `bounded_recovery_prefix`로 구분한다.
+
+ROS 정합 시험의 모든plan에서LiDAR–family 차이가150ms를 넘어야 한다는 가정도
+바로잡았다. 네topic callback은 원자적이지 않다. 실제 선택stamp 차이와age 차이의
+일치·모든 표본의 기존freshness 준수·시험 전체의150ms 초과 독립시각 사례 존재를
+검사한다. 운영 시각 한계를 완화하지 않는다.

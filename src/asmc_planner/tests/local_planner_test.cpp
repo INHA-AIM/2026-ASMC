@@ -112,6 +112,22 @@ int main() {
   }
   try {
     {
+      auto s=empty(); Config c;c.recovery=true;c.budget_ms=250.;
+      // A measured far wall leaves only a short braking-feasible prefix.
+      // Current road support exists beyond the nose; no arbitrary4/6m gate.
+      s.grid.coverage[160*160+80]=128;
+      s.obstacles.push_back({90,{{5.4,-8.},{5.5,-8.},{5.5,8.},{5.4,8.}}});
+      auto r=Plan(s,c);
+      expect(r.valid && r.recovery && r.path.back().x<4. && r.chosen_cap>0.,
+             "short observed assisted prefix permits limited stationary repositioning");
+      Config aided=c;aided.blind_assist=true;
+      for(size_t i=1;i<r.path.size();++i){Result check;
+        expect(CheckSweep(s,aided,r.path[i-1],r.path[i],check),
+               "short recovery prefix preserves known nonroad and OBB swept veto");}
+      s.grid.coverage.assign(40000,0);
+      expect(!Plan(s,c).valid,"unknown-only short prefix never becomes a drivable corridor");
+    }
+    {
       auto s=empty(); Config c; s.speed=12./3.6; s.acceleration=.8;
       s.aligned_to_plan=true;
       const double needed=s.speed*c.delay+BrakingDistance(s.speed,s.acceleration,c);

@@ -206,13 +206,21 @@ def main():
                 assert len(observed) >= 6, (speed, [r["reason"] for r in result])
                 for r in observed:
                     ids = r["inputs"]
-                    assert ids["lidar_minus_family_source_ms"] > 150
+                    # ROS callbacks are independent: the newest LiDAR packet
+                    # can still be in flight while the camera bundle is ready.
+                    # Check the actual chosen stamps, never assume an atomic
+                    # four-topic publication or borrow a future LiDAR sample.
+                    expected_skew=(ids["lidar_stamp_ns"]-r["input_join"]["selected_stamp_ns"])*1e-6
+                    assert abs(ids["lidar_minus_family_source_ms"]-expected_skew)<.001, ids
+                    assert abs(1000*(ids["camera_age_s"]-ids["lidar_age_s"])-expected_skew)<.001, ids
                     assert ids["camera_age_s"] < 0.35 and ids["lidar_age_s"] < 0.15
                     assert (
                         r["input_join"]["selection_policy"]
                         == "independent_latest_to_plan"
                     )
                     # Constant speed part after the initial transition settles.
+                assert any(r["inputs"]["lidar_minus_family_source_ms"]>150 for r in observed), (
+                    speed, [r["inputs"] for r in observed])
                 tail = observed[-1]
                 shift = tail["scene"]["source_in_plan"][0]
                 assert abs(shift + speed * tail["inputs"]["camera_age_s"]) < 0.06, (

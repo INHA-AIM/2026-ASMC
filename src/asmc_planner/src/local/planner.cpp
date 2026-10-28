@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <set>
 #include <tuple>
 
 namespace local_planning {
@@ -749,12 +750,33 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
     // BuildSpeedProfile has already checked this candidate against actual
     // speed/acceleration and lag. An arbitrary6m gate discarded feasible5m
     // paths and selected an infeasible4m recovery instead (LOCAL-2F fixture).
-    // Beyond4m the front of the physical body necessarily leaves the6.5m
-    // bounded blind patch. A wholly unknown raster must never create crawl
-    // permission merely because a short blind-only prefix can stop at rest.
-    if (full.valid && full.path.back().x >= 4. && full.chosen_cap > .3) {
+    // A short, physically feasible prefix can reposition a stopped vehicle
+    // before a near obstacle; demanding4m trapped drive07 indefinitely. It
+    // still needs distinct CURRENT road cells at the future nose outside the
+    // already occupied body. An all-unknown raster grants no crawl permission.
+    std::set<int> front_support;
+    if(full.valid && full.path.back().x >= .6) {
+      const auto &g=s.grid;
+      for(const auto &p:full.path) for(double side:{-.45,0.,.45}) {
+        const double nose=c.length-c.rear;
+        const double x=p.x+std::cos(p.yaw)*nose-std::sin(p.yaw)*c.width*side,
+                     y=p.y+std::sin(p.yaw)*nose+std::cos(p.yaw)*c.width*side;
+        if(x<=nose+.5*g.resolution && std::abs(y)<=c.width*.5+.5*g.resolution) continue;
+        const auto q=PlanToGrid(g,x,y);
+        const int row=std::lround((g.xmax-q[0])/g.resolution),
+                  col=std::lround((g.ymax-q[1])/g.resolution);
+        if(row>=0 && row<g.rows && col>=0 && col<g.cols) {
+          const int i=row*g.cols+col;
+          if(g.coverage[i]==255 && g.probability[i]>=166)front_support.insert(i);
+        }
+      }
+    }
+    const bool short_supported=full.valid && full.path.back().x>=.6 &&
+        full.chosen_cap>.1 && front_support.size()>=3;
+    if (full.valid && ((full.path.back().x >= 4. && full.chosen_cap > .3) || short_supported)) {
       full.recovery = true;
-      full.reason = "near_field_assisted_sweep";
+      full.reason = full.path.back().x>=4.?"near_field_assisted_sweep":"near_field_assisted_prefix";
+      if(full.path.back().x<4.)full.path_source="bounded_recovery_prefix";
       full.speed_reason = "near_field_recovery_3kph";
       full.raw_cap = c.speed_cap;
       full.elapsed_ms = elapsed(start);
