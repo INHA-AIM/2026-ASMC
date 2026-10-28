@@ -16,7 +16,7 @@
 namespace asmc_planner {
 // /planning/mode의 단일 발행자. 판정 규칙은 JammingDetector가 소유한다.
 // 파라미터는 /planning_mode/* 에서 읽는다(autonomy_no_bridges_v2.launch).
-// 판정이 NORMAL로 돌아와도 정상 궤적이 준비될 때까지(최대 5s) JAMMING 발행을 유지한다.
+// 판정이 NORMAL로 돌아와도 정상 궤적이 준비될 때까지(최대 recovery_timeout_s) JAMMING 발행을 유지한다.
 class GpsModeSource final {
  public:
   explicit GpsModeSource(ros::NodeHandle nh);
@@ -29,6 +29,7 @@ class GpsModeSource final {
   void publishMode(PlanningMode next, const char* reason);
   void publishStatus(double now);
   void publishLidarPause();
+  void publishGpsReturn();
   ros::NodeHandle nh_;
   ros::Subscriber gps_sub_;
   ros::Subscriber state_sub_;
@@ -36,6 +37,7 @@ class GpsModeSource final {
   ros::Publisher mode_pub_;
   ros::Publisher status_pub_;
   ros::Publisher lidar_pause_pub_;
+  ros::Publisher gps_return_pub_;
   ros::SteadyTimer timer_;
   JammingDetector detector_;
   std::unique_ptr<ShadowZone> zone_;
@@ -47,5 +49,7 @@ class GpsModeSource final {
   ros::Time recovery_source_time_, last_ready_stamp_;
   unsigned ready_frames_ = 0;
   int lidar_pause_ = -1;  // 마지막 발행값, -1은 미발행.
+  int gps_return_ = -1;   // 마지막 발행값, -1은 미발행.
+  double recovery_timeout_s_ = 4.0;
 };
 }  // namespace asmc_planner

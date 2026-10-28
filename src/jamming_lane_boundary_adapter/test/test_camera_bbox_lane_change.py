@@ -46,6 +46,8 @@ class LaneChangeTest(unittest.TestCase):
         # The legacy ACTIVE algorithm is exercised under its required mode.
         cls.mode_pub=rospy.Publisher('/planning/mode',UInt8,queue_size=1,latch=True)
         cls.mode_pub.publish(UInt8(1))
+        cls.gps_return_pub=rospy.Publisher('/planning/mode/gps_return',Bool,queue_size=1,latch=True)
+        cls.gps_return_pub.publish(Bool(False))
         cls.command=cls.diag=cls.target=cls.classification=None
         cls.subscribers=[]
         for topic,typ,attribute in [('/bbox_change_test/command',CtrlCmd,'command'),
@@ -85,6 +87,7 @@ class LaneChangeTest(unittest.TestCase):
         self.assertIsNotNone(self.command)
 
     def tearDown(self):
+        self.gps_return_pub.publish(Bool(False))
         os.killpg(self.process.pid,signal.SIGINT)
         self.process.wait(timeout=10)
         self.log.close()
@@ -662,6 +665,44 @@ class LaneChangeTest(unittest.TestCase):
         self.assertAlmostEqual(line,2.97,delta=0.15)
         self.assertEqual(status['locked_lane'],'0')
         self.assertGreater(self.command.steering,0)
+
+    def test_return_line_mode_back_to_entry_lane_after_pass(self):
+        self.feed()
+        # Own lane blocked: the left lane (line 2.25) becomes my lane while passing.
+        self.feed(spans=[(-1.2,1.2,14.)],speed=0.,duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,2.25)
+        self.assertEqual(status['locked_lane'],'0')
+        # The vehicle has moved onto line 2.25: lanes appear shifted right by 3.06 m.
+        self.feed(shift=-3.0625,speed=8.,duration=1.0)
+        self.feed(shift=-3.0625,speed=8.,duration=2.5)
+        self.following()
+        line,status=self.line_status()
+        # Passed and clear: back to the entry lane centre, not the nearer left-lane centre (line 2).
+        self.assertAlmostEqual(line,4.0)
+        self.assertEqual(status['locked_lane'],'1')
+        self.assertLess(self.target.point.y,-0.3)  # Heading back right towards line 4.
+
+    def test_return_gps_return_skips_pass_margin(self):
+        self.feed()
+        self.feed(spans=[(-1.2,1.2,14.)],speed=0.,duration=.8)
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,2.25)
+        # GPS is back: return as soon as the entry-lane path is clear, while the obstacle is
+        # still remembered (before vehicle rear + avoid_pass_margin has passed it).
+        self.gps_return_pub.publish(Bool(True))
+        returned=None
+        for _ in range(40):
+            self.feed(shift=-3.0625,speed=4.,duration=.25)
+            line,status=self.line_status()
+            if line==4.0:
+                returned=status
+                break
+        self.assertIsNotNone(returned,'no GPS-return to the entry lane')
+        self.assertEqual(returned['gps_return'],'true')
+        self.assertNotEqual(returned['line_obstacles'],'0')
+        self.assertEqual(returned['locked_lane'],'1')
 
     def test_straddle_far_blocking_obstacle_uses_lane_change(self):
         self.feed()

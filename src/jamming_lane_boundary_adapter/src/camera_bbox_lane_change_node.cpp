@@ -349,6 +349,9 @@ struct LineObstacle {
 struct LineState {
     double target = 0.0;                  // 따라가는 선(1~5 좌표). 0이면 아직 정하지 않음.
     double home = 0.0;                    // 복귀할 차로 중앙(2 또는 4).
+    // return_to_entry_lane: 진입 차로 중앙(2 또는 4). 회피로 옆 차로에 가도 지난 뒤 여기로 돌아와
+    // 재밍 종료 시 일반 플래너 기준 경로(lateral 범위) 안에서 넘겨준다. 0이면 사용 안 함.
+    double return_home = 0.0;
     double odom = 0.0;                    // [m] 실제 속도 적분 이동 거리.
     std::vector<LineObstacle> obstacles;  // 선 좌표로 기억한 장애물(화면 밖에서도 유지).
 } line_state;
@@ -373,6 +376,7 @@ struct AvoidPlan {
 
 ros::Subscriber bbox_subscriber;
 ros::Subscriber mode_subscriber;
+ros::Subscriber gps_return_subscriber;
 ros::Subscriber ego_subscriber;
 ros::Subscriber lidar_subscriber;
 ros::Subscriber imu_subscriber;
@@ -597,6 +601,15 @@ void resetActuationLifecycle() {
     std_msgs::Int8 automatic_lane;
     automatic_lane.data = -1;
     reference_lane_publisher.publish(automatic_lane);
+}
+
+// GpsModeSource: 재밍 원인이 사라졌고 일반 주행으로 넘기기 전(복귀 대기)이면 true.
+bool gps_return = false;
+void gpsReturnCallback(const std_msgs::Bool::ConstPtr& message) {
+    if (!message || message->data == gps_return) return;
+    gps_return = message->data;
+    ROS_WARN("GPS return %s: %s", gps_return ? "started" : "cleared",
+             gps_return ? "steer back to the entry lane before the normal handoff" : "normal rules");
 }
 
 void modeCallback(const std_msgs::UInt8::ConstPtr& message) {
@@ -1644,6 +1657,8 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "locked_lane", std::to_string(follower_state.locked_lane));
     addDiagnosticValue(status, "entry_lane", std::to_string(change_state.entry_lane));
     addDiagnosticValue(status, "returning_to_entry", change_state.returning_to_entry ? "true" : "false");
+    addDiagnosticValue(status, "gps_return", gps_return ? "true" : "false");
+    addDiagnosticValue(status, "line_return_home", std::to_string(line_state.return_home));
     addDiagnosticValue(status, "source_age_sec", std::to_string(source_age));
     addDiagnosticValue(status, "lookahead_distance", std::to_string(params.lookahead_distance));
     addDiagnosticValue(status, "target_y_m", tracking ? std::to_string(follower_state.target_point.y) : "unavailable");
@@ -1735,6 +1750,7 @@ void initializeRosInterface(ros::NodeHandle& nh) {
     ros_interface.lane_sub = nh.subscribe(params.input_topic, 1, laneBoundaryCallback);
     ros_interface.stop_sub = nh.subscribe(params.emergency_stop_topic, 1, emergencyStopCallback);
     mode_subscriber = nh.subscribe("/planning/mode", 1, modeCallback);
+    gps_return_subscriber = nh.subscribe("/planning/mode/gps_return", 1, gpsReturnCallback);
     if (params.straddle_avoidance) ego_subscriber = nh.subscribe(params.ego_topic, 1, egoCallback);
     if (params.straddle_avoidance && params.lane_hold_distance > 0.0) {
         imu_subscriber = nh.subscribe(params.imu_topic, 5, imuCallback);
@@ -2728,6 +2744,9 @@ bool lineAllowed(double line) {
     const double clear = params.vehicle_width / 2.0 + params.avoid_clearance + params.avoid_plan_margin;
     for (const auto& obstacle : line_state.obstacles) {
         if (!lineObstacleConfirmed(obstacle)) continue;
+        // 차량 후방까지 완전히 지난 장애물은 선 간격 판단에서 뺀다(경로 footprint 검사는 그대로).
+        if (lineObstacleX(obstacle) + obstacle.length + params.vehicle_rear +
+            params.obstacle_longitudinal_margin < 0.0) continue;
         const double x = std::max(lineObstacleX(obstacle), params.planning_start_x);
         LineFrame frame;
         double left = 0.0, right = 0.0;
@@ -2775,19 +2794,24 @@ std::string updateLinePlan(bool new_scan) {
     if (planning_ready) rememberLineObstacles(new_scan);
     const double own_home = follower_state.locked_lane == 0 ? 2.0 : 4.0;
     if (line_state.target <= 0.0) line_state.target = own_home;
+    if (params.return_to_entry_lane && line_state.return_home <= 0.0 && change_state.entry_lane >= 0)
+        line_state.return_home = change_state.entry_lane == 0 ? 2.0 : 4.0;
     // 회피 중이 아니면(기억한 장애물 없음, 차로 중앙 주행) 차량이 실제로 있는 차로를 내 차선으로 다시 잡는다.
     // 시뮬레이터에서 차량을 다른 차로로 옮기거나 노드를 재시작해도 장애물 없이 옆 차로로 가지 않는다.
+    // 진입 차로 복귀가 남아 있으면 그 차로가 아닌 곳으로 다시 잡지 않는다.
     const double vehicle_line = lineOf(near, 0.0);
     if (line_state.obstacles.empty() && std::abs(line_state.target - 3.0) > 0.5) {
         const double vehicle_home = vehicle_line < 3.0 ? 2.0 : 4.0;
-        if (vehicle_home != line_state.target && std::abs(vehicle_line - vehicle_home) < 0.5) {
+        if (vehicle_home != line_state.target && std::abs(vehicle_line - vehicle_home) < 0.5 &&
+            (line_state.return_home <= 0.0 || vehicle_home == line_state.return_home)) {
             ROS_INFO("Line selection: vehicle is in lane centre %.0f (line %.2f); own lane follows it",
                      vehicle_home, vehicle_line);
             line_state.target = vehicle_home;
         }
     }
     // 복귀할 차로 중앙: 지금 선에서 가까운 2 또는 4(중앙선 위면 현재 내 차선).
-    line_state.home = std::abs(line_state.target - 3.0) < params.epsilon ? own_home :
+    line_state.home = line_state.return_home > 0.0 ? line_state.return_home :
+        std::abs(line_state.target - 3.0) < params.epsilon ? own_home :
         (line_state.target < 3.0 ? 2.0 : 4.0);
     double cover_left = std::numeric_limits<double>::infinity(), cover_right = -cover_left;
     bool ahead = false;
@@ -2812,9 +2836,13 @@ std::string updateLinePlan(bool new_scan) {
     std::vector<FamilyPoint2d> path;
     double centre = 0.0;
     std::vector<FamilyPoint2d> centre_path;
-    if (!ahead && std::abs(line_state.target - line_state.home) > params.epsilon && lineClear(line_state.home, path)) {
+    // GPS가 돌아오면 통과 여유(avoid_pass_margin)를 기다리지 않고, 경로가 비는 즉시 진입 차로로 복귀한다.
+    // 일반 플래너가 이어받을 수 있도록 복귀 대기(최대 recovery_timeout_s) 안에 기준 경로로 돌아가기 위함이다.
+    if ((!ahead || gps_return) && std::abs(line_state.target - line_state.home) > params.epsilon &&
+        lineClear(line_state.home, path)) {
         // 일반 구간 AVOID의 RETURN과 같다: 장애물 중심을 모두 지났고 차로 중앙 경로가 비어 있으면 복귀.
-        ROS_INFO("Line selection: return %.2f -> %.2f", line_state.target, line_state.home);
+        ROS_INFO("Line selection: return %.2f -> %.2f%s", line_state.target, line_state.home,
+                 gps_return ? " (GPS return)" : "");
         line_state.target = line_state.home;
         describe("return");
     } else if (lineClear(line_state.target, path)) {

@@ -23,6 +23,7 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   std::string path_file;
   params.param("shadow_zone/enabled", zone_enabled, zone_enabled);
   params.param("shadow_zone/path_file", path_file, std::string());
+  params.param("recovery_timeout_s", recovery_timeout_s_, recovery_timeout_s_);
   // 단독 실행(시험 노드)처럼 경로가 주어지지 않으면 GPS 값 규칙만 쓴다.
   if (zone_enabled && !path_file.empty()) {
     double start_m = 0.0, end_m = 0.0, lateral_m = 10.0, heading_rad = 1.0;
@@ -43,6 +44,9 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   // LiDAR는 재밍 원인이 사라지는 즉시 재개한다. NORMAL 복귀(exit_hold_s와 궤적 준비
   // 대기) 시점에 추적이 이미 데워져 있어야 판제가 장애물 입력 stale로 정지하지 않는다.
   lidar_pause_pub_ = nh_.advertise<std_msgs::Bool>("/planning/mode/lidar_pause", 1, true);
+  // 재밍 원인이 사라졌지만 아직 JAMMING을 발행하는 동안 true. 재밍 제어기는 이때 바로
+  // 진입 차로(GPS 기준 경로)로 돌아가 일반 플래너가 이어받을 수 있게 한다.
+  gps_return_pub_ = nh_.advertise<std_msgs::Bool>("/planning/mode/gps_return", 1, true);
   gps_sub_ = nh_.subscribe("/gps", 1, &GpsModeSource::gpsCallback, this);
   feedback_sub_ = nh_.subscribe("/planning/frenet_feedback_v2", 1,
                                 &GpsModeSource::feedbackCallback, this);
@@ -51,6 +55,7 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   mode_pub_.publish(initial);
   publishStatus(Now());
   publishLidarPause();
+  publishGpsReturn();
   timer_ = nh_.createSteadyTimer(ros::WallDuration(0.05), &GpsModeSource::timerCallback, this);
   ROS_INFO("Planning mode NORMAL: waiting for raw /gps");
 }
@@ -62,6 +67,7 @@ void GpsModeSource::gpsCallback(const morai_msgs::GPSMessage::ConstPtr& message)
   // 0 좌표·no-fix 진입은 타이머를 기다리지 않고 같은 메시지에서 반영한다.
   if (detector_.Update(now)) onDetectorChange();
   publishLidarPause();
+  publishGpsReturn();
 }
 
 void GpsModeSource::stateCallback(const asmc_msgs::VehicleState::ConstPtr& message) {
@@ -95,13 +101,14 @@ void GpsModeSource::feedbackCallback(const asmc_msgs::FrenetFeedback::ConstPtr& 
 void GpsModeSource::timerCallback(const ros::SteadyTimerEvent&) {
   const double now = Now();
   if (detector_.Update(now)) onDetectorChange();
-  if (recovering_ && (ros::SteadyTime::now() - recovery_started_).toSec() >= 5.0) {
+  if (recovering_ && (ros::SteadyTime::now() - recovery_started_).toSec() >= recovery_timeout_s_) {
     recovering_ = false;
     // Do not drive indefinitely with the camera after a failed handoff.
     // The normal controller/selector's existing safe stop remains authoritative.
     publishMode(PlanningMode::NORMAL, "GPS recovery deadline; normal safety checks apply");
   }
   publishLidarPause();
+  publishGpsReturn();
   if (last_status_s_ < 0.0 || now - last_status_s_ >= 0.5) publishStatus(now);
 }
 
@@ -122,7 +129,7 @@ void GpsModeSource::onDetectorChange() {
   recovery_source_time_ = ros::Time::now();
   last_ready_stamp_ = ros::Time();
   ready_frames_ = 0;
-  ROS_INFO("Jamming cleared: waiting for fresh normal trajectories (maximum 5 s)");
+  ROS_INFO("Jamming cleared: waiting for fresh normal trajectories (maximum %.1f s)", recovery_timeout_s_);
   publishStatus(Now());
 }
 
@@ -144,6 +151,15 @@ void GpsModeSource::publishLidarPause() {
   std_msgs::Bool output;
   output.data = pause;
   lidar_pause_pub_.publish(output);
+}
+
+void GpsModeSource::publishGpsReturn() {
+  const bool gps_return = mode_ == PlanningMode::JAMMING && detector_.cause() == JammingReason::NONE;
+  if (static_cast<int>(gps_return) == gps_return_) return;
+  gps_return_ = gps_return;
+  std_msgs::Bool output;
+  output.data = gps_return;
+  gps_return_pub_.publish(output);
 }
 
 void GpsModeSource::publishStatus(double now) {
