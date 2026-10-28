@@ -294,6 +294,8 @@ class Node {
       << ",\"space_kph\":" << r.space_cap * 3.6
       << ",\"actual_state_stopping_kph\":" << r.stopping_cap * 3.6
       << ",\"required_stopping_m\":" << r.required_stopping_m
+      << ",\"comfort_stopping_m\":" << r.comfort_stopping_m
+      << ",\"braking_limit_mps2\":" << r.braking_limit
       << ",\"available_stopping_m\":" << r.available_stopping_m
       << ",\"recovery_extension_m\":" << r.recovery_extension_m
       << ",\"selected_kph\":" << r.chosen_cap * 3.6 << ",\"speed_reason\":\""
@@ -1064,12 +1066,14 @@ public:
     p.param("clearance_margin", config.margin, .10);
     p.param("planning_budget_ms", config.budget_ms, 40.);
     p.param("acceleration_limit_mps2", config.accel, 1.);
+    p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
     if (run.empty() || run.size() > 128 ||
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
                               "WXYZ0123456789-_.") != std::string::npos ||
         !std::isfinite(config.width + config.length + config.rear +
                        config.margin + config.budget_ms + config.speed_cap +
-                       config.accel) ||
+                       config.accel + config.controlled_decel) ||
+        config.controlled_decel<config.decel || config.controlled_decel>3. ||
         config.width < 1.892 || config.length < 4.5 || config.rear <= 0 ||
         config.rear >= config.length || config.margin < 0 ||
         config.budget_ms <= 0 || config.budget_ms > 100 ||

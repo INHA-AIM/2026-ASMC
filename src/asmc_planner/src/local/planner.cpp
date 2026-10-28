@@ -639,7 +639,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       full.recovery = true;
       full.reason = full.path.back().x>=4.?"near_field_assisted_sweep":"near_field_assisted_prefix";
       if(full.path.back().x<4.)full.path_source="bounded_recovery_prefix";
-      full.speed_reason = "near_field_recovery_3kph";
+      full.speed_reason = full.braking_limit>c.decel?"near_field_controlled_braking":"near_field_recovery_3kph";
       full.raw_cap = c.speed_cap;
       full.elapsed_ms = elapsed(start);
       return full;

@@ -22,6 +22,7 @@ struct Obstacle {
 struct Config {
   double length = 4.635, width = 2.160835, rear = .79, margin = .10;
   double speed_cap = 25. / 3.6, decel = 1.5, accel = 1., jerk = 4.8;
+  double controlled_decel = 1.5; // Candidate actual-state brake; cruise stays at decel.
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;
@@ -69,6 +70,7 @@ struct Result {
   double raw_cap = 0, curve_cap = 0, space_cap = 0, chosen_cap = 0;
   double stopping_cap = 0;
   double required_stopping_m = 0, available_stopping_m = 0;
+  double comfort_stopping_m = 0, braking_limit = 1.5;
   double recovery_extension_m = 0;
   bool budget_exhausted = false;
   double reference_end = 0, search_horizon = 0;

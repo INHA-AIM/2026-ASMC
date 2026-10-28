@@ -48,12 +48,23 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   // available sweep. Keep execution/jerk delay, do not charge that travel
   // twice.
   double lag = c.delay + (s.aligned_to_plan ? 0. : s.age);
-  out.required_stopping_m = s.speed * lag + BrakingDistance(s.speed, s.acceleration, c);
+  out.comfort_stopping_m = s.speed * lag + BrakingDistance(s.speed, s.acceleration, c);
+  out.required_stopping_m = out.comfort_stopping_m;
+  Config braking=c;
+  // Comfort is not the vehicle's physical braking bound. Keep the original
+  // cruise governor, but before invalidating a current path try the separately
+  // configured/calibrated controlled brake (max3m/s², MPC bound is5m/s²).
+  // No distance, delay, jerk, source age or collision gate is relaxed.
+  if(out.required_stopping_m>distance && c.controlled_decel>c.decel) {
+    braking.decel=c.controlled_decel;
+    out.required_stopping_m=s.speed*lag+BrakingDistance(s.speed,s.acceleration,braking);
+  }
+  out.braking_limit=braking.decel;
   // A braking frame must not instantly raise the cruise cap and restart the
   // throttle/brake cycle. Keep a positive-acceleration envelope, plus measured
   // LOCAL-2B tracking overshoot reserve (0.35m/s). Actual-state stopping
   // feasibility below remains separate and is never relaxed by this governor.
-  out.stopping_cap = SpaceSpeed(distance - .1, s.acceleration, lag, c);
+  out.stopping_cap = SpaceSpeed(distance - .1, s.acceleration, lag, braking);
   out.space_cap =
       std::max(0., SpaceSpeed(distance - .1, c.accel, lag, c) - .35);
   out.chosen_cap = std::min({out.raw_cap, out.curve_cap, out.space_cap});
@@ -72,7 +83,8 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
     out.reason = "insufficient_stopping_space";
     return false;
   }
-  double travelled = 0, v = s.speed, a = std::max(-c.decel, s.acceleration);
+  if(braking.decel>c.decel)out.speed_reason="controlled_braking";
+  double travelled = 0, v = s.speed, a = std::max(-braking.decel, s.acceleration);
   size_t index = 1;
   for (int i = 0; i < 400; ++i) {
     while (index < out.path.size() - 1 && out.path[index].s < travelled)
@@ -86,14 +98,14 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
                               left.k + q * (right.k - left.k), v, a, i * .05});
     double remaining = std::max(0., distance - travelled);
     double cap =
-        std::min(out.chosen_cap, SpaceSpeed(remaining - .1, a, lag, c));
+        std::min(out.chosen_cap, SpaceSpeed(remaining - .1, a, lag, braking));
     // LOCAL-2C: scalar SpeedProfiler clips a lower cap immediately and is
     // deliberately unsuitable for a physical v/a trajectory. Use its shared
     // analytical transition, retaining endpoint acceleration (not average
     // delta-v/dt). Otherwise a tiny overspeed provokes a brake/reaccelerate
     // loop.
     const auto step =
-        AdvancePhysicalSpeed({cap, v, a, .05}, {c.accel, c.decel, c.jerk});
+        AdvancePhysicalSpeed({cap, v, a, .05}, {c.accel, braking.decel, c.jerk});
     const double new_v = step.target_speed;
     a = step.target_acceleration;
     travelled += .5 * (v + new_v) * .05;

@@ -22,3 +22,5 @@ acceleration_limit_mps2: 1.0
 semantic_reference_fallback: false
 # LOCAL-2F short measured-asset retention candidate, max200ms; OFF until A/B.
 retain_static_observations: false
+# Comfort1.5m/s² remains the default;3.0 is a separately validated trial profile.
+controlled_braking_limit_mps2: 1.5

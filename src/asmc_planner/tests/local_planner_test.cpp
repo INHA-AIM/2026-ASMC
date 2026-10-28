@@ -113,6 +113,25 @@ int main() {
   }
   try {
     {
+      auto s=empty();Config c;s.speed=2.8744620747;s.acceleration=-.2951031;s.aligned_to_plan=true;
+      Result r;r.path={{0,0,0,0,0},{3.8123133434,0,0,0,3.8123133434}};
+      expect(!BuildSpeedProfile(s,c,r),"recorded comfort brake cannot fit the shortened current path");
+      c.controlled_decel=3.;
+      expect(BuildSpeedProfile(s,c,r) && r.braking_limit==3. && r.required_stopping_m<r.available_stopping_m,
+             "controlled brake keeps an actually stoppable path instead of unconditional full stop");
+      expect(r.comfort_stopping_m>r.available_stopping_m && r.speed_reason=="controlled_braking",
+             "comfort and controlled braking are separately visible");
+      const double expected=std::max(0.,SpaceSpeed(r.available_stopping_m-.1,c.accel,c.delay,c)-.35);
+      expect(std::abs(r.space_cap-expected)<1e-9,"stronger current-state brake never raises the cruise governor");
+      for(size_t i=1;i<r.trajectory.size();++i) {
+        expect(std::abs(r.trajectory[i][5]-r.trajectory[i-1][5])<=c.jerk*.05+1e-7,
+               "controlled braking trajectory keeps the original jerk bound");
+        expect(r.trajectory[i][5]>=-3.-1e-8,"controlled brake stays below the controller physical bound");
+      }
+      s.speed=4.;s.acceleration=1.;r.path.back()={1.,0,0,0,1.};
+      expect(!BuildSpeedProfile(s,c,r),"insufficient actual brake space still cannot be marked valid");
+    }
+    {
       auto s=RecordedStoppedBarrier();Config c;c.budget_ms=250.;c.speed_cap=10./3.6;
       expect(!Plan(s,c).valid,"recorded stopped barrier needs an explicit recovery path");
       c.recovery=true;const auto r=Plan(s,c);
