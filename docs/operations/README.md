@@ -99,6 +99,8 @@ docker exec -it asmc-ros-noetic bash
 | 학습 | `docker_perception_up.sh build/up` → `asmc/perception-train:dev` | `$ASMC_DATA` read-only |
 
 코드만 바뀌면 image를 재빌드하지 않고 컨테이너에서 `./scripts/build_ws.sh`를 실행한다.
+기본값은 운영 `runtime`이며, 개발 도구·C++ 시험까지 준비하려면 `./scripts/build_ws.sh full`을 사용한다.
+두 모드는 같은 build/devel을 재사용하고 시험 실행은 별도다. [빌드 안내](build.md)를 따른다.
 Dockerfile/requirements가 바뀌었을 때만 `rebuild`를 사용한다. `up`은 컨테이너를 재생성하므로
 주행·녹화 중 실행하지 않는다.
 

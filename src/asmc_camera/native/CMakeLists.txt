@@ -6,7 +6,13 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(ASMC_NATIVE_PYTHON_OUTPUT "${CMAKE_BINARY_DIR}/python/asmc_camera")
 endif()
 
-find_path(ASMC_PYBIND11_INCLUDE_DIR pybind11/pybind11.h)
+# Reuse Torch's bundled headers on the supported runtime image; no GPU/model
+# import and no network installation is needed to build the native kernel.
+find_package(PythonInterp 3 REQUIRED)
+execute_process(COMMAND "${PYTHON_EXECUTABLE}" -c
+  "import importlib.util,pathlib; s=importlib.util.find_spec('torch'); print(pathlib.Path(s.origin).parent/'include' if s and s.origin else '')"
+  OUTPUT_VARIABLE asmc_torch_headers OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+find_path(ASMC_PYBIND11_INCLUDE_DIR pybind11/pybind11.h HINTS "${asmc_torch_headers}")
 if(NOT ASMC_PYBIND11_INCLUDE_DIR)
   if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message(FATAL_ERROR "pybind11 headers required; set ASMC_PYBIND11_INCLUDE_DIR")

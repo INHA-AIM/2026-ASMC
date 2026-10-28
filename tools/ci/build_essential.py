@@ -12,7 +12,7 @@ def command(scope, root=ROOT):
     spec = json.loads((root/'.github/ci/essential.json').read_text())['jobs'][scope]
     return ['./scripts/build_ws.sh', *spec['targets'], '-j2', '-l2',
             '-DCATKIN_WHITELIST_PACKAGES='+';'.join(spec['packages']),
-            '-DASMC_LIDAR_PIPELINE_REQUIRED=ON',
+            '-DASMC_LIDAR_PIPELINE_REQUIRED=ON', '-DCMAKE_BUILD_TYPE=',
             '-DCMAKE_C_COMPILER_LAUNCHER=ccache', '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache']
 
 

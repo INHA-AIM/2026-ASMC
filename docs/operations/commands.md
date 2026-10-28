@@ -22,9 +22,13 @@ LiDAR·판제·수집은 outer workspace만 빌드합니다. 주행 중 containe
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
-./scripts/build_ws.sh -j2 -l2 -DCMAKE_BUILD_TYPE=Release
+./scripts/build_ws.sh runtime -j2 -l2
 source devel/setup.bash
 ```
+
+기본 `runtime`은 운영 노드·메시지·native 모듈을 준비한다. 개발 도구·C++ 시험이 필요하면
+같은 workspace에서 `./scripts/build_ws.sh full -j2 -l2`를 먼저 실행한다.
+모드 전환에 clean은 필요하지 않으며, 기본 Release 설정과 cache 정책은 [빌드 안내](build.md)를 따른다.
 
 각 터미널은 아래 outer 환경만 적용합니다.
 ```bash

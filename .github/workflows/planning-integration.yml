@@ -30,4 +30,4 @@ jobs:
       - name: Build planning in isolation
         run: |
           source /opt/ros/noetic/setup.bash
-          ./scripts/build_ws.sh -j2 -l2 -DCATKIN_WHITELIST_PACKAGES="asmc_geometry;asmc_msgs;morai_msgs;planning_inputs;asmc_planner;asmc_controller"
+          ./scripts/build_ws.sh full -j2 -l2 -DCATKIN_WHITELIST_PACKAGES="asmc_geometry;asmc_msgs;morai_msgs;planning_inputs;asmc_planner;asmc_controller"

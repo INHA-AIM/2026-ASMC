@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-desktop-full \
     git curl wget nano vim tmux sudo bash-completion \
-    build-essential cmake libyaml-cpp-dev libpcap-dev libgeographic-dev \
+    build-essential cmake ccache libyaml-cpp-dev libpcap-dev libgeographic-dev \
     python3-pip python3-dev \
     python3-scipy python3-numpy \
     iputils-ping net-tools mesa-utils \

@@ -11,7 +11,7 @@ bridge·카메라·LiDAR는 별도 실행합니다. LiDAR 정본은 `asmc_lidar`
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
-./scripts/build_ws.sh -j2
+./scripts/build_ws.sh runtime -j2 -l2
 source devel/setup.bash
 # bridge·카메라·asmc_lidar를 별도 준비한 뒤
 roslaunch asmc_planner autonomy_no_bridges_v2.launch
@@ -99,12 +99,18 @@ GPS 위치 gain0.35, 속도별 gain, 조향0.15초 지연·29step×0.05초·속�
 [PR #89 원본 검증](https://github.com/INHAautonav/2026-ASMC/pull/89)은 직진 안정성3회와 속도 튜닝2회 완주를 보고합니다.
 후자의 실측 최고57.72/58.04km/h, 전체 이동 평균30.85km/h이며 재밍 이후 평균40km/h는 미달성입니다.
 속도 튜닝 후 p95 지도 중심선 오차가 증가한 trade-off와 rebase 이후 새 정량 Bag 미측정도 남습니다.
-`roundabout_execution_test`의 `safe distant candidate cannot commit six metres before the stopline` 실패가 보고됐습니다.
-이 문서 갱신에서 새 주행 성공이나 회귀 전체 통과를 주장하지 않습니다.
+`roundabout_execution_test`의 `safe distant candidate cannot commit six metres before the stopline` 실패는
+PR #89 당시 기록입니다. 이후 [PR #135 검증](https://github.com/INHAautonav/2026-ASMC/pull/135)에서는
+해당 회귀 실행파일이 통과했습니다. 이는 합성 회귀 확인이며 새 전 구간 주행 성공을 의미하지 않습니다.
 
 ## 회귀와 시나리오
 
+운영 `runtime` 빌드만으로 시험 실행파일이 모두 준비되지는 않습니다. 동일한 outer workspace에서
+`full`로 시험·개발 도구를 빌드한 뒤 실행합니다. [빌드 모드 안내](build.md)를 참고합니다.
+
 ```bash
+./scripts/build_ws.sh full -j2 -l2
+source devel/setup.bash
 catkin_make run_tests_asmc_planner run_tests_asmc_controller run_tests_planning_inputs
 catkin_test_results build/test_results
 ```

@@ -54,7 +54,7 @@ xhost +local:docker
 ./scripts/docker_ros_up.sh build
 ./scripts/docker_ros_up.sh up
 ./scripts/docker_ros_up.sh check
-docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
+docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh' # 기본 runtime; 전체 시험은 build_ws.sh full
 ```
 
 > **GPU 추론 이미지 선택**: RTX 40 팀원은 위의 기본 `build`/`up`을 그대로

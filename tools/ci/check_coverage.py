@@ -89,7 +89,7 @@ def audit(root=ROOT):
         if set(events or {}) != {'workflow_dispatch'}:
             errors.append('heavy regression must remain manual-only: '+name)
     full = (root/'.github/workflows/full-regression.yml').read_text()
-    if ('./scripts/build_ws.sh all' not in full or
+    if ('./scripts/build_ws.sh full' not in full or
             'tools/ci/run_checks.py --output .ci-results --workers 2' not in full):
         errors.append('manual full build and every regression group must remain available')
     auto = (root/'.github/workflows/ci.yml').read_text()
