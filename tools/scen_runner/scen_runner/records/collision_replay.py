@@ -59,6 +59,12 @@ class ReplaySection(Section):
         self.events=sorted(self.definition.get('events',[]),key=lambda e:(e['time_s'],e['action']=='spawn'))
         self.next_event=0;self.by_key={};self.plans={};self.tickets=[];self.pending=None;self.started=None
 
+    def ready_live(self, states):
+        if (self.definition.get('allow_empty_scene') is True and
+                self.definition.get('baseline')==[] and not self.events):
+            return not self.actors
+        return super().ready_live(states)
+
     def vehicle_cfg(self,definition,state):
         cfg=copy.deepcopy(definition['cfg'])
         if state:
@@ -137,7 +143,7 @@ class ReplaySection(Section):
                 self.status='재현 · MORAI 생성점 배치 거부 · 같은 설정으로 대기';return False
             self.baseline.pop(0);return False
         self.map_statics()
-        self.prepared=(self.definition.get('allow_empty_scene') is True and not self.actors and not self.events) or self.ready_live(states)
+        self.prepared=self.ready_live(states)
         self.status='저장된 구간 진입 상태 준비 완료' if self.prepared else '재현 객체 상태 수신 대기'
         return self.prepared
 
