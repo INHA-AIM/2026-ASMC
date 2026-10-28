@@ -327,7 +327,7 @@ def main():
             )
             time.sleep(0.8)
 
-            def clock_phase(t, lead, duration):
+            def clock_phase(t, lead, duration, mutate=lambda s, p: None):
                 nonlocal seq
                 seq += 1
                 clock_pub.publish(Clock(rospy.Time.from_sec(t)))
@@ -351,6 +351,7 @@ def main():
                     point = TrajectoryPoint()
                     point.x, point.velocity = i * 0.05, 1.0
                     plan.points.append(point)
+                mutate(state, plan)
                 received.clear()
                 states.publish(state)
                 plans.publish(plan)
@@ -367,6 +368,8 @@ def main():
             ), tiny_future
             recovered = clock_phase(100.10, -0.01, 0.08)
             assert any(r["reason"] == "ok" for r in recovered), recovered
+            assert any(r.get("execution_seed_restarted") for r in recovered if r["valid"]), recovered
+            assert all(r["execution_history_samples"] > 0 for r in recovered if r["valid"]), recovered
             prolonged = clock_phase(100.15, 0.000067, 0.30)
             assert any(
                 r["reason"] in ("local_source_stale", "local_receive_stale")
@@ -381,6 +384,12 @@ def main():
             print(
                 "67us clock handoff never computes future state; recovery/expiry/7ms rejection PASS"
             )
+            clock_phase(100.30, -0.01, 0.10)
+            bad_future = clock_phase(100.35, 0.000067, 0.08,
+                                     lambda s, p: setattr(s.pose.pose.orientation, "w", 0.0))
+            assert any(r["reason"] == "nonfinite_motion" for r in bad_future), bad_future
+            assert not any(r["reason"] == "motion_clock_pending" for r in bad_future), bad_future
+            print("pending handoff still rejects invalid geometry; resumed execution history updated PASS")
             stop(clock_preview)
             clock_pub.unregister()
             rospy.set_param("/use_sim_time", False)

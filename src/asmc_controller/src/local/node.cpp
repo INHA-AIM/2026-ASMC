@@ -1,5 +1,6 @@
 // Separate LOCAL-1 input boundary. Normal map converter/behavior stays intact.
 #include "MPC/MPC.hpp"
+#include "local/execution_history.hpp"
 #include "MPC/Reference/path_resampler.hpp"
 #include "MPC/Reference/reference_validator.hpp"
 #include "Util/MessageConverter.hpp"
@@ -28,6 +29,13 @@ class LocalController {
   ros::Time evaluation_time;
   ros::SteadyTime last_solved;
   bool command_published = false;
+  asmc_local::ExecutionHistory execution_history;
+  asmc_local::ExecutionHistory::Snapshot execution_snapshot;
+  void resetExecution() {
+    ResetMPCOnFailSafe();
+    execution_history.Clear();
+    execution_snapshot = {};
+  }
   std::string frame, reason = "initializing";
   bool enabled = false, selected = false, duplicate = false;
   double command_age = 0, last_steering = 0;
@@ -39,7 +47,7 @@ class LocalController {
   void mode(const std_msgs::UInt8::ConstPtr &m) {
     bool next = m->data == 1;
     if (next != selected) {
-      ResetMPCOnFailSafe();
+      resetExecution();
       plan.reset();
       last_good.reset();
       last_solved = ros::SteadyTime();
@@ -48,7 +56,7 @@ class LocalController {
   }
   void receiveState(const nav_msgs::Odometry::ConstPtr &m) {
     if (!state || m->header.frame_id != state->header.frame_id) {
-      ResetMPCOnFailSafe();
+      resetExecution();
       plan.reset();
       last_good.reset();
       last_solved = ros::SteadyTime();
@@ -58,7 +66,7 @@ class LocalController {
         plan.reset();
         last_good.reset();
         last_solved = ros::SteadyTime();
-        ResetMPCOnFailSafe();
+        resetExecution();
       }
       return;
     }
@@ -101,6 +109,9 @@ class LocalController {
       << ",\"solver_acceleration_mps2\":" << (solve ? solve->control.accel : 0)
       << ",\"acceleration_residual_mps2\":"
       << (solve ? solve->first_acceleration_residual : 0)
+      << ",\"execution_elapsed_s\":" << execution_snapshot.elapsed_s
+      << ",\"execution_seed_restarted\":" << (execution_snapshot.restart_seed ? "true" : "false")
+      << ",\"execution_history_samples\":" << execution_snapshot.steering.size()
       << ",\"steering\":" << cmd.steering << ",\"throttle\":" << cmd.accel
       << ",\"brake\":" << cmd.brake << ",\"processing_ms\":" << cost
       << ",\"tracking_error_m\":" << cross
@@ -121,7 +132,7 @@ class LocalController {
     }
     auto cmd = mpc_controller_ros::MakeRosEmergencyStopCommand();
     cmd.steering = last_steering;
-    ResetMPCOnFailSafe();
+    resetExecution();
     last_solved = ros::SteadyTime();
     if (enabled && !duplicate && selected) {
       command_pub.publish(cmd);
@@ -213,18 +224,14 @@ class LocalController {
     // future state or refresh a command. The already-solved command remains
     // bounded by150ms and the selector watchdog. A persistent or >5ms lead
     // still fails; this is not a timestamp correction or extrapolation.
-    if (state_age < 0 && state_age >= -.005 && last_good &&
+    const bool clock_pending = state_age < 0 && state_age >= -.005 && last_good &&
         candidate->header.frame_id == last_good->header.frame_id &&
         state->header.frame_id == last_good->header.frame_id &&
         state->child_frame_id == "base_link" && age >= 0 && age <= .25 &&
         source_age >= age && source_age <= .35 &&
-        (steady - last_solved).toSec() < .15) {
-      reason = "motion_clock_pending";
-      report(false, morai_msgs::CtrlCmd());
-      return;
-    }
+        (steady - last_solved).toSec() < .15;
     if (age < 0 || age > (grace ? .55 : .35) || source_age < age ||
-        source_age > (grace ? .55 : .50) || state_age < 0 || state_age > .15) {
+        source_age > (grace ? .55 : .50) || (state_age < 0 && !clock_pending) || state_age > .15) {
       stop("local_source_stale");
       return;
     }
@@ -240,7 +247,7 @@ class LocalController {
     }
     if (frame != candidate->header.frame_id) {
       frame = candidate->header.frame_id;
-      ResetMPCOnFailSafe();
+      resetExecution();
     }
     PlannedPath path;
     path.dt = candidate->dt;
@@ -274,6 +281,15 @@ class LocalController {
       stop("nonfinite_motion");
       return;
     }
+    // Even the tiny clock handoff must pass frame, finite geometry and
+    // quaternion checks; it never makes an invalid input eligible for hold.
+    if (clock_pending && std::isfinite(state->twist.twist.angular.z)) {
+      execution_history.Pending();
+      reason = "motion_clock_pending";
+      report(false, morai_msgs::CtrlCmd());
+      return;
+    }
+    if (state_age < 0) { stop("local_source_stale"); return; }
     ego.vx = std::max(0., ego.vx);
     if (!grace && source_age > .35) {
       // No computation from expired perception. Hold the previously issued
@@ -289,6 +305,7 @@ class LocalController {
           candidate->scene_stamp >= last_good->scene_stamp && age <= .25 &&
           state_age <= .10 && std::isfinite(state->twist.twist.angular.z) &&
           (steady - last_solved).toSec() < .15) {
+        execution_history.Pending();
         reason = "plan_replacement_pending";
         report(false, morai_msgs::CtrlCmd());
         return;
@@ -305,6 +322,7 @@ class LocalController {
         (steady - last_solved).toSec() < .15) {
       // The same bounded handoff covers the measured114ms IMU gap at15km/h.
       // No new command and no forecast beyond100ms, at any experiment speed.
+      execution_history.Pending();
       reason = "motion_sample_pending";
       report(false, morai_msgs::CtrlCmd());
       return;
@@ -331,6 +349,9 @@ class LocalController {
       return;
     }
     auto start = ros::SteadyTime::now();
+    execution_snapshot = execution_history.At(start.toSec(), GetMPCParams().dt,
+                                              GetMPCParams().steering_response_delay_s);
+    asmc_local::PrepareExecution(execution_snapshot);
     auto output = MPCProcess(ego, ref, local_acceleration_limit);
     if (!output.success) {
       stop(output.failure_reason ? output.failure_reason : "mpc_failed");
@@ -340,6 +361,8 @@ class LocalController {
         mpc_controller_ros::ToRosControlCommand(output.control, GetMPCParams());
     last_solved = ros::SteadyTime::now();
     last_steering = command.steering;
+    // Preview has its own simulated command timeline. It never publishes.
+    execution_history.Issued(last_solved.toSec(), output.control);
     if (enabled && selected) {
       command_pub.publish(command);
       command_published = true;
