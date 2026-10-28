@@ -1,6 +1,7 @@
 # lane_family 계산 지연 개선 — 2026-10-28
 
-상태: **격리 작업트리 구현·CPU 재현·MORAI 터널 실행 및 사용자 전 구간 수동 확인 완료. PR 통합 검증 중.**
+상태: **구현·CPU 재현·MORAI 터널 실행·사용자 전 구간 수동 확인 및 최신 main 통합 로컬 검증 완료.**
+원격 CI와 병합 상태는 [PR #130](https://github.com/INHAautonav/2026-ASMC/pull/130)을 따른다.
 기준은 PR #127 통합 커밋 `d518b7c9fdf9af57c6a3dabf799802829bb2b703`이며,
 작업 브랜치는 `perf/lane-family-latency-20261028`이다.
 재현은 기준 revision과 각 run의 소스 snapshot/패치를 함께 사용한다.
@@ -186,3 +187,17 @@ CI에는 `python3-dev`/`pybind11-dev`와 빌드 결과 import 검사를 추가�
 미빌드로 생략되는 것을 막는다. 격리 ROS master에서 실제 lane 노드의 python/native/auto
 geometry hash가 판제 기대값과 같고, 실제 lateral gate 변경은 hash를 바꾸는 회귀도 실행한다.
 추론 모델·운영 토픽·판제 수락 임계값에는 이 PR의 변경이 없다.
+
+리베이스 충돌 없이 `562c99f9` 위에 통합했고 다음을 확인했다.
+
+- 전체 Release catkin 빌드 및 devel native module import 성공.
+- BEV220개, runtime124개, detection90개, IMU/runtime 측정16개: 총450개 통과.
+  측정 도구 시험은 CI와 같은 `unittest discover -s tools/perception` 방식으로 실행했다.
+- 별도 임시 ROS master의 실제 노드4회 생성: 세 backend의 geometry hash/판제 기대값 일치,
+  기하 gate 변경 시 hash 변경 확인. 공용 master·시뮬레이터는 사용하지 않았다.
+- 기존 CI145개 검사 보존 감사, 문서 이동·현재 launch 안내 검사, `git diff --check` 통과.
+
+새 실행 환경은 `python3-dev`와 `pybind11-dev`를 설치하고 catkin을 다시 빌드한다.
+기존 검증 이미지의 Torch 포함 headers를 쓰는 경우 위의 CMake include 인자를 명시한다.
+빌드 후 `source devel/setup.bash` 및 `python3 -c 'from asmc_camera import _lane_association; print(_lane_association.__file__)'`
+로 확인한다. extension 없이 auto의 Python fallback만 실행한 결과를 native 최적화 적용으로 보지 않는다.
