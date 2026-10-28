@@ -58,6 +58,12 @@ class BatchedYoloDetector:
             raise DetectorStartupError('unknown runtime backend')
         if (path.suffix == '.engine') != (runtime_backend == 'tensorrt'):
             raise DetectorStartupError('checkpoint/engine backend mismatch')
+        source_weights = str(path)
+        if runtime_backend == 'tensorrt':
+            import tensorrt
+            from asmc_camera.camera.backends.object_engine_selection import select_object_engine
+            path, actual = select_object_engine(path, actual, torch.cuda.get_device_name(device),
+                                                 tensorrt.__version__, head_profile)
         start = time.monotonic()
         if self.direct_detect:
             from ultralytics.nn.autobackend import AutoBackend
@@ -110,6 +116,7 @@ class BatchedYoloDetector:
             raise DetectorStartupError('runtime device/format/head differs from the selected profile')
         self.info = dict(backend=runtime_backend, model_kind='yolo', task=task,
             weights=str(path), weights_sha256=actual, allowed_names=self.allowed,
+            source_weights=source_weights,
             batch_mode=batch_mode, shapes=self.shapes, device=device, model_device=device,
             ultralytics=ultralytics.__version__, torch=torch.__version__,
             conf_thres=self.conf, model_load_ms=load_ms,

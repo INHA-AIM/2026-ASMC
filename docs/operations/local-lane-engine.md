@@ -44,3 +44,28 @@ timeout 5s rostopic echo -n 1 /planning/camera_bbox_lane_change/diagnostics
 상태 토픽 발행과 실제 차선 결과의 신선도·유효성이 모두 확인되어야 한다.
 GPU에서 엔진을 생성하고 MORAI 재밍 주행을 확인하는 절차는 CPU 네이티브
 테스트로 대체하지 않는다.
+
+## 객체 엔진도 함께 재생성할 때
+
+현재 기본 객체 모델은 YOLO26L mission15 E3이다. 저장소의 객체 엔진은 RTX 4060에서
+생성됐으며, TwinLite Large E8 엔진의 GPU 이력과 다르다. 두 모델을 혼동하지 않는다.
+
+```bash
+# 추론·판제를 종료한 ROS 컨테이너의 /root/ws에서 실행
+bash tools/scen_runner/prepare_camera_engines.sh --check
+bash tools/scen_runner/prepare_camera_engines.sh
+roslaunch asmc_camera camera.launch
+```
+
+이 도구는 현재 기본 모델의 checkpoint SHA를 확인하고 엔진을 생성한 뒤 합성 추론을
+검사한다. 완료된 `.runtime/camera_runtime.json`의 로컬 객체 엔진은 일반 `camera.launch`에서도
+사용한다. 원본 배포 엔진 SHA, 로컬 엔진 SHA, GPU, TensorRT, head와 검사 결과가 맞아야 한다.
+객체 노드의 시작 정보 `source_weights`, `weights`, `weights_sha256`으로 실제 선택을 확인한다.
+E8 또는 pretrained를 명시적으로 선택하면 E3 로컬 엔진으로 대체하지 않는다.
+별도 프로필 위치는 `ASMC_CAMERA_RUNTIME_PROFILE`로 지정할 수 있다.
+
+기존 배포 파일과 체크섬은 수정하지 않는다. 새 엔진은 개인 캐시이며 Git에 추가하지 않는다.
+대용량 생성 경로 `.runtime/camera_engines`는 로컬 저장 규약에 맞게 데이터 드라이브로
+연결할 수 있다. 컨테이너에서도 같은 링크 대상이 보여야 한다.
+다른 모델·GPU·TensorRT로 바뀌면 다시 생성한다. 생성 도구의 합성 검사 통과는 실제
+영상의 정확도·전 구간 주행 수락을 의미하지 않는다.

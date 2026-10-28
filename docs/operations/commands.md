@@ -54,11 +54,15 @@ python3 /root/ws/src/asmc_lidar/tools/check_runtime_build.py
 | 순서 | 실행 | 포함·주의 |
 |---|---|---|
 | A | `./scripts/udp_bridge.sh` | 허용 센서·기본 `/vehicle/state`, UDP 포트당 수신자 하나 |
-| B | `roslaunch asmc_camera camera.launch` | 세 모델 상시 ACTIVE·발행, E8 기본; GUI 별도 |
+| B | `roslaunch asmc_camera camera.launch` | 세 모델 상시 ACTIVE·발행, YOLO26L E3·TwinLite Large E8·ResNet18 기본; GUI 별도 |
 | C | `roslaunch asmc_lidar lidar.launch` | 공용 local/map 추적·속도/운동·전달 필터; 카메라 모델 미실행 |
 | D | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
 
 고주로 통합 브랜치에서는 D에 `highway_merge:=true`를 지정합니다.
+GPU가 다른 PC에서 만든 객체 엔진을 사용하던 경우, 추론 노드를 정지한 뒤
+`bash tools/scen_runner/prepare_camera_engines.sh`로 현재 모델·GPU·TensorRT에 맞는
+엔진을 생성합니다. 검증을 마친 로컬 객체 엔진은 직접 실행하는 `camera.launch`와
+시나리오 실행기 모두에서 선택됩니다. [로컬 엔진 안내](local-lane-engine.md)를 참고하세요.
 판제 대시보드는 D에 포함되어 별도 실행하지 않습니다. 실행·보존·검증 범위는
 [통합 안내](../../src/asmc_planner/docs/main-integration-20261026.md)를 참고하세요.
 
