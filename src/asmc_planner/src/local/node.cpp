@@ -20,6 +20,7 @@
 #include <set>
 #include <sstream>
 #include <std_msgs/String.h>
+#include <std_msgs/UInt8.h>
 
 namespace local_planning {
 double yaw(const geometry_msgs::Quaternion &q) {
@@ -43,13 +44,15 @@ class Node {
   MotionHistory motion;
   RoadMemory road_memory;
   bool use_road_memory = true;
+  bool active_in_jamming_only = false, jamming_selected = false;
+  uint64_t mode_generation = 0;
   // Callbacks own the small input cache. Expensive Plan runs outside this lock;
   // a second callback thread keeps signed odometry and arrivals current.
   std::mutex input_mutex, calculation_mutex;
   uint64_t discarded_plans = 0;
   std::string session, run, frame, camera_epoch, speed_caller, config_id;
   ros::Subscriber speed_sub, imu_sub, prob_sub, cover_sub, context_sub,
-      family_sub, objects_sub;
+      family_sub, objects_sub, mode_sub;
   ros::Publisher odom_pub, path_pub, trajectory_pub, trace_pub, diagnostics_pub;
   ros::SteadyTimer planner_timer, diagnostic_timer;
   std::map<uint64_t, sensor_msgs::Image::ConstPtr> probs, covers;
@@ -110,6 +113,18 @@ class Node {
   void reset() {
     motion.reset();
     clear_scene();
+  }
+  void mode(const std_msgs::UInt8::ConstPtr &m) {
+    std::lock_guard<std::mutex> lock(input_mutex);
+    const bool next = m->data == 1;
+    if (next != jamming_selected) {
+      ++mode_generation;
+      // Retain short motion history, but never reuse an earlier mode's scene,
+      // recovery memory or path. An in-flight Plan is rejected by generation.
+      clear_scene();
+      next_plan_due = 0;
+    }
+    jamming_selected = next;
   }
   std::string current_frame() {
     return "local/" + session + "/" + std::to_string(motion.epoch);
@@ -356,6 +371,10 @@ class Node {
     if (!computation.owns_lock())
       return;
     std::unique_lock<std::mutex> lock(input_mutex);
+    if (active_in_jamming_only && !jamming_selected) {
+      invalid("inactive_normal_mode");
+      return;
+    }
     if (ros::SteadyTime::now().toSec() - imu_received > .15) {
       invalid("motion_unavailable");
       return;
@@ -764,6 +783,7 @@ class Node {
     double alignment_ms =
         (ros::SteadyTime::now() - alignment_start).toSec() * 1000;
     const auto expected_epoch = motion.epoch;
+    const auto expected_mode = mode_generation;
     const auto expected_camera = camera_epoch, expected_lidar = lidar_epoch;
     const auto scheduled = ros::SteadyTime::now().toSec();
     next_plan_due = next_plan_due == 0
@@ -776,7 +796,7 @@ class Node {
     else
       result = Plan(scene, config);
     lock.lock();
-    if (expected_epoch != motion.epoch || expected_camera != camera_epoch ||
+    if (expected_mode != mode_generation || expected_epoch != motion.epoch || expected_camera != camera_epoch ||
         expected_lidar != lidar_epoch) {
       ++discarded_plans;
       return; // Reset/restart cannot publish an already computing old scene.
@@ -853,6 +873,7 @@ public:
     config.speed_cap /= 3.6;
     p.param("near_blind_assist", config.blind_assist, false);
     p.param("causal_road_memory", use_road_memory, true);
+    p.param("active_in_jamming_only", active_in_jamming_only, false);
     p.param("recovery", config.recovery, true);
     p.param("vehicle_width", config.width, 2.160835);
     p.param("vehicle_length", config.length, 4.635);
@@ -884,6 +905,8 @@ public:
     diagnostics_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(
         "/planning/local/diagnostics", 1);
     speed_sub = nh.subscribe("/Ego_topic", 64, &Node::speed, this);
+    if (active_in_jamming_only)
+      mode_sub = nh.subscribe("/planning/mode", 1, &Node::mode, this);
     imu_sub = nh.subscribe("/imu", 64, &Node::imu, this);
     prob_sub = nh.subscribe<sensor_msgs::Image>(
         "/experimental/shadow/semantic_space_trial/drivable_probability", 1,

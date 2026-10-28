@@ -475,9 +475,54 @@ rosservice call /test/lidar/lidar_pipeline/reset "{}"
 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 따릅니다.
 
 
+## 공유 master에서 LOCAL 음영 주행 선택
+
+여러 host-network 컨테이너가 브릿지를 공유할 때 master는 기본 컨테이너 한 곳에서만 실행한다.
+각 컨테이너는 **자기 `/root/ws/devel/setup.bash`**를 source한다. 다른 worktree의 setup을
+겹쳐 읽지 않는다. `network=none` 컨테이너는 이 설정만으로 공유 master에 접속할 수 없다.
+
+```bash
+# 기본 컨테이너의 별도 터미널: 이미 roscore가 있으면 다시 시작하지 않는다.
+roscore -p 11311
+```
+
+LOCAL worktree를 연결한 컨테이너에서 아래 환경과 실행 명령을 사용한다.
+새 대화형 Bash에 같은 설정이 적용돼 있으면 export는 생략할 수 있다.
+`/root/local-env.sh`는 bag/회귀용 독립 master11348이므로 공유 주행 터미널에서는 사용하지 않는다.
+
+```bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source /root/ws/devel/setup.bash
+export ROS_MASTER_URI=http://127.0.0.1:11311
+export ROS_HOSTNAME=127.0.0.1
+unset ROS_IP
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local local_speed_cap_kph:=10
+```
+
+이 명령은 **차량 제어를 포함**한다. bridge·camera·LiDAR는 공용 master에 각각 한 세트만
+별도로 실행한다. 다른 컨테이너의 autonomy나 `local.launch`, 구 BBox follower와 동시에
+실행하지 않는다. `jamming_planner`의 기본값은 기존 `camera`이며, `local`을 선택하면:
+
+- 기존 GPS/구간 mode 판단과 selector를 재사용한다. 일반 구간은 기존 NORMAL MPC,
+  음영구간은 LOCAL planner/MPC가 담당하고, `/ctrl_cmd` 생산자는 selector 하나다.
+- 구 BBox classifier/follower를 시작하지 않는다. LOCAL은 NORMAL 중 경로 탐색·MPC
+  계산을 쉬며 짧은 속도/IMU 이력만 갱신한다. 모드 전환 때 이전 경로·노면 기억을 비운다.
+- 기존 카메라 결과에서 IMU 정합 노면 probability/coverage를 만드는 입력도 시작한다.
+  추가 모델 추론은 없다. 같은 `semantic_space_trial`을 이미 사용 중이면
+  `local_semantic_input:=false`를 지정한다.
+- `local_speed_cap_kph` 기본은25지만 첫 확인은 위처럼10을 사용한다. 관측·곡률·복구
+  제한은 그대로이며 속도/완주 수락을 보장하는 옵션이 아니다.
+- 웹은 동일한 `http://localhost:8088/web/index_v2.html`이다. LOCAL 경로·노면·family·
+  OBB와 제어 trace를 표시한다. 별도 dashboard 서버를 켜지 않는다.
+
+판제 알고리즘 기본값 승격이 아니라 명시적 실행 선택이다.
+[LOCAL-2D 검증 상태](../records/planning/2026-10-29-local-rebase.md)의 공급 공백과
+폐루프 미수락 항목은 이 연결로 해결된 것으로 처리하지 않는다.
+
 ## LOCAL 실험 계산과 모니터
 
-일반 autonomy 실행과 별도로 개발 중인 GPS 독립 경로다. 현재 운영 기본이나
+아래는 통합 주행 대신 계산만 보는 독립 preview 방법이다. 현재 운영 기본이나
 전 터널 수락 구성이 아니다. [검증 상태·제한](../records/planning/2026-10-28-local-planner.md)을 먼저 확인한다.
 bridge·camera·LiDAR가 한 세트 실행 중인 outer workspace에서 다음을 사용한다.
 
@@ -504,7 +549,7 @@ NORMAL의 map 궤적과 local 궤적을 같은 좌표처럼 섞지 않는다. �
 
 | 내부 실험 인자 | 기본·용도 |
 |---|---|
-| `enable_control` | false. true는 기존 음영 제어 생산자를 제외한 소유권 통제시험에서만 사용 |
+| `enable_control` | false. 독립 제어 시험 또는 위 통합 launch 내부에서만 true. 별도 autonomy와 중복 시작 금지 |
 | `speed_cap_kph` |25. 경로·관측·회복 제한이 더 낮으면 그 이유와 실제 상한 표시 |
 | `recovery` |true. 신선한 semantic의 저속3km/h 회복 시험; 충돌 없음의 증명 아님 |
 | `near_blind_assist` |false. S3 미관측 보조의 명시적 비교용, 켤 때≤5km/h 시험만 |

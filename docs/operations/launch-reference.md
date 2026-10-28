@@ -226,6 +226,9 @@
 | `dashboard` | `true` | — |
 | `dashboard_port` | `8088` | — |
 | `open_dashboard` | `false` | — |
+| `jamming_planner` | `camera` | camera: 기존 BBox 방식, local: GPS 독립 노면·family·LiDAR 경로/MPC |
+| `local_speed_cap_kph` | `25` | LOCAL 목표 상한. 첫 수동 확인은 10 권장; 관측·곡률·회복 제한은 유지 |
+| `local_semantic_input` | `true` | LOCAL 노면 투영 입력 시작. 같은 semantic_space_trial이 이미 실행 중이면 false |
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
@@ -574,3 +577,7 @@
 | `speed_cap_kph` | `25` | — |
 | `recovery` | `true` | — |
 | `near_blind_assist` | `false` | — |
+| `semantic_input` | `false` | — |
+| `active_in_jamming_only` | `false` | — |
+| `normal_controller_node` | `(빈 문자열)` | — |
+| `selector_node` | `(빈 문자열)` | — |

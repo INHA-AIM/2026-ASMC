@@ -110,17 +110,23 @@ planner/controller·BBox lane classifier/follower·selector는 실행돼 있지 
 
 | 경계 | 현재 실행·재사용과 제한 |
 |---|---|
-| `local.launch` | 새 planner/controller 두 노드만 시작. 구 autonomy·BBox follower·센서 생산자·selector를 include하지 않음 |
+| `local.launch` | 기본은 planner/controller preview. `semantic_input`으로 노면 투영 입력 선택 가능. 구 BBox·센서 추론·selector는 시작하지 않음 |
 | 계산 코어 | 기존 Frenet quintic·충돌 기하·속도 수학과 MPC solver를 링크해서 호출. 기존 ROS planner·행동 판단 루프·BBox 차선변경 루프는 호출하지 않음 |
 | 제어 시험 | `run_local_trial.py`가 기존 제어/모드 발행자를 먼저 거부하고 selector 하나와 local만 시작 |
 | `/ctrl_cmd/jamming` | 기존 selector의 선택 슬롯을 재사용한 이름. 새 local 제어를 연결할 때 구 follower도 가동한다는 뜻이 아님 |
-| 실행 중 충돌 | local 제어 활성 상태에서 같은 슬롯의 다른 생산자 또는 NORMAL 제어 생산자를1초마다 확인. 충돌 시 새 local 자신을 종료하며 상대 프로세스를 종료하지 않음. 이 검사는 원자적 실행 lease나 즉시 차단을 보장하지 않음 |
+| 실행 중 충돌 | 독립 시험은 NORMAL 생산자도 거부. 통합 실행만 지정된 NORMAL MPC와 selector를 허용하며, 같은 JAMMING 슬롯의 다른 생산자는 계속 거부. 1초 주기 검사이며 원자적 lease나 즉시 차단은 아님 |
 | dashboard | 구 BBox 결과와 새 local 결과를 읽어 표시. 구 제어 알고리즘·경로 계산을 실행하지 않음 |
 
-**local 제어 시험과 `autonomy_no_bridges_v2.launch`를 함께 실행하지 않는다.** 후자는
-map planner/controller와 구 BBox follower 및 selector를 시작한다. preview는 명령을
-발행하지 않아 읽기 전용 대조에 사용할 수 있지만, 이번 성능 시험에서는 구 계산 노드도
-제외하여 부하 원인을 분리한다. 기존 운영 기본 launch는 변경하지 않았다.
+**독립 `local.launch`와 autonomy를 따로 겹쳐 실행하지 않는다.**
+2026-10-29부터 `autonomy_no_bridges_v2.launch jamming_planner:=local`이 LOCAL을 한 번
+include하고 구 BBox 경로를 제외한다. 기본 `camera`는 이전 행동을 유지한다.
+통합 LOCAL은 NORMAL 중 경로/MPC 계산을 쉬고, 속도/IMU 이력을 유지한다.
+모드 변경 시 이전 scene/노면 기억/path를 비우며 계산 중 이전 모드 결과도 버린다.
+통합 이름으로 허용된 `/mpc_controller` 외의 NORMAL 생산자, 다른 JAMMING 생산자,
+지정 selector 외 wire 생산자를 허용하지 않는다. 기존 selector의250ms watchdog은 유지한다.
+노면 투영 입력은 `asmc_camera/launch/semantic_space.launch`가 소유하며 시나리오 launch도
+이를 include한다. 추가 추론이나 구 제어 루프를 실행하지 않는다.
+실행·공유 master 설정은 [명령 안내](../operations/commands.md#공유-master에서-local-음영-주행-선택)를 따른다.
 
 사용자가 확정한 새 local의 탐색 규약은 다음과 같다.
 

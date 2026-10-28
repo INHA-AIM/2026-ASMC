@@ -127,3 +127,41 @@ rebase01의 준비 로그는 별도 보존하며 성공 run으로 계산하지 �
 기대값과 **키 제거 시 원래 consensus로 복귀**하는 독립 회귀를 함께 갱신했다.
 갤러리 전체 검사에서 이 작업 밖의 과거 wheel/연구 링크30개가 없었지만 LOCAL-2D
 페이지의 누락은0이며 목록·요약·두 source 갤러리는 HTTP200으로 확인했다.
+
+## 공유11311·autonomy LOCAL 선택 연결
+
+동일 날짜의 후속 요청으로 `autonomy_no_bridges_v2.launch`에
+`jamming_planner:=local`을 추가했다. 기본 `camera`는 기존 BBox 행동을 유지한다.
+LOCAL 선택은 구 BBox 경로를 제외하고, 노면 투영 입력과 LOCAL planner/controller를
+한 번씩 시작한다. 기존 GPS/구간 mode 판단과 selector를 재사용한다.
+NORMAL 중에는 LOCAL 경로 탐색/MPC를 실행하지 않고 입력 이력을 갱신하며, 전환 때
+이전 scene/복구 기억/경로를 비운다. 계산 중 이전 모드 결과도 발행하지 않는다.
+
+통합 모드에서만 `/mpc_controller`와 `/asmc_control_selector`를 소유권 검사에 명시적으로
+허용한다. 다른 JAMMING 생산자는 계속 거부하며, 독립 시험의 NORMAL 생산자 거부도
+유지한다. `local.launch` preview/자동시험의 기본 동작과 일반 판제 행동은 유지한다.
+semantic 설정은 `asmc_camera/launch/semantic_space.launch`에 두고 기존 시나리오
+진입점은 이를 include한다. 카메라 추론을 추가로 실행하지 않는다.
+
+검증:
+
+- 새 대화형 Bash에서 기본/LOCAL 모두 `ROS_MASTER_URI=http://127.0.0.1:11311`,
+  `ROS_HOSTNAME=127.0.0.1`, 각자의 `/root/ws/devel`을 선택했다.
+- 확인 시 공용 master는 꺼져 있었다. 기본 컨테이너에서 **roscore만** 시작하고,
+  두 컨테이너의 테스트 토픽 왕복을 확인했다. bridge/실차 명령 생산자는 시작하지 않았다.
+- 다른 연구 컨테이너 두 개는 `network=none`으로 확인했다. 해당 네트워크·환경은
+  변경하지 않았다. Bash 환경만11311로 바꿔도 network=none에서는 공유 접속되지 않는다.
+- `test_local_autonomy.py`: 실제 launch 전개, camera/local 배타성, 오타 거부,
+  NORMAL→LOCAL→NORMAL 실제 MPC/selector 전환, 같은 슬롯의 중복 생산자 거부 통과.
+- `test_local_alignment.py`: 입력은 유지하되 NORMAL 중 탐색 없음, 최신 scene으로
+  재진입, 기존 정/역방향·시각·세대 회귀 통과.
+- `test_local_boundary.py`: preview 무발행, 미래/만료/형상 검사, 독립 소유권 회귀 통과.
+- 전체 autonomy LOCAL을 **별도 master**에서 실행해 semantic/planner/controller/selector
+  시작과 세 제어 토픽의 단일 소유권을 확인했다. 검사가 만든 프로세스만 종료했다.
+- 재빌드, launch 계약6개, 실행 계약3개, 문서 검사/시험10개, 문서 보존 검사 통과.
+  계약 시험에 빠져 있던 backend 진단용 stub을 보완했으며 geometry SHA는 변경하지 않았다.
+
+공유 주행에서는 `/root/local-env.sh`를 source하지 않는다. 그 파일은 여전히 독립
+bag/회귀용11348이다. [현재 실행 명령](../../operations/commands.md#공유-master에서-local-음영-주행-선택)을
+따른다. 위 검사는 연결 수락이며, 앞서 기록한282.88ms 공백이나 실제 회피·복귀 미수락을
+해결한 결과로 해석하지 않는다. push·병합은 하지 않았다.

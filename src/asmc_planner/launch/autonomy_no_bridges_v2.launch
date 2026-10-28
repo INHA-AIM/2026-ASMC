@@ -3,6 +3,12 @@
   <arg name="dashboard" default="true"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="open_dashboard" default="false"/>
+  <!-- One JAMMING producer only. camera preserves the existing follower;
+       local selects the independent GPS-free planner/MPC through the SAME
+       mode source and selector. Bridge/camera inference/LiDAR stay external. -->
+  <arg name="jamming_planner" default="camera" doc="camera: 기존 BBox 방식, local: GPS 독립 노면·family·LiDAR 경로/MPC"/>
+  <arg name="local_speed_cap_kph" default="25" doc="LOCAL 목표 상한. 첫 수동 확인은 10 권장; 관측·곡률·회복 제한은 유지"/>
+  <arg name="local_semantic_input" default="true" doc="LOCAL 노면 투영 입력 시작. 같은 semantic_space_trial이 이미 실행 중이면 false"/>
   <!-- Integrated planner, input adapters and controller. Bridges and asmc_lidar
        remain separately managed. This wrapper currently supports LiDAR input. -->
   <arg name="state_source" default="competition" doc="competition, gps_imu or external"/>
@@ -92,7 +98,8 @@
         name="asmc_control_selector" output="screen" required="true"/>
   <!-- 재밍 BBOX 입력은 camera_bbox_frame_bridge가 /perception/camera/objects를 직접 받는다
        (별도 YOLO 변환 어댑터 없음, 소비 cutoff는 bbox_conf_thres 0.7). -->
-  <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
+  <include if="$(eval {'camera': True, 'local': False}[arg('jamming_planner')])"
+           file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
     <arg name="enable_control" value="true"/>
     <!-- PR127 recovery is intentional; PR128 highway/dashboard ownership above stays unchanged. -->
     <arg name="return_to_entry_lane" value="true"/>
@@ -121,6 +128,16 @@
     <arg name="speed_ki" value="0.1"/>
     <arg name="max_accel_pedal" value="0.5"/>
     <arg name="max_brake_pedal" value="0.5"/>
+  </include>
+  <include if="$(eval {'camera': False, 'local': True}[arg('jamming_planner')])"
+           file="$(find asmc_planner)/launch/local.launch">
+    <arg name="enable_control" value="true"/>
+    <arg name="active_in_jamming_only" value="true"/>
+    <arg name="normal_controller_node" value="/mpc_controller"/>
+    <arg name="selector_node" value="/asmc_control_selector"/>
+    <arg name="semantic_input" value="$(arg local_semantic_input)"/>
+    <arg name="speed_cap_kph" value="$(arg local_speed_cap_kph)"/>
+    <arg name="run_id" value="local-autonomy"/>
   </include>
   <include if="$(arg dashboard)" file="$(find asmc_planner)/launch/dashboard.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>

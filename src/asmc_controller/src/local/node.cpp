@@ -38,6 +38,7 @@ class LocalController {
   }
   std::string frame, reason = "initializing";
   bool enabled = false, selected = false, duplicate = false;
+  std::string normal_controller_node, selector_node;
   double command_age = 0, last_steering = 0;
   double local_acceleration_limit = 1.;
   static double yaw(const geometry_msgs::Quaternion &q) {
@@ -149,13 +150,21 @@ class LocalController {
       const std::string topic = payload[0][i][0];
       // /ctrl_cmd/jamming is the existing selector slot, not the old BBox
       // follower. Local control owns this slot exclusively. A NORMAL command
-      // producer also means an old control stack was started during the trial;
-      // refuse our own control instead of running two stacks or killing theirs.
-      // The one selector's /ctrl_cmd publisher is expected and is not a
-      // conflict.
+      // producer is allowed only when explicitly named by the integrated
+      // autonomy launch. Standalone trials retain the strict exclusion rule.
       if (topic == command_pub.getTopic() || topic == "/ctrl_cmd/normal") {
+        for (int j = 0; j < payload[0][i][1].size(); ++j) {
+          const std::string owner = payload[0][i][1][j];
+          if (topic == "/ctrl_cmd/normal" && !normal_controller_node.empty() &&
+              owner == normal_controller_node)
+            continue;
+          if (owner != ros::this_node::getName())
+            return topic + " owned by " + owner;
+        }
+      }
+      if (topic == "/ctrl_cmd" && !selector_node.empty()) {
         for (int j = 0; j < payload[0][i][1].size(); ++j)
-          if (std::string(payload[0][i][1][j]) != ros::this_node::getName())
+          if (std::string(payload[0][i][1][j]) != selector_node)
             return topic + " owned by " + std::string(payload[0][i][1][j]);
       }
     }
@@ -176,6 +185,13 @@ class LocalController {
       }
     }
     used_plan = plan;
+    if (enabled && !selected) {
+      // NORMAL is handled by its own MPC. Do not solve a second MPC, publish
+      // brake into the inactive slot, or warm-start with hypothetical commands.
+      reason = "inactive_normal_mode";
+      report(false, morai_msgs::CtrlCmd());
+      return;
+    }
     const auto now = evaluation_time;
     const auto steady = ros::SteadyTime::now();
     if (!state || !plan) {
@@ -410,9 +426,17 @@ public:
       throw std::runtime_error("invalid local MPC tuning");
     InitMPC(params);
     p.param("enable_control", enabled, false);
+    p.param<std::string>("normal_controller_node", normal_controller_node, "");
+    p.param<std::string>("selector_node", selector_node, "");
+    if (normal_controller_node.empty() != selector_node.empty() ||
+        (!normal_controller_node.empty() &&
+         (normal_controller_node.front() != '/' || selector_node.front() != '/' ||
+          normal_controller_node == ros::this_node::getName() ||
+          normal_controller_node == selector_node)))
+      throw std::runtime_error("invalid integrated LOCAL controller ownership");
     // Reuse one MPC solver and the selector's historical JAMMING slot. This
-    // never starts the old BBox follower or NORMAL controller. Preview has no
-    // command publisher; control trials must exclude autonomy_no_bridges_v2.
+    // never starts the old BBox follower. Preview has no command publisher;
+    // autonomy may explicitly permit its NORMAL MPC through the selector.
     if (enabled)
       command_pub = nh.advertise<morai_msgs::CtrlCmd>("/ctrl_cmd/jamming", 1);
     diagnostics_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(
