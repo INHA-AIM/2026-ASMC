@@ -28,6 +28,15 @@ def check_delivery_clock_and_marked_drive_window(tmp_path):
 
 
 class DeliveryMetricsTest(unittest.TestCase):
+    def test_trial_readiness_waits_for_selected_fresh_wire_command(self):
+        from types import SimpleNamespace
+        from run_local_trial import selected_command_ready
+        m=SimpleNamespace(longlCmdType=1,steering=0.,accel=.1,brake=0.)
+        self.assertFalse(selected_command_ready(dict(wire=(10.,m)),10.))
+        self.assertFalse(selected_command_ready(dict(mode=0,wire=(10.,m)),10.2))
+        m.brake=1.;self.assertFalse(selected_command_ready(dict(mode=0,wire=(10.,m)),10.01))
+        m.brake=0.;self.assertTrue(selected_command_ready(dict(mode=0,wire=(10.,m)),10.01))
+
     def test_collision_sentinel_is_not_contact_but_brief_real_entries_survive(self):
         from types import SimpleNamespace
         from run_local_trial import collision_objects

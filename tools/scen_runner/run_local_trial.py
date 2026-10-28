@@ -25,6 +25,15 @@ def collision_objects(message):
             for o in message.collision_object if o.type>=0]
 
 
+def selected_command_ready(latest,now):
+    wire=latest.get('wire')
+    if latest.get('mode') not in (0,1) or not wire:return False
+    received,message=wire
+    return (0<=now-received<=.15 and message.longlCmdType==1 and
+            math.isfinite(message.steering+message.accel+message.brake) and
+            message.brake<.9)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("root", type=Path)
@@ -229,6 +238,7 @@ def main():
         stream = (root / name).open("x")
         handles.append(stream)
         def write(m):
+            if topic=='/ctrl_cmd':latest['wire']=(time.monotonic(),m)
             stream.write(json.dumps(dict(received_steady=time.monotonic(), ros_time=rospy.Time.now().to_sec(),
                 steering=m.steering, accel=m.accel, brake=m.brake)) + "\n")
         return rospy.Subscriber(topic, CtrlCmd, write, queue_size=100)
@@ -242,6 +252,10 @@ def main():
             emit(dict(event='udp_collision',objects=objects,
                       source_stamp=message.header.stamp.to_sec()))
 
+    def on_mode(message):
+        latest['mode']=int(message.data)
+        emit(dict(event='mode',value=int(message.data)))
+
     subscriptions = [
         rospy.Subscriber('/CollisionData',CollisionData,collision,queue_size=100),
         rospy.Subscriber('/planning/frenet_feedback_v2', FrenetFeedback,
@@ -249,8 +263,7 @@ def main():
         commands("/ctrl_cmd", "wire.jsonl"),
         commands("/ctrl_cmd/normal", "normal-commands.jsonl"),
         commands("/ctrl_cmd/jamming", "mpc-commands.jsonl"),
-        rospy.Subscriber('/planning/mode', UInt8,
-            lambda m: emit(dict(event='mode', value=int(m.data))), queue_size=10),
+        rospy.Subscriber('/planning/mode', UInt8,on_mode,queue_size=10),
         rospy.Subscriber('/planning/mode/local_prepare', Bool,
             lambda m: emit(dict(event='prepare', value=bool(m.data))), queue_size=10),
         rospy.Subscriber('/planning/control_selector/diagnostics', String,
@@ -487,7 +500,9 @@ def main():
             normal_feedback = latest.get('normal_feedback')
             local_ready = plan and plan.valid and 0 <= (rospy.Time.now()-plan.scene_stamp).to_sec() <= .35
             normal_ready = args.integrated and normal_feedback and normal_feedback.plan_valid and normal_feedback.command_accepted
-            if local_ready or normal_ready: break
+            # A valid NORMAL feedback can precede the selector's latched mode
+            # (drive14). Never enable AUTO on that advertisement alone.
+            if (local_ready or normal_ready) and selected_command_ready(latest,time.monotonic()): break
             if any(child.poll() is not None for child in children):
                 raise RuntimeError('owned producer exited before control readiness')
             if time.monotonic() > ready_until:
