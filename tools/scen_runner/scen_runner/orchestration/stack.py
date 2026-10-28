@@ -278,10 +278,16 @@ class RosProbe(Readiness):
         self.lock = threading.RLock()
         super().__init__(config)
         import rospy
-        from asmc_msgs.msg import Trajectory, VehicleState
+        from asmc_msgs.msg import Trajectory, VehicleState, LaneBoundaryFamily, LidarTrackingObservation
         from planning_inputs.msg import DetectedObjectArray
-        from morai_msgs.msg import CtrlCmd
+        from morai_msgs.msg import CtrlCmd, GPSMessage, EgoVehicleStatus
+        from std_msgs.msg import UInt8
         self.subscribers = []
+        if self.profile=='shadow_local':
+            for name,topic,kind in [('family','/perception/lane/boundary_family',LaneBoundaryFamily),
+                    ('local','/perception/lidar/tracks_local',LidarTrackingObservation),
+                    ('gps','/gps',GPSMessage),('speed','/Ego_topic',EgoVehicleStatus),('mode','/planning/mode',UInt8)]:
+                self.subscribers.append(rospy.Subscriber(topic,kind,lambda message,key=name:self.observe(key,message,time.monotonic()),queue_size=1))
         for name, topic, kind in (
                 ('state', '/planning/vehicle/state', VehicleState),
                 ('objects', '/planning/objects', DetectedObjectArray),

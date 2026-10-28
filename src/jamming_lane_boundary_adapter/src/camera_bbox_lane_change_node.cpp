@@ -1217,7 +1217,7 @@ void initializeRosInterface(ros::NodeHandle& nh) {
     }
 
     ros::NodeHandle("~").param<std::string>("bev_mode",params.bev_mode,"off");
-    if(params.bev_mode!="off" && params.bev_mode!="audit" && params.bev_mode!="guard")throw std::runtime_error("invalid bev_mode");
+    if(params.bev_mode!="off" && params.bev_mode!="audit")throw std::runtime_error("BEV execution guard is not accepted: use off/audit until shared-plane visibility is validated");
     if(params.bev_mode!="off") {
         if(!params.contact_clearance_enabled || !params.contact_local_required)throw std::runtime_error("BEV trial requires measured local clearance");
         double xmin,ymin;std::string frame;
