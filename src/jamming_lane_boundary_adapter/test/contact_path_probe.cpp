@@ -164,6 +164,19 @@ int semanticFrame(const char* directory,bool assist){
   const auto result=grid->check(pts,vehicle,params.path_sample_step);
   std::cout<<"lane="<<lane.lane_index<<" offset="<<offset<<" length="<<length<<" clear="<<result.clear
    <<" reason="<<result.reason<<" blocked="<<result.blocked_x<<','<<result.blocked_y<<" assisted="<<result.assisted<<'\n';
+  if(result.clear)for(const auto& object:local->observation.objects.objects){
+   geometry_msgs::Polygon footprint;
+   if(!lane_boundary_adapter::LocalObstacleSupport::footprint(object,footprint))continue;
+   lane_boundary_adapter::clearance::Polygon polygon;
+   for(const auto& p:footprint.points)polygon.push_back({p.x,p.y});
+   if(lane_boundary_adapter::clearance::pathClearOfPolygons(pts,{polygon},vehicle,20.,params.path_sample_step))continue;
+   std::cout<<"LOCAL_VETO track="<<object.track_id<<" class="<<object.camera_class
+    <<" center="<<object.center.x<<','<<object.center.y<<','<<object.center.z
+    <<" dimensions="<<object.length<<','<<object.width<<','<<object.height
+    <<" points="<<object.source_point_count<<" padded_xy=";
+   for(const auto& p:polygon)std::cout<<p.x<<','<<p.y<<';';
+   std::cout<<'\n';
+  }
  }
  // Offline attribution only. Do not publish these counterfactual inputs.
  // Preserve actual geometry and compare which layer rejects all candidates.
