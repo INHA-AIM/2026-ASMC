@@ -23,6 +23,8 @@
   <exec_depend>morai_msgs</exec_depend>
   <exec_depend>rosbag</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
+  <build_depend>python3-dev</build_depend>
+  <build_depend>pybind11-dev</build_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
   <exec_depend>python3-scipy</exec_depend>

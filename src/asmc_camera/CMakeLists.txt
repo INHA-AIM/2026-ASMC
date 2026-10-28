@@ -24,6 +24,12 @@ catkin_package(
     std_msgs
 )
 
+option(ASMC_CAMERA_NATIVE_ASSOCIATION "Build optional CPU lane association kernel" ON)
+if(ASMC_CAMERA_NATIVE_ASSOCIATION)
+  set(ASMC_NATIVE_PYTHON_OUTPUT "${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_PYTHON_DESTINATION}")
+  add_subdirectory(native)
+endif()
+
 catkin_install_python(PROGRAMS
   scripts/camera_runtime_node.py
   scripts/camera_region_example_node.py

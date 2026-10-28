@@ -35,7 +35,7 @@ jobs:
           apt-get -o Acquire::Retries=3 update
           # Last line: asmc_lidar shadow pipeline build_depend (PCL, GeographicLib, pcl_conversions, rosbag).
           apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
-            git ca-certificates ccache nodejs libyaml-cpp-dev libssl-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-pil python3-nose python3-pip \
+            git ca-certificates ccache nodejs libyaml-cpp-dev libssl-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-pil python3-nose python3-pip python3-dev pybind11-dev \
             ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest \
             libpcl-dev libgeographic-dev ros-noetic-pcl-conversions ros-noetic-rosbag ros-noetic-visualization-msgs
           rm -rf /var/lib/apt/lists/*
@@ -115,6 +115,11 @@ jobs:
           source devel/setup.bash
           catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test ground_projection_test -j2 -l2
           test -x devel/lib/asmc_lidar/camera_receiver_ros_test
+
+      - name: Require compiled lane association for parity regressions
+        run: |
+          source devel/setup.bash
+          python3 -c 'from asmc_camera import _lane_association; print(_lane_association.__file__)'
 
       - name: C0 coordinate and clock regression (small synthetic inputs)
         run: |

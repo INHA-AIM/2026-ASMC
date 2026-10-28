@@ -37,6 +37,9 @@ confidence_by_class:
 
 x_bin_m: 0.25
 lateral_cluster_gap_m: 0.30
+# auto uses the compiled CPU kernel when available; python is the explicit
+# rollback. Native keeps the same gates and falls back on arithmetic near ties.
+association_backend: auto
 max_track_gap_m: 2.0
 max_lateral_residual_m: 0.45
 max_heading_change_deg: 20.0

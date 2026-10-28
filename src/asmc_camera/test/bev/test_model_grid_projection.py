@@ -38,6 +38,53 @@ class ModelGridProjectionTest(unittest.TestCase):
         confidence[row, column] = 255
         return projector.extract(classes, confidence, {1: 0.5})
 
+    def test_uint8_sparse_extraction_matches_full_float_path_at_every_confidence(self):
+        projector = ModelGridGroundProjector(self.cameras['front'], model_hw=(96, 160))
+        indices = np.flatnonzero(projector.valid)
+        self.assertGreaterEqual(len(indices), 512)
+        classes = np.zeros(projector.model_hw, dtype=np.uint8)
+        confidence = np.zeros_like(classes)
+        for i, label in enumerate((1, 2)):
+            pixels = indices[i * 256:(i + 1) * 256]
+            classes.ravel()[pixels] = label
+            confidence.ravel()[pixels] = np.arange(256, dtype=np.uint8)
+        thresholds = list((np.arange(256, dtype=np.float32) / 255.).astype(float))
+        thresholds += [np.nextafter(.5, 0.), .5, np.nextafter(.5, 1.)]
+        for threshold in thresholds:
+            values = {1: threshold, 2: 1. - threshold}
+            full_classes, normalized, masks = projector._selection_masks(classes, confidence, values)
+            selected = masks['selected']
+            result = projector.extract(classes, confidence, values)
+            np.testing.assert_array_equal(result.xy, projector.ground_xy[selected])
+            np.testing.assert_array_equal(result.class_id, full_classes[selected])
+            np.testing.assert_array_equal(result.confidence, normalized[selected])
+            np.testing.assert_array_equal(result.geometric_quality, projector.geometric_quality[selected])
+            np.testing.assert_array_equal(result.source_mask, np.full(np.count_nonzero(selected), projector.source_mask, np.uint8))
+
+    def test_sparse_path_preserves_strided_inputs_empty_classes_and_float_validation(self):
+        projector = ModelGridGroundProjector(self.cameras['front'], model_hw=(96, 160))
+        rng = np.random.RandomState(28)
+        classes = rng.randint(0, 4, projector.model_hw).astype(np.uint8)[:, ::-1]
+        confidence = rng.randint(0, 256, projector.model_hw).astype(np.uint8)[:, ::-1]
+        expected = projector.extract(classes, confidence.astype(np.float32) / 255., {1: .3, 2: .8})
+        actual = projector.extract(classes, confidence, {1: .3, 2: .8})
+        for key in ('xy', 'class_id', 'confidence', 'geometric_quality', 'source_mask'):
+            np.testing.assert_array_equal(getattr(actual, key), getattr(expected, key))
+        self.assertEqual(len(projector.extract(classes, confidence, {}, classes=()).xy), 0)
+        for threshold in (-.1, 1.1, float('nan')):
+            with self.assertRaises(ValueError):
+                projector.extract(classes, confidence, {1: threshold})
+        outside = tuple(np.argwhere(~projector.valid)[0])
+        for value in (float('nan'), -.1, 1.1):
+            invalid = confidence.astype(np.float32) / 255.
+            invalid[outside] = value
+            with self.assertRaises(ValueError):
+                projector.extract(classes, invalid, {})
+        with self.assertRaises(ValueError):
+            projector.extract(classes.astype(np.int16), confidence, {})
+        with self.assertRaises(ValueError):
+            projector.extract(classes, confidence[:-1], {})
+
     def test_front_pixel_maps_directly_to_metric_ground(self):
         result = self._single_point("front", (10.0, 1.5), 1)
         self.assertEqual((1, 2), result.xy.shape)

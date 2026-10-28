@@ -9,6 +9,11 @@ import numpy as np
 
 from .lane_evidence import LaneNode
 
+try:
+    from asmc_camera import _lane_association
+except ImportError:
+    _lane_association = None
+
 
 @dataclass(frozen=True)
 class LaneTrack:
@@ -40,7 +45,7 @@ def _predict_y(nodes, x):
     return slope * float(x) + intercept, slope
 
 
-def associate_lane_nodes_with_audit(
+def _associate_lane_nodes_python(
     nodes,
     max_track_gap_m: float = 2.0,
     max_lateral_residual_m: float = 0.45,
@@ -167,6 +172,61 @@ def associate_lane_nodes_with_audit(
     return result, counters
 
 
+def association_backend_info(backend="auto"):
+    if backend not in ("auto", "python", "native"):
+        raise ValueError("association backend must be auto, python, or native")
+    if backend == "native" and _lane_association is None:
+        raise RuntimeError("native lane association is not built for this Python")
+    return dict(requested=backend, native_available=_lane_association is not None,
+                selected="native_guarded" if backend != "python" and _lane_association is not None else "python")
+
+
+def associate_lane_nodes_with_audit(
+    nodes,
+    max_track_gap_m: float = 2.0,
+    max_lateral_residual_m: float = 0.45,
+    max_heading_change_deg: float = 20.0,
+    min_track_nodes: int = 4,
+    min_observed_span_m: float = 2.0,
+    backend: str = "auto",
+) -> tuple[list, dict]:
+    """Use the optional native kernel, preserving the NumPy reference fallback.
+
+    No persistent track state or changed gates. Near arithmetic-sensitive gates
+    and competing ties, evaluate the entire frame using the original routine.
+    ``python`` is an explicit rollback; ``native`` requires a compiled module.
+    """
+    association_backend_info(backend)
+    parameters = dict(max_track_gap_m=max_track_gap_m,
+        max_lateral_residual_m=max_lateral_residual_m,
+        max_heading_change_deg=max_heading_change_deg,
+        min_track_nodes=min_track_nodes, min_observed_span_m=min_observed_span_m)
+    if (backend == "python" or _lane_association is None or not nodes or
+            not all(math.isfinite(v) for v in parameters.values()) or
+            any(not isinstance(node.xy, np.ndarray) or node.xy.dtype != np.float64 for node in nodes)):
+        return _associate_lane_nodes_python(nodes, **parameters)
+    # Packed input is owned for the duration of the GIL-free call. No Python
+    # LaneNode, source frame buffer, or worker-owned ROS message is borrowed.
+    xy = np.asarray([node.xy for node in nodes], dtype=np.float64)
+    classes = np.asarray([int(node.class_id) for node in nodes], dtype=np.int64)
+    bins = np.asarray([int(node.x_bin) for node in nodes], dtype=np.int64)
+    indices, counts, ambiguous = _lane_association.associate(
+        xy, classes, bins, max_track_gap_m, max_lateral_residual_m,
+        max_heading_change_deg, min_track_nodes, min_observed_span_m)
+    if ambiguous:
+        return _associate_lane_nodes_python(nodes, **parameters)
+    result = [LaneTrack(tuple(nodes[index] for index in track)) for track in indices]
+    counters = dict(zip(("input_nodes", "candidate_pairs", "rejected_nonforward_or_gap",
+        "rejected_lateral_residual", "rejected_heading_change", "assignment_conflicts",
+        "raw_tracklets", "rejected_too_few_nodes", "rejected_short_span", "accepted_tracks"), counts))
+    counters["by_class"] = {
+        str(class_id): dict(input_nodes=int(np.count_nonzero(classes == class_id)),
+                           accepted_tracks=sum(t.class_id == class_id for t in result))
+        for class_id in sorted(set(classes.tolist()))
+    }
+    return result, counters
+
+
 def associate_lane_nodes(
     nodes,
     max_track_gap_m: float = 2.0,
@@ -174,6 +234,7 @@ def associate_lane_nodes(
     max_heading_change_deg: float = 20.0,
     min_track_nodes: int = 4,
     min_observed_span_m: float = 2.0,
+    backend: str = "auto",
 ) -> list:
     result, _ = associate_lane_nodes_with_audit(
         nodes,
@@ -182,5 +243,6 @@ def associate_lane_nodes(
         max_heading_change_deg=max_heading_change_deg,
         min_track_nodes=min_track_nodes,
         min_observed_span_m=min_observed_span_m,
+        backend=backend,
     )
     return result

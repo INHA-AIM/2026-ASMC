@@ -13,6 +13,7 @@ silently turn extrapolation into a usable lane strip.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Dict, Iterable, Sequence, Tuple
 
 import numpy as np
@@ -89,7 +90,7 @@ def _merge_intervals(intervals: Iterable[Tuple[float, float]], tolerance=1e-9):
     values = sorted(
         (float(start), float(end))
         for start, end in intervals
-        if np.isfinite((start, end)).all() and end > start
+        if math.isfinite(start) and math.isfinite(end) and end > start
     )
     if not values:
         return ()
@@ -230,9 +231,7 @@ def _support_intervals(family: SharedLaneFamily):
         SAMPLE_OBSERVED,
         SAMPLE_STRUCTURE_INFERRED,
     }
-    unknown = sorted(
-        set(int(item) for value in states.values() for item in value) - valid_states
-    )
+    unknown = sorted(set(np.unique(np.concatenate(tuple(states.values()))).tolist()) - valid_states)
     if unknown:
         raise ValueError("unknown shared-family support states: {}".format(unknown))
 
@@ -241,31 +240,27 @@ def _support_intervals(family: SharedLaneFamily):
         "right_strip": (YELLOW_ROLE, RIGHT_ROLE),
         "both_strips": (LEFT_ROLE, YELLOW_ROLE, RIGHT_ROLE),
     }
-    result = {
-        name: {"usable": [], "observed": []} for name in pairs
-    }
-    for index in range(len(points) - 1):
-        start_x = float(min(points[index, 0], points[index + 1, 0]))
-        end_x = float(max(points[index, 0], points[index + 1, 0]))
-        if end_x <= start_x:
-            continue
-        for name, roles in pairs.items():
-            endpoints = [
-                int(states[role][sample_index])
-                for role in roles
-                for sample_index in (index, index + 1)
-            ]
-            if all(value != SAMPLE_INVALID for value in endpoints):
-                result[name]["usable"].append((start_x, end_x))
-                if all(value == SAMPLE_OBSERVED for value in endpoints):
-                    result[name]["observed"].append((start_x, end_x))
-    return {
-        name: {
-            key: _merge_intervals(intervals)
-            for key, intervals in value.items()
+    # Test endpoint states in bulk. This retains non-monotonic x and overlap
+    # semantics; it does not assume that every fitted sample is supported.
+    start = np.minimum(points[:-1, 0], points[1:, 0])
+    end = np.maximum(points[:-1, 0], points[1:, 0])
+    finite_segment = np.isfinite(start) & np.isfinite(end) & (end > start)
+    usable_by_role = {role: (state[:-1] != SAMPLE_INVALID) & (state[1:] != SAMPLE_INVALID)
+                      for role, state in states.items()}
+    observed_by_role = {role: (state[:-1] == SAMPLE_OBSERVED) & (state[1:] == SAMPLE_OBSERVED)
+                        for role, state in states.items()}
+    result = {}
+    for name, roles in pairs.items():
+        usable = finite_segment.copy()
+        observed = finite_segment.copy()
+        for role in roles:
+            usable &= usable_by_role[role]
+            observed &= observed_by_role[role]
+        result[name] = {
+            "usable": _merge_intervals(zip(start[usable], end[usable])),
+            "observed": _merge_intervals(zip(start[observed], end[observed])),
         }
-        for name, value in result.items()
-    }
+    return result
 
 
 def measure_planning_usability(
