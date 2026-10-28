@@ -81,6 +81,24 @@ int semanticRegression(){
  auto result=updateSemanticPathPlan();if(!result.empty()){std::cerr<<result;return 32;}
  if(!contact_geometry_ready || bool(contact_result) || semantic_target!=1)return 33;
  if(semantic_safe_length<14.)return 34;
+ // A newer semantic pair without <=50ms LiDAR cannot discard an older
+ // complete tuple that is still fresh. No individual timestamp is refreshed.
+ ros::Time::setNow(ros::Time(100.15));contact_lane_history.push_back({ros::Time(100.12),lanes});
+ auto newest=bev_frames.back();newest.stamp=ros::Time(100.12);bev_frames.push_back(newest);
+ if(!updateSemanticPathPlan().empty() || semantic_selected_stamp!=ros::Time(100))return 38;
+ contact_lane_history.pop_back();bev_frames.pop_back();ros::Time::setNow(ros::Time(100));
+ // A measured local collision vetoes semantic free space, including blind
+ // assistance. An empty array is never allowed to overwrite this geometry.
+ auto occupied=boost::make_shared<asmc_msgs::LidarTrackingObservation>(*local);
+ occupied->observation.objects.status=occupied->observation.objects.OBSERVED;
+ asmc_msgs::LidarObject obstacle;obstacle.observation_state=obstacle.OBSERVED;
+ obstacle.source_point_count=8;obstacle.length=1.;obstacle.width=9.;obstacle.height=1.;
+ unsigned k=0;for(double x:{6.,7.})for(double y:{-3.,6.})for(double z:{0.,1.}){
+  obstacle.obb_corners[k].x=x;obstacle.obb_corners[k].y=y;obstacle.obb_corners[k++].z=z;}
+ occupied->observation.objects.objects.push_back(obstacle);
+ semantic_local=lane_boundary_adapter::LocalObstacleSupport();semantic_local.accept(occupied,ros::Time(100),ros::SteadyTime::now());
+ if(updateSemanticPathPlan()!="semantic_all_paths_blocked_or_unobserved" || !contact_collision_rejected)return 39;
+ semantic_local=lane_boundary_adapter::LocalObstacleSupport();semantic_local.accept(local,ros::Time(100),ros::SteadyTime::now());
  // The same algorithm must refuse an all-unknown grid, even with EMPTY LiDAR.
  auto grid=std::make_shared<lane_boundary_adapter::clearance::DrivableClearance>();
  std::vector<uint8_t> zeros(40000,0),free(40000,255);
