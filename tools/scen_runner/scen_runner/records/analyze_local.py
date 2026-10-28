@@ -6,6 +6,12 @@ import json
 from pathlib import Path
 
 
+def read_rows(path):
+    with path.open() as stream:
+        for line in stream:
+            yield json.loads(line)
+
+
 def quantiles(values):
     x = sorted(values)
     return {
@@ -30,8 +36,7 @@ def analyze(root, output_name="summary.json"):
     last_frame = None
     examples = {}
     previous = None
-    for line in (root / "decisions.jsonl").open():
-        row = json.loads(line)
+    for row in read_rows(root / "decisions.jsonl"):
         count += 1
         valid += bool(row["valid"])
         assisted += bool(row.get("assisted"))
@@ -60,8 +65,7 @@ def analyze(root, output_name="summary.json"):
             examples[key] = row
     control = []
     if (root / "control.jsonl").exists():
-        for line in (root / "control.jsonl").open():
-            row = json.loads(line)
+        for row in read_rows(root / "control.jsonl"):
             if row.get("valid", True):
                 control.append(row["processing_ms"])
     result = dict(

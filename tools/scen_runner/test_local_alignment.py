@@ -115,7 +115,7 @@ def main():
             sequence = 0
 
             prepare_mode = False
-            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20):
+            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0):
                 nonlocal sequence
                 rows.clear()
                 plans.clear()
@@ -164,6 +164,8 @@ def main():
                                 Point(x * 0.5, y, -0.36) for x in range(41)
                             ]
                             line.support_state = [1] * 41
+                            if role == folded_role:
+                                line.polyline[10].x = line.polyline[9].x - .2
                             family.boundaries.append(line)
                         raster = Image()
                         raster.header.stamp = stamp
@@ -229,6 +231,11 @@ def main():
             assert any(r["reason"] == "local_objects_invalid" for r in result)
             assert not any(r.get("scene_valid") for r in result[-3:])
             print("latest INVALID never revives older valid scan PASS")
+            result, _ = feed(1.2, 1., status=empty, folded_role=1)
+            assert any(r.get('valid') for r in result), [r['reason'] for r in result]
+            result, _ = feed(.7, 1., status=empty, folded_role=3)
+            assert result[-1]['reason']=='family_not_monotonic'
+            print('Unused opposite boundary cannot invalidate home; required boundary remains strict PASS')
             result, _ = feed(1.5, 1.0, status=empty, camera_age=.275)
             late = [r for r in result if r.get('valid')]
             assert late, [r['reason'] for r in result]

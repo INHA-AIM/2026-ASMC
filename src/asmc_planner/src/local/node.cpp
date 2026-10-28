@@ -666,8 +666,13 @@ class Node {
                  sy = std::sin(g.source_in_plan[2]);
     std::map<int, std::vector<std::array<double, 2>>> bounds;
     for (const auto &bound : family->boundaries) {
+      // Only centre/right define LOCAL's home reference. A folded inferred
+      // opposite outer line is not evidence that the semantic road is blocked.
+      // Do not sort/repair a required boundary or bridge its support gaps.
+      if (bound.role != 1 && bound.role != 2 && bound.role != 3) continue;
       if (bound.support_state.size() != bound.polyline.size())
         continue;
+      bool optional_invalid = false;
       bool started = false;
       for (size_t k = 0; k < bound.polyline.size(); ++k) {
         if (bound.support_state[k] == 0) {
@@ -677,6 +682,7 @@ class Node {
         }
         auto v = bound.polyline[k];
         if (!std::isfinite(v.x + v.y + v.z)) {
+          if (bound.role == 1) { optional_invalid = true; break; }
           invalid("family_nonfinite");
           return;
         }
@@ -686,12 +692,14 @@ class Node {
         q[1] = g.source_in_plan[1] + sy * qx + cy * qy;
         auto &line = bounds[bound.role];
         if (!line.empty() && q[0] <= line.back()[0]) {
+          if (bound.role == 1) { optional_invalid = true; break; }
           invalid("family_not_monotonic");
           return;
         }
         line.push_back({q[0], q[1]});
         started = true;
       }
+      if (optional_invalid) bounds.erase(1);
     }
     if (bounds[2].size() < 2 || bounds[3].size() < 2) {
       invalid("family_support");

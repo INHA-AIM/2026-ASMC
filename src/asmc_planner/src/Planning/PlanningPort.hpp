@@ -17,6 +17,7 @@
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 #include <ros/ros.h>
+#include <std_msgs/Bool.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #include "Frenet/frenet_planner.hpp"
@@ -261,6 +262,10 @@ class PlanningPort {
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
     ros::Subscriber vehicle_sub_;
+    ros::Subscriber local_prepare_sub_;
+    bool local_prepare_enabled_ = false, local_preparing_ = false;
+    ros::SteadyTime local_prepare_received_;
+    double local_entry_cap_kph_ = 10.;
     ros::Subscriber objects_sub_;
     ros::Subscriber behavior_sub_;
     ros::Subscriber behavior_command_v2_sub_;

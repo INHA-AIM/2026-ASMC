@@ -18,6 +18,14 @@ PlanningPort::PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh,
                            FeedbackSink feedback_sink)
     : feedback_sink_(std::move(feedback_sink)),
       nh_(std::move(nh)), pnh_(std::move(pnh)) {
+    nh_.param("/planning_mode/local_prepare_enabled", local_prepare_enabled_, false);
+    if (local_prepare_enabled_) {
+      nh_.param("/local_planner/speed_cap_kph", local_entry_cap_kph_, 10.);
+      local_prepare_sub_ = nh_.subscribe<std_msgs::Bool>("/planning/mode/local_prepare",1,
+          [this](const std_msgs::Bool::ConstPtr& m) {
+            local_preparing_ = m->data; local_prepare_received_ = ros::SteadyTime::now();
+          });
+    }
     nh_.param("/control_binding/enabled",control_binding_enabled_,false);
     if(control_binding_enabled_) {
       control_plan_pub_=nh_.advertise<std_msgs::UInt8MultiArray>("/planning/control_plan",10);

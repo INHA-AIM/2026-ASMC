@@ -1,8 +1,11 @@
 import json
+from pathlib import Path
+import tempfile
+import unittest
 from scen_runner.records.analyze_local import analyze
 
 
-def test_full_delivery_clock_and_marked_drive_window(tmp_path):
+def check_delivery_clock_and_marked_drive_window(tmp_path):
     def rows(name, values):
         (tmp_path/name).write_text(''.join(json.dumps(v)+'\n' for v in values))
     rows('decisions.jsonl', [])
@@ -18,3 +21,12 @@ def test_full_delivery_clock_and_marked_drive_window(tmp_path):
     assert result['wire_command_receive_gap_ms']['max']>1000
     assert abs(result['driving_wire_command_receive_gap_ms']['max']-50)<1e-6
     assert result['rss_kib']['planner']==dict(first=10,last=11,maximum=12,samples=3)
+
+
+class DeliveryMetricsTest(unittest.TestCase):
+    def test_full_delivery_clock_and_marked_drive_window(self):
+        with tempfile.TemporaryDirectory() as root:
+            check_delivery_clock_and_marked_drive_window(Path(root))
+
+
+if __name__=='__main__': unittest.main()
