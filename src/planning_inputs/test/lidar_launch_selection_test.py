@@ -14,7 +14,8 @@ class LidarLaunchSelection(unittest.TestCase):
         self.assertEqual(c.params['/planning_objects_adapter/input_topic'].value,
                          '/perception/lidar/planning_observations_map')
         self.assertFalse(any(n.type in ('tracked_wire_bridge.py','lidar_pipeline_node') for n in c.nodes))
-        self.assertNotIn('/camera_bbox_lane_change/return_to_entry_lane',c.params)
+        # PR127 enables entry-lane recovery in the integrated stack after avoidance.
+        self.assertTrue(c.params['/camera_bbox_lane_change/return_to_entry_lane'].value)
         self.assertFalse(c.params['/camera_bbox_lane_change/one_lane_change_only'].value)
         self.assertTrue(c.params['/camera_bbox_lane_change/straddle_avoidance'].value)
     def test_scenario_producer_and_consumer(self):
@@ -25,7 +26,8 @@ class LidarLaunchSelection(unittest.TestCase):
         c=config('tools/scen_runner/launch/planning.launch')
         self.assertEqual(c.params['/planning_objects_adapter/input_topic'].value,
                          '/perception/lidar/planning_observations_map')
-        self.assertNotIn('/camera_bbox_lane_change/return_to_entry_lane',c.params)
+        # The scenario harness includes the standalone launch, which still opts out.
+        self.assertFalse(c.params['/camera_bbox_lane_change/return_to_entry_lane'].value)
         self.assertFalse(c.params['/camera_bbox_lane_change/one_lane_change_only'].value)
         self.assertTrue(c.params['/camera_bbox_lane_change/straddle_avoidance'].value)
     def test_explicit_test_namespace_input(self):

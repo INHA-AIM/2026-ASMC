@@ -124,7 +124,8 @@ struct Parameters {
     int obstacle_confirm_frames = 2;      // 내 차로 검출을 연속 확인할 서로 다른 BBOX frame 수.
     int adjacent_clear_frames = 3;        // 옆 차로 NO_DETECTION 연속 확인 수. 실제 빈 공간 보장은 아님.
     bool ignore_bbox_during_lane_change = true; // 변경 중 BBOX 검출/UNKNOWN/유실에 의한 정지·감속 제외. 완료 즉시 복원.
-    bool one_lane_change_only = false;    // false: 새 내 차로의 장애물에 따라 반복 변경. 장애물 없는 자동 복귀는 하지 않음.
+    bool one_lane_change_only = false;
+    bool return_to_entry_lane = false;    // 통합 재밍 주행: 양 차로 연속 미검출 후 진입 차로 복귀.
     double obstacle_lateral_margin = 0.30; // [m] 도로 경계 검사에 사용할 차량 좌우 여유.
     double obstacle_longitudinal_margin = 0.5; // [m] 차량 전후 여유. 장애물 거리 여유가 아님.
     double vehicle_front = 3.845;           // [m] base_link(후륜축)에서 앞범퍼까지.
@@ -150,6 +151,10 @@ struct Parameters {
     double ego_speed_timeout = 0.3;         // [s] 속도 미수신 상한. 회피 중 초과하면 정지.
     double avoid_clearance = 0.5;           // [m] 차체 측면과 장애물 하단 가장자리 사이 최소 간격.
     double avoid_speed_kph = 8.0;           // [km/h] 회피 중 속도 상한.
+    // 인식·판단 정지(차선 끊김, 지날 선 없음 등) 대신 마지막 조향을 유지하고 이 속도로 기어간다. 0이면 기존처럼 정지.
+    // 비상정지·입력 timeout·사람 정지·차속 없음, 그리고 앞 creep_clear_distance 안의 경로 장애물은 그대로 정지한다.
+    double creep_speed_kph = 0.0;
+    double creep_clear_distance = 2.0;      // [m] 앞 범퍼부터 이 거리까지 지금 조향의 경로에 장애물이 없어야 기어간다. 0 이하면 검사 안 함.
     double avoid_obstacle_length = 6.0;     // [m] 보이지 않는 장애물 전후 길이 가정. 하단 접점부터 전방으로 적용.
     double avoid_pass_margin = 2.0;         // [m] 장애물 끝 + 차량 후방을 지난 뒤 추가 이동 거리.
     double avoid_lane_tie = 0.10;           // [m] 두 차로 offset 차이가 이 값 이하면 내 차로 유지.
@@ -170,6 +175,9 @@ struct Parameters {
     // 5개 기준선(1 왼쪽 끝, 2 왼쪽 차로 중앙, 3 중앙선, 4 오른쪽 차로 중앙, 5 오른쪽 끝) 사이를 이 간격으로 나눈
     // 후보 주행선 중 장애물 간격·주행 영역을 지키며 내 차로 중앙(2 또는 4)에 가장 가까운 선을 고른다.
     double avoid_line_step = 0.25;
+    // [m] 선 선택에 쓰는 장애물의 최대 전방 거리. 한 선으로 먼 장애물까지 함께 피하려 하면 엇갈린 장애물
+    // 사이 통로를 출발하지 못한다. 더 먼 장애물은 가까워지면 그때 다시 선을 고른다. 0 이하면 제한 없음.
+    double line_obstacle_reach = 20.0;
     // 회피 선을 고른 뒤 같은 방향으로 더 밀어 여유를 늘린다. 0이면 기존처럼
     // 통과 가능한 가장 가까운 선(최소 횡이동)을 쓴다. 단위는 선 번호.
     double avoid_line_extra = 0.0;
@@ -275,6 +283,9 @@ struct LaneChangeState {
     int obstacle_hits = 0;
     int clear_hits = 0;
     int target_lane = -1;
+    int entry_lane = -1;
+    bool returning_to_entry = false;
+    ros::SteadyTime return_clear_since;
     bool changing = false;
     bool change_failed = false;
     std::string change_failure_reason;
@@ -341,12 +352,18 @@ struct LineObstacle {
     double line_left, line_right;         // 덮는 범위(선 번호). line_left < line_right.
     double odom_at;
     int hits;                             // 서로 다른 관측 frame에서 확인한 횟수.
+    bool lidar = false;                   // LiDAR 측정. 매 LiDAR 스캔의 형상으로 교체한다(합치지 않음).
 };
 struct LineState {
     double target = 0.0;                  // 따라가는 선(1~5 좌표). 0이면 아직 정하지 않음.
     double home = 0.0;                    // 복귀할 차로 중앙(2 또는 4).
+    double lane_home = 0.0;               // 지금 선에서 가까운 차로 중앙. 횡이동 상한(avoid_max_offset)의 기준.
+    // return_to_entry_lane: 진입 차로 중앙(2 또는 4). 회피로 옆 차로에 가도 지난 뒤 여기로 돌아와
+    // 재밍 종료 시 일반 플래너 기준 경로(lateral 범위) 안에서 넘겨준다. 0이면 사용 안 함.
+    double return_home = 0.0;
     double odom = 0.0;                    // [m] 실제 속도 적분 이동 거리.
     std::vector<LineObstacle> obstacles;  // 선 좌표로 기억한 장애물(화면 밖에서도 유지).
+    unsigned long lidar_sequence = 0;     // 마지막으로 반영한 LiDAR 스캔.
 } line_state;
 bool line_mode_active = false;
 
@@ -369,6 +386,7 @@ struct AvoidPlan {
 
 ros::Subscriber bbox_subscriber;
 ros::Subscriber mode_subscriber;
+ros::Subscriber gps_return_subscriber;
 ros::Subscriber ego_subscriber;
 ros::Subscriber lidar_subscriber;
 ros::Subscriber imu_subscriber;
@@ -447,6 +465,7 @@ std::string startLaneChange(int adjacent_index, const LaneChain& adjacent,
 std::string updateLinePlan(bool new_scan);
 bool lineObstacleArea(const LineObstacle& obstacle, std::array<FamilyPoint2d, 4>& area);
 bool lineObstacleConfirmed(const LineObstacle& obstacle);
+double lineObstacleX(const LineObstacle& obstacle);
 
 
 struct RosInterface {
@@ -476,6 +495,9 @@ double calculateSteering(double curvature, double dt);
 double calculateTargetSpeed(double curvature);
 morai_msgs::CtrlCmd makeStopCommand();
 morai_msgs::CtrlCmd makeFollowingCommand(double dt);
+morai_msgs::CtrlCmd makeCreepCommand(double dt);
+bool hardStopReason(const std::string& reason);
+bool creepPathBlocked();
 void publishControlCommand(const morai_msgs::CtrlCmd& command);
 void publishShutdownStop();
 
@@ -575,6 +597,9 @@ void resetActuationLifecycle() {
     change_state.change_started = ros::SteadyTime();
     change_state.completed_at = ros::SteadyTime();
     change_state.has_completed = false;
+    change_state.entry_lane = -1;
+    change_state.returning_to_entry = false;
+    change_state.return_clear_since = ros::SteadyTime();
     change_state.maximum_path_curvature = 0.0;
     change_state.measured.clear();
     change_state.measured_complete = false;
@@ -590,6 +615,15 @@ void resetActuationLifecycle() {
     std_msgs::Int8 automatic_lane;
     automatic_lane.data = -1;
     reference_lane_publisher.publish(automatic_lane);
+}
+
+// GpsModeSource: 재밍 원인이 사라졌고 일반 주행으로 넘기기 전(복귀 대기)이면 true.
+bool gps_return = false;
+void gpsReturnCallback(const std_msgs::Bool::ConstPtr& message) {
+    if (!message || message->data == gps_return) return;
+    gps_return = message->data;
+    ROS_WARN("GPS return %s: %s", gps_return ? "started" : "cleared",
+             gps_return ? "steer back to the entry lane before the normal handoff" : "normal rules");
 }
 
 void modeCallback(const std_msgs::UInt8::ConstPtr& message) {
@@ -614,6 +648,8 @@ void modeCallback(const std_msgs::UInt8::ConstPtr& message) {
 
 void egoCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& message) {
     if (!message) return;
+    // Integration PR128/PR127: CompetitionInfo supplies longitudinal x only.
+    // Keep the validated main contract; do not integrate absent/lateral y into odometry or pedal control.
     const double speed = std::fabs(message->velocity.x);
     if (!std::isfinite(speed)) return;
     ego_speed.speed = speed;
@@ -854,9 +890,11 @@ void updateLaneChangeTiming(const ros::SteadyTime& now) {
 }
 
 bool ignoreBboxDuringLaneChange() {
+    // A voluntary return always keeps live target-obstacle/freshness checks.
     // 회피 중에는 기억한 장애물 기하로 경로를 검사하므로 차선변경과 같은 제외 규칙을 쓴다.
-    return params.ignore_bbox_during_lane_change && (change_state.changing || avoid_state.active ||
-        (line_mode_active && !line_state.obstacles.empty()));
+    return params.ignore_bbox_during_lane_change &&
+        ((change_state.changing && !change_state.returning_to_entry) || avoid_state.active ||
+         (line_mode_active && !line_state.obstacles.empty()));
 }
 
 void cameraLaneFollowingProcess() {
@@ -905,16 +943,25 @@ void cameraLaneFollowingProcess() {
     } else {
         change_state.obstacle_hits = 0;
         change_state.clear_hits = 0;
+        change_state.return_clear_since = ros::SteadyTime();
     }
     if (!stop_reason.empty()) change_state.completion_hits = 0;
     const bool tracking = stop_reason.empty() && follower_state.target_ready;
-    if (!tracking) speed_integral = 0.0;
+    // 인식·판단 정지면 앞 경로가 비어 있는 한 마지막 조향으로 기어간다(creep_speed_kph).
+    const bool creep = !tracking && !stop_reason.empty() && params.creep_speed_kph > params.epsilon &&
+        mode_active && !hardStopReason(stop_reason) && !creepPathBlocked();
+    if (!tracking && !creep) speed_integral = 0.0;
     morai_msgs::CtrlCmd command = makeStopCommand();
 
     // 3. 유효한 목표점이 있을 때만 조향 / 속도를 계산.
     if (tracking) {
         command = makeFollowingCommand(dt);
         publishTargetPoint();
+    } else if (creep) {
+        ROS_WARN_THROTTLE(2.0, "Camera lane follower CREEP %.1f km/h instead of stop: %s",
+                          params.creep_speed_kph, stop_reason.c_str());
+        command = makeCreepCommand(dt);
+        stop_reason = "creep:" + stop_reason;
     }
 
     change_state.last_command_driving = change_state.changing && tracking &&
@@ -1019,6 +1066,64 @@ morai_msgs::CtrlCmd makeStopCommand() {
     return command;
 }
 
+// 목표 속도[km/h]를 페달 PI(차속 있을 때) 또는 MORAI 내장 속도 제어로 명령에 넣는다.
+void applySpeedControl(morai_msgs::CtrlCmd& command, double target_speed, double dt) {
+    command.velocity = target_speed;  // [km/h] 페달 제어에서도 진단용으로 목표를 남긴다.
+    if (params.pedal_speed_control && egoSpeedFresh()) {
+        // 페달 PI: 목표보다 느리면 가속, 빠르면 브레이크. 둘을 동시에 밟지 않는다.
+        command.longlCmdType = 1;
+        const double error = target_speed / 3.6 - ego_speed.speed;
+        speed_integral = std::clamp(speed_integral + error * dt,
+                                    -params.speed_integral_limit, params.speed_integral_limit);
+        const double effort = params.speed_kp * error + params.speed_ki * speed_integral;
+        if (effort >= 0.0) command.accel = std::min(effort, params.max_accel_pedal);
+        else command.brake = std::min(-effort, params.max_brake_pedal);
+    } else {
+        command.longlCmdType = 2;  // 속도 입력이 없을 때만 MORAI 내장 속도 제어.
+    }
+}
+
+// 기어가기를 허용하지 않는 정지: 안전 입력·의도된 정지·차속 없음.
+bool hardStopReason(const std::string& reason) {
+    return reason == "emergency_stop" || reason == "inactive_mode" || reason == "person_stop" ||
+        reason.find("timeout") != std::string::npos || reason.find("expired") != std::string::npos ||
+        reason.find("restart_required") != std::string::npos || !egoSpeedFresh();
+}
+
+// 마지막 조향의 원호를 따라 앞 범퍼부터 creep_clear_distance까지 차체 폭 안에 장애물이 있으면 막힘.
+bool creepPathBlocked() {
+    if (params.creep_clear_distance <= 0.0) return false;  // 장애물로는 멈추지 않는다(사람 정지는 hardStopReason).
+    const double curvature = std::tan(follower_state.last_steering) * params.steering_curvature_gain / params.wheelbase;
+    const double half_width = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
+    const double reach = params.vehicle_front + params.creep_clear_distance;
+    const auto hits = [&](double x0, double x1, double y_min, double y_max) {
+        for (double x = 0.0; x <= reach + params.epsilon; x += 0.25) {
+            if (x < x0 || x > x1) continue;
+            const double y = 0.5 * curvature * x * x;
+            if (y_min <= y + half_width && y_max >= y - half_width) return true;
+        }
+        return false;
+    };
+    for (const auto& obstacle : planning_obstacles) {
+        if (hits(obstacle.x, obstacle.x_far, obstacle.y_min, obstacle.y_max)) return true;
+    }
+    LineFrame frame;
+    for (const auto& obstacle : line_state.obstacles) {
+        const double x0 = lineObstacleX(obstacle);
+        if (!lineObstacleConfirmed(obstacle) || !lineFrameAt(std::max(x0, params.planning_start_x), frame)) continue;
+        const double y_left = lineY(frame, obstacle.line_left), y_right = lineY(frame, obstacle.line_right);
+        if (hits(x0, x0 + obstacle.length, std::min(y_left, y_right), std::max(y_left, y_right))) return true;
+    }
+    return false;
+}
+
+morai_msgs::CtrlCmd makeCreepCommand(double dt) {
+    morai_msgs::CtrlCmd command;
+    command.steering = follower_state.last_steering;
+    applySpeedControl(command, params.creep_speed_kph, dt);
+    return command;
+}
+
 morai_msgs::CtrlCmd makeFollowingCommand(double dt) {
     // 목표 속도가 0이면 제동 명령을 유지하고, 조향 계산 상태만 갱신한다.
     morai_msgs::CtrlCmd command = makeStopCommand();
@@ -1028,20 +1133,8 @@ morai_msgs::CtrlCmd makeFollowingCommand(double dt) {
 
     if (target_speed > 0.0) {
         command = morai_msgs::CtrlCmd();
-        command.velocity = target_speed;  // [km/h] 페달 제어에서도 진단용으로 목표를 남긴다.
         command.steering = steering;      // [rad], 기존 MPC / bridge와 동일.
-        if (params.pedal_speed_control && egoSpeedFresh()) {
-            // 페달 PI: 목표보다 느리면 가속, 빠르면 브레이크. 둘을 동시에 밟지 않는다.
-            command.longlCmdType = 1;
-            const double error = target_speed / 3.6 - ego_speed.speed;
-            speed_integral = std::clamp(speed_integral + error * dt,
-                                        -params.speed_integral_limit, params.speed_integral_limit);
-            const double effort = params.speed_kp * error + params.speed_ki * speed_integral;
-            if (effort >= 0.0) command.accel = std::min(effort, params.max_accel_pedal);
-            else command.brake = std::min(-effort, params.max_brake_pedal);
-        } else {
-            command.longlCmdType = 2;  // 속도 입력이 없을 때만 MORAI 내장 속도 제어.
-        }
+        applySpeedControl(command, target_speed, dt);
     }
 
     return command;
@@ -1632,6 +1725,10 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "active_lane", std::to_string(follower_state.locked_lane));
     addDiagnosticValue(status, "clipped_obstacle_tracking", change_state.clipped_association ? "true" : "false");
     addDiagnosticValue(status, "locked_lane", std::to_string(follower_state.locked_lane));
+    addDiagnosticValue(status, "entry_lane", std::to_string(change_state.entry_lane));
+    addDiagnosticValue(status, "returning_to_entry", change_state.returning_to_entry ? "true" : "false");
+    addDiagnosticValue(status, "gps_return", gps_return ? "true" : "false");
+    addDiagnosticValue(status, "line_return_home", std::to_string(line_state.return_home));
     addDiagnosticValue(status, "source_age_sec", std::to_string(source_age));
     addDiagnosticValue(status, "lookahead_distance", std::to_string(params.lookahead_distance));
     addDiagnosticValue(status, "target_y_m", tracking ? std::to_string(follower_state.target_point.y) : "unavailable");
@@ -1685,7 +1782,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     diagnostics.status.push_back(status);
     ros_interface.diagnostic_pub.publish(diagnostics);
 
-    if (!tracking) {
+    if (!tracking && reason.rfind("creep:", 0) != 0) {
         ROS_WARN_THROTTLE(2.0, "Camera lane follower STOP: %s (source age=%.3fs)", reason.c_str(), source_age);
     }
 }
@@ -1723,6 +1820,7 @@ void initializeRosInterface(ros::NodeHandle& nh) {
     ros_interface.lane_sub = nh.subscribe(params.input_topic, 1, laneBoundaryCallback);
     ros_interface.stop_sub = nh.subscribe(params.emergency_stop_topic, 1, emergencyStopCallback);
     mode_subscriber = nh.subscribe("/planning/mode", 1, modeCallback);
+    gps_return_subscriber = nh.subscribe("/planning/mode/gps_return", 1, gpsReturnCallback);
     if (params.straddle_avoidance) ego_subscriber = nh.subscribe(params.ego_topic, 1, egoCallback);
     if (params.straddle_avoidance && params.lane_hold_distance > 0.0) {
         imu_subscriber = nh.subscribe(params.imu_topic, 5, imuCallback);
@@ -1753,6 +1851,7 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("person_ignore_sec", params.person_ignore_sec, params.person_ignore_sec);
     private_nh.param("ignore_bbox_during_lane_change", params.ignore_bbox_during_lane_change, params.ignore_bbox_during_lane_change);
     private_nh.param("one_lane_change_only", params.one_lane_change_only, params.one_lane_change_only);
+    private_nh.param("return_to_entry_lane", params.return_to_entry_lane, params.return_to_entry_lane);
     private_nh.param("max_lateral_step", params.max_lateral_step, params.max_lateral_step);
     private_nh.param("max_sensor_skew", params.max_sensor_skew, params.max_sensor_skew);
     private_nh.param("obstacle_confirm_frames", params.obstacle_confirm_frames, params.obstacle_confirm_frames);
@@ -1780,6 +1879,8 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("ego_speed_timeout", params.ego_speed_timeout, params.ego_speed_timeout);
     private_nh.param("avoid_clearance", params.avoid_clearance, params.avoid_clearance);
     private_nh.param("avoid_speed_kph", params.avoid_speed_kph, params.avoid_speed_kph);
+    private_nh.param("creep_speed_kph", params.creep_speed_kph, params.creep_speed_kph);
+    private_nh.param("creep_clear_distance", params.creep_clear_distance, params.creep_clear_distance);
     private_nh.param("avoid_obstacle_length", params.avoid_obstacle_length, params.avoid_obstacle_length);
     private_nh.param("avoid_pass_margin", params.avoid_pass_margin, params.avoid_pass_margin);
     private_nh.param("avoid_lane_tie", params.avoid_lane_tie, params.avoid_lane_tie);
@@ -1791,6 +1892,7 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("avoid_wall_margin", params.avoid_wall_margin, params.avoid_wall_margin);
     private_nh.param("avoid_line_overrun", params.avoid_line_overrun, params.avoid_line_overrun);
     private_nh.param("avoid_line_step", params.avoid_line_step, params.avoid_line_step);
+    private_nh.param("line_obstacle_reach", params.line_obstacle_reach, params.line_obstacle_reach);
     private_nh.param("avoid_line_extra", params.avoid_line_extra, params.avoid_line_extra);
     private_nh.param("line_edge_expand", params.line_edge_expand, params.line_edge_expand);
     private_nh.param("lane_hold_distance", params.lane_hold_distance, params.lane_hold_distance);
@@ -1935,6 +2037,7 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         change_state.bbox_valid = false;
         change_state.bbox_error = reason;
         change_state.obstacle_hits = change_state.clear_hits = 0;
+        change_state.return_clear_since = ros::SteadyTime();
         change_state.measured.clear();
         change_state.measured_complete = false;
         avoid_state.hits = 0;
@@ -2613,16 +2716,42 @@ bool lineObstacleConfirmed(const LineObstacle& obstacle) {
     return obstacle.hits >= params.obstacle_confirm_frames;
 }
 
+// line_obstacle_reach보다 먼 장애물은 지금 선 선택(선 간격·틈 중앙)에서 뺀다.
+bool lineObstacleInReach(const LineObstacle& obstacle) {
+    return params.line_obstacle_reach <= 0.0 || lineObstacleX(obstacle) <= params.line_obstacle_reach;
+}
+
 // 이번 관측(카메라 접점, 켜져 있으면 LiDAR)을 선 좌표로 바꿔 기억한다. 같은 물체는 덮는 범위를 합친다.
+// 카메라 박스는 가까워지면 화면 끝에서 잘려 좁게 측정되므로 기억한 범위와 합친다(줄이지 않음).
+// LiDAR는 매 스캔 물체 전체 OBB를 주므로, 이번 스캔에서 보인 물체는 겹치는 이전 기억을 최신 형상으로
+// 교체한다(합치면 근처 물체·일시 측정·이동 중 오차가 누적되어 좁은 통로가 막힌다). 이번 스캔에서
+// 보이지 않은 이전 LiDAR 물체(옆을 지나는 중 가림·추적 끊김)는 지날 때까지 그대로 유지한다.
 void rememberLineObstacles(bool new_scan) {
+    const bool lidar_scan = lidarFresh() && lidar_state.sequence != line_state.lidar_sequence;
+    std::vector<LineObstacle> lidar_scan_obstacles;
     for (const auto& obstacle : planning_obstacles) {
         LineFrame frame;
         if (!lineFrameAt(std::max(obstacle.x, params.planning_start_x), frame)) continue;
-        const LineObstacle measured{obstacle.x, obstacle.x_far - obstacle.x, lineOf(frame, obstacle.y_max),
-                                    lineOf(frame, obstacle.y_min), line_state.odom, 1};
+        LineObstacle measured{obstacle.x, obstacle.x_far - obstacle.x, lineOf(frame, obstacle.y_max),
+                              lineOf(frame, obstacle.y_min), line_state.odom, 1};
+        if (obstacle.lidar) {
+            if (!lidar_scan) continue;  // 같은 LiDAR 스캔을 여러 제어 주기에 다시 반영하지 않는다.
+            measured.lidar = true;
+            // 겹치는 이전 LiDAR 물체의 확인 횟수를 이어받는다.
+            for (const auto& old : line_state.obstacles) {
+                if (!old.lidar) continue;
+                const double old_x = lineObstacleX(old);
+                if (old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
+                    old.line_left < measured.line_right && measured.line_left < old.line_right) {
+                    measured.hits = std::max(measured.hits, std::min(old.hits + 1, params.obstacle_confirm_frames));
+                }
+            }
+            lidar_scan_obstacles.push_back(measured);
+            continue;
+        }
         auto same = std::find_if(line_state.obstacles.begin(), line_state.obstacles.end(), [&](const auto& old) {
             const double old_x = lineObstacleX(old);
-            return old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
+            return !old.lidar && old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
                 old.line_left < measured.line_right && measured.line_left < old.line_right;
         });
         if (same == line_state.obstacles.end()) {
@@ -2635,6 +2764,19 @@ void rememberLineObstacles(bool new_scan) {
         same->length = measured.length;
         same->odom_at = measured.odom_at;
         if (new_scan) same->hits = std::min(same->hits + 1, params.obstacle_confirm_frames);
+    }
+    if (lidar_scan) {
+        line_state.lidar_sequence = lidar_state.sequence;
+        auto& stored = line_state.obstacles;
+        stored.erase(std::remove_if(stored.begin(), stored.end(), [&](const auto& old) {
+            if (!old.lidar) return false;
+            const double old_x = lineObstacleX(old);
+            return std::any_of(lidar_scan_obstacles.begin(), lidar_scan_obstacles.end(), [&](const auto& measured) {
+                return old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
+                    old.line_left < measured.line_right && measured.line_left < old.line_right;
+            });
+        }), stored.end());
+        stored.insert(stored.end(), lidar_scan_obstacles.begin(), lidar_scan_obstacles.end());
     }
     const double passed = params.vehicle_rear + params.avoid_pass_margin;
     auto& obstacles = line_state.obstacles;
@@ -2706,14 +2848,22 @@ bool pathClearOfLineObstacles(const std::vector<FamilyPoint2d>& path) {
 }
 
 // 선 단위 사전 검사: 내 차로 중앙 기준 횡이동 상한, 각 장애물과 판단 여유, 주행 영역.
+// 횡이동 상한은 지금 차로 중앙 기준이다. 진입 차로 복귀 중에는 진입 차로 중앙 기준도 허용한다.
+// (진입 차로를 기준으로만 재면 진입 차로를 막은 장애물을 옆 차로로 피하는 선이 모두 거부된다.)
 bool lineAllowed(double line) {
     LineFrame near;
-    if (!lineFrameAt(params.planning_start_x, near) ||
-        std::abs(lineY(near, line) - lineY(near, line_state.home)) > params.avoid_max_offset + params.epsilon) return false;
+    if (!lineFrameAt(params.planning_start_x, near)) return false;
+    const auto within = [&](double home) {
+        return home > 0.0 && std::abs(lineY(near, line) - lineY(near, home)) <= params.avoid_max_offset + params.epsilon;
+    };
+    if (!within(line_state.lane_home) && !within(line_state.return_home)) return false;
     const double edge = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
     const double clear = params.vehicle_width / 2.0 + params.avoid_clearance + params.avoid_plan_margin;
     for (const auto& obstacle : line_state.obstacles) {
-        if (!lineObstacleConfirmed(obstacle)) continue;
+        if (!lineObstacleConfirmed(obstacle) || !lineObstacleInReach(obstacle)) continue;
+        // 차량 후방까지 완전히 지난 장애물은 선 간격 판단에서 뺀다(경로 footprint 검사는 그대로).
+        if (lineObstacleX(obstacle) + obstacle.length + params.vehicle_rear +
+            params.obstacle_longitudinal_margin < 0.0) continue;
         const double x = std::max(lineObstacleX(obstacle), params.planning_start_x);
         LineFrame frame;
         double left = 0.0, right = 0.0;
@@ -2738,26 +2888,48 @@ bool lineClear(double line, std::vector<FamilyPoint2d>& path) {
     return false;
 }
 
+// 선 line의 왼쪽과 오른쪽에 모두 아직 지나지 않은 장애물이 있으면 그 사이 틈의 중앙 선.
+// 한쪽에만 있거나 line이 장애물 안이면 false. 좁은 틈은 한쪽에 붙지 않고 가운데로 지난다.
+bool lineGapCentre(double line, double& centre) {
+    double left = -std::numeric_limits<double>::infinity();
+    double right = std::numeric_limits<double>::infinity();
+    for (const auto& obstacle : line_state.obstacles) {
+        if (!lineObstacleConfirmed(obstacle) || !lineObstacleInReach(obstacle) ||
+            lineObstacleX(obstacle) + obstacle.length + params.vehicle_rear + params.avoid_pass_margin <= 0.0) continue;
+        if (obstacle.line_right <= line) left = std::max(left, obstacle.line_right);
+        else if (obstacle.line_left >= line) right = std::min(right, obstacle.line_left);
+        else return false;
+    }
+    if (!std::isfinite(left) || !std::isfinite(right)) return false;
+    centre = 0.5 * (left + right);
+    return true;
+}
+
 std::string updateLinePlan(bool new_scan) {
     LineFrame near;
     if (!lineFrameAt(params.planning_start_x, near)) return "five_lines_unavailable";
     if (planning_ready) rememberLineObstacles(new_scan);
     const double own_home = follower_state.locked_lane == 0 ? 2.0 : 4.0;
     if (line_state.target <= 0.0) line_state.target = own_home;
+    if (params.return_to_entry_lane && line_state.return_home <= 0.0 && change_state.entry_lane >= 0)
+        line_state.return_home = change_state.entry_lane == 0 ? 2.0 : 4.0;
     // 회피 중이 아니면(기억한 장애물 없음, 차로 중앙 주행) 차량이 실제로 있는 차로를 내 차선으로 다시 잡는다.
     // 시뮬레이터에서 차량을 다른 차로로 옮기거나 노드를 재시작해도 장애물 없이 옆 차로로 가지 않는다.
+    // 진입 차로 복귀가 남아 있으면 그 차로가 아닌 곳으로 다시 잡지 않는다.
     const double vehicle_line = lineOf(near, 0.0);
     if (line_state.obstacles.empty() && std::abs(line_state.target - 3.0) > 0.5) {
         const double vehicle_home = vehicle_line < 3.0 ? 2.0 : 4.0;
-        if (vehicle_home != line_state.target && std::abs(vehicle_line - vehicle_home) < 0.5) {
+        if (vehicle_home != line_state.target && std::abs(vehicle_line - vehicle_home) < 0.5 &&
+            (line_state.return_home <= 0.0 || vehicle_home == line_state.return_home)) {
             ROS_INFO("Line selection: vehicle is in lane centre %.0f (line %.2f); own lane follows it",
                      vehicle_home, vehicle_line);
             line_state.target = vehicle_home;
         }
     }
-    // 복귀할 차로 중앙: 지금 선에서 가까운 2 또는 4(중앙선 위면 현재 내 차선).
-    line_state.home = std::abs(line_state.target - 3.0) < params.epsilon ? own_home :
+    // 복귀할 차로 중앙: 지금 선에서 가까운 2 또는 4(중앙선 위면 현재 내 차선). 진입 차로 복귀면 진입 차로.
+    line_state.lane_home = std::abs(line_state.target - 3.0) < params.epsilon ? own_home :
         (line_state.target < 3.0 ? 2.0 : 4.0);
+    line_state.home = line_state.return_home > 0.0 ? line_state.return_home : line_state.lane_home;
     double cover_left = std::numeric_limits<double>::infinity(), cover_right = -cover_left;
     bool ahead = false;
     for (const auto& obstacle : line_state.obstacles) {
@@ -2779,13 +2951,29 @@ std::string updateLinePlan(bool new_scan) {
         line_decision = summary;
     };
     std::vector<FamilyPoint2d> path;
-    if (!ahead && std::abs(line_state.target - line_state.home) > params.epsilon && lineClear(line_state.home, path)) {
+    double centre = 0.0;
+    std::vector<FamilyPoint2d> centre_path;
+    // GPS가 돌아오면 통과 여유(avoid_pass_margin)를 기다리지 않고, 경로가 비는 즉시 진입 차로로 복귀한다.
+    // 일반 플래너가 이어받을 수 있도록 복귀 대기(최대 recovery_timeout_s) 안에 기준 경로로 돌아가기 위함이다.
+    if ((!ahead || gps_return) && std::abs(line_state.target - line_state.home) > params.epsilon &&
+        lineClear(line_state.home, path)) {
         // 일반 구간 AVOID의 RETURN과 같다: 장애물 중심을 모두 지났고 차로 중앙 경로가 비어 있으면 복귀.
-        ROS_INFO("Line selection: return %.2f -> %.2f", line_state.target, line_state.home);
+        ROS_INFO("Line selection: return %.2f -> %.2f%s", line_state.target, line_state.home,
+                 gps_return ? " (GPS return)" : "");
         line_state.target = line_state.home;
         describe("return");
     } else if (lineClear(line_state.target, path)) {
-        describe("keep");
+        // 양쪽 장애물 사이를 지나는 중이면 틈 중앙으로 맞춘다. 한 칸 이상 벗어났을 때만 옮겨 떨림을 막는다.
+        if (lineGapCentre(line_state.target, centre) &&
+            std::abs(centre - line_state.target) >= params.avoid_line_step - params.epsilon &&
+            lineClear(centre, centre_path)) {
+            ROS_INFO("Line selection: %.2f -> gap centre %.2f", line_state.target, centre);
+            line_state.target = centre;
+            path = centre_path;
+            describe("centre to");
+        } else {
+            describe("keep");
+        }
     } else {
         // 지금 선이 막혔다. 가까운 선부터(같으면 오른쪽 먼저) 피할 수 있는 선을 찾는다.
         bool found = false;
@@ -2798,9 +2986,17 @@ std::string updateLinePlan(bool new_scan) {
                 // pathInsideRoad(corridorAt)가 판정한다. 따라서 숫자 한계는 갓길까지
                 // 후보로 낼 수 있도록 한 칸 넓히고, 실제 제약은 corridor에 맡긴다.
                 if (line < 0.0 || line > 6.0 || !lineClear(line, path)) continue;
+                double chosen = line;
+                // 양쪽에 장애물이 있으면 한쪽으로 더 밀지 않고 틈 중앙을 쓴다.
+                if (lineGapCentre(line, centre) && lineClear(centre, centre_path)) {
+                    ROS_INFO("Line selection: %.2f blocked -> gap centre %.2f", line_state.target, centre);
+                    line_state.target = centre;
+                    path = centre_path;
+                    found = true;
+                    break;
+                }
                 // 통과 가능한 가장 가까운 선은 장애물을 바짝 스친다. avoid_line_extra만큼
                 // 같은 방향으로 더 밀어 여유를 늘린다. 추가 후보가 막히면 직전 값을 쓴다.
-                double chosen = line;
                 for (double extra = params.avoid_line_step; extra <= params.avoid_line_extra + params.epsilon;
                      extra += params.avoid_line_step) {
                     const double pushed = line + side * extra;
@@ -2811,6 +3007,18 @@ std::string updateLinePlan(bool new_scan) {
                 }
                 ROS_INFO("Line selection: %.2f blocked -> %.2f", line_state.target, chosen);
                 line_state.target = chosen;
+                found = true;
+                break;
+            }
+        }
+        // 격자 선이 모두 막혀도 두 장애물 사이 틈의 중앙은 지날 수 있다(격자 간격보다 좁은 틈).
+        for (int k = 0; k <= steps && !found; ++k) {
+            for (int side : {1, -1}) {
+                const double line = line_state.target + side * k * params.avoid_line_step;
+                if (line < 0.0 || line > 6.0 || !lineGapCentre(line, centre) || !lineClear(centre, centre_path)) continue;
+                ROS_INFO("Line selection: %.2f blocked -> gap centre %.2f", line_state.target, centre);
+                line_state.target = centre;
+                path = centre_path;
                 found = true;
                 break;
             }
@@ -2852,6 +3060,8 @@ std::string startLaneChange(int adjacent_index, const LaneChain& adjacent,
     follower_state.locked_lane = adjacent_index;
     change_state.target_lane = follower_state.locked_lane;
     change_state.changing = true;
+    change_state.returning_to_entry = false;
+    change_state.return_clear_since = ros::SteadyTime();
     change_state.has_completed = false; // 이번 변경의 완료 여부를 새로 기록한다.
     change_state.change_started = now;
     change_state.timing_updated_at = now;
@@ -2867,6 +3077,7 @@ std::string startLaneChange(int adjacent_index, const LaneChain& adjacent,
 
 std::string updateLaneChangePlan() {
     if (change_state.change_failed) return change_state.change_failure_reason;
+    if (change_state.entry_lane < 0) change_state.entry_lane = follower_state.locked_lane;
     const auto now = ros::SteadyTime::now();
     const bool new_scan = change_state.decision_sequence != observationSequence();
     change_state.decision_sequence = observationSequence();
@@ -2901,7 +3112,13 @@ std::string updateLaneChangePlan() {
                     return "target_lane_detected";
                 }
                 if (new_scan) change_state.clear_hits = std::min(change_state.clear_hits + 1, params.adjacent_clear_frames);
-                if (change_state.clear_hits < params.adjacent_clear_frames) return "confirming_target_lane_after_stop";
+                // Return initiation already required a full clear interval. After
+                // a brief input gap, stop until a *new*, valid target-clear frame
+                // arrives, then continue that same checked maneuver. Repeating the
+                // initiation dwell after every transient frame gap caused stop/go
+                // starvation at the exit. A detected/unknown target still stops.
+                const int resume_frames = change_state.returning_to_entry ? 1 : params.adjacent_clear_frames;
+                if (change_state.clear_hits < resume_frames) return "confirming_target_lane_after_stop";
             }
         }
         std::vector<FamilyPoint2d> path;
@@ -2927,6 +3144,8 @@ std::string updateLaneChangePlan() {
             // 내 차로는 시작 때 이미 전환했다. 여기서는 차량의 이동 완료만 기록한다.
             change_state.changing = false;
             change_state.has_completed = true;
+            change_state.returning_to_entry = false;
+            change_state.return_clear_since = ros::SteadyTime();
             change_state.completed_at = now;
             change_state.obstacle_hits = 0;
             change_state.clear_hits = 0;
@@ -3003,12 +3222,31 @@ std::string updateLaneChangePlan() {
     const bool lidar_fresh = lidarFresh();
     const bool detected = change_state.occupancy[follower_state.locked_lane] == BboxResult::DETECTED ||
         (params.straddle_avoidance && lidar_fresh && lidarOccupiesLane(*current));
+    const bool both_clear = !detected && !change_state.deferred_far && !change_state.clipped_association &&
+        change_state.occupancy[0] == BboxResult::NO_DETECTION &&
+        change_state.occupancy[1] == BboxResult::NO_DETECTION;
+    if (!both_clear) change_state.return_clear_since = ros::SteadyTime();
+    else if (new_scan && change_state.return_clear_since.isZero()) change_state.return_clear_since = now;
+    const bool return_ready = params.return_to_entry_lane && !params.one_lane_change_only &&
+        change_state.has_completed && change_state.entry_lane == adjacent_index && both_clear &&
+        !change_state.return_clear_since.isZero() &&
+        (now - change_state.return_clear_since).toSec() >= 1.0 &&
+        (now - change_state.completed_at).toSec() >= params.lane_change_cooldown &&
+        change_state.clear_hits >= params.adjacent_clear_frames;
     if (change_state.deferred_far && params.far_obstacle_speed_kph <= params.epsilon) return "far_obstacle_approach_disabled";
     const bool measurement_ready = params.straddle_avoidance && egoSpeedFresh() && planning_ready &&
         !planning_obstacles.empty();
     // 카메라의 먼 미확정 박스는 LiDAR가 있으면 LiDAR 물체로 차도 위치가 정해진다.
     const bool far_unresolved = change_state.deferred_far && !lidar_fresh;
-    if (!detected) {
+    // 진입 차로 복귀가 막히면 회피 판단 없이 현재 차로 중심선을 따른다.
+    const auto follow_current = [&]() -> std::string {
+        std::vector<FamilyPoint2d> path;
+        if (!buildPath(*current, false, path) || !pathInsideRoad(path)) return "following_path_outside_road";
+        storePlannedTarget(*current, path);
+        change_state.target_lane = follower_state.locked_lane;
+        return "";
+    };
+    if (!detected && !return_ready) {
         change_state.obstacle_hits = 0;
         // 내 차로 겹침이 점유 기준(min_contact_overlap_ratio) 미만인 옆 차로 장애물도 넘친 만큼 중심을 민다.
         // 이미 차로 안에 간격 여유가 있으면 offset은 0이고 기존 중심선 추종을 유지한다.
@@ -3055,7 +3293,8 @@ std::string updateLaneChangePlan() {
     const LaneChain* adjacent = far_unresolved ? nullptr : adjacent_lane;
 
     // 측정된 접점으로 덜 덮인 차로와 offset을 고른다. offset 없는 단순 변경은 기존 확인 절차를 따른다.
-    if (measurement_ready) {
+    // 복귀는 장애물 없는 단순 변경이므로 회피 계획을 거치지 않는다.
+    if (measurement_ready && detected) {
         AvoidPlan plan = chooseAvoidPlan(*current, adjacent);
         // 5개 기준선에서 고른 주행선이 옆 차로 안쪽(옆 차로 중앙 ±0.5선)이면 내 차로 offset 회피가 아니라
         // 옆 차로로 변경한다. 차로 소유권·판정 기준 차로를 넘기고 그 차로 안에서 offset을 적용한다.
@@ -3111,16 +3350,20 @@ std::string updateLaneChangePlan() {
 
     if (adjacent == nullptr) {
         change_state.clear_hits = 0;
+        if (return_ready) return follow_current();
         return "adjacent_lane_horizon_missing";
     }
     std::vector<FamilyPoint2d> path;
     if (change_state.occupancy[adjacent_index] != BboxResult::NO_DETECTION || !buildRoadBoundedChangePath(*adjacent, path)) {
         change_state.clear_hits = 0;
+        if (return_ready) return follow_current();
         return "adjacent_lane_detected_or_path_invalid";
     }
-    if (change_state.obstacle_hits < params.obstacle_confirm_frames ||
+    if ((!return_ready && change_state.obstacle_hits < params.obstacle_confirm_frames) ||
         change_state.clear_hits < params.adjacent_clear_frames) return "confirming_bbox_lane_change";
-    return startLaneChange(adjacent_index, *adjacent, path, now);
+    const std::string result = startLaneChange(adjacent_index, *adjacent, path, now);
+    change_state.returning_to_entry = return_ready;
+    return result;
 }
 
 void validateLaneChangeParameters() {

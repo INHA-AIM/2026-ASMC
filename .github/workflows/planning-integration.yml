@@ -78,7 +78,7 @@ jobs:
         run: |
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
-          catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test detected_msg_converter_test feature_builder_avoid_test dynamic_object_policy_test -j2 -l2
+          catkin_make planning_lidar_observation_test planning_group_conversion_test planning_lidar_companion_test planning_gps_recovery_test detected_msg_converter_test feature_builder_avoid_test dynamic_object_policy_test highway_runtime_test -j2 -l2
       - name: Save successful compilation before regression tests
         if: steps.compiler-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -94,6 +94,12 @@ jobs:
           ./devel/lib/planning_inputs/planning_lidar_companion_test
           ./devel/lib/planning_inputs/planning_gps_recovery_test
           rostest planning_inputs lidar_observation.test
+
+      - name: Check Behavior and Frenet highway runtime handoff
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          rostest asmc_planner highway_runtime.test
 
       - name: Check AVOID fixtures and roundabout commit guards
         run: |

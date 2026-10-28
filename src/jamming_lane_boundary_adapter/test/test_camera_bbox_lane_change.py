@@ -46,6 +46,8 @@ class LaneChangeTest(unittest.TestCase):
         # The legacy ACTIVE algorithm is exercised under its required mode.
         cls.mode_pub=rospy.Publisher('/planning/mode',UInt8,queue_size=1,latch=True)
         cls.mode_pub.publish(UInt8(1))
+        cls.gps_return_pub=rospy.Publisher('/planning/mode/gps_return',Bool,queue_size=1,latch=True)
+        cls.gps_return_pub.publish(Bool(False))
         cls.command=cls.diag=cls.target=cls.classification=None
         cls.subscribers=[]
         for topic,typ,attribute in [('/bbox_change_test/command',CtrlCmd,'command'),
@@ -69,11 +71,14 @@ class LaneChangeTest(unittest.TestCase):
             *(['path_horizon:=10.0'] if self._testMethodName.startswith('test_straddle_far') else []),
             *(['lane_hold_time:=3.0'] if 'hold' in self._testMethodName else []),
             *(['use_lidar_obstacles:=true'] if 'lidar' in self._testMethodName else []),
+            *(['creep_speed_kph:=3.0'] if 'creep' in self._testMethodName else []),
+            *(['creep_clear_distance:=0.0'] if 'without_clear_distance' in self._testMethodName else []),
             *(['avoid_line_overrun:=0.0'] if 'wall' in self._testMethodName else []),
             'lane_change_timeout:='+('10.0' if self._testMethodName.startswith('test_ignore') else '5.0'),
-            *([] if self._testMethodName.startswith(('test_ignore','test_repeat')) or 'hold' in self._testMethodName
+            'return_to_entry_lane:='+('true' if self._testMethodName.startswith('test_return') else 'false'),
+            *([] if self._testMethodName.startswith(('test_ignore','test_repeat','test_return')) or 'hold' in self._testMethodName
               else ['ignore_bbox_during_lane_change:=false']),
-            *([] if self._testMethodName.startswith('test_repeat') else
+            *([] if self._testMethodName.startswith(('test_repeat','test_return')) else
               ['one_lane_change_only:='+('false' if self._testMethodName=='test_clipped_cannot_start_second_change' else 'true')]),
             'hood_crop_bottom_ratio:='+('0.21' if self._testMethodName.startswith(('test_clipped','test_ignore')) else '0.0'),
             'far_obstacle_speed_kph:='+('0.0' if self._testMethodName in ('test_far_approach_can_be_disabled','test_ignore_far_zero_speed_during_change') else '5.0'),
@@ -84,6 +89,7 @@ class LaneChangeTest(unittest.TestCase):
         self.assertIsNotNone(self.command)
 
     def tearDown(self):
+        self.gps_return_pub.publish(Bool(False))
         os.killpg(self.process.pid,signal.SIGINT)
         self.process.wait(timeout=10)
         self.log.close()
@@ -93,12 +99,12 @@ class LaneChangeTest(unittest.TestCase):
         self.assertIsNotNone(self.diag)
         return self.diag.status[0].message,{v.key:v.value for v in self.diag.status[0].values}
 
-    def feed(self, ys=(),shift=0.,duration=.55,camera=True,bbox=True,stamp=None,gap=False,source_gap=False,target_gap=False,far=False,slope=0.,box_x=10.,raw_boxes=None,spans=(),speed=None,lidar=None,imu=None,label='car'):
+    def feed(self, ys=(),shift=0.,duration=.55,camera=True,bbox=True,stamp=None,gap=False,source_gap=False,target_gap=False,far=False,slope=0.,box_x=10.,raw_boxes=None,spans=(),speed=None,lidar=None,imu=None,label='car',ego_y=0.):
         end=time.monotonic()+duration
         while time.monotonic()<end:
             source=rospy.Time.now() if stamp is None else stamp
             if speed is not None:
-                ego=EgoVehicleStatus();ego.velocity.x=speed
+                ego=EgoVehicleStatus();ego.velocity.x=speed;ego.velocity.y=ego_y
                 self.ego_pub.publish(ego)
             if imu is not None:
                 message=Imu();message.angular_velocity.z=imu
@@ -158,6 +164,50 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(self.command.longlCmdType,1,self.status())
         self.assertEqual(self.command.brake,1)
         if reason:self.assertEqual(self.status()[0],reason)
+
+    def test_return_clear_entry_lane_and_keep_target_obstacle_stop(self):
+        self.feed()
+        self.feed([0])
+        self.feed([], shift=-3.5, duration=.65)
+        self.assertEqual(self.status()[1]['entry_lane'], '1')
+        self.assertEqual(self.status()[1]['change_completed'], 'true')
+        # A blocked entry lane never becomes a voluntary return target, even
+        # after the cooldown. Continue in the currently clear lane.
+        self.feed([0], shift=-3.5, duration=4.1)
+        self.following()
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, duration=1.5)
+        self.following()
+        self.assertEqual(self.status()[1]['locked_lane'], '1')
+        self.assertEqual(self.status()[1]['returning_to_entry'], 'true')
+        self.assertEqual(self.status()[1]['bbox_stop_suppressed'], 'false')
+        self.feed([0], shift=-3.5)
+        self.stopped('target_lane_detected')
+        # Exactly one fresh BBOX source frame (duplicates do not count) can
+        # resume an already-authorized return after observing the target clear.
+        self.feed([], shift=-3.5, duration=.2, stamp=rospy.Time.now())
+        self.following()
+        self.feed([], shift=0., duration=.65)
+        self.assertEqual(self.status()[1]['change_completed'], 'true')
+        self.assertEqual(self.status()[1]['returning_to_entry'], 'false')
+        self.feed([], duration=4.1)
+        self.assertEqual(self.status()[1]['locked_lane'], '1')
+
+    def test_return_rejects_unresolved_or_stale_observations(self):
+        self.feed()
+        self.feed([0])
+        self.feed([], shift=-3.5, duration=.65)
+        self.feed([], shift=-3.5, far=True, duration=4.1)
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, duration=.6)
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, bbox=False, duration=.8)
+        self.stopped()
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, duration=.65)
+        self.assertEqual(self.status()[1]['locked_lane'], '0')
+        self.feed([], shift=-3.5, duration=.9)
+        self.assertEqual(self.status()[1]['locked_lane'], '1')
 
     def test_person_stops_three_seconds_then_changes_lane_without_restop(self):
         self.feed()
@@ -607,6 +657,76 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(status['locked_lane'],'1')
         self.assertGreater(self.target.point.y,0.3)  # Heading back towards line 4 (+1.75 m in this frame).
 
+    def test_straddle_obstacles_on_both_sides_use_gap_centre(self):
+        self.feed()
+        # Right obstacle blocks line 4 (y -0.8..-3.2); left obstacle covers up to line ~1.49 (y 4.4..6.0).
+        # The nearest clear line 3.5 would graze the right obstacle; the gap centre is line ~2.97.
+        self.feed(spans=[(-3.2,-0.8,13.),(4.4,6.0,13.)],speed=0.,duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,2.97,delta=0.15)
+        self.assertEqual(status['locked_lane'],'0')
+        self.assertGreater(self.command.steering,0)
+
+    def test_return_line_mode_back_to_entry_lane_after_pass(self):
+        self.feed()
+        # Own lane blocked: the left lane (line 2.25) becomes my lane while passing.
+        self.feed(spans=[(-1.2,1.2,14.)],speed=0.,duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,2.25)
+        self.assertEqual(status['locked_lane'],'0')
+        # The vehicle has moved onto line 2.25: lanes appear shifted right by 3.06 m.
+        self.feed(shift=-3.0625,speed=8.,duration=1.0)
+        self.feed(shift=-3.0625,speed=8.,duration=2.5)
+        self.following()
+        line,status=self.line_status()
+        # Passed and clear: back to the entry lane centre, not the nearer left-lane centre (line 2).
+        self.assertAlmostEqual(line,4.0)
+        self.assertEqual(status['locked_lane'],'1')
+        self.assertLess(self.target.point.y,-0.3)  # Heading back right towards line 4.
+
+    def test_return_widened_entry_lane_obstacle_moves_further_left(self):
+        self.feed()
+        # Entry-lane obstacle: avoid onto line 2.25 in the left lane.
+        self.feed(spans=[(-1.2,1.2,14.)],speed=0.,duration=.8)
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,2.25)
+        # Closer views widen the remembered obstacle (y up to 2.3): 2.25 is blocked. Line 1.75 is
+        # 3.94 m from the entry lane centre but 0.44 m from the current (left) lane centre.
+        self.feed(spans=[(-2.0,2.3,14.)],speed=0.,duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,1.75)
+        self.assertEqual(status['locked_lane'],'0')
+        # Passed and clear: back to the entry lane across 2.25 lines.
+        self.feed(shift=-3.9375,speed=8.,duration=1.0)
+        self.feed(shift=-3.9375,speed=8.,duration=2.5)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,4.0)
+        self.assertEqual(status['locked_lane'],'1')
+
+    def test_return_gps_return_skips_pass_margin(self):
+        self.feed()
+        self.feed(spans=[(-1.2,1.2,14.)],speed=0.,duration=.8)
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,2.25)
+        # GPS is back: return as soon as the entry-lane path is clear, while the obstacle is
+        # still remembered (before vehicle rear + avoid_pass_margin has passed it).
+        self.gps_return_pub.publish(Bool(True))
+        returned=None
+        for _ in range(40):
+            self.feed(shift=-3.0625,speed=4.,duration=.25)
+            line,status=self.line_status()
+            if line==4.0:
+                returned=status
+                break
+        self.assertIsNotNone(returned,'no GPS-return to the entry lane')
+        self.assertEqual(returned['gps_return'],'true')
+        self.assertNotEqual(returned['line_obstacles'],'0')
+        self.assertEqual(returned['locked_lane'],'1')
+
     def test_straddle_far_blocking_obstacle_uses_lane_change(self):
         self.feed()
         # Own lane fully blocked beyond the path reach: not ignored; the left lane (line 2.25) becomes my lane.
@@ -665,6 +785,62 @@ class LaneChangeTest(unittest.TestCase):
         self.assertAlmostEqual(self.line_status()[0],3.0)
         self.feed(shift=-1.75,speed=8.,lidar=[],duration=1.5)
         self.assertAlmostEqual(self.line_status()[0],4.0)
+
+    def test_straddle_lidar_memory_follows_latest_scan_in_narrow_gap(self):
+        self.feed()
+        # Objects on both sides leave a 3.4 m gap around line 4 (needs about 3.0 m).
+        left,right=(9.,10.,1.7,3.0,1.),(9.,10.,-3.0,-1.7,1.)
+        self.feed(speed=0.,lidar=[left,right],duration=.8)
+        self.following()
+        self.assertAlmostEqual(self.line_status()[0],4.0)
+        # One wide transient measurement of the left object closes the gap.
+        self.feed(speed=0.,lidar=[(9.,10.,0.3,3.0,1.),right],duration=.3)
+        # The next scans show the true shape again: memory follows them instead of keeping the union.
+        self.feed(speed=0.,lidar=[left,right],duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertAlmostEqual(line,4.0,delta=0.15)
+        self.assertEqual(status['lidar_fresh'],'true',status)
+
+    def test_straddle_lidar_distant_object_beyond_path_does_not_block_near_gap(self):
+        self.feed()
+        # Near gap around line 4 (3.4 m). A distant object (x 27 m, beyond line_obstacle_reach 20 m) on the
+        # right would need y >= 1.3 m, which the near left object forbids. Pass the near gap first.
+        left,right,far=(9.,10.,1.7,3.0,1.),(9.,10.,-3.0,-1.7,1.),(27.,28.,-1.7,-0.2,1.)
+        self.feed(speed=0.,lidar=[left,right,far],duration=.8)
+        self.following()
+        self.assertAlmostEqual(self.line_status()[0],4.0,delta=0.15)
+
+    def test_straddle_lidar_creep_instead_of_no_clear_line_but_stop_close(self):
+        self.feed()
+        # Gap too narrow for any line (2.6 m, needs about 3.0 m) but 6 m ahead: creep at 3 km/h.
+        left,right=(12.,13.,1.3,3.0,1.),(12.,13.,-3.0,-1.3,1.)
+        self.feed(speed=0.,lidar=[left,right],duration=.8)
+        message,status=self.status()
+        self.assertEqual(message,'creep:no_clear_line',status)
+        self.assertEqual(self.command.longlCmdType,1)
+        self.assertGreater(self.command.accel,0.)
+        self.assertAlmostEqual(self.command.velocity,3.0)
+        # An object in the path within creep_clear_distance of the front bumper: hard stop.
+        self.feed(speed=0.,lidar=[(5.,6.,-0.5,0.5,1.)],duration=.8)
+        self.stopped()
+        self.assertNotIn('creep',self.status()[0])
+
+    def test_straddle_lidar_creep_without_clear_distance_keeps_moving(self):
+        self.feed()
+        # creep_clear_distance:=0 (integrated launch): a LiDAR object right ahead does not stop the creep.
+        self.feed(speed=0.,lidar=[(12.,13.,1.3,3.0,1.),(12.,13.,-3.0,-1.3,1.)],duration=.8)
+        self.feed(speed=0.,lidar=[(5.,6.,-0.5,0.5,1.)],duration=.8)
+        message,status=self.status()
+        self.assertTrue(message.startswith('creep:'),status)
+        self.assertGreater(self.command.accel,0.)
+
+    def test_creep_does_not_override_emergency_stop(self):
+        self.feed()
+        self.stop_pub.publish(Bool(True))
+        self.feed(duration=.5)
+        self.stopped('emergency_stop')
+        self.stop_pub.publish(Bool(False))
 
     def test_straddle_lidar_blocks_adjacent_that_camera_sees_clear(self):
         self.feed()
@@ -726,6 +902,16 @@ class LaneChangeTest(unittest.TestCase):
         self.feed(duration=.6)
         self.assertEqual(self.command.longlCmdType,2)
         self.assertAlmostEqual(self.command.velocity,20.,delta=.1)
+
+    def test_pedal_ignores_non_longitudinal_velocity_components(self):
+        # Preserve PR128's CompetitionInfo contract while adding PR127 recovery/creep.
+        # y is not a provided forward-speed signal, including when it is non-finite.
+        self.feed()
+        for lateral in (100.,float('nan')):
+            self.feed(speed=0.,ego_y=lateral,duration=.6)
+            self.assertEqual(self.command.longlCmdType,1,self.status())
+            self.assertGreater(self.command.accel,0.,self.status())
+            self.assertEqual(self.command.brake,0.,self.status())
 
     def test_straddle_without_ego_speed_keeps_legacy_stop(self):
         self.feed()
