@@ -109,6 +109,16 @@ int semanticRegression(){
  for(int r=0;r<81;++r)for(int c=70;c<90;++c)free[r*160+c]=0;
  grid->prepare(bev_spec,free,image->data,{});bev_frames.back().grid=grid;
  result=updateSemanticPathPlan();if(!result.empty() || semantic_target!=0){std::cerr<<result<<" target="<<semantic_target;return 36;}
+ // Receding horizon trap: home is free for8m, but an observed hole at16m
+ // blocks its long plan. Far unknown truncates both full horizons. Start a
+ // checked adjacent prefix rather than repeatedly choosing the home prefix.
+ free.assign(40000,255);std::vector<uint8_t> coverage(40000,255);
+ for(int r=0;r<10;++r)for(int c=0;c<160;++c)coverage[r*160+c]=0;
+ for(int r=0;r<=40;++r)for(int c=70;c<90;++c)free[r*160+c]=0;
+ grid->prepare(bev_spec,free,coverage,{});bev_frames.back().grid=grid;
+ semantic_home=semantic_target=1;semantic_confirm=0;semantic_last_decision=ros::Time();
+ result=updateSemanticPathPlan();if(!result.empty() || semantic_target!=0)return 43;
+ result=updateSemanticPathPlan();if(!result.empty() || semantic_target!=0 || semantic_confirm)return 44;
  ros::Time::setNow(ros::Time(100.36));
  if(updateSemanticPathPlan()!="semantic_exact_family_space_unavailable")return 37;
  std::cout<<"semantic_primary_no_yolo_exact_epoch_unknown_and_partial_avoidance_passed\n";return 0;
