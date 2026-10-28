@@ -36,7 +36,7 @@ inline TrackedObject PrepareHighwayLaneMotion(const TrackedObject& object,
   const auto vehicle=static_cast<int>(asmc_planner::ObjectType::VEHICLE);
   const auto unknown=static_cast<int>(asmc_planner::ObjectType::UNKNOWN);
   if((object.type!=vehicle&&object.type!=unknown)||object.motion_state==ObjectMotionState::LOW_THREAT||
-     object.motion_state==ObjectMotionState::UNKNOWN||!track||track->samples.size()<3||
+     !track||track->samples.size()<3||
      track->stamp-track->samples.front().time<minimum_span)return result;
   const double speed=std::hypot(object.vx,object.vy);
   if(!std::isfinite(speed)||speed<1)return result;
@@ -49,6 +49,8 @@ inline TrackedObject PrepareHighwayLaneMotion(const TrackedObject& object,
     if(!p.valid||p.s<0||p.s>lane->line().length)continue;
     const auto at=Interpolate(lane->line(),p.s);
     if((object.vx*std::cos(at.theta)+object.vy*std::sin(at.theta))/speed<minimum_alignment)continue;
+    // Motion-state UNKNOWN does not mean class UNKNOWN. Unique source frames
+    // and actual displacement establish lane motion independently of that label.
     // Unique source frames confirm membership, including geometry fragments
     // classified UNKNOWN. A crossing actor or an ID discontinuity abstains.
     bool stable=true;std::size_t checked=0;
@@ -74,7 +76,7 @@ inline TrackedObject PrepareHighwayLaneMotion(const TrackedObject& object,
   const double along=object.vx*std::cos(at.theta)+object.vy*std::sin(at.theta);
   // UNKNOWN roadside clutter with a fictitious velocity is not certified by
   // a class guess. Its actual source-time displacement must support motion.
-  if(object.type==unknown) {
+  if(object.type==unknown||object.motion_state==ObjectMotionState::UNKNOWN) {
     const auto& first=track->samples.front();const double dt=track->stamp-first.time;
     const double displacement=(object.x-first.x)*std::cos(at.theta)+(object.y-first.y)*std::sin(at.theta);
     if(displacement<=.1||displacement/dt<.5*along)return result;

@@ -118,8 +118,22 @@ class JammingLaunchContractTest(unittest.TestCase):
         integrated=ET.parse(LAUNCH/'autonomy_no_bridges_v2.launch')
         self.assertIsNone(integrated.find("./include[@file='$(find lane_boundary_adapter)/launch/camera_bbox_detector.launch']"))
         change=integrated.find("./include[@file='$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch']")
-        self.assertEqual('true',change.find("arg[@name='return_to_entry_lane']").get('value'))
+        self.assertIsNone(change.find("arg[@name='return_to_entry_lane']"))
         self.assertEqual('/ctrl_cmd/jamming',change.find("arg[@name='control_topic']").get('value'))
+
+    def test_1024_contact_geometry_and_longitudinal_speed_contract(self):
+        package=ROOT/'src/jamming_lane_boundary_adapter'
+        fields=(package/'msg/CameraBBoxLaneResult.msg').read_text()
+        for name in ['contact_x','contact_y_min','contact_y_max']:
+            self.assertIn('float32[] '+name,fields)
+        controller=(package/'src/camera_bbox_lane_change_node.cpp').read_text()
+        self.assertIn('std::fabs(message->velocity.x)',controller)
+        self.assertNotIn('message->velocity.y',controller)
+        self.assertIn('far_obstacle_lane_unresolved',controller)
+        args=default_arguments(JAMMING/'camera_bbox_lane_change.launch')
+        self.assertEqual('true',args['straddle_avoidance'])
+        self.assertEqual('false',args['use_lidar_obstacles'])
+        self.assertNotIn('return_to_entry_lane',args)
 
     def test_dashboard_uses_the_same_planning_inputs(self):
         root = ET.parse(LAUNCH / 'autonomy_no_bridges_v2.launch')

@@ -52,17 +52,20 @@
   <arg name="diagnostics_topic" default="/planning/camera_bbox_lane_change/diagnostics"/>
   <arg name="emergency_stop_topic" default="/planning/camera_bbox_lane_change/emergency_stop"/>
   <arg name="bbox_topic" default="/planning/camera_bbox_lane/result"/>
-  <arg name="bbox_conf_thres" default="0.7"/>
   <arg name="reference_lane_topic" default="/planning/camera_bbox_lane_change/reference_lane"/>
   <arg name="far_obstacle_speed_kph" default="5.0"/>
   <arg name="bbox_source_timeout" default="0.5"/>
   <arg name="bbox_receive_timeout" default="0.5"/>
+  <!-- 차도 위 사람: person_stop_sec 정지 후 출발, 그 뒤 person_ignore_sec 동안 사람으로 재정지하지 않는다.
+       사람 박스는 계속 장애물이라 차도를 점유하면 차로 변경·회피한다. -->
+  <arg name="person_stop" default="true"/>
+  <arg name="person_stop_sec" default="3.0"/>
+  <arg name="person_ignore_sec" default="4.0"/>
   <arg name="max_sensor_skew" default="0.4"/>
   <arg name="obstacle_confirm_frames" default="2"/>
   <arg name="adjacent_clear_frames" default="3"/>
   <arg name="ignore_bbox_during_lane_change" default="true"/>
   <arg name="one_lane_change_only" default="false"/>
-  <arg name="return_to_entry_lane" default="false"/>
   <arg name="obstacle_lateral_margin" default="0.30"/>
   <arg name="obstacle_longitudinal_margin" default="0.5"/>
   <arg name="vehicle_front" default="3.845"/>
@@ -80,6 +83,51 @@
   <arg name="lane_change_pause_timeout" default="30.0"/>
   <arg name="lane_change_timeout" default="15.0"/>
   <arg name="lane_change_cooldown" default="4.0"/>
+  <!-- Straddle avoidance: flat-ground BBOX bottom contact + /Ego_topic speed. Missing input keeps legacy stops. -->
+  <arg name="straddle_avoidance" default="true"/>
+  <arg name="ego_topic" default="/Ego_topic"/>
+  <arg name="ego_speed_timeout" default="0.3"/>
+  <arg name="avoid_clearance" default="0.5"/>
+  <arg name="avoid_speed_kph" default="8.0"/>
+  <arg name="avoid_obstacle_length" default="6.0"/>
+  <arg name="avoid_pass_margin" default="2.0"/>
+  <arg name="avoid_lane_tie" default="0.10"/>
+  <arg name="avoid_shift_length" default="5.0"/>
+  <arg name="avoid_lookahead_distance" default="5.0"/>
+  <arg name="avoid_line_straddle" default="true"/>
+  <arg name="avoid_max_offset" default="3.5"/>
+  <arg name="avoid_max_shoulder" default="2.0"/>
+  <arg name="avoid_wall_margin" default="0.3"/>
+  <arg name="avoid_line_overrun" default="1.0"/>
+  <arg name="avoid_line_step" default="0.25"/>
+  <!-- 고른 회피 선을 같은 방향으로 더 밀어 여유를 늘린다(선 번호 단위). 0은 기존 동작. -->
+  <arg name="avoid_line_extra" default="0.0"/>
+  <!-- [m] 기준선 1·5를 도로 바깥으로 확장. 주행 한계는 corridor가 정한다. -->
+  <arg name="line_edge_expand" default="0.0"/>
+  <!-- Keep the last camera lanes by dead reckoning (IMU yaw rate + /Ego_topic speed) when they drop out. -->
+  <arg name="lane_hold_distance" default="15.0"/>
+  <arg name="lane_hold_time" default="8.0"/>
+  <arg name="imu_topic" default="/imu"/>
+  <!-- Pedal speed control from /Ego_topic speed (longlCmdType=1); falls back to MORAI velocity control. -->
+  <arg name="pedal_speed_control" default="true"/>
+  <arg name="speed_kp" default="0.3"/>
+  <arg name="speed_ki" default="0.1"/>
+  <arg name="speed_integral_limit" default="3.0"/>
+  <arg name="max_accel_pedal" default="0.5"/>
+  <arg name="max_brake_pedal" default="0.5"/>
+  <arg name="avoid_reconsider_distance" default="0.5"/>
+  <arg name="avoid_plan_margin" default="0.05"/>
+  <!-- LiDAR objects_local (Main enable_common_geometry:=true), filtered to the current camera road area. -->
+  <arg name="use_lidar_obstacles" default="false"/>
+  <arg name="lidar_objects_topic" default="/perception/lidar/objects_local"/>
+  <arg name="lidar_timeout" default="0.6"/>
+  <arg name="lidar_max_x" default="30.0"/>
+  <arg name="lidar_min_height" default="0.15"/>
+  <arg name="lidar_max_length" default="20.0"/>
+  <arg name="lidar_min_points" default="5"/>
+  <arg name="lidar_road_min_overlap" default="0.20"/>
+  <arg name="lidar_lane_min_overlap" default="0.10"/>
+  <arg name="lidar_structure_hold" default="1.5"/>
   <arg name="use_rviz" default="true"/>
   <arg name="bbox_consumer_x_max" default="20.0"/>
   <arg name="start_classifier" default="true"/>
@@ -87,7 +135,6 @@
   <arg name="projection_manifest" default="$(find asmc_camera)/config/bev/projection_context_v1.yaml"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <include if="$(arg start_classifier)" file="$(find lane_boundary_adapter)/launch/camera_bbox_lane.launch">
-    <arg name="conf_thres" value="$(arg bbox_conf_thres)"/>
     <arg name="use_rviz" value="false"/>
     <arg name="contact_band_height_px" value="$(arg contact_band_height_px)"/>
     <arg name="contact_row_tolerance_px" value="$(arg contact_row_tolerance_px)"/>
@@ -154,12 +201,14 @@
     <param name="far_obstacle_speed_kph" type="double" value="$(arg far_obstacle_speed_kph)"/>
     <param name="bbox_source_timeout" type="double" value="$(arg bbox_source_timeout)"/>
     <param name="bbox_receive_timeout" type="double" value="$(arg bbox_receive_timeout)"/>
+    <param name="person_stop" type="bool" value="$(arg person_stop)"/>
+    <param name="person_stop_sec" type="double" value="$(arg person_stop_sec)"/>
+    <param name="person_ignore_sec" type="double" value="$(arg person_ignore_sec)"/>
     <param name="max_sensor_skew" type="double" value="$(arg max_sensor_skew)"/>
     <param name="obstacle_confirm_frames" type="int" value="$(arg obstacle_confirm_frames)"/>
     <param name="adjacent_clear_frames" type="int" value="$(arg adjacent_clear_frames)"/>
     <param name="ignore_bbox_during_lane_change" type="bool" value="$(arg ignore_bbox_during_lane_change)"/>
     <param name="one_lane_change_only" type="bool" value="$(arg one_lane_change_only)"/>
-    <param name="return_to_entry_lane" type="bool" value="$(arg return_to_entry_lane)"/>
     <param name="obstacle_lateral_margin" type="double" value="$(arg obstacle_lateral_margin)"/>
     <param name="obstacle_longitudinal_margin" type="double" value="$(arg obstacle_longitudinal_margin)"/>
     <param name="vehicle_front" type="double" value="$(arg vehicle_front)"/>
@@ -177,6 +226,45 @@
     <param name="lane_change_pause_timeout" type="double" value="$(arg lane_change_pause_timeout)"/>
     <param name="lane_change_timeout" type="double" value="$(arg lane_change_timeout)"/>
     <param name="lane_change_cooldown" type="double" value="$(arg lane_change_cooldown)"/>
+    <param name="straddle_avoidance" type="bool" value="$(arg straddle_avoidance)"/>
+    <param name="ego_topic" type="str" value="$(arg ego_topic)"/>
+    <param name="ego_speed_timeout" type="double" value="$(arg ego_speed_timeout)"/>
+    <param name="avoid_clearance" type="double" value="$(arg avoid_clearance)"/>
+    <param name="avoid_speed_kph" type="double" value="$(arg avoid_speed_kph)"/>
+    <param name="avoid_obstacle_length" type="double" value="$(arg avoid_obstacle_length)"/>
+    <param name="avoid_pass_margin" type="double" value="$(arg avoid_pass_margin)"/>
+    <param name="avoid_lane_tie" type="double" value="$(arg avoid_lane_tie)"/>
+    <param name="avoid_shift_length" type="double" value="$(arg avoid_shift_length)"/>
+    <param name="avoid_lookahead_distance" type="double" value="$(arg avoid_lookahead_distance)"/>
+    <param name="avoid_line_straddle" type="bool" value="$(arg avoid_line_straddle)"/>
+    <param name="avoid_max_offset" type="double" value="$(arg avoid_max_offset)"/>
+    <param name="avoid_max_shoulder" type="double" value="$(arg avoid_max_shoulder)"/>
+    <param name="avoid_wall_margin" type="double" value="$(arg avoid_wall_margin)"/>
+    <param name="avoid_line_overrun" type="double" value="$(arg avoid_line_overrun)"/>
+    <param name="avoid_line_step" type="double" value="$(arg avoid_line_step)"/>
+    <param name="avoid_line_extra" type="double" value="$(arg avoid_line_extra)"/>
+    <param name="line_edge_expand" type="double" value="$(arg line_edge_expand)"/>
+    <param name="lane_hold_distance" type="double" value="$(arg lane_hold_distance)"/>
+    <param name="lane_hold_time" type="double" value="$(arg lane_hold_time)"/>
+    <param name="imu_topic" type="str" value="$(arg imu_topic)"/>
+    <param name="pedal_speed_control" type="bool" value="$(arg pedal_speed_control)"/>
+    <param name="speed_kp" type="double" value="$(arg speed_kp)"/>
+    <param name="speed_ki" type="double" value="$(arg speed_ki)"/>
+    <param name="speed_integral_limit" type="double" value="$(arg speed_integral_limit)"/>
+    <param name="max_accel_pedal" type="double" value="$(arg max_accel_pedal)"/>
+    <param name="max_brake_pedal" type="double" value="$(arg max_brake_pedal)"/>
+    <param name="avoid_reconsider_distance" type="double" value="$(arg avoid_reconsider_distance)"/>
+    <param name="avoid_plan_margin" type="double" value="$(arg avoid_plan_margin)"/>
+    <param name="use_lidar_obstacles" type="bool" value="$(arg use_lidar_obstacles)"/>
+    <param name="lidar_objects_topic" type="str" value="$(arg lidar_objects_topic)"/>
+    <param name="lidar_timeout" type="double" value="$(arg lidar_timeout)"/>
+    <param name="lidar_max_x" type="double" value="$(arg lidar_max_x)"/>
+    <param name="lidar_min_height" type="double" value="$(arg lidar_min_height)"/>
+    <param name="lidar_max_length" type="double" value="$(arg lidar_max_length)"/>
+    <param name="lidar_min_points" type="int" value="$(arg lidar_min_points)"/>
+    <param name="lidar_road_min_overlap" type="double" value="$(arg lidar_road_min_overlap)"/>
+    <param name="lidar_lane_min_overlap" type="double" value="$(arg lidar_lane_min_overlap)"/>
+    <param name="lidar_structure_hold" type="double" value="$(arg lidar_structure_hold)"/>
   </node>
   <node if="$(arg use_rviz)" pkg="rviz" type="rviz" name="camera_bbox_lane_change_rviz"
         args="-d $(find lane_boundary_adapter)/rviz/camera_bbox_lane_change.rviz"/>

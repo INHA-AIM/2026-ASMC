@@ -54,6 +54,45 @@ void run() {
  }
  auto low=measured;low.motion_state=ObjectMotionState::LOW_THREAT;
  expect(!PrepareHighwayLaneMotion(low,&track,network->lanes,.2,.7).prediction_lane,"confirmed stationary objects retain original prediction");
+ auto pending=unknown;pending.motion_state=ObjectMotionState::UNKNOWN;
+ expect(bool(PrepareHighwayLaneMotion(pending,&track,network->lanes,.2,.7).prediction_lane),
+     "measured position history can establish a lane before the motion-state label settles");
+ pending.type=int(asmc_planner::ObjectType::VEHICLE);
+ expect(!PrepareHighwayLaneMotion(pending,&stationary,network->lanes,.2,.7).prediction_lane,
+     "a camera vehicle label alone cannot establish unknown motion without position support");
+ // Mature, unresolved lane association is a distinct fallback from initial grace.
+ HighwayMergeConfig cfg;cfg.motion_fit_min_span_s=.2;cfg.min_rear_gap=8;
+ VehicleShape test_shape;test_shape.length=4.635;test_shape.width=1.9;test_shape.rear_overhang=.8;
+ CartesianState own{measured.x+60*std::cos(measured.heading),
+     measured.y+60*std::sin(measured.heading),measured.heading,0,14,0};
+ const auto unresolved=[&](const TrackedObject& object,const ObservedObjectMotion& history) {
+   return PrepareHighwayUnresolvedMotion(object,&history,cfg,measured.heading,own,test_shape);
+ };
+ ObservedObjectMotion first;first.Observe(measured,101,1);
+ const auto grace=unresolved(measured,first);
+ expect(std::isfinite(grace.continuation_vx)&&grace.turn_prediction_duration==.2,
+     "far newborn rear actor retains short measured motion but not a long lateral extrapolation");
+ expect(grace.x==measured.x&&grace.y==measured.y&&grace.corners[0].x==measured.corners[0].x,
+     "provisional rear treatment preserves the current measured footprint");
+ auto no_lateral=track;
+ const double tx=std::cos(measured.heading),ty=std::sin(measured.heading);
+ for(auto& p:no_lateral.samples){const double along=(p.x-measured.x)*tx+(p.y-measured.y)*ty;
+   p.x=measured.x+along*tx;p.y=measured.y+along*ty;}
+ expect(std::isfinite(unresolved(measured,no_lateral).continuation_vx),
+     "after grace, unmapped but position-unsupported transverse speed remains provisional");
+ auto crossing_history=no_lateral;
+ for(auto& p:crossing_history.samples){const double d=2*(p.time-crossing_history.stamp);
+   p.x-=d*ty;p.y+=d*tx;}
+ expect(!std::isfinite(unresolved(measured,crossing_history).continuation_vx),
+     "after grace, position-supported lateral motion retains general collision prediction");
+ auto nearby_ego=own;nearby_ego.x=measured.x+5*tx;nearby_ego.y=measured.y+5*ty;
+ expect(!std::isfinite(PrepareHighwayUnresolvedMotion(measured,&first,cfg,measured.heading,
+     nearby_ego,test_shape).continuation_vx),"near rear hazards do not receive provisional lateral grace");
+ expect(!std::isfinite(PrepareHighwayUnresolvedMotion(measured,&first,cfg,NAN,own,test_shape).continuation_vx),
+     "missing map direction cannot grant a straight-road prediction");
+ auto ahead_ego=own;ahead_ego.x=measured.x-60*tx;ahead_ego.y=measured.y-60*ty;
+ expect(!std::isfinite(PrepareHighwayUnresolvedMotion(measured,&first,cfg,measured.heading,
+     ahead_ego,test_shape).continuation_vx),"front actors never receive the newborn rear policy");
  auto crossing=track;crossing.samples.back().x+=20;
  expect(!PrepareHighwayLaneMotion(measured,&crossing,network->lanes,.2,.7).prediction_lane,
      "inconsistent recent lane membership cannot certify a traffic hypothesis");

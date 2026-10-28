@@ -1,5 +1,9 @@
 # BBOX 검출에 따른 반복 차선변경
 
+2026-10-27: 통합 실행은 1024의 접지점 회피·5개 주행선 선택·속도/IMU 기반 차선 유지로
+갱신했다. 아래의 단순 점유 라벨 기반 차선변경 설명은 측정 회피를 적용할 수 없는 경우의
+fallback을 포함한다. 현재 기본 동작과 실행 계약은 [통합 재밍 실행](integrated-1024.md)을 참조한다.
+
 2026-10-26: 공용 카메라 결과를 기존 frame bridge가 직접 소비한다. 구 Main CPU 변환과
 `camera_bbox_detector.launch`는 제거했고 Main/Msg가 필요 없다. cutoff0.7과 판정/주행 계산은 유지하며
 원본 subpixel bbox를 private frame에 보존한다. 별도 detector 실행 없이 카메라와 아래 launch를 사용한다.
@@ -57,16 +61,9 @@ BBOX 기반 속도 상한도 이 구간에서는 제외하며 변경 속도/곡�
   변경 완료 후 `lane_change_cooldown=4.0`초 동안은 재변경을 대기하며, 이때 내 차로 장애물이 있으면 제동한다.
   대기 후에도 옆 차로 연속 미검출과 유효 경로가 확인되어야 변경한다. standalone 기본 설정에서는 장애물 없는 자동 복귀를 하지 않는다.
   한 번만 변경하려면 `one_lane_change_only:=true`로 실행한다. 각 변경 시작 시 완료 상태를 초기화한다.
-- `return_to_entry_lane=true`인 통합 `autonomy_no_bridges_v2.launch`에서는 회피 후 진입 차로로
-  복귀할 수 있다. 변경 완료 후 기존 4초 대기, 양쪽 차로의 1초 연속 미검출과 서로 다른
-  BBOX 3 frame, 관측된 목표 차로와 차체 경계 내 경로를 모두 확인한다. UNKNOWN, 먼 물체,
-  잘림 추적, 입력 유실은 복귀 확인을 초기화한다. 복귀 조건이 부족하면 현재의 안전한 차로를
-  계속 따라간다. 복귀 중에는 `ignore_bbox_during_lane_change=true`여도 목표 차로 검출과
-  BBOX 신선도 검사를 유지한다. `one_lane_change_only=true`이면 복귀하지 않는다.
-  이미 시작한 복귀가 입력 공백으로 멈췄다면, 새 유효 frame에서 목표 차로 미검출을
-  확인하는 즉시 같은 복귀를 재개한다. 시작 전의 1초/3 frame 대기를 매번 반복하지 않는다.
-  standalone 기본값은 false다. 진입 차로는 JAMMING 진입 때 새로 관측해 저장하며
-  `entry_lane`, `returning_to_entry` 진단으로 확인한다. 전방 미검출의 한계는 아래 설명과 같다.
+- 통합 실행은 1024의 측정 접점·주행선 선택·차선 유지 추측 항법을 사용한다.
+  이전 `return_to_entry_lane` 옵션은 제거했다. 1024의 주행선 선택과 장애물 통과 후
+  복귀 판단을 따른다. 실행 및 입력 계약은 [통합 연결](integrated-1024.md)을 참조한다.
 - 차선 입력 누락/차선 단절/비상정지는 항상 제동한다. 오래된 BBOX/UNKNOWN/양 차로 점유는
   변경 전후 또는 `ignore_bbox_during_lane_change=false`인 변경 중에 제동한다.
 - 변경 중에는 목표 차로를 추종한다. 원래 차로의 먼 부분이 가려져도 목표 경로와 차량

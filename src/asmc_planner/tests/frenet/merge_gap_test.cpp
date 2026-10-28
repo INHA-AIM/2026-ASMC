@@ -415,6 +415,64 @@ void TestHighwayReferenceArrival() {
     Expect(!check({}).safe,"short continuation cannot complete reference-transition admission");
 }
 
+void TestSourceLaneFollowerContinuation() {
+    using namespace asmc_planner::lane_reference;
+    HighwayFixture f;
+    LaneMapData data;data.identity={"map","source-rear","test",std::string(64,'b')};data.complete=true;
+    for(int i=0;i<2;++i) {
+        LaneData lane;lane.id=lane.link_id=i?"target":"source";lane.traversable=true;
+        const double y=i?3.5:0;
+        lane.centerline={{0,y},{400,y}};
+        lane.polygon={{0,y-1.75},{400,y-1.75},{400,y+1.75},{0,y+1.75}};
+        data.lanes.push_back(lane);
+    }
+    data.areas={{"road",{{0,-2},{400,-2},{400,6},{0,6}},true}};
+    std::string error;f.map=HdLaneMap::create(data,error);
+    f.zone.source_region=f.map->corridor({"source"},error);
+    f.zone.target_region=f.map->corridor({"target"},error);
+    f.zone.source_reference=f.ref;f.zone.target_reference=f.ref;
+    for(auto& p:f.zone.target_reference.points)p.y=3.5;
+    auto rear=MakeVehicleAt(311,48,0,0,18);rear.motion_state=ObjectMotionState::DYNAMIC;
+    const auto check=[&](const std::vector<TrackedObject>& objects,bool entering=false) {
+        return EvaluateHighwayMergeCandidate(f.path,f.zone,f.ref,objects,f.cfg,
+            MakeEgoShape(),MakeCollisionCfg(),.1,entering,0,
+            std::chrono::steady_clock::time_point::max(),true);
+    };
+    Expect(check({rear}).safe,"current-lane forward continuation survives faster separated rear traffic");
+    Expect(check({rear},true).reason=="insufficient_completion_horizon",
+        "source rear no longer blocks preparation; missing target completion still prevents entry approval");
+    auto crossing=rear;crossing.vy=1;
+    Expect(!check({crossing}).safe,"source-lane lateral crossing retains the full collision check");
+    auto pedestrian=rear;pedestrian.type=int(asmc_planner::ObjectType::PEDESTRIAN);
+    Expect(!check({pedestrian}).safe,"pedestrians never acquire the new highway source-following role");
+    auto provisional=rear;provisional.vy=.7;provisional.turn_prediction_duration=.2;
+    provisional.continuation_vx=18;provisional.continuation_vy=0;
+    Expect(check({provisional}).safe,"far provisional rear motion uses following only beyond its strict observation window");
+    auto near=MakeVehicleAt(315,65,0,0,18);near.motion_state=ObjectMotionState::DYNAMIC;
+    near.vy=.7;near.turn_prediction_duration=.2;near.continuation_vx=18;near.continuation_vy=0;
+    Expect(!check({near}).safe,"a collision inside provisional rear observation time still rejects the candidate");
+    auto contact=MakeVehicleAt(312,70,0,0,18);contact.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({contact}).safe,"source-following policy never hides current contact");
+    auto front=MakeVehicleAt(313,90,0,0,0);front.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({front}).safe,"a source-lane front obstacle still rejects a forward candidate");
+    for(std::size_t i=0;i<f.path.y.size();++i)f.path.y[i]=std::min(3.5,i*.35);
+    auto target_rear=MakeVehicleAt(314,48,3.5,0,25);target_rear.motion_state=ObjectMotionState::DYNAMIC;
+    Expect(!check({target_rear},true).safe,"current-lane role does not exempt a fast target-lane rear vehicle during entry");
+    for(auto& y:f.path.y)y=0;
+    data.lanes.clear();
+    LaneData source;source.id=source.link_id="source";source.traversable=true;
+    source.centerline={{0,0},{100,0}};source.polygon={{0,-1.75},{100,-1.75},{100,1.75},{0,1.75}};
+    LaneData common=source;common.id=common.link_id="common";
+    common.centerline={{100,0},{400,0}};common.polygon={{100,-1.75},{400,-1.75},{400,1.75},{100,1.75}};
+    data.lanes={source,common};f.map=HdLaneMap::create(data,error);
+    f.zone.source_region=f.map->corridor({"source"},error);
+    f.zone.target_region=f.map->corridor({"common"},error);f.zone.target_reference=f.ref;
+    f.zone.source_following_region=f.map->corridor({"source","common"},error);
+    Expect(check({rear}).safe,"current-lane rear role survives the boundary into the shared successor");
+    f.path.y[5]=3.5;
+    Expect(!check({rear}).safe,"source following never resumes after a candidate leaves and re-enters the corridor");
+}
+
 void TestMappedFollowerOnCurve() {
     HighwayFixture f;f.ref={};f.ref.length=200;
     asmc_planner::lane_reference::LaneMapData data;
@@ -536,6 +594,7 @@ int main() {
     TestHighwayPredictionAndLaneScope();
     TestHighwayReferenceArrival();
     TestMappedFollowerOnCurve();
+    TestSourceLaneFollowerContinuation();
     TestHighwayBoundedRearResponse();
     TestObservedFastUnknownFragment();
     std::cout<<g_failures<<" failures\n";return g_failures?1:0;
