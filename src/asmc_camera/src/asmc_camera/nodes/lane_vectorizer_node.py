@@ -52,7 +52,7 @@ from asmc_camera.bev.invalid_support import (
     invalid_support_config_from_dict,
 )
 from asmc_camera.bev.lane_evidence import reduce_evidence_to_nodes
-from asmc_camera.bev.lane_tracking import associate_lane_nodes_with_audit
+from asmc_camera.bev.lane_tracking import associate_lane_nodes_with_audit, association_backend_info
 from asmc_camera.bev.model_grid_projection import (
     MetricEvidence,
     ModelGridGroundProjector,
@@ -93,7 +93,7 @@ class _ViewFrame:
     timing: object = None
 
 
-RUNTIME_PROFILE_SCHEMA = "asmc-lane-runtime-profile-1.2.0"
+RUNTIME_PROFILE_SCHEMA = "asmc-lane-runtime-profile-1.3.0"
 RUNTIME_PROFILE_STAGES = (
     "input_decode_copy",
     "imu_attitude_lookup",
@@ -105,6 +105,7 @@ RUNTIME_PROFILE_STAGES = (
     "association",
     "shadow_prefit",
     "shared_family_fit",
+    "planning_usability",
     "invalid_support_classification",
     "independent_spline_fit",
     "evidence_message_publish",
@@ -233,6 +234,7 @@ class LaneVectorizerNode:
             "x_origin_m": float(rospy.get_param("~evidence_x_min_m")),
         }
         self.track_parameters = {
+            "backend": str(rospy.get_param("~association_backend", "auto")),
             "max_track_gap_m": float(rospy.get_param("~max_track_gap_m")),
             "max_lateral_residual_m": float(
                 rospy.get_param("~max_lateral_residual_m")
@@ -245,6 +247,7 @@ class LaneVectorizerNode:
                 rospy.get_param("~min_observed_span_m")
             ),
         }
+        self.association_backend = association_backend_info(self.track_parameters["backend"])
         self.spline_parameters = {
             "smoothing": float(rospy.get_param("~spline_smoothing")),
             "sample_spacing_m": float(
@@ -364,6 +367,13 @@ class LaneVectorizerNode:
             raise ValueError("boundary operating_domain and algorithm_id are required")
         if not 0 < self.expected_boundary_count <= 255:
             raise ValueError("expected_boundary_count must lie in [1,255]")
+        # The guarded native backend preserves the Python geometry and gates.
+        # Backend selection is execution provenance (reported in diagnostics),
+        # not a new geometry contract for downstream planners.
+        geometry_track_parameters = {
+            key: value for key, value in self.track_parameters.items()
+            if key != "backend"
+        }
         boundary_contract_config = {
             "algorithm_id": self.algorithm_id,
             "operating_domain": self.operating_domain,
@@ -373,7 +383,7 @@ class LaneVectorizerNode:
             "source_masks": source_masks,
             "confidence_by_class": self.confidence_by_class,
             "node": self.node_parameters,
-            "track": self.track_parameters,
+            "track": geometry_track_parameters,
             "spline": self.spline_parameters,
             "shadow_boundary": self.shadow_boundary_parameters,
             "temporal_boundary": self.temporal_boundary_parameters,
@@ -402,7 +412,7 @@ class LaneVectorizerNode:
             "source_masks": source_masks,
             "confidence_by_class": self.confidence_by_class,
             "node": self.node_parameters,
-            "track": self.track_parameters,
+            "track": geometry_track_parameters,
             "shadow_prefit": self.shadow_boundary_parameters,
             "shared_lane_family": self.shared_family_parameters,
             "calibration_sha256": self.calibration_sha256,
@@ -993,11 +1003,13 @@ class LaneVectorizerNode:
             shared_audit["candidate_output_enabled"] = bool(
                 self.boundary_family_candidate_enabled
             )
-            planning_usability = measure_planning_usability(
-                shared_family,
-                zones=self.planning_zones,
-                anchor_tolerance_m=(
-                    self.invalid_support_config.gap_tolerance_m
+            planning_usability = _measure(
+                timings,
+                "planning_usability",
+                lambda: measure_planning_usability(
+                    shared_family,
+                    zones=self.planning_zones,
+                    anchor_tolerance_m=self.invalid_support_config.gap_tolerance_m,
                 ),
             )
             shared_audit["invalid_support_classification"] = _measure(
@@ -2056,6 +2068,7 @@ class LaneVectorizerNode:
             else None,
             "runtime_profile_schema": RUNTIME_PROFILE_SCHEMA,
             "runtime_stage_ms": runtime_stage_summary,
+            "association_backend": self.association_backend,
             "runtime_debug_subscribers": {
                 "evidence_points": self.evidence_publisher.get_num_connections(),
                 "candidate_markers": self.marker_publisher.get_num_connections(),

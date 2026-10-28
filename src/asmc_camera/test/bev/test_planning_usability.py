@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import unittest
+from itertools import product
 
 import numpy as np
 
@@ -74,6 +75,24 @@ def family_with_states(left, yellow, right, x=None):
 
 
 class PlanningUsabilityTest(unittest.TestCase):
+    def test_all_endpoint_state_combinations_preserve_interval_contract(self):
+        zone = (LongitudinalZone('test', 0., 1.),)
+        for states in product((SAMPLE_INVALID, SAMPLE_OBSERVED, SAMPLE_STRUCTURE_INFERRED), repeat=6):
+            family = family_with_states(states[:2], states[2:4], states[4:])
+            metrics = measure_planning_usability(family, zone)['zones']['test']
+            for name, endpoints in [('left_strip', states[:4]), ('right_strip', states[2:]), ('both_strips', states)]:
+                self.assertEqual(metrics[name]['available_length_m'], float(SAMPLE_INVALID not in endpoints))
+                self.assertEqual(metrics[name]['observed_length_m'], float(all(s == SAMPLE_OBSERVED for s in endpoints)))
+
+    def test_reversed_overlapping_zero_and_nonfinite_segments(self):
+        zone = (LongitudinalZone('test', 0., 4.),)
+        for x, length in [([0., 3., 1., 1., 4.], 4.),
+                          ([0., 1., np.nan, 2., 4.], 3.),
+                          ([0., 1., np.inf, 2., 4.], 3.)]:
+            observed = [SAMPLE_OBSERVED] * len(x)
+            actual = measure_planning_usability(family_with_states(observed, observed, observed, x), zone)
+            self.assertEqual(actual['zones']['test']['both_strips']['available_length_m'], length)
+
     def setUp(self):
         self.zone = (LongitudinalZone("test", 0.0, 5.0),)
 

@@ -181,6 +181,46 @@ class ModelGridGroundProjector:
         self.ground_xy = np.ascontiguousarray(ground, dtype=np.float32)
         self.valid = np.ascontiguousarray(valid)
         self.geometric_quality = np.ascontiguousarray(quality, dtype=np.float32)
+        # Calibration/ROI are fixed for this projector. Select this sparse
+        # domain before reading/normalizing the per-frame confidence image.
+        self.valid.flags.writeable = False
+        self._valid_pixels = np.flatnonzero(self.valid)
+        self._uint8_confidence = np.arange(256, dtype=np.float32) / 255.0
+        self._uint8_confidence.flags.writeable = False
+        self._uint8_selection_cache = None
+
+    def _extract_uint8(self, class_id, confidence, confidence_by_class, classes):
+        if class_id.shape != self.model_hw or class_id.dtype != np.uint8:
+            raise ValueError("class_id must be uint8 {}".format(self.model_hw))
+        if confidence.shape != self.model_hw:
+            raise ValueError("confidence shape differs from the model grid")
+        key = tuple((int(value), float(confidence_by_class.get(int(value), 0.5))) for value in classes)
+        if any(not 0.0 <= threshold <= 1.0 for _, threshold in key):
+            raise ValueError("class confidence threshold lies outside [0,1]")
+        cached = self._uint8_selection_cache
+        if cached is None or cached[0] != key:
+            allowed = np.zeros((256, 256), dtype=bool)
+            for value, threshold in key:
+                if 0 <= value <= 255:
+                    # Compare through the same float32 normalization and NumPy
+                    # scalar rules as _selection_masks (including edge values).
+                    allowed[value] |= self._uint8_confidence >= threshold
+            allowed.flags.writeable = False
+            cached = (key, allowed)
+            self._uint8_selection_cache = cached  # One bounded, atomic entry.
+        labels = class_id.ravel()[self._valid_pixels]
+        raw_confidence = confidence.ravel()[self._valid_pixels]
+        selected = cached[1][labels, raw_confidence]
+        pixels = self._valid_pixels[selected]
+        if not len(pixels):
+            return MetricEvidence.empty()
+        return MetricEvidence(
+            xy=np.ascontiguousarray(self.ground_xy.reshape(-1, 2)[pixels], dtype=np.float32),
+            class_id=np.ascontiguousarray(labels[selected], dtype=np.uint8),
+            confidence=np.ascontiguousarray(self._uint8_confidence[raw_confidence[selected]], dtype=np.float32),
+            geometric_quality=np.ascontiguousarray(self.geometric_quality.ravel()[pixels], dtype=np.float32),
+            source_mask=np.full(len(pixels), self.source_mask, dtype=np.uint8),
+        )
 
     def _selection_masks(
         self,
@@ -280,6 +320,10 @@ class ModelGridGroundProjector:
         confidence_by_class: Mapping[int, float],
         classes=(1, 2),
     ) -> MetricEvidence:
+        classes_array, confidence_array = np.asarray(class_id), np.asarray(confidence)
+        if confidence_array.dtype == np.uint8:
+            return self._extract_uint8(classes_array, confidence_array, confidence_by_class, classes)
+        # Float input retains full finite/range validation, even outside ROI.
         classes_value, normalized_confidence, masks = self._selection_masks(
             class_id, confidence, confidence_by_class, classes
         )

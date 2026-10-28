@@ -907,43 +907,11 @@ def fit_shared_lane_family_with_audit(
         )
         nearest = _nearest_curve_indices(points, dense_curve, workspace)
         assigned_parameters = workspace.select_dense(nearest)
-        assigned_centres = dense_curve[nearest]
         assigned_normals = dense_normals[nearest]
-        signed = np.sum((points - assigned_centres) * assigned_normals, axis=1)
-
-        prior_strength = float(values["width_prior_strength"])
-        width_min = float(values["lane_width_min_m"])
-        width_max = float(values["lane_width_max_m"])
-        for role, prior, sign in (
-            (LEFT_ROLE, float(values["nominal_left_width_m"]), 1.0),
-            (RIGHT_ROLE, float(values["nominal_right_width_m"]), -1.0),
-        ):
-            mask = point_roles == role
-            if not np.any(mask):
-                continue
-            measured = sign * signed[mask]
-            weight = base_weights[mask] * robust[mask]
-            estimate = (
-                _weighted_average(measured, weight) + prior_strength * prior
-            ) / (1.0 + prior_strength)
-            if role == LEFT_ROLE:
-                left_width = float(np.clip(estimate, width_min, width_max))
-            else:
-                right_width = float(np.clip(estimate, width_min, width_max))
-
-        offsets = np.asarray(
-            [
-                left_width
-                if role == LEFT_ROLE
-                else -right_width
-                if role == RIGHT_ROLE
-                else 0.0
-                for role in point_roles
-            ],
-            dtype=np.float64,
-        )
-        targets = points - offsets[:, None] * assigned_normals
         if bool(values['joint_width_fit_enabled']) and YELLOW_ROLE in roles:
+            # This solver derives both widths from points/normals/weights and
+            # the configured priors. Alternating width estimates and targets
+            # would be discarded here; they are needed only for the fallback.
             knots, controls, joint_widths = _fit_joint_width_controls(
                 points, assigned_parameters, assigned_normals, point_roles,
                 base_weights * robust, values, workspace)
@@ -951,6 +919,31 @@ def fit_shared_lane_family_with_audit(
             offsets = np.asarray([left_width if r == LEFT_ROLE else -right_width if r == RIGHT_ROLE else 0.
                                   for r in point_roles])
         else:
+            assigned_centres = dense_curve[nearest]
+            signed = np.sum((points - assigned_centres) * assigned_normals, axis=1)
+            prior_strength = float(values["width_prior_strength"])
+            width_min = float(values["lane_width_min_m"])
+            width_max = float(values["lane_width_max_m"])
+            for role, prior, sign in (
+                (LEFT_ROLE, float(values["nominal_left_width_m"]), 1.0),
+                (RIGHT_ROLE, float(values["nominal_right_width_m"]), -1.0),
+            ):
+                mask = point_roles == role
+                if not np.any(mask):
+                    continue
+                measured = sign * signed[mask]
+                weight = base_weights[mask] * robust[mask]
+                estimate = (
+                    _weighted_average(measured, weight) + prior_strength * prior
+                ) / (1.0 + prior_strength)
+                if role == LEFT_ROLE:
+                    left_width = float(np.clip(estimate, width_min, width_max))
+                else:
+                    right_width = float(np.clip(estimate, width_min, width_max))
+            offsets = np.asarray(
+                [left_width if role == LEFT_ROLE else -right_width if role == RIGHT_ROLE else 0.0
+                 for role in point_roles], dtype=np.float64)
+            targets = points - offsets[:, None] * assigned_normals
             knots, controls = _fit_controls(
                 targets, assigned_parameters, base_weights * robust, control_count,
                 degree, float(values["spline_smoothing"]), workspace)
