@@ -6,7 +6,7 @@ entrypoints:
     launch: camera.launch
     default_mode: active
     default_models: all
-    default_detector: e8
+    default_detector: e3
     confidence: 0.40
     nms_iou: 0.50
     implementation: separate
@@ -22,7 +22,7 @@ launch_profiles:
   debug: {load_models: true, managed: true, initial_mode: ACTIVE, visualization: true}
   legacy: {camera_lane: true, camera_objects: false, traffic_light: false, managed: false}
 input_policy:
-  objects_model_profiles: [camera/yolo26l_mission16_e8_three_view.yaml, camera/yolo26l_pretrained_mission_three_view.yaml]
+  objects_model_profiles: [camera/yolo26l_mission15_e3_three_view.yaml, camera/yolo26l_mission16_e8_three_view.yaml, camera/yolo26l_pretrained_mission_three_view.yaml]
   lane_inference_and_projection: camera/lane_input.yaml
 model_target_hz: {twinlite: 15.0, yolo: 15.0, resnet18: 10.0}
 minimum_supply_hz: {twinlite: 10.0, yolo: 10.0, resnet18: 9.5}
@@ -44,12 +44,12 @@ components:
     diagnostics_topic: /perception/camera/objects/diagnostics
     source_stamp_policy: source_image_header
     views: [front, left, right]
-    default_model_profile: finetuned_e8
-    selectable_model_profiles: [finetuned_e8, pretrained_coco7]
+    default_model_profile: collect_e3
+    selectable_model_profiles: [collect_e3, finetuned_e8, pretrained_coco7]
     model_selection_policy: startup_restart
-    class_profile: mission16_v1
+    class_profile: mission15_no_cone_v1
     implementation: asmc_camera/object_detection_node.py
-    consumer: asmc_lidar/fusion/front_camera_fusion
+    consumer: asmc_lidar/fusion/multi_camera_fusion
   camera_lane:
     enabled_by_default: true  # camera.launch starts ACTIVE; driving use is shadow-only
     sensor_set: ASMC_sensor_set_v3
@@ -158,4 +158,4 @@ external_components:
   lidar_fusion:
     owner_workspace: src/asmc_lidar
     integration_policy: independently_started_canonical_runtime
-    producer_status: canonical_camera_observations_front_fusion_three_view_receiver
+    producer_status: canonical_camera_observations_three_view_fusion

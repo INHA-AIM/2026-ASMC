@@ -1,0 +1,7 @@
+class_groups:
+  profile: mission15_no_cone_v1
+  default_group: unknown
+  groups:
+    vehicle: [car, bus, truck]
+    dynamic_obstacle: [person, dog, deer, bicycle, stroller]
+    static_obstacle: [motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier]

@@ -26,7 +26,7 @@ def main():
     p.add_argument('--model', choices=MODELS, required=True)
     p.add_argument('--stage', choices=['onnx', 'engine'], required=True)
     p.add_argument('--checkpoint', type=Path, help='Pinned fine-tuned checkpoint; copied without modifying source')
-    p.add_argument('--head-profile', choices=['legacy_coco7','mission16_one2one_nms'], default='legacy_coco7')
+    p.add_argument('--head-profile', choices=['legacy_coco7','mission16_one2one_nms','mission15_one2one_nms'], default='legacy_coco7')
     args = p.parse_args()
     directory = args.directory.resolve()
     directory.mkdir(parents=True, exist_ok=True)
@@ -36,13 +36,19 @@ def main():
         if checkpoint.exists() and sha(checkpoint) != sha(args.checkpoint):
             raise ValueError('refusing to overwrite another checkpoint')
         if not checkpoint.exists(): shutil.copy2(args.checkpoint, checkpoint)
-    mission = args.head_profile == 'mission16_one2one_nms'
+    mission = args.head_profile in ('mission16_one2one_nms', 'mission15_one2one_nms')
     started = time.monotonic()
     if args.stage == 'onnx':
         import torch
         import ultralytics
         from ultralytics import YOLO
         model = YOLO(str(checkpoint), task=MODELS[args.model])
+        if mission:
+            import sys
+            sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'src/asmc_camera/src'))
+            from asmc_camera.detection.mission import profile_classes
+            if tuple(model.names[i] for i in sorted(model.names)) != profile_classes(args.head_profile):
+                raise ValueError('checkpoint class order differs from head profile')
         # nms=None exports raw one-to-many outputs; predictor performs class-aware NMS.
         exported = Path(model.export(format='onnx', dynamic=True, batch=1,
             imgsz=[736,1280], device=0, nms=False if mission else None, opset=17, simplify=True))

@@ -1,7 +1,7 @@
 <launch>
   <!-- Internal comparison entrypoint. Public callers use camera.launch. -->
   <arg name="mode" default="active"/><arg name="models" default="all"/>
-  <arg name="detector" default="e8"/><arg name="confidence" default="0.40"/>
+  <arg name="detector" default="e3"/><arg name="confidence" default="0.40"/>
   <arg name="nms_iou" default="0.50"/>
   <arg name="implementation" default="separate" doc="separate | shared; experimental until accepted"/>
   <arg name="lane_hz" default="15.0"/>
@@ -15,8 +15,9 @@
   <arg name="objects" default="$(eval arg('mode') != 'off' and 'objects' in arg('selection') and arg('valid_models'))"/>
   <arg name="lane" default="$(eval arg('mode') != 'off' and 'lane' in arg('selection') and arg('valid_models'))"/>
   <arg name="traffic" default="$(eval arg('mode') != 'off' and 'traffic_light' in arg('selection') and arg('valid_models'))"/>
-  <arg name="model_profile" default="$(eval {'e8':'finetuned_e8','pretrained':'pretrained_coco7'}[arg('detector')])"/>
-  <arg name="object_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'e8':'yolo26l_mission16_e8_three_view.yaml','pretrained':'yolo26l_pretrained_mission_three_view.yaml'}[arg('detector')])"/>
+  <arg name="model_profile" default="$(eval {'e3':'collect_e3','e8':'finetuned_e8','pretrained':'pretrained_coco7'}[arg('detector')])"/>
+  <arg name="object_config" default="$(eval find('asmc_camera') + '/config/camera/' + {'e3':'yolo26l_mission15_e3_three_view.yaml','e8':'yolo26l_mission16_e8_three_view.yaml','pretrained':'yolo26l_pretrained_mission_three_view.yaml'}[arg('detector')])"/>
+  <arg name="object_classes" default="$(eval find('asmc_camera') + '/config/camera/' + ('object_classes_mission15_v1.yaml' if arg('detector') == 'e3' else 'object_classes_mission16_v1.yaml'))"/>
   <arg name="separate" default="$(eval {'separate':True,'shared':False}[arg('implementation')])"/>
   <include file="$(find asmc_camera)/launch/_components.launch">
     <arg name="profile" value="$(arg profile)"/>
@@ -47,7 +48,7 @@
       <rosparam param="models" subst_value="true">$(eval ['objects','lane'] if arg('objects') and arg('lane') else ['objects'] if arg('objects') else ['lane'])</rosparam>
       <param name="initial_mode" value="$(eval 2 if arg('mode') == 'active' else 0)"/>
       <rosparam command="load" file="$(arg object_config)" ns="components/objects" subst_value="true"/>
-      <rosparam command="load" file="$(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml" ns="components/objects"/>
+      <rosparam command="load" file="$(arg object_classes)" ns="components/objects"/>
       <param name="components/objects/conf_thres" value="$(arg confidence)" type="double"/>
       <param name="components/objects/nms_iou" value="$(arg nms_iou)" type="double"/>
       <rosparam command="load" file="$(find asmc_camera)/config/camera/objects_runtime.yaml" ns="components/objects" subst_value="true"/>

@@ -15,7 +15,7 @@
   <arg name="traffic_light" default="false"/>
   <arg name="camera_lane" default="false"/>
   <arg name="camera_objects" default="false"/>
-  <arg name="objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="objects_config" default="$(find asmc_camera)/config/camera/yolo26l_mission15_e3_three_view.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
   <arg name="objects_side_ego_mask" default="true"/>
   <arg name="objects_left_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml"/>

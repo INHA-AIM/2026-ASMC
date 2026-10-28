@@ -1128,6 +1128,38 @@ TEST(MultiCameraFusion, ThreeViewsGiveOnlyOneConfirmationAndPreserveGeometry) {
   EXPECT_EQ(r.objects[0].camera.str_ObjectClass,"vehicle");
   EXPECT_EQ(r.fusion.counters().observations,5u);ExpectSameGeometry(before,r.objects.front());
 }
+
+TEST(MultiCameraFusion, Mission15AcceptsEveryClassFromEachViewAndRejectsCone) {
+  FusionConfig config;
+  config.allowed_names = fusion_adapter::MissionNames();
+  config.allowed_names.erase(std::remove(config.allowed_names.begin(), config.allowed_names.end(), "traffic_cone"),
+                             config.allowed_names.end());
+  ASSERT_EQ(config.allowed_names.size(), 15u);
+  auto labels = config.allowed_names;
+  labels.push_back("traffic_cone");
+  for (std::size_t view = 0; view < 3; ++view) for (const auto& label : labels) {
+    SCOPED_TRACE(std::to_string(view)+":"+label);
+    MultiCameraFusion fusion(config, OverlapCameras());
+    FakeSource source;
+    std::vector<TrackedObject> objects{MakeCar(7,10)}, history;
+    const auto before = objects.front();
+    for (int i = 0; i < 5; ++i) {
+      const Ns stamp = kT0+i*100*kMs;
+      std::vector<std::string> views(3, "empty"); views[view] = label;
+      ThreeFrames(source, stamp, views);
+      auto context = LeveledContext(stamp); context.scan_sequence = stamp;
+      const auto report = fusion.Process(stamp, stamp, context, objects, &history, source, stamp, stamp);
+      EXPECT_EQ(report.matched_this_call, 3u);  // All three image timestamps match, including empty views.
+      std::size_t associations = 0;
+      for (const auto& decision : report.decisions) associations += decision.associations.size();
+      EXPECT_EQ(associations, label == "traffic_cone" ? 0u : 1u);
+    }
+    EXPECT_EQ(objects[0].camera.str_ObjectClass,
+              label == "traffic_cone" ? "unknown" : fusion_class::Normalize(label, true));
+    if (label != "traffic_cone") EXPECT_EQ(objects[0].camera.str_YoloClass, label);
+    ExpectSameGeometry(before, objects.front());
+  }
+}
 TEST(MultiCameraFusion, PositiveOverridesEmptyAndStaticConflictWithholdsProtection) {
   MultiRig r;ThreeFrames(r.source,kT0,{"car","empty","empty"});r.Run(kT0);
   EXPECT_EQ(r.objects[0].camera.class_miss_counter,0);EXPECT_EQ(r.objects[0].camera.continuity_counter,1);

@@ -1,9 +1,9 @@
 # 카메라 관측 연결
 
 이 컴포넌트는 카메라 입력과 투영 근거를 제공한다. 실행 중인 YOLO는 `asmc_camera` 한 곳에
-두고, 손재호의 LiDAR 노드 안에서 `camera::Receiver`를 생성한다. 현재 asmc_lidar의 전방
-fusion과 이 수신 라이브러리는 별도다. opt-in shadow 노드([Shadow 파이프라인](pipeline.md))는
-이 Receiver로 `camera_front`만 fusion에 쓴다. 전체 LiDAR 이전·3뷰 객체 매칭은 아직 완료되지 않았다.
+두고, `asmc_lidar` 노드 안에서 `camera::Receiver`를 생성한다. 현재 정본 노드는 이 Receiver의
+전방·좌측·우측 관측으로 매칭과 융합을 수행한다. 기본 분류는 E3의 `mission15_no_cone_v1`이다.
+[3뷰 융합](three-view-fusion.md)과 [파이프라인](pipeline.md)에서 실행 경계를 확인한다.
 
 ## 공용 상태와 구형 제어 전환
 
@@ -58,7 +58,7 @@ for (const auto& view : observations.views) {
 최신 관측이 먼저다. 조회가 관측을 소비하지 않는다. 호출자는
 `session/generation/frame_id/stamp/calibration_id`로 이미 사용한 근거를 식별한다.
 여러 카메라 또는 반복 조회를 서로 독립적인 시간 확인으로 세지 않는다.
-현재 전방 Main의 ±50ms·200ms 대기는 이 라이브러리의 3뷰 매칭 정책이 아니다.
+매칭 시간차 ±50ms·scan 대기 상한200ms는 융합 설정이다. 이 버퍼 조회 자체는 비차단이다.
 
 ## 상태·시간·메모리
 

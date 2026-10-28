@@ -10,9 +10,11 @@
 | `runtime.yaml` | 실행·소유권·공급 기준 안내 |
 | `runtime/camera_region_example.yaml` | 기본 미실행인 제어 예제. 현재 설정은 GPS/구간과 무관하게 세 모델 ACTIVE 요청 |
 | `camera/objects_runtime.yaml` | 두 객체 모델이 공유하는 mask·보정·발행 설정 |
-| `camera/yolo26l_mission16_e8_three_view.yaml` | 기본 E8, 전방960·좌우640 |
+| `camera/yolo26l_mission15_e3_three_view.yaml` | 기본 collect E3, 15종, 전방960·좌우640 |
+| `camera/yolo26l_mission16_e8_three_view.yaml` | 이전 E8, 16종, 전방960·좌우640 |
 | `camera/yolo26l_pretrained_mission_three_view.yaml` | 실행 시 선택하는 사전학습 COCO7, 전방960·좌우640 |
-| `camera/object_classes_mission16_v1.yaml` | 원본 이름→세 소비 그룹 |
+| `camera/object_classes_mission15_v1.yaml` | 기본15종 이름→세 소비 그룹 |
+| `camera/object_classes_mission16_v1.yaml` | 이전16종 이름→세 소비 그룹 |
 | `camera/lane_runtime.yaml` | Large v7 E8 기본 TensorRT FP16·GPU 전처리·수요 기반 출력·고정 engine manifest |
 | `camera/lane_runtime_pytorch.yaml` | 같은 Large E8·입력 크기의 명시적 PyTorch 복구 설정. 내부 `_runtime.launch lane_runtime_config:=...`로 선택 |
 | `camera/lane_runtime_large.yaml` | Large v7 E8 TensorRT 명시적 선택. 현재 기본과 같은 설정이며 이전 후보 실행 명령도 보존 |

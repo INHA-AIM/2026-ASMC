@@ -24,14 +24,23 @@ asmc_camera/camera.launch
 
 ## 모델과 분류
 
-YOLO는 E8 또는 `detector:=pretrained`, 전방544×960 B1·측방480×640 B2, 목표15Hz·confidence0.40·NMS0.50이다.
+YOLO 기본은 `detector:=e3`(collect v5 E3, 15종, RTX5070 TensorRT FP16)다.
+전방544×960 B1·측방480×640 B2, 목표15Hz·confidence0.40·NMS0.50이다.
+이전 E8과 `detector:=pretrained`는 명시적으로 선택한다. 배포 파일은
+[모델 목록 v3](../../config/models/camera_object_models_v3.json)를 따른다.
 TwinLite Large E8 TensorRT도 같은 B1/B2 크기·목표15Hz, 신호등은10Hz다. 기본 camera.launch는 세 모델 ACTIVE다.
 
 | 그룹 | 원본 클래스 |
 |---|---|
 | vehicle | car, bus, truck |
 | dynamic_obstacle | person, dog, deer, bicycle, stroller |
-| static_obstacle | motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier, traffic_cone |
+| static_obstacle | motorcycle, bollard, box, concrete_barrier, steel_barricade, traffic_drum, plastic_barrier |
+
+LiDAR 기본 `fusion.camera_class_profile`은 `mission15_no_cone_v1`, `fusion.views`는 `all`이다.
+모델의 ID14는 카메라에서 `stroller`라는 이름으로 변환된다. LiDAR와 판제에는 원본 이름과
+위 그룹을 전달하므로 판제 enum을 모델 번호에 맞춰 재배열하지 않는다. `traffic_cone`은
+현재 15종 프로필에서 허용하지 않는다. 이전 E8을 사용하려면 LiDAR 설정 파일의 프로필도
+`mission16_v1`로 맞춘다. MotionClassifier의 실제 운동 상태 판단은 그대로 유지한다.
 
 그룹은 소비용 분류이며 실제 운동 상태가 아니다. fresh 양성 matching의 vehicle/dynamic_obstacle은
 HD맵 도로 밖에서도 보호한다. 오래된 분류나 LiDAR 추정 속도만으로 이 예외를 적용하지 않는다.
@@ -47,17 +56,21 @@ HD맵 도로 밖에서도 보호한다. 오래된 분류나 LiDAR 추정 속도�
 ## 실행과 후속
 
 ```bash
-roslaunch asmc_camera camera.launch
+roslaunch asmc_camera camera.launch models:=objects detector:=e3
 roslaunch asmc_lidar lidar.launch
 ```
 
-각 명령은 별도 터미널이다. 모델을 중복 시작하지 않는다. 카메라 없는 비교는 LiDAR의 `fusion:=false`를 사용한다.
+각 명령은 별도 터미널이다. 저장소 루트 workspace만 빌드/source한다. 폐기한 nested workspace는 사용하지 않는다.
+위 카메라 명령은 객체 모델만 실행한다. RTX5070의 E3 엔진을 유지하며 기존 TwinLite 엔진의 GPU 검사도 유지한다.
+`models:=all`은 별도로 호환되는 차선 엔진이 필요하다. 모델을 중복 시작하지 않는다.
+카메라 없는 비교는 LiDAR의 `fusion:=false`를 사용한다.
 현재3뷰 matching은 뷰별 원본 보정·시각·관측 ID를 사용하며 느린 뷰를 기다리거나 같은 근거를 중복 확인 횟수로 세지 않는다.
 안승현은 **3뷰 matching/fusion과 카메라 API·보정·시간·라벨 연결**, 손재호는 **터널·OBB·추적/속도/운동 상태**를 담당한다.
 공동 수정 지점과 완료 기준은 [개선 계획](../../src/asmc_lidar/docs/improvement-milestones.md)을 따른다.
 
 bus/truck·차로 앞 bicycle/dog·dog 하위 종류 약세는 가중치 개선 기록이며, 현재 실행 구조와 구분해
-장원태가 detect 추가학습을 진행한다. 새 모델은 기존16종/3그룹·원본 좌표·B1/B2 TensorRT와 동일 val을 검증한 뒤 인수한다.
+장원태가 detect 추가학습을 진행한다. 현재 E3는15종/3그룹이며 원본 좌표·B1/B2 TensorRT를 유지한다.
+교체 전후 동일 검증셋 결과와 실제 주행 검증 범위는 [E3 배포 기록](../records/camera/2026-10-28-mission15-e3-deployment.md)을 따른다.
 Seg는 mask GT·binding·후처리·3뷰 지연까지 별도 확인할 후보이며 detect 납품의 선행 조건이 아니다.
 [인수할 모델·라벨 근거](../../src/asmc_lidar/docs/improvement-milestones.md#yolo-인수--detect-우선-seg는-조건부)를 참고한다. 구 정수 wire 및 이전 인계 수치는
 [PR #111까지의 기록](../records/lidar/camera-handoff-through-pr111.md)에 보존한다.

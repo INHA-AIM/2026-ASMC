@@ -1,0 +1,7 @@
+# RTX50 / Python3.9 / PyTorch CUDA12.8. CUDA11 TensorRT is not used here.
+--extra-index-url https://pypi.nvidia.com
+tensorrt-cu12==10.13.0.35
+nvidia-ml-py==13.610.43
+onnx==1.17.0
+onnxslim==0.1.82
+onnxruntime-gpu==1.19.2

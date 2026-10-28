@@ -8,11 +8,15 @@ cd "$SCEN_ENGINE_ROOT"
 SCEN_ENGINE_DEPS="$SCEN_ENGINE_ROOT/tools/scen_runner/.runtime/engine_build_python"
 export PYTHONPATH="$SCEN_ENGINE_DEPS${PYTHONPATH:+:$PYTHONPATH}"
 export YOLO_AUTOINSTALL=false
+SCEN_ENGINE_PYTHON=/usr/bin/python3
+if [[ -x /opt/yolo-venv/bin/python ]]; then
+  SCEN_ENGINE_PYTHON=/opt/yolo-venv/bin/python
+fi
 if [[ "${1:-}" != "--check" ]]; then
   # Keep build-only dependencies local; do not upgrade the ROS/PyTorch NumPy.
-  if ! /usr/bin/python3 -c 'import onnxruntime, coloredlogs, flatbuffers, humanfriendly' 2>/dev/null; then
-    /usr/bin/python3 -m pip install --target "$SCEN_ENGINE_DEPS" --no-deps \
+  if ! "$SCEN_ENGINE_PYTHON" -c 'import onnxruntime, coloredlogs, flatbuffers, humanfriendly' 2>/dev/null; then
+    "$SCEN_ENGINE_PYTHON" -m pip install --target "$SCEN_ENGINE_DEPS" --no-deps \
       onnxruntime coloredlogs flatbuffers humanfriendly
   fi
 fi
-exec /usr/bin/python3 tools/perception/prepare_local_camera_engines.py "$@"
+exec "$SCEN_ENGINE_PYTHON" tools/perception/prepare_local_camera_engines.py "$@"

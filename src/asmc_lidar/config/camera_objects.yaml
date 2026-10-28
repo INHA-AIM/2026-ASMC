@@ -1,8 +1,6 @@
-# Reusable camera receiver/buffer/projection; 3-view object matching and fusion remain migration work.
+# Canonical three-view receiver, projection, matching and fusion.
 schema_version: 1
-implementation_status: receiver_buffer_projection_ready_fusion_not_implemented
-# Status of this receiver contract. The canonical runtime (docs/pipeline.md)
-# fuses camera_front only; 3-view fusion is not implemented.
+implementation_status: three_view_fusion_enabled
 observation_contract: config/contracts/camera_object_observation_v1.yaml
 observation_topic: /perception/camera/objects/observations
 status_topic: /perception/camera/objects/status
@@ -11,11 +9,11 @@ cameras:
   left: camera_left
   right: camera_right
 calibration_config: $(find asmc_camera)/config/cameras_v3.yaml
-class_groups_config: $(find asmc_camera)/config/camera/object_classes_mission16_v1.yaml
+class_groups_config: $(find asmc_camera)/config/camera/object_classes_mission15_v1.yaml
 current_consumer:
   runtime_host: asmc_lidar
   input_topic: /perception/camera/objects/observations
-  camera_scope: front
+  camera_scope: all
   output_topic: /perception/lidar/tracks_map
 
 control_contract: config/contracts/camera_inference_control_v2.yaml

@@ -64,7 +64,7 @@ struct RuntimeConfig {
 // altitude origin equals the map origin z. Throws std::runtime_error.
 // relative paths in the file are resolved against `package_share_dir`.
 // Every key is required (no silent struct defaults). Also rejected like Main
-// at start-up: camera_class_profile not legacy|mission16_v1, fusion_yolo_policy
+// at start-up: camera_class_profile not legacy|mission16_v1|mission15_no_cone_v1, fusion_yolo_policy
 // not unique|bounded_reuse. pipeline.calibration_id =
 // "shadow:" + sha256(yaml) + ":" + sha256(mount file) (not Main's id string).
 // Recompute identity after launch/replay overrides, including camera calibration.

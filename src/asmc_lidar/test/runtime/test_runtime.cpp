@@ -589,7 +589,9 @@ TEST(RuntimeConfig, LoadsShippedConfigWithMainValues) {
   EXPECT_EQ(c.fusion.sync_wait_timeout_s, 0.20);
   EXPECT_EQ(c.fusion.initial_confirmations, 5);
   EXPECT_EQ(c.fusion.iou_threshold, 0.25);
-  EXPECT_TRUE(c.fusion.allowed_names.empty());  // adapter default: profile classes
+  EXPECT_EQ(c.fusion.allowed_names.size(), 15u);
+  EXPECT_EQ(std::count(c.fusion.allowed_names.begin(), c.fusion.allowed_names.end(), "traffic_cone"), 0);
+  EXPECT_EQ(std::count(c.fusion.allowed_names.begin(), c.fusion.allowed_names.end(), "stroller"), 1);
   EXPECT_FALSE(c.fusion.exclude_hood_y_band);
   EXPECT_EQ(c.max_points, 62500u);
   EXPECT_EQ(c.stamp_provenance, "bridge_receive_ns");
@@ -616,6 +618,17 @@ TEST(RuntimeConfig, RejectsGpsAgeOutsideMainBound) {
   ExpectConfigError([](YAML::Node& n) { n["pose"]["lidar_pose_gps_max_age_s"] = 0.0; }, "GPS age");
   ExpectConfigError([](YAML::Node& n) { n["pose"]["lidar_pose_gps_max_age_s"] = 0.31; }, "GPS age");
   ExpectConfigError([](YAML::Node& n) { n["pose"]["lidar_pose_gps_max_age_s"] = -0.1; }, "GPS age");
+}
+
+TEST(RuntimeConfig, Mission15AndOldProfilesKeepGroupSemantics) {
+  for (const std::string profile : {"mission15_no_cone_v1", "mission16_v1", "legacy"}) {
+    TempDir dir;
+    auto node = YAML::LoadFile(ShippedConfig());
+    node["fusion"]["camera_class_profile"] = profile;
+    const auto config = sh::LoadRuntimeConfig(dir.Write("shadow_pipeline.yaml", node), PackageDir());
+    EXPECT_EQ(profile != "legacy", config.fusion.mission_profile);
+    EXPECT_EQ(profile == "mission15_no_cone_v1" ? 15u : 0u, config.fusion.allowed_names.size());
+  }
 }
 
 TEST(RuntimeConfig, RejectsAltitudeOriginDifferentFromMapOrigin) {

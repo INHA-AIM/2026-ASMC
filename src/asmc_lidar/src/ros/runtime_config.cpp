@@ -4,6 +4,7 @@
 // (main.cpp:608-613, FrameBoundary.cpp:54-130, Parser.cpp:21-48, FusionCamera.cpp
 // parameter clamps) for the part of the configuration this port uses.
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/fusion/fusion_policy.hpp>
 
 #include <openssl/sha.h>
 #include <yaml-cpp/yaml.h>
@@ -363,13 +364,19 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   // FusionCamera.cpp:366-384, 784-799 (parameter reads and clamps) (8f93c22e).
   config.enable_camera_fusion = r.Get<bool>("fusion.enable_sensor_fusion");
   const auto profile = r.Get<std::string>("fusion.camera_class_profile");
-  if (profile != "legacy" && profile != "mission16_v1") Fail(file, "Unsupported camera_class_profile");
+  if (profile != "legacy" && profile != "mission16_v1" && profile != "mission15_no_cone_v1")
+    Fail(file, "Unsupported camera_class_profile");
   auto& f = config.fusion;
   if(r.Node("fusion")["views"])f.views=r.Node("fusion")["views"].as<std::string>();
   if(f.views!="front"&&f.views!="all")Fail(file,"fusion.views must be front or all");
   p.tunnel_route.protection.multiview=f.views=="all";
   if(root["motion"]&&root["motion"]["semantic_static_enabled"])p.motion.semantic_static_enabled=root["motion"]["semantic_static_enabled"].as<bool>();
-  f.mission_profile = profile == "mission16_v1";
+  f.mission_profile = profile != "legacy";
+  if (profile == "mission15_no_cone_v1") {
+    f.allowed_names = pipeline::fusion_adapter::MissionNames();
+    f.allowed_names.erase(std::remove(f.allowed_names.begin(), f.allowed_names.end(), "traffic_cone"),
+                          f.allowed_names.end());
+  }
   f.yolo_policy = r.Get<std::string>("fusion.fusion_yolo_policy");
   if (f.yolo_policy != "unique" && f.yolo_policy != "bounded_reuse") Fail(file, "invalid fusion_yolo_policy");
   f.max_time_offset_s = std::max(0.001, r.Get<double>("fusion.fusion_max_time_offset_sec"));

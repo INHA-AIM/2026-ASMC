@@ -310,7 +310,7 @@ struct YoloBox {
   int source_index = -1;  // Original observation index, before adapter/hood filtering.
 };
 
-// asmc_camera/detection/mission.py CLASSES (adapter mission16_v1 default).
+// Previous mission16 vocabulary; runtime_config removes cone for mission15.
 inline const std::vector<std::string>& MissionNames() {
   static const std::vector<std::string> names{
       "person", "dog", "deer", "bicycle", "car", "motorcycle", "bus", "truck", "bollard", "box",

@@ -1,6 +1,7 @@
 # 객체 검출 배포 모델
 
-YOLO26l E8/사전학습 `.pt`·`.engine` 실제 파일을 일반 Git으로 배포합니다.
+기본 YOLO26l collect E3(15종)와 기존 E8/사전학습 `.pt`·`.engine` 실제 파일을 배포합니다.
+E3 engine은 RTX5070·TensorRT10.13.0.35 CUDA12용이며, 기존 engine은 RTX4060Ti용입니다.
 모델 출처와 환경·경로는
 [모델 안내](../README.md)를 따릅니다.
 
