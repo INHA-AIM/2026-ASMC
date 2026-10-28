@@ -71,5 +71,25 @@
       "Packaged matching lane engines reused; redundant lane export interrupted and retained separately."
     ]
   },
-  "scope_note": "Read-only real-cache validation and CPU regression after profile policy changes; previous stationary/teleport live smoke is separate evidence. Private logs, cache, engines, personal paths and unrelated work are excluded."
+  "scope_note": "Read-only real-cache validation and CPU regression after profile policy changes; previous stationary/teleport live smoke is separate evidence. Private logs, cache, engines, personal paths and unrelated work are excluded.",
+  "ci_closeout_20261029": {
+    "failed_workflow_run": 40715268298,
+    "failed_job": 122911114652,
+    "failure": "canonical camera support count expected 10, actual 11 after adding object_engine_selection.py",
+    "fix_commit": "3c7c66757fbb4ee5308b2ca6fc8aebb1184690d7",
+    "synchronized_main": "af6df9e6",
+    "ownership_inventory_before": 10,
+    "ownership_inventory_after": 11,
+    "both_engine_selectors_required": true,
+    "legacy_dependency_guards_preserved": true,
+    "local_facade_tests_passed": 18,
+    "local_camera_ci_group_tests_passed": 1011,
+    "local_camera_ci_group_test_invocations": 78,
+    "local_group_exit_code": 0,
+    "local_group_log_sha256": "c0df6dbb0fa39879a08ecaffab704d1a55f0053c39ee7557649587e72fa051b1",
+    "original_failure_log_sha256": "024e77da26756f7395d6aed3b805bc0cb1f1895d39f8ddfe9f2537fcfd963bde",
+    "local_environment": "Noetic runtime image, no GPU or network, operational devel mounted read-only; distinct from hosted CPU runtime",
+    "operational_checkout_changed": false,
+    "merge_gate": "All three hosted checks on the new PR head must succeed before merge."
+  }
 }

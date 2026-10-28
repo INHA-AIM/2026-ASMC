@@ -46,3 +46,21 @@ E3 15종으로 맞췄다. E8 16종과 기존 실험 수치·출처는 복구·�
 개인 데이터 저장 위치와 LOCAL·AIMDrive 실험 코드도 배포 범위에 포함하지 않는다.
 같은 모델의 로컬 선택 수정이므로 배포 checkpoint·engine을 다시 내려받을 필요는 없다.
 사용 중인 카메라 노드는 소스 업데이트만으로 바뀌지 않으므로 다음 실행 때 재시작한다.
+
+## PR #131 CI 마감
+
+첫 hosted CI `40715268298`에서 `test_runtime_support_and_config_are_canonically_owned`가
+`10 != 11 : camera`로 실패했다. 새 객체 엔진 선택 모듈은 추가했지만, 기존의 고정된
+지원 파일 개수 검사를 갱신하지 않은 누락이다. 앞선247개 로컬 검사에는 이 facade 검사가
+포함되지 않아 발견하지 못했다. 다른 LiDAR·lane·camera-ros·bridge 그룹은 통과했다.
+
+운영 checkout을 바꾸지 않고 별도 CI 작업트리에서 같은 실패를 재현했다. 최신 main
+`af6df9e6`(PR #132 포함)을 충돌 없이 병합하고 `3c7c6675`에서 예상 개수를11로 갱신했다.
+lane/object 선택 모듈이 모두 카메라 패키지에 있어야 한다는 명시 검사도 추가했다.
+기존 소유권·금지된 구 패키지 의존성 검사는 유지한다.
+
+수정 후 facade18개와 **전체 `.github/ci/camera-unit.sh` 1,011개 검사(78회 호출)**가
+통과했다. 로컬 전체 그룹은 GPU·네트워크 없이 격리한 Noetic runtime에서 기존 devel을
+읽기 전용으로 사용했다. hosted CPU 환경과 구분하며, 최종 병합은 수정된 PR head의
+GitHub CI·planning-catkin-build·validated-lidar-build 통과를 확인한 뒤 진행한다.
+이 마감은 테스트·검증 기록만 수정하며 운영 모델·노드·컨테이너와 다른 개발 worktree는 유지한다.
