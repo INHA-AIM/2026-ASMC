@@ -751,6 +751,7 @@
       ['추가 노면 여유 비용',String(r.soft_semantic_margin_visits||0)+' sample visits · 차체+최소 여유는 별도 검사'],
       ['이전 실제 노면 근거',String(r.scene?.recent_road_cells||0)+' cells · 최대 '+fmt(r.scene?.recent_road_max_age_s,2)+'s (청회색)'],['계획 / MPC',fmt(r.processing_ms,2)+' / '+fmt(c?.processing_ms,2)+' ms'],
       ['입력 나이',fmt(r.age_s,3)+'s'],
+      ['장애물 현재 / 과거 측정',(r.scene?.obstacles||[]).filter(o=>!o.retained_measurement).length+' / '+(r.scene?.obstacles||[]).filter(o=>o.retained_measurement).length+' (과거 측정은 보라 점선)'],
       ['실제 선택 source 차 (LiDAR−family)',fmt(r.inputs?.lidar_minus_family_source_ms,1)+'ms · '+(r.inputs?.lidar_minus_family_source_ms>=0?'LiDAR 기준시각이 뒤':'family 기준시각이 뒤')],
       ['결과 수신 순서',r.inputs?.timing_available?(r.inputs.lidar_minus_family_receive_ms>=0?'LiDAR':'family')+'가 '+fmt(Math.abs(r.inputs.lidar_minus_family_receive_ms),1)+'ms 늦게 도착':'수신 시각 대기'],
       ['family 기준시각→수신',fmt(r.inputs?.family_source_to_receive_ms,1)+'ms'],

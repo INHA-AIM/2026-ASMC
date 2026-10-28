@@ -109,7 +109,20 @@ def main():
                         continue
                     yaw = (math.sin(roll)*m.angular_velocity.y + math.cos(roll)*m.angular_velocity.z)/math.cos(pitch)
                     imus.append((stamp, yaw))
-    result = audit(sorted(imus), sorted(speeds), sorted(commands))
+    # Integrated trials include fast NORMAL travel. Score LOCAL-selected
+    # intervals only; otherwise NORMAL's40km/h tails contaminate a10km/h audit.
+    control = sorted((json.loads(line) for line in (args.run/'control.jsonl').open()),
+                     key=lambda r:r['decision_stamp'])
+    ct = [r['decision_stamp'] for r in control]
+    selected=[]
+    for sample in imus:
+        i=bisect_right(ct,sample[0])-1
+        if i>=0 and sample[0]-ct[i]<=.15 and control[i].get('control_enabled'):
+            selected.append(sample)
+    result = audit(sorted(selected), sorted(speeds), sorted(commands))
+    result['interval'] = 'LOCAL control selected only; NORMAL/preparation excluded'
+    result['imu_samples_all'] = len(imus)
+    result['imu_samples_selected'] = len(selected)
     result['input_run'] = args.run.name
     with args.output.open('x') as stream:
         json.dump(result, stream, indent=2)

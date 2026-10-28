@@ -212,7 +212,7 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
                 image,
                 [np.asarray([pt(*q) for q in ob["polygon"]], np.int32)],
                 True,
-                (0, 100, 255),
+                (230, 130, 200) if ob.get("retained_measurement") else (0, 100, 255),
                 2,
             )
         stem = "case-%02d" % len(cases)
@@ -257,7 +257,7 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>LOCAL 경로·실패 검수</title><style>body{background:#141a22;color:#eee;font:16px sans-serif;margin:24px}img{vertical-align:top;max-width:100%}article{border-top:1px solid #555;margin-top:24px}</style><h1>'
         + html.escape(root.name)
-        + '</h1><p>청록=선택 경로, 옅은 보라=후보, 파랑=방향 reference(출처는 사례/JSON에 표시), 노란 외곽=차체 sweep. 청회색 셀=과거 실제 관측 노면(현재 프레임 추론 아님). 초록=노면 확률, 빨강=비노면/가림 그림자, 보라=차체 가림, 갈색=시야 밖. 회복 경로는 충돌 무결성이 검증된 경로가 아닙니다. 실제 진행·접촉은 events/trial-result와 대조합니다.</p><a href="index.json">시각 대응·누락</a>'
+        + '</h1><p>청록=선택 경로, 옅은 보라=후보, 파랑=방향 reference(출처는 사례/JSON에 표시), 노란 외곽=차체 sweep. 청회색 셀=과거 실제 관측 노면(현재 프레임 추론 아님). 주황 OBB=현재 측정, 보라 OBB=최대200ms 과거 측정 보조(원래 나이 유지). 초록=노면 확률, 빨강=비노면/가림 그림자, 보라=차체 가림, 갈색=시야 밖. 회복 경로는 충돌 무결성이 검증된 경로가 아닙니다. 실제 진행·접촉은 events/trial-result와 대조합니다.</p><a href="index.json">시각 대응·누락</a>'
         + ('<p style="color:#ff9999">bag 읽기 오류: 완전한 기록이 아닙니다. 원본은 수정하지 않았으며 읽을 수 있는 정확한 시각의 사례만 표시합니다.</p>' if read_errors else '')
         + cards,
         encoding="utf-8",
