@@ -61,13 +61,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /*
-            !**/*.pt
-            !**/*.engine
-            !**/*.onnx
-            !**/*.tar.gz
       - name: Restore production compiler cache
         id: compiler-cache
         uses: actions/cache/restore@v4

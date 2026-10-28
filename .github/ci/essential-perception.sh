@@ -2,6 +2,8 @@
 set -eo pipefail
 source .github/ci/ros-env.sh
 python3 tools/audit/check_git_history_assets.py
+python3 tools/audit/validate_perception_contract.py
+python3 -m unittest tools/audit/test_perception_contract.py
 for regression in asmc_lidar_frame_time_core_test asmc_lidar_geometry_boundary_test; do
   "${ASMC_CI_DEVEL:-devel}/lib/asmc_lidar/$regression"
 done

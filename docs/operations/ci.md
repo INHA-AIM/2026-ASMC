@@ -44,7 +44,8 @@ LiDAR 운영 target은 `ASMC_LIDAR_PIPELINE_REQUIRED=ON`으로 PCL 의존성 누
 인지 build에는 공식 Noetic perception 이미지의 고정 digest를 사용해 PCL/OpenCV 의존성 준비 비용을
 줄인다. PR 검사에서는 Torch/torchvision/Ultralytics를 설치하지 않고 필요한 NumPy·SciPy·PyYAML만
 [requirements](../../.github/ci/essential-requirements.txt)로 고정한다. 운영 컨테이너의 환경은 바꾸지 않는다.
-계약·판제 job은 큰 배포 PT/engine/ONNX/과거 tar.gz를 sparse checkout에서 제외한다.
+계약 job은 큰 배포 PT/engine/ONNX/과거 tar.gz를 sparse checkout에서 제외한다.
+Noetic의 Git 2.25는 checkout action의 sparse 지원 조건을 충족하지 않아 판제 job은 일반 checkout을 사용한다.
 인지 job은 전체 파일을 받아 E3/E8/Large와 신호등 모델 존재·해시를 확인한다.
 
 ccache는 C++/header/CMake/package/message/service 내용으로 key를 만들고 역할별로 저장한다.

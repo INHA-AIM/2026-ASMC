@@ -10,10 +10,9 @@ python3 tools/bridge/render_morai_network_profiles.py --check
 python3 tools/audit/validate_bridge_profiles.py
 python3 -m unittest tools/audit/test_bridge_profiles.py
 python3 tools/audit/validate_p1b_contract.py
-python3 tools/audit/validate_perception_contract.py
 python3 tools/audit/validate_perception_topic_policy.py
 python3 tools/audit/validate_perception_runtime_acceptance.py
-python3 -m unittest tools/audit/test_p1b_contract.py tools/audit/test_perception_contract.py tools/audit/test_perception_topic_policy.py tools/audit/test_perception_runtime_acceptance.py
+python3 -m unittest tools/audit/test_p1b_contract.py tools/audit/test_perception_topic_policy.py tools/audit/test_perception_runtime_acceptance.py
 python3 tools/audit/check_lidar_canonicalization.py
 PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_collection/test -p 'test_storage_paths.py'
 PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_collection/test -p 'test_data_locations.py'
