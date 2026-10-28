@@ -27,7 +27,7 @@ Scene empty() {
 int main() {
   try {
     // Tiny overspeed must converge, not become a full-brake trough. The old
-    // scalar-cap + average-acceleration loop reached3.8m/s for a4.1667m/s cap.
+    // scalar-cap + average-acceleration loop created an unnecessary trough.
     for (double initial_a : {-1., 0., 1.}) {
       double v = 4.3, a = initial_a;
       for (int i = 0; i < 100; ++i) {

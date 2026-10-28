@@ -208,6 +208,21 @@ class LocalController {
     // Header is now the planning basis, not the perception source. Re-anchoring
     // geometry must never renew its350ms source freshness (550ms crawl grace).
     const double source_age = (now - candidate->scene_stamp).toSec();
+    // LOCAL-2C drive09: a 67us future motion stamp caused a full brake even
+    // with a fresh path. Wait for the clock/sample handoff, NEVER solve with
+    // future state or refresh a command. The already-solved command remains
+    // bounded by150ms and the selector watchdog. A persistent or >5ms lead
+    // still fails; this is not a timestamp correction or extrapolation.
+    if (state_age < 0 && state_age >= -.005 && last_good &&
+        candidate->header.frame_id == last_good->header.frame_id &&
+        state->header.frame_id == last_good->header.frame_id &&
+        state->child_frame_id == "base_link" && age >= 0 && age <= .25 &&
+        source_age >= age && source_age <= .35 &&
+        (steady - last_solved).toSec() < .15) {
+      reason = "motion_clock_pending";
+      report(false, morai_msgs::CtrlCmd());
+      return;
+    }
     if (age < 0 || age > (grace ? .55 : .35) || source_age < age ||
         source_age > (grace ? .55 : .50) || state_age < 0 || state_age > .15) {
       stop("local_source_stale");

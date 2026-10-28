@@ -307,6 +307,84 @@ def main():
             print("preview has no command publisher PASS")
             stop(preview)
 
+            # A frozen private ROS clock reproduces the measured67us future
+            # stamp deterministically; no probabilistic sleep-vs-callback race.
+            from rosgraph_msgs.msg import Clock
+
+            rospy.set_param("/use_sim_time", True)
+            clock_pub = rospy.Publisher("/clock", Clock, queue_size=1, latch=True)
+            clock_pub.publish(Clock(rospy.Time.from_sec(100.0)))
+            clock_preview = start(
+                [
+                    "rosrun",
+                    "asmc_controller",
+                    "asmc_local_controller_node",
+                    "__name:=local_clock_contract",
+                    "_enable_control:=false",
+                    "_controller_config:=" + config,
+                ],
+                "clock-contract.log",
+            )
+            time.sleep(0.8)
+
+            def clock_phase(t, lead, duration):
+                nonlocal seq
+                seq += 1
+                clock_pub.publish(Clock(rospy.Time.from_sec(t)))
+                state = Odometry()
+                state.header.stamp = rospy.Time.from_sec(t + lead)
+                state.header.frame_id = "local/clock/0"
+                state.child_frame_id = "base_link"
+                state.pose.pose.orientation.w = 1.0
+                state.twist.twist.linear.x = 1.0
+                plan = LocalTrajectory()
+                plan.header = copy.deepcopy(state.header)
+                plan.header.stamp = rospy.Time.from_sec(t - 0.05)
+                plan.ego_at_plan = copy.deepcopy(state)
+                plan.ego_at_plan.header = copy.deepcopy(plan.header)
+                plan.scene_stamp = rospy.Time.from_sec(t - 0.20)
+                plan.valid = True
+                plan.reason = "ok"
+                plan.dt = 0.05
+                plan.plan_sequence = seq
+                for i in range(100):
+                    point = TrajectoryPoint()
+                    point.x, point.velocity = i * 0.05, 1.0
+                    plan.points.append(point)
+                received.clear()
+                states.publish(state)
+                plans.publish(plan)
+                time.sleep(duration)
+                return [dict(r) for r in received]
+
+            assert any(r["reason"] == "ok" for r in clock_phase(100.0, -0.01, 0.10))
+            tiny_future = clock_phase(100.05, 0.000067, 0.08)
+            assert any(
+                r["reason"] == "motion_clock_pending" for r in tiny_future
+            ), tiny_future
+            assert not any(
+                r["valid"] or r["command_published"] for r in tiny_future
+            ), tiny_future
+            recovered = clock_phase(100.10, -0.01, 0.08)
+            assert any(r["reason"] == "ok" for r in recovered), recovered
+            prolonged = clock_phase(100.15, 0.000067, 0.30)
+            assert any(
+                r["reason"] in ("local_source_stale", "local_receive_stale")
+                for r in prolonged
+            ), prolonged
+            clock_phase(100.20, -0.01, 0.10)
+            large_future = clock_phase(100.25, 0.007, 0.08)
+            assert any(
+                r["reason"] == "local_source_stale" for r in large_future
+            ), large_future
+            assert not any(r["reason"] == "motion_clock_pending" for r in large_future)
+            print(
+                "67us clock handoff never computes future state; recovery/expiry/7ms rejection PASS"
+            )
+            stop(clock_preview)
+            clock_pub.unregister()
+            rospy.set_param("/use_sim_time", False)
+
             # Exercise the actual ownership check, including a NORMAL producer
             # whose commands do not share the local topic. These publishers are
             # isolated from the operating master and never send a command.
