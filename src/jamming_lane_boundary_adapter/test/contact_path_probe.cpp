@@ -165,6 +165,22 @@ int semanticFrame(const char* directory,bool assist){
   std::cout<<"lane="<<lane.lane_index<<" offset="<<offset<<" length="<<length<<" clear="<<result.clear
    <<" reason="<<result.reason<<" blocked="<<result.blocked_x<<','<<result.blocked_y<<" assisted="<<result.assisted<<'\n';
  }
+ // Offline attribution only. Do not publish these counterfactual inputs.
+ // Preserve actual geometry and compare which layer rejects all candidates.
+ const auto original_grid=bev_frames.back().grid;
+ for(int mask=1;mask<4;++mask){
+  semantic_home=semantic_target=follower_state.locked_lane;semantic_confirm=0;semantic_last_decision=ros::Time();
+  bev_frames.back().grid=original_grid;
+  if(mask&1){auto free_grid=std::make_shared<lane_boundary_adapter::clearance::DrivableClearance>();
+   std::vector<uint8_t> free_cells(40000,255);free_grid->prepare(bev_spec,free_cells,free_cells,vehicle,166,true,assist);bev_frames.back().grid=free_grid;}
+  auto scan=boost::make_shared<asmc_msgs::LidarTrackingObservation>(*local);
+  if(mask&2){scan->observation.objects.objects.clear();scan->observation.objects.status=scan->observation.objects.OBSERVED_EMPTY;}
+  semantic_local=lane_boundary_adapter::LocalObstacleSupport();semantic_local.accept(scan,ros::Time::now(),ros::SteadyTime::now());
+  const auto why=updateSemanticPathPlan();
+  std::cout<<"COUNTERFACTUAL_NOT_EXECUTION semantic_free="<<bool(mask&1)<<" local_empty="<<bool(mask&2)
+   <<" decision="<<why<<" target="<<semantic_target<<" end="<<semantic_safe_length
+   <<" candidates="<<contact_candidates<<" road="<<contact_road_rejected<<" grid="<<bev_rejected<<" local="<<contact_collision_rejected<<'\n';
+ }
  return 0;
 }
 int main(int argc,char**argv){
