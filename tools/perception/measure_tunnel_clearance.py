@@ -32,6 +32,14 @@ def quantiles(v):
     )
 
 
+def interpolate_pose(left, right, fraction):
+    """Interpolate a bracketed SE(2) sample without crossing the long yaw arc."""
+    left, right = np.asarray(left), np.asarray(right)
+    delta = right - left
+    delta[2] = np.arctan2(np.sin(delta[2]), np.cos(delta[2]))
+    return left + fraction * delta
+
+
 def wall_band(points, line, centre, sign):
     """Mode of offset from observed paint with vertical/longitudinal support."""
     x, y, z = points.T
@@ -145,7 +153,7 @@ def main():
         if l[1] != r[1] or r[0] - l[0] > 0.1:
             return None
         f = (t - l[0]) / (r[0] - l[0])
-        return l[1], np.asarray(l[2:]) + f * (np.asarray(r[2:]) - l[2:])
+        return l[1], interpolate_pose(l[2:], r[2:], f)
 
     stamps = sorted(set(families) & set(contexts))
     rows = []

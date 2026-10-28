@@ -12,9 +12,9 @@ import time
 
 
 def main():
-    port = 11350
     with socket.socket() as sock:
-        sock.bind(("127.0.0.1", port))
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
     os.environ["ROS_MASTER_URI"] = "http://127.0.0.1:%d" % port
     os.environ["ROS_HOSTNAME"] = "127.0.0.1"
     import rosgraph

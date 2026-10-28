@@ -11,9 +11,9 @@ import time
 
 
 def main():
-    port = 11349
     with socket.socket() as sock:
-        sock.bind(("127.0.0.1", port))
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
     os.environ["ROS_MASTER_URI"] = "http://127.0.0.1:%d" % port
     os.environ["ROS_HOSTNAME"] = "127.0.0.1"
     import rosgraph
@@ -127,16 +127,40 @@ def main():
                         if r.get("incoming_plan_sequence", r["plan_sequence"])
                         >= seq - 1
                     )
+                    for row in received:
+                        if row["reason"] == "motion_sample_pending":
+                            assert not row["command_published"]
                     received.clear()
                 for wanted in [expected] if isinstance(expected, str) else expected:
                     assert wanted in seen, (name, wanted, seen)
                 print(name, expected, "PASS")
 
             case("exact epoch-scale stamp", lambda s, p: None, "ok")
-            case("old source cannot be renewed by fresh plan header",
-                 lambda s,p: setattr(p,"scene_stamp",p.header.stamp-rospy.Duration(.8)),
-                 "local_source_stale")
+            held = []
 
+            def missing_new_state(s, p):
+                import copy
+
+                p.header = copy.deepcopy(p.header)
+                p.ego_at_plan = copy.deepcopy(p.ego_at_plan)
+                s.header = copy.deepcopy(s.header)
+                if not held:
+                    held.append(s.header.stamp)
+                s.header.stamp = held[0]
+
+            case(
+                "one crawl cadence wait never refreshes command",
+                missing_new_state,
+                ["motion_sample_pending", "local_receive_stale"],
+            )
+
+            case(
+                "old source cannot be renewed by fresh plan header",
+                lambda s, p: setattr(
+                    p, "scene_stamp", p.header.stamp - rospy.Duration(0.8)
+                ),
+                "local_source_stale",
+            )
 
             def delayed_state(s, p, delay):
                 import copy
@@ -151,7 +175,7 @@ def main():
                 "ok",
             )
             case(
-                "120ms exceeds motion forecast",
+                "single crawl tick waits; sustained120ms exceeds forecast",
                 lambda s, p: delayed_state(s, p, 0.12),
                 "control_motion_extrapolation_limit",
             )

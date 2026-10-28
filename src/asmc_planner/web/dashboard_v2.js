@@ -755,7 +755,7 @@
       ['관측 / 계획',r.scene_valid?'현재 관측 표시 · '+(r.valid?'전진 계획 유효':'전진 계획 무효'):'관측 무효 · 최근 기하 최대1초 회색'],
       ['시각 정렬',r.inputs?.alignment||'source 기준'],
       ['LiDAR 관측 나이',fmt(r.inputs?.lidar_age_s,3)+'s'],
-      ['MPC 상태',c?.reason||'대기'],['경로 오차',fmt(c?.tracking_error_m,3)+'m (본차로 오차와 별도)']]);
+      ['MPC 상태',c?.reason||'대기'],['이번 주기 명령 발행',c?.command_published===false?'없음 (preview·표본 대기 포함)':c?.command_published===true?'발행':'구 기록'],['경로 오차',fmt(c?.tracking_error_m,3)+'m (본차로 오차와 별도)']]);
     $('localExperimentReasons').textContent=JSON.stringify({blocked_object:r.blocking_id,rejections:r.rejected,
       speed_reason:r.speed_reason,recovery_obb_overlap:r.recovery_obb_overlap,candidates_omitted:r.candidates_omitted},null,2);
     $('localExperimentEvidence').textContent=JSON.stringify({inputs:r.inputs,obstacles:r.scene?.obstacles,

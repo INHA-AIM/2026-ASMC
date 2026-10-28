@@ -26,6 +26,8 @@ class LocalController {
   asmc_msgs::LocalTrajectory::ConstPtr plan, last_good, used_plan;
   ros::SteadyTime state_received, plan_received;
   ros::Time evaluation_time;
+  ros::SteadyTime last_solved;
+  bool command_published = false, motion_waited = false;
   std::string frame, reason = "initializing";
   bool enabled = false, selected = false, duplicate = false;
   double command_age = 0, last_steering = 0;
@@ -39,6 +41,7 @@ class LocalController {
       ResetMPCOnFailSafe();
       plan.reset();
       last_good.reset();
+      last_solved = ros::SteadyTime();
     }
     selected = next;
   }
@@ -47,11 +50,13 @@ class LocalController {
       ResetMPCOnFailSafe();
       plan.reset();
       last_good.reset();
+      last_solved = ros::SteadyTime();
     } else if (m->header.stamp <= state->header.stamp) {
       if (m->header.stamp < state->header.stamp) {
         state.reset();
         plan.reset();
         last_good.reset();
+        last_solved = ros::SteadyTime();
         ResetMPCOnFailSafe();
       }
       return;
@@ -71,6 +76,7 @@ class LocalController {
               double reference = 0, double cross = 0, double heading = 0) {
     std::ostringstream s;
     s << std::setprecision(17) << "{\"valid\":" << (valid ? "true" : "false")
+      << ",\"command_published\":" << (command_published ? "true" : "false")
       << ",\"reason\":" << std::quoted(reason) << ",\"frame\":"
       << std::quoted(state ? state->header.frame_id : std::string())
       << ",\"plan_sequence\":" << (used_plan ? used_plan->plan_sequence : 0)
@@ -109,8 +115,12 @@ class LocalController {
     auto cmd = mpc_controller_ros::MakeRosEmergencyStopCommand();
     cmd.steering = last_steering;
     ResetMPCOnFailSafe();
-    if (enabled && !duplicate && selected)
+    last_solved = ros::SteadyTime();
+    motion_waited = false;
+    if (enabled && !duplicate && selected) {
       command_pub.publish(cmd);
+      command_published = true;
+    }
     report(false, cmd);
   }
   std::string controlConflict() {
@@ -136,6 +146,7 @@ class LocalController {
   }
   void tick(const ros::SteadyTimerEvent &) {
     evaluation_time = ros::Time::now();
+    command_published = false;
     static unsigned cycles = 0;
     if (enabled && cycles++ % 20 == 0) {
       const auto conflict = controlConflict();
@@ -246,6 +257,18 @@ class LocalController {
     // State and trajectory have independent source times. Propagate the most
     // recent odometry once to this control tick, within the same100ms bound as
     // the planner's MotionHistory. Camera latency was handled by the planner.
+    if (!motion_waited && state_age > .10 && state_age <= .15 &&
+        std::isfinite(state->twist.twist.angular.z) && ego.vx <= 5. / 3.6 &&
+        (steady - last_solved).toSec() < .10) {
+      // A measured100.7ms cadence gap used to issue one full-brake tick at
+      // crawl. Wait for the next actual state, with no command refresh or extra
+      // extrapolation. The existing250ms selector watchdog still owns expiry.
+      // Only a recently solved path at crawl qualifies; sustained gaps fail.
+      motion_waited = true;
+      reason = "motion_sample_pending";
+      report(false, morai_msgs::CtrlCmd());
+      return;
+    }
     if (state_age > .10 || !std::isfinite(state->twist.twist.angular.z)) {
       stop("control_motion_extrapolation_limit");
       return;
@@ -275,9 +298,13 @@ class LocalController {
     }
     auto command =
         mpc_controller_ros::ToRosControlCommand(output.control, GetMPCParams());
+    last_solved = ros::SteadyTime::now();
+    motion_waited = false;
     last_steering = command.steering;
-    if (enabled && selected)
+    if (enabled && selected) {
       command_pub.publish(command);
+      command_published = true;
+    }
     if (!grace)
       last_good = candidate;
     reason = grace ? "replan_grace_crawl" : "ok";
