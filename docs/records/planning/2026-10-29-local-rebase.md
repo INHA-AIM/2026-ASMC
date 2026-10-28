@@ -165,3 +165,24 @@ semantic 설정은 `asmc_camera/launch/semantic_space.launch`에 두고 기존 �
 bag/회귀용11348이다. [현재 실행 명령](../../operations/commands.md#공유-master에서-local-음영-주행-선택)을
 따른다. 위 검사는 연결 수락이며, 앞서 기록한282.88ms 공백이나 실제 회피·복귀 미수락을
 해결한 결과로 해석하지 않는다. push·병합은 하지 않았다.
+
+## LOCAL-2D 후속 착수: 최신 main·실행 구분
+
+2026-10-29 후속 작업은 `cc7ee8d2`를
+`archive/local-before-local2d-continuity-20261029`로 보존하고 main `7bb4d9a1`
+(PR131/132/133 포함) 위로 리베이스했다. 재작성 완료 지점은 `de33475d`다.
+기존 E3 수정 두 개는 main에 포함돼 재적용되지 않았다. CI 충돌은 최신 공유 빌드
+구조를 보존하고 LOCAL 검사를 기존 planning 그룹에 다시 연결하는 방향으로 정리한다.
+LiDAR의 signed ground 정책과 fitting 실험 설정은 다른 정책이므로 함께 보존해 대조한다.
+
+**수치 정정:** 위 오프라인282.88ms는 유효/무효를 모두 포함한 계획 판단 기록 간격이다.
+해당 preview는 실제 명령을 발행하지 않았다. 이를 명령 공백 또는250ms 명령 수락
+실패로 표현한 과거 frozen run의 문장은 원본을 유지하되 이 정정을 따른다. 이후 검사는
+판단 간격·유효 경로·MPC 출력·selector 최종 출력 간격을 각각 기록한다.
+
+수동 실행은 공용11311에서 한 컨테이너의 전체 인지/주행 스택을 교대한다. 자동 bag
+및 MORAI 시험은 해당 worktree의 독립 master를 사용한다. 실시간 시험은 전용 bridge와
+인지/주행 코드를 시작하되 공유 simulator lease와 UDP/GPU/HTTP 점유를 확인한다.
+다른 작업의 bridge를 종료하거나 공용 센서를 몰래 다른 master로 전달하지 않는다.
+새 결과는 D `artifacts/local2d-20261029-continuity01`에 기록하며 기존 run을 수정하지 않는다.
+이 절은 착수 기록이며 폐루프 수락 선언이 아니다.
