@@ -86,7 +86,10 @@ class LocalController {
     if (!state || m->header.frame_id != state->header.frame_id) {
       resetExecution();
       frame = m->header.frame_id;
-      plan.reset();
+      // Different TCPROS topics can deliver the matching plan before its
+      // first odometry. Preserve that same-frame candidate; tick still checks
+      // geometry, source age and state time. Never retain a different frame.
+      if (plan && plan->header.frame_id != m->header.frame_id) plan.reset();
       last_good.reset();
       last_solved = ros::SteadyTime();
     } else if (m->header.stamp <= state->header.stamp) {

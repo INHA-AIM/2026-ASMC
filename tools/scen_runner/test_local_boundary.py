@@ -338,7 +338,7 @@ def main():
                 assert time.monotonic()<deadline,'clock contract node did not connect'
                 time.sleep(.02)
 
-            def clock_phase(t, lead, duration, mutate=lambda s, p: None):
+            def clock_phase(t, lead, duration, mutate=lambda s, p: None, plan_first=False):
                 nonlocal seq
                 seq += 1
                 clock_pub.publish(Clock(rospy.Time.from_sec(t)))
@@ -364,12 +364,17 @@ def main():
                     plan.points.append(point)
                 mutate(state, plan)
                 received.clear()
-                states.publish(state)
-                plans.publish(plan)
+                if plan_first:
+                    plans.publish(plan)
+                    time.sleep(.025)
+                    states.publish(state)
+                else:
+                    states.publish(state)
+                    plans.publish(plan)
                 time.sleep(duration)
                 return [dict(r) for r in received]
 
-            first_clock=clock_phase(100.0,-0.01,.10)
+            first_clock=clock_phase(100.0,-0.01,.10,plan_first=True)
             assert any(r["reason"] == "ok" for r in first_clock), first_clock
             tiny_future = clock_phase(100.05, 0.000067, 0.08)
             assert any(
