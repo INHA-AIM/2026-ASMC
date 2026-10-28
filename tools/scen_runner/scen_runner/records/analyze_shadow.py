@@ -119,6 +119,17 @@ def completed_bags(directory,allow_incomplete=False):
     return bags
 
 
+def decode_gallery_image(data):
+    if not data:return None,'empty_image_payload'
+    import cv2
+    import numpy as np
+    try:
+        image=cv2.imdecode(np.frombuffer(bytes(data),np.uint8),cv2.IMREAD_COLOR)
+    except cv2.error:
+        return None,'image_decode_exception'
+    return (image,'') if image is not None else (None,'invalid_image_payload')
+
+
 def analyze(directory, output_name='analysis',allow_incomplete=False):
     import rosbag
     from scen_runner.records.sensor_recording import REQUIRED_TOPICS, write_json
@@ -132,6 +143,7 @@ def analyze(directory, output_name='analysis',allow_incomplete=False):
     stats, reasons, box_reasons, selectors = {}, Counter(), Counter(), Counter()
     images, pending, cases = OrderedDict(), OrderedDict(), []
     case_counts = Counter()
+    gallery_errors=Counter()
     collision_samples, collision_ids = 0, Counter()
     unresolved_collision_samples = 0
     contact_decisions = Counter()
@@ -154,12 +166,11 @@ def analyze(directory, output_name='analysis',allow_incomplete=False):
         # Exact source identity only; no nearest-frame substitution.
         extension = '.png' if 'png' in frame.image.format.lower() else '.jpg'
         name = 'case-%02d%s' % (len(cases)+1, extension)
-        (output/name).write_bytes(bytes(frame.image.data))
-        import cv2
-        import numpy as np
-        decoded=cv2.imdecode(np.frombuffer(bytes(frame.image.data),np.uint8),cv2.IMREAD_COLOR)
-        if decoded is None:
+        decoded,error=decode_gallery_image(frame.image.data)
+        if error:
+            gallery_errors[error]+=1
             return
+        (output/name).write_bytes(bytes(frame.image.data))
         height,width=decoded.shape[:2]
         boxes = [dict(label=b.label, bbox=[b.xmin,b.ymin,b.xmax,b.ymax],
                       assignment=int(result.assignments[i]), reason=result.box_reasons[i])
@@ -248,7 +259,7 @@ def analyze(directory, output_name='analysis',allow_incomplete=False):
                    recording_errors=recording.get('errors',[]),recording_missing_topics=recording.get('missing_required_topics',[]), input_bags=[dict(file=p.name,bytes=p.stat().st_size) for p in bags], topics={k:v.summary() for k,v in stats.items()},
                    missing_required=[k for k in REQUIRED_TOPICS if k not in stats],
                    follower_reason_samples=dict(reasons), bbox_reason_samples=dict(box_reasons),
-                   selector_samples=dict(selectors), gallery_cases=cases,
+                   selector_samples=dict(selectors), gallery_cases=cases, gallery_errors=dict(gallery_errors),
                    contact_decision_samples=dict(contact_decisions), mode_transitions=modes,
                    evaluated_contact_plan_wall_ms=planning_cost.summary(),native_contacts=native_contact_summary(directory),scenario_outcomes=scenario_outcome_summary(directory),
                    unresolved_collision_report_samples=unresolved_collision_samples,
