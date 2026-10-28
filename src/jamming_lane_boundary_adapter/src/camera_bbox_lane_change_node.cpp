@@ -1742,7 +1742,7 @@ void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>&
 std::string updateSemanticPathPlan() {
     namespace cc=lane_boundary_adapter::clearance;
     contact_candidates=contact_road_rejected=contact_collision_rejected=bev_rejected=0;
-    contact_geometry_ready=false;semantic_safe_length=0.;semantic_assisted_cells=0;semantic_blocked_x=semantic_blocked_y=0.;
+    contact_geometry_ready=false;semantic_safe_length=0.;semantic_assisted_cells=0;semantic_selected_stamp=ros::Time();semantic_blocked_x=semantic_blocked_y=0.;
     auto fail=[](const std::string& reason){contact_decision=bev_status=reason;return reason;};
     const std::vector<LaneChain>* geometry=nullptr;
     std::shared_ptr<cc::DrivableClearance> grid;
@@ -1765,6 +1765,7 @@ std::string updateSemanticPathPlan() {
     // observed semantic hole. Explicit near-blind assistance is reported and
     // does NOT certify LiDAR-negative space as free. No map pose is used.
     if(!local)return fail("semantic_local_health_or_time_unavailable");
+    semantic_selected_stamp=stamp;
     std::vector<cc::Polygon> occupied;
     for(const auto& object:local->observation.objects.objects){
         if(object.observation_state!=object.OBSERVED || object.miss_count)continue;
