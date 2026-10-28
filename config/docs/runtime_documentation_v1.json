@@ -128,6 +128,11 @@
       "title": "Controlled reference handover trial",
       "path": "src/asmc_planner/launch/reference_handover_trial.launch",
       "internal_args": []
+    },
+    {
+      "title": "LOCAL-1 experimental preview",
+      "path": "src/asmc_planner/launch/local.launch",
+      "internal_args": []
     }
   ],
   "command_guides": [

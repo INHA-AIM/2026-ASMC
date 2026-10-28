@@ -81,6 +81,7 @@ def main():
             "src/asmc_planner/launch/local.launch",
             "src/asmc_planner/config/local_planner.yaml",
             "src/asmc_controller/config/controller.yaml",
+            "src/asmc_controller/config/local_controller.yaml",
         )
     ]
     (root / "runtime-provenance.json").write_text(

@@ -63,6 +63,15 @@ class RuntimeDocumentationTest(unittest.TestCase):
         self.assertEqual(count,1)
         self.assertIn('missing required arg',errors[0])
 
+    def test_direct_container_launch_file(self):
+        self.guide.write_text('```bash\nroslaunch /root/ws/src/example/launch/run.launch required:=yes\n```\n')
+        self.assertEqual(check_commands(self.root,self.config),([],1))
+        self.guide.write_text('```bash\nroslaunch /root/ws/src/example/launch/run.launch\n```\n')
+        errors,count=check_commands(self.root,self.config)
+        self.assertIn('missing required arg',errors[0])
+        self.guide.write_text('```bash\nroslaunch /root/ws/../outside.launch\n```\n')
+        self.assertTrue(check_commands(self.root,self.config)[0])
+
     def test_label_id_or_group_drift_fails(self):
         (self.root/'config/datasets').mkdir(parents=True)
         (self.root/'config/datasets/camera_object_labels_v2.json').write_text(

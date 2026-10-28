@@ -561,3 +561,16 @@
 | `state_topic` | `/planning/vehicle/state` | — |
 | `objects_topic` | `/planning/objects` | — |
 | `config` | `$(find asmc_planner)/config/reference_handover_trial.yaml` | — |
+
+## LOCAL-1 experimental preview
+
+[소스](../../src/asmc_planner/launch/local.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `enable_control` | `false` | — |
+| `run_id` | `local-preview` | — |
+| `journal_path` | `(빈 문자열)` | — |
+| `speed_cap_kph` | `25` | — |
+| `recovery` | `true` | — |
+| `near_blind_assist` | `false` | — |
