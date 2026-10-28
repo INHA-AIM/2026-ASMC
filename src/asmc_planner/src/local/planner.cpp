@@ -326,6 +326,7 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
     double cost = 0.;
     unsigned overlap = 0;
     int known = 0;
+    bool physical_collision = false;
     for (int step = 1; step <= 40; ++step) {
       double k = p.k + std::clamp(requested - p.k, -.015, .015),
              turn = .05 * (p.k + k);
@@ -337,19 +338,23 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
       if (std::abs(p.yaw) > .65)
         break;
       path.push_back(p);
-      if (step % 4)
-        continue;
       CartesianState state{p.x, p.y, p.yaw, p.k, 0, 0};
       auto body =
           MakeEgoFootprint(state, VehicleShape{c.width, c.length, c.rear}, 0.);
       for (auto &o : s.obstacles) {
         double d = geometry::ConvexPolygonDistance(body, o.polygon);
+        // Recovery may soften unobserved near-body raster/motion padding,
+        // but cannot select a path through an actual measured OBB. Evaluate
+        // every10cm pose, not only the coarse semantic scoring samples.
+        if (d<=1e-9) { physical_collision=true;break; }
         if (d <= o.uncertainty) {
           cost += 50.;
           ++overlap;
         } else
           cost += .05 / std::max(.05, d);
       }
+      if (physical_collision) break;
+      if (step % 4) continue;
       for (double a : {0., c.length - c.rear})
         for (double b : {-c.width * .5, 0., c.width * .5}) {
           double x = p.x + std::cos(p.yaw) * a - std::sin(p.yaw) * b,
@@ -378,7 +383,7 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
       }
     }
     cost += .3 * std::abs(goal[1] - homeAt(s, goal[0])) + .2 * (8. - goal[0]);
-    if (path.size() > 10 && known >= 10 && cost < best_cost) {
+    if (!physical_collision && path.size() > 10 && known >= 10 && cost < best_cost) {
       best_cost = cost;
       best = std::move(path);
       best_overlap = overlap;
@@ -713,10 +718,16 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       }
     }
   }
-  if (out.path.size() < 3 && c.recovery) {
+  const double prefix_lag=c.delay+(s.aligned_to_plan?0.:s.age);
+  const bool short_for_current_speed=out.path.size()>1 &&
+      s.speed*prefix_lag+brakingDistance(s.speed,s.acceleration,c)>out.path.back().s;
+  if ((out.path.size() < 3 || short_for_current_speed) && c.recovery) {
     // Prefer a full-horizon swept path with explicitly bounded near-camera
     // unknown assistance over a short centroid arc. Known nonroad and OBBs
     // still veto this candidate, so a distant barrier causes early avoidance.
+    // Also try it before rejecting a short valid prefix: drive01 had2m of
+    // strict road at10km/h while a long crawl sweep remained available. This
+    // is replanning/deceleration, not ignoring insufficient stopping space.
     Config aided = c;
     aided.recovery = false;
     aided.blind_assist = true;

@@ -4,6 +4,7 @@
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
 #include "local/semantic_reference.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 #include <cmath>
 #include <cstdio>
 #include <iostream>
@@ -76,6 +77,24 @@ int main() {
     expect(SemanticReference(s.grid,c).empty(),"unknown semantic area cannot create a reference");
   }
   try {
+    {
+      auto s=empty();Config c;c.recovery=true;c.budget_ms=200.;
+      s.speed=10./3.6;s.aligned_to_plan=true;
+      // Near-body unknown at6.1m truncates the strict path near2m. It is
+      // neither an observed obstruction nor permission to drive through OBBs.
+      s.grid.coverage[139*160+80]=128;
+      auto r=Plan(s,c);
+      expect(r.valid && r.recovery && r.path.back().x>=6.,
+             "short stopping prefix attempts a longer bounded crawl sweep");
+      s.obstacles.push_back({55,{{5.,-8.},{6.,-8.},{6.,8.},{5.,8.}}});
+      r=Plan(s,c);
+      if(r.valid) for(const auto& p:r.path) {
+        CartesianState ego{p.x,p.y,p.yaw,p.k,0,0};
+        auto body=MakeEgoFootprint(ego,VehicleShape{c.width,c.length,c.rear},0.);
+        expect(geometry::ConvexPolygonDistance(body,s.obstacles[0].polygon)>0.,
+               "crawl recovery never selects an actual measured OBB overlap");
+      }
+    }
     { // Equal geometry must not rank differently due to analytic/lattice spacing.
       auto scene=empty(); Config config;
       scene.previous={{0,.3,0,0,0},{10,.3,0,0,10}};
