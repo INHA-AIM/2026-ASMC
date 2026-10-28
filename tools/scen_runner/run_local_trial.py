@@ -119,6 +119,7 @@ def main():
             dict(
                 options=dict(
                     vars(args),
+                    bag_compression='lz4',
                     root=str(root),
                     scene=str(args.scene),
                     lidar_config=str(args.lidar_config) if args.lidar_config else None,
@@ -202,6 +203,7 @@ def main():
             raise RuntimeError("LOCAL-1 first unit accepts static fixtures only")
     section = None
     children = []
+    child_names = {}
     handles = []
     fixture = StaticFixture(link, emit)
     mode = None
@@ -273,6 +275,7 @@ def main():
             cmd, stdout=f, stderr=subprocess.STDOUT, start_new_session=True
         )
         children.append(proc)
+        child_names[proc.pid]=name
         return proc
 
     reason = "preparation_failed"
@@ -283,6 +286,7 @@ def main():
     speedmax = 0.0
     cleanup_errors = []
     mutated = False
+    child_exits=[]
     try:
         from scen_runner.runtime.private_master import require_udp_ports_free
         require_udp_ports_free([9099, 9798, 7505, 9092, 9291, 9293, 9295, 9297, 9299, 9301, 9303])
@@ -407,6 +411,7 @@ def main():
             [
                 "rosbag",
                 "record",
+                "--lz4",
                 "--split",
                 "--duration=60",
                 "--buffsize=128",
@@ -482,7 +487,10 @@ def main():
         reason = "time_limit"
         stationary = started
         while time.monotonic() - started < args.seconds:
-            if any(x.poll() is not None for x in children):
+            child_exits=[dict(name=child_names[x.pid],returncode=x.returncode)
+                         for x in children if x.poll() is not None]
+            if child_exits:
+                emit(dict(event='child_exit',processes=child_exits))
                 reason = "child_exit"
                 break
             if os.statvfs(root).f_bavail * os.statvfs(root).f_frsize < 2 * 2**30:
@@ -609,6 +617,7 @@ def main():
             near_blind_assist=args.near_blind_assist,
             cleanup_errors=cleanup_errors,
             closed_loop_acceptance=False,
+            child_exits=child_exits,
         )
         (root / "trial-result.json").write_text(json.dumps(result, indent=2))
         print(json.dumps(result), flush=True)
