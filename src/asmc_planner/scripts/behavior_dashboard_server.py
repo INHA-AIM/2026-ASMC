@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Serve dashboard assets and proxy custom behavior messages over HTTP."""
 
+import argparse
+import sys
 import functools
 import http.server
 import json
@@ -21,6 +23,7 @@ from diagnostic_msgs.msg import DiagnosticArray
 from std_msgs.msg import UInt8
 from asmc_msgs.msg import LaneBoundaryFamily, LidarTrackingObservation
 from lane_boundary_adapter.msg import CameraBBoxLaneResult
+from dashboard_startup import run_on_port
 from dashboard_observation import LocalScene, family_payload, markers_payload, objects_payload, stamp_ns
 
 local_scene = LocalScene()
@@ -284,9 +287,11 @@ def set_planning_markers(message):
         DashboardHandler.snapshot["received_at"]["planning_markers"] = time.time()
 
 
-def main():
+def run_dashboard(server=None, reserved_port=None):
     rospy.init_node("behavior_dashboard_server")
     port = int(rospy.get_param("~port", 8088))
+    if reserved_port is not None and port != reserved_port:
+        raise ValueError("dashboard --port and ROS ~port disagree")
     package_path = rospy.get_param("~package_path")
     interface_version = rospy.get_param("~interface_version", "v1")
     DashboardHandler.snapshot["interface_version"] = interface_version
@@ -349,15 +354,35 @@ def main():
         set_planning_markers, queue_size=1)
     DashboardHandler.snapshot["debug_config"] = load_debug_config()
     handler = functools.partial(DashboardHandler, directory=package_path)
-    server = http.server.ThreadingHTTPServer(("0.0.0.0", port), handler)
+    if server is None:  # Legacy direct rosrun invocation without --port.
+        server = http.server.ThreadingHTTPServer(("0.0.0.0", port), handler)
+    else:
+        server.RequestHandlerClass = handler
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     page = "index_v2.html" if interface_version == "v2" else "index.html"
     rospy.loginfo("Behavior dashboard (%s): http://localhost:%d/web/%s",
                   interface_version, port, page)
     rospy.on_shutdown(server.shutdown)
-    rospy.spin()
+    try:
+        rospy.spin()
+    finally:
+        server.shutdown()
+        server.server_close()
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--port', type=int)
+    args = parser.parse_args(rospy.myargv()[1:])
+    if args.port is None:
+        return run_dashboard()
+    if not 1 <= args.port <= 65535:
+        parser.error('--port must be between 1 and 65535')
+    return run_on_port(args.port, DashboardHandler,
+                       lambda server: run_dashboard(server, args.port))
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

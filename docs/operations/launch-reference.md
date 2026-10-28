@@ -240,7 +240,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `highway_merge` | `false` | — |
+| `highway_merge` | `true` | — |
 | `dashboard` | `true` | — |
 | `dashboard_port` | `8088` | — |
 | `open_dashboard` | `false` | — |

@@ -272,6 +272,12 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME hd_lane_map_product_test COMMAND hd_lane_map_product_test)
   add_executable(lane_reference_execution_test tests/frenet/lane_reference_execution_test.cpp)
   target_link_libraries(lane_reference_execution_test asmc_planner_lane_reference_core yaml-cpp)
+  add_executable(prepared_static_inputs_test tests/frenet/prepared_static_inputs_test.cpp)
+  target_compile_definitions(prepared_static_inputs_test PRIVATE
+    FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml"
+    FRENET_TEST_PACKAGE="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(prepared_static_inputs_test asmc_planner_frenet_core yaml-cpp)
+  add_test(NAME prepared_static_inputs_test COMMAND prepared_static_inputs_test)
   add_executable(highway_reference_execution_test tests/frenet/highway_reference_execution_test.cpp)
   target_compile_definitions(highway_reference_execution_test PRIVATE
     FRENET_TEST_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/frenet/params.yaml")
@@ -982,3 +988,8 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(signal_journal_test asmc_planner_ros_adapters ${catkin_LIBRARIES})
   endif()
 endif()
+
+# Pure HTTP prebind helper must accompany the catkin-installed ROS script.
+configure_file(scripts/dashboard_startup.py
+  ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_startup.py COPYONLY)
+install(FILES scripts/dashboard_startup.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

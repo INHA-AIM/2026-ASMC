@@ -7,7 +7,8 @@
   <!-- Current motion state is in typed planning objects. Historical JSON is opt-in. -->
   <arg name="dashboard_lidar_motion_debug_topic" default=""/>
   <node pkg="asmc_planner" type="behavior_dashboard_server.py"
-        name="behavior_dashboard_server" output="screen">
+        name="behavior_dashboard_server" output="screen"
+        args="--port $(arg dashboard_port)">
     <remap from="/vehicle/state" to="$(arg state_topic)"/>
     <param name="port" value="$(arg dashboard_port)"/>
     <param name="package_path" value="$(find asmc_planner)"/>

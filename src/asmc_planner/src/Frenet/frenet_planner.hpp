@@ -79,6 +79,9 @@ public:
 
     // yaml_path: config/params.yaml
     bool Init(const std::string& yaml_path);
+    // Fresh dormant core: reuse validated static inputs, never execution state.
+    // Any changed/missing input bytes force the ordinary validation/load path.
+    bool InitFromPrepared(const std::string& yaml_path, const FrenetPlanner& source);
 
     // Preparation-only entry for an isolated reference-handover trial. Never
     // replace the reference of an executing planner: prepare a second core,
@@ -949,6 +952,10 @@ private:
     //
     // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     AvoidRoadMap avoid_road_map_;
+    struct PreparedStaticInputs;
+    std::shared_ptr<const PreparedStaticInputs> prepared_static_inputs_;
+    bool InitImpl(const std::string& yaml_path,
+                  std::shared_ptr<const PreparedStaticInputs> prepared);
     std::string highway_areas_path_;
     bool PlanHighwayTransitionImpl(const CartesianState&,const std::vector<TrackedObject>&,
         const PlannerCommand&,double,double,CartesianPath&,HighwayMergeResult&,double,

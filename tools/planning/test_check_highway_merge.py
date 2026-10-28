@@ -44,7 +44,8 @@ class HighwayPreflightTests(unittest.TestCase):
         (self.behavior / 'route.yaml').write_text('route:\n  links: [source, target]\n')
         for name in ('planner_v2.launch', 'autonomy_no_bridges_v2.launch'):
             (self.package / 'launch' / name).write_text(
-                '<launch><arg name="highway_merge" default="false"/>' +
+                '<launch><arg name="highway_merge" default="%s"/>' %
+                ('true' if name == 'autonomy_no_bridges_v2.launch' else 'false') +
                 ('<param name="/frenet_planner/highway_merge_enabled" value="$(arg highway_merge)"/>'
                  if name == 'planner_v2.launch' else
                  '<include file="$(find asmc_planner)/launch/planner_v2.launch">'
@@ -108,14 +109,20 @@ class HighwayPreflightTests(unittest.TestCase):
 
     def test_missing_wrapper_forwarding(self):
         (self.package / 'launch/autonomy_no_bridges_v2.launch').write_text(
-            '<launch><arg name="highway_merge" default="false"/></launch>')
+            '<launch><arg name="highway_merge" default="true"/></launch>')
         with self.assertRaisesRegex(ValueError, 'does not forward'):
             self.check()
 
-    def test_opt_in_stays_off(self):
+    def test_standalone_planner_stays_opt_in(self):
         (self.package / 'launch/planner_v2.launch').write_text(
             '<launch><arg name="highway_merge" default="true"/></launch>')
         with self.assertRaisesRegex(ValueError, 'default=false'):
+            self.check()
+
+    def test_autonomy_defaults_on(self):
+        path = self.package / 'launch/autonomy_no_bridges_v2.launch'
+        path.write_text(path.read_text().replace('default="true"', 'default="false"'))
+        with self.assertRaisesRegex(ValueError, 'default=true'):
             self.check()
 
 

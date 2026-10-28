@@ -9,6 +9,8 @@
 #include <limits>
 #include <unordered_map>
 #include <utility>
+#include <iterator>
+#include <stdexcept>
 
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Maneuver/KeepCruise.hpp"
@@ -39,6 +41,32 @@ bool PathObeysCurvatureLimit(const CartesianPath& path, double limit) {
 
 }  // namespace
 
+struct FrenetPlanner::PreparedStaticInputs {
+    std::string config_path;
+    std::string map_root;
+    std::vector<std::pair<std::string, std::string>> files;
+    AvoidRoadMap road_map;
+    RefLine reference;
+    // Circulating references in the zone are shared_ptr<const RefLine>.
+    RoundaboutMergeZone roundabout;
+
+    static std::string Read(const std::string& path) {
+        std::ifstream file(path, std::ios::binary);
+        if (!file) throw std::runtime_error("cannot read startup input: " + path);
+        std::string bytes{std::istreambuf_iterator<char>(file), {}};
+        if (file.bad()) throw std::runtime_error("cannot finish startup input: " + path);
+        return bytes;
+    }
+    void Capture(const std::string& path) { files.emplace_back(path, Read(path)); }
+    bool Unchanged() const {
+        try {
+            for (const auto& input : files)
+                if (Read(input.first) != input.second) return false;
+            return true;
+        } catch (const std::exception&) { return false; }
+    }
+};
+
 bool FrenetPlanner::SetPreparedReference(const RefLine& reference) {
     if(highway_route_)return false; // mission stations cannot follow a reference swap
     if (!ref_loaded_ || has_last_s_ || reference.closed_loop || reference.points.size()<3 ||
@@ -62,6 +90,28 @@ bool FrenetPlanner::SetPreparedReference(const RefLine& reference) {
 }
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
+    return InitImpl(yaml_path, nullptr);
+}
+
+bool FrenetPlanner::InitFromPrepared(const std::string& yaml_path,
+                                     const FrenetPlanner& source) {
+    if (ref_loaded_ || has_last_s_ || !source.prepared_static_inputs_) return false;
+    return InitImpl(yaml_path, source.prepared_static_inputs_);
+}
+
+bool FrenetPlanner::InitImpl(const std::string& yaml_path,
+                            std::shared_ptr<const PreparedStaticInputs> prepared) {
+    if (prepared && (prepared->config_path != yaml_path || !prepared->Unchanged()))
+        prepared.reset();
+    prepared_static_inputs_.reset();
+    auto snapshot = std::make_shared<PreparedStaticInputs>();
+    snapshot->config_path = yaml_path;
+    try { if (!prepared) snapshot->Capture(yaml_path); }
+    catch (const std::exception& error) {
+        ref_loaded_ = false;
+        std::fprintf(stderr, "[FrenetPlanner] %s\n", error.what());
+        return false;
+    }
     ref_loaded_ = false;
     highway_route_.reset();highway_prediction_map_.reset();highway_owned_lanes_.clear();highway_areas_path_.clear();ResetHighwayMerge();
     solid_paint_contact_active_ = false;
@@ -88,12 +138,25 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
             } else if(std::ifstream(config_dir+"hd_map/drivable.json").good()) {
                 root=config_dir+"hd_map/";
             }
+            // The implicit config-local map directory may appear after the
+            // source initialized. Reuse must follow the resolved input set too.
+            if (prepared && prepared->map_root != root) {
+                prepared.reset();
+                snapshot->Capture(yaml_path);
+            }
+            snapshot->map_root = root;
             std::string error;
             // This file bundle is independent of the /hd_map/global topics.
             // Update drivable.json, lines.json and drivable_grid.rle together;
             // publishing a newer HD map does not replace this planner cache.
             // See docs/handoffs/hd-map-to-planning.md for bundle acceptance.
-            if(!avoid_road_map_.Load(root+"drivable.json",root+"lines.json",error)) {
+            if (!prepared) {
+                snapshot->Capture(root+"drivable.json");
+                snapshot->Capture(root+"lines.json");
+                snapshot->Capture(root+"drivable_grid.rle");
+            }
+            if (prepared) avoid_road_map_ = prepared->road_map;
+            else if(!avoid_road_map_.Load(root+"drivable.json",root+"lines.json",error)) {
                 std::fprintf(stderr,"[FrenetPlanner] HD map init failed: %s\n",error.c_str());
                 return false;
             }
@@ -143,38 +206,45 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     // reference line 자체가 만족해야 하는 곡률 한계는 KinematicFilter가
     // 후보를 걸러내는 물리적 한계와 같은 차량 능력이다 - 별도 YAML key로
     // 중복 관리하지 않고 loaded KinematicLimits에서 그대로 읽어 넘긴다.
-    if (waypoint_file.empty() ||
+    try { if (!prepared && !waypoint_file.empty()) snapshot->Capture(waypoint_file); }
+    catch (const std::exception& error) {
+        std::fprintf(stderr, "[FrenetPlanner] %s\n", error.what()); return false;
+    }
+    if (prepared) ref_ = prepared->reference;
+    else if (waypoint_file.empty() ||
         !LoadReferenceLine(waypoint_file, ref_, ref_config_, limits_.max_curvature)) {
         std::printf("[FrenetPlanner] Reference line load failed (waypoint_file='%s')\n",
                     waypoint_file.c_str());
         return false;
     }
-    if (merge_cfg_.conflict_s < 0.0) {
-        std::printf("[FrenetPlanner] Roundabout MERGE disabled: set "
-                    "planner.merge.conflict_s in params.yaml\n");
-    } else {
-        const RefPoint conflict = Interpolate(ref_, merge_cfg_.conflict_s);
-        std::printf("[FrenetPlanner] Roundabout MERGE conflict: s=%.2f pos=(%.2f, %.2f)\n",
-                    merge_cfg_.conflict_s, conflict.x, conflict.y);
-    }
-    // zone s-ordering은 ConfigValidator::ValidateConfig가 이미 검증했다 -
-    // 여기서는 로그만 남긴다. 잘못된 zone 설정은 Init() 자체를 실패시키므로
-    // (Rule: config가 유효하지 않으면 조용히 기능을 끄지 않는다) 이 지점에
-    // 도달했다면 highway_merge_cfg_는 항상 유효하다.
-    if (!highway_merge_cfg_.enabled || highway_merge_cfg_.zones.empty()) {
-        std::printf("[FrenetPlanner] Highway MERGE disabled: measure start/conflict/"
-                    "completion_s, then set planner.highway_merge.enabled=true\n");
-    } else {
-        for (const auto& zone : highway_merge_cfg_.zones) {
-            std::printf("[FrenetPlanner] Highway MERGE '%s': start=%.2f complete=%.2f "
-                        "checkpoints=%zu\n", zone.name.c_str(), zone.start_s,
-                        zone.completion_s, zone.checkpoints.size());
-            for (size_t i = 0; i < zone.checkpoints.size(); ++i) {
-                const auto& checkpoint = zone.checkpoints[i];
-                const RefPoint conflict = Interpolate(ref_, checkpoint.conflict_s);
-                std::printf("  checkpoint[%zu]: conflict=%.2f clear=%.2f pos=(%.2f, %.2f)\n",
-                            i, checkpoint.conflict_s, checkpoint.clear_s,
-                            conflict.x, conflict.y);
+    if (!prepared) {
+        if (merge_cfg_.conflict_s < 0.0) {
+            std::printf("[FrenetPlanner] Roundabout MERGE disabled: set "
+                        "planner.merge.conflict_s in params.yaml\n");
+        } else {
+            const RefPoint conflict = Interpolate(ref_, merge_cfg_.conflict_s);
+            std::printf("[FrenetPlanner] Roundabout MERGE conflict: s=%.2f pos=(%.2f, %.2f)\n",
+                        merge_cfg_.conflict_s, conflict.x, conflict.y);
+        }
+        // zone s-ordering은 ConfigValidator::ValidateConfig가 이미 검증했다 -
+        // 여기서는 로그만 남긴다. 잘못된 zone 설정은 Init() 자체를 실패시키므로
+        // (Rule: config가 유효하지 않으면 조용히 기능을 끄지 않는다) 이 지점에
+        // 도달했다면 highway_merge_cfg_는 항상 유효하다.
+        if (!highway_merge_cfg_.enabled || highway_merge_cfg_.zones.empty()) {
+            std::printf("[FrenetPlanner] Highway MERGE disabled: measure start/conflict/"
+                        "completion_s, then set planner.highway_merge.enabled=true\n");
+        } else {
+            for (const auto& zone : highway_merge_cfg_.zones) {
+                std::printf("[FrenetPlanner] Highway MERGE '%s': start=%.2f complete=%.2f "
+                            "checkpoints=%zu\n", zone.name.c_str(), zone.start_s,
+                            zone.completion_s, zone.checkpoints.size());
+                for (size_t i = 0; i < zone.checkpoints.size(); ++i) {
+                    const auto& checkpoint = zone.checkpoints[i];
+                    const RefPoint conflict = Interpolate(ref_, checkpoint.conflict_s);
+                    std::printf("  checkpoint[%zu]: conflict=%.2f clear=%.2f pos=(%.2f, %.2f)\n",
+                                i, checkpoint.conflict_s, checkpoint.clear_s,
+                                conflict.x, conflict.y);
+                }
             }
         }
     }
@@ -212,7 +282,8 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
             if(map["directory"]) { root=map["directory"].as<std::string>(); if(root.empty())throw std::runtime_error("empty HD map directory"); if(root.front()!='/')root=config_dir+root; if(root.back()!='/')root+='/'; }
             else if(std::ifstream(config_dir+"hd_map/drivable.json").good())root=config_dir+"hd_map/";
             std::string error;
-            if(!roundabout_zone_.Load(root+"drivable.json",root+"lines.json",ref_,vehicle_shape_,roundabout_merge_cfg_,collision_cfg_.safety_margin,error))
+            if (prepared) roundabout_zone_ = prepared->roundabout;
+            else if(!roundabout_zone_.Load(root+"drivable.json",root+"lines.json",ref_,vehicle_shape_,roundabout_merge_cfg_,collision_cfg_.safety_margin,error))
                 throw std::runtime_error(error);
             auto p=Interpolate(ref_,roundabout_zone_.stop_s);
             if(!avoid_road_map_.FootprintInside(p.x,p.y,p.theta,vehicle_shape_))
@@ -222,6 +293,21 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
         ref_loaded_ = false;
         std::fprintf(stderr,"[FrenetPlanner] roundabout init failed: %s\n",error.what());
         return false;
+    }
+    const auto& inputs = prepared ? *prepared : *snapshot;
+    if (!inputs.Unchanged()) {
+        ref_loaded_ = false;
+        std::fprintf(stderr, "[FrenetPlanner] startup inputs changed while initializing\n");
+        return false;
+    }
+    if (prepared) {
+        prepared_static_inputs_ = std::move(prepared);
+        std::printf("[FrenetPlanner] Reused validated map/reference inputs; fresh execution state\n");
+    } else {
+        snapshot->road_map = avoid_road_map_;
+        snapshot->reference = ref_;
+        snapshot->roundabout = roundabout_zone_;
+        prepared_static_inputs_ = std::move(snapshot);
     }
     return true;
 }

@@ -126,8 +126,9 @@ def check_assets(repo, config):
     for name in ('planner_v2.launch', 'autonomy_no_bridges_v2.launch'):
         launch = ET.parse(required_file(repo / 'src/asmc_planner/launch' / name)).getroot()
         args = {arg.attrib['name']: arg.attrib for arg in launch.findall('arg')}
-        if args.get('highway_merge', {}).get('default') != 'false':
-            raise ValueError('%s must declare highway_merge with default=false' % name)
+        expected = 'true' if name == 'autonomy_no_bridges_v2.launch' else 'false'
+        if args.get('highway_merge', {}).get('default') != expected:
+            raise ValueError('%s must declare highway_merge with default=%s' % (name, expected))
         if name == 'planner_v2.launch':
             wired = any(p.attrib.get('name') == '/frenet_planner/highway_merge_enabled'
                         and p.attrib.get('value') == '$(arg highway_merge)'
