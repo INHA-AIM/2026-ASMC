@@ -133,6 +133,9 @@ def main():
                             "plan_replacement_pending",
                         ):
                             assert not row["command_published"]
+                        if row['reason'] == 'ok':
+                            assert row['scene_age_s'] <= .35
+                            assert row['motion_age_s'] <= .10
                     received.clear()
                 for wanted in [expected] if isinstance(expected, str) else expected:
                     assert wanted in seen, (name, wanted, seen)
@@ -172,7 +175,7 @@ def main():
                 time.sleep(0.015)
             reasons = [r["reason"] for r in received]
             assert (
-                "ok" in reasons and reasons.count("plan_replacement_pending") == 1
+                "ok" in reasons and 1 <= reasons.count("plan_replacement_pending") <= 3
             ), reasons
             assert "local_source_stale" in reasons, reasons
             assert not any(
@@ -181,7 +184,7 @@ def main():
                 if r["reason"] == "plan_replacement_pending"
             )
             print(
-                "one source-replacement wait; sustained expiry fails", reasons, "PASS"
+                "bounded source-replacement hold; sustained expiry fails", reasons, "PASS"
             )
             received.clear()
             seq = plan.plan_sequence

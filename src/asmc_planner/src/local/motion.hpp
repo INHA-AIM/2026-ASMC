@@ -13,6 +13,9 @@ struct Motion {
 class MotionHistory {
 public:
   unsigned epoch = 0;
+  double latest_stamp() const {
+    return samples.empty() ? 0. : samples.back().t;
+  }
   void reset() {
     samples.clear();
     ++epoch;

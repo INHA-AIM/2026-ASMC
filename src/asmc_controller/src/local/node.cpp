@@ -27,7 +27,7 @@ class LocalController {
   ros::SteadyTime state_received, plan_received;
   ros::Time evaluation_time;
   ros::SteadyTime last_solved;
-  bool command_published = false, input_waited = false;
+  bool command_published = false;
   std::string frame, reason = "initializing";
   bool enabled = false, selected = false, duplicate = false;
   double command_age = 0, last_steering = 0;
@@ -117,7 +117,6 @@ class LocalController {
     cmd.steering = last_steering;
     ResetMPCOnFailSafe();
     last_solved = ros::SteadyTime();
-    input_waited = false;
     if (enabled && !duplicate && selected) {
       command_pub.publish(cmd);
       command_published = true;
@@ -204,7 +203,7 @@ class LocalController {
     // geometry must never renew its350ms source freshness (550ms crawl grace).
     const double source_age = (now - candidate->scene_stamp).toSec();
     if (age < 0 || age > (grace ? .55 : .35) || source_age < age ||
-        source_age > (grace ? .55 : .40) || state_age < 0 || state_age > .15) {
+        source_age > (grace ? .55 : .50) || state_age < 0 || state_age > .15) {
       stop("local_source_stale");
       return;
     }
@@ -256,15 +255,15 @@ class LocalController {
     }
     ego.vx = std::max(0., ego.vx);
     if (!grace && source_age > .35) {
-      // No new command computed from expired perception. One normal20Hz tick
-      // may wait for a replacement after a recent solve in the same session.
-      // The existing selector keeps only the original command age/watchdog.
-      if (!input_waited && last_good &&
+      // No computation from expired perception. Hold the previously issued
+      // command for at most150ms since its valid solve, without publishing or
+      // refreshing it. This covers a measured17ms missed handoff; the external
+      // 250ms watchdog remains authoritative. Sustained loss still fails.
+      if (last_good &&
           candidate->header.frame_id == last_good->header.frame_id &&
-          candidate->scene_stamp >= last_good->scene_stamp && age <= .15 &&
+          candidate->scene_stamp >= last_good->scene_stamp && age <= .20 &&
           state_age <= .10 && std::isfinite(state->twist.twist.angular.z) &&
-          (steady - last_solved).toSec() < .10) {
-        input_waited = true;
+          (steady - last_solved).toSec() < .15) {
         reason = "plan_replacement_pending";
         report(false, morai_msgs::CtrlCmd());
         return;
@@ -276,14 +275,11 @@ class LocalController {
     // State and trajectory have independent source times. Propagate the most
     // recent odometry once to this control tick, within the same100ms bound as
     // the planner's MotionHistory. Camera latency was handled by the planner.
-    if (!input_waited && state_age > .10 && state_age <= .15 &&
-        std::isfinite(state->twist.twist.angular.z) && ego.vx <= 5. / 3.6 &&
-        (steady - last_solved).toSec() < .10) {
-      // A measured100.7ms cadence gap used to issue one full-brake tick at
-      // crawl. Wait for the next actual state, with no command refresh or extra
-      // extrapolation. The existing250ms selector watchdog still owns expiry.
-      // Only a recently solved path at crawl qualifies; sustained gaps fail.
-      input_waited = true;
+    if (state_age > .10 && state_age <= .15 &&
+        std::isfinite(state->twist.twist.angular.z) &&
+        (steady - last_solved).toSec() < .15) {
+      // The same bounded handoff covers the measured114ms IMU gap at15km/h.
+      // No new command and no forecast beyond100ms, at any experiment speed.
       reason = "motion_sample_pending";
       report(false, morai_msgs::CtrlCmd());
       return;
@@ -318,7 +314,6 @@ class LocalController {
     auto command =
         mpc_controller_ros::ToRosControlCommand(output.control, GetMPCParams());
     last_solved = ros::SteadyTime::now();
-    input_waited = false;
     last_steering = command.steering;
     if (enabled && selected) {
       command_pub.publish(command);

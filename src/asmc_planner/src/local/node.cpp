@@ -421,6 +421,13 @@ class Node {
     auto camera_origin = motion.at(t);
     auto origin = motion.at(plan_stamp.toSec());
     if (!origin || !camera_origin) {
+      const double state_age = plan_stamp.toSec() - motion.latest_stamp();
+      if (!origin && camera_origin && state_age > .10 && state_age <= .15) {
+        // Do not forecast past100ms or publish an invalid pulse during a
+        // bounded sensor cadence gap.150ms receive/source expiry remains hard.
+        ROS_WARN_THROTTLE(5., "LOCAL waiting for motion: age=%.3fs", state_age);
+        return;
+      }
       invalid(!camera_origin ? "camera_motion_history_unavailable"
                              : "plan_motion_extrapolation_limit");
       return;
