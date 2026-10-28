@@ -851,7 +851,10 @@ class Node {
         debug << ',';
       debug << g.rotation[k];
     }
-    debug << "],\"source_in_plan\":[" << g.source_in_plan[0] << ','
+    debug << "],\"speed_mps\":" << scene.speed
+          << ",\"yaw_rate_rad_s\":" << scene.yaw_rate
+          << ",\"acceleration_mps2\":" << scene.acceleration
+          << ",\"source_in_plan\":[" << g.source_in_plan[0] << ','
           << g.source_in_plan[1] << ',' << g.source_in_plan[2]
           << "],\"plan_stamp_ns\":" << plan_stamp.toNSec()
           << ",\"obstacles\":[";

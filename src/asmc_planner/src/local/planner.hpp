@@ -93,6 +93,7 @@ struct Result {
   double recovery_cost = 0;
   unsigned recovery_obb_overlap = 0;
 };
+double ReferenceAt(const Scene &, double x); // Soft home cue, never a collision boundary.
 // Distance-normalized final score; does not certify collision validity.
 double SegmentQualityCost(const Scene &, const Config &, const Pose &, const Pose &, unsigned soft_cells);
 void BuildGridIndex(Grid &); // Current raster index; never changes probability/coverage.

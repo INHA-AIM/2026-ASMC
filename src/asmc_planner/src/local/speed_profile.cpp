@@ -101,7 +101,7 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
     if (travelled > distance + .05) {
       out.reason = "terminal_braking_violation";
       out.trajectory.clear();
-        return false;
+      return false;
     }
     if (i > 40 && v < .03 && remaining < .4) {
       out.trajectory.back()[4] = 0;
