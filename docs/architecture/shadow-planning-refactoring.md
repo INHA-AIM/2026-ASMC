@@ -191,3 +191,13 @@ S1에서 필요한 최소 기록만 새로 수집한다. 이전 공간 예외를
 S1의 추가 여유·조기 차로 변경 선택 후보는 concrete 통과를 개선하지 못해 실행 경로에서 제거했다.
 실패를 해결하려고 차체 여유·도로 경계·freshness를 낮추지 않았다. 세부 결과와 재현 SHA는
 [수정 실험 기록](../records/planning/2026-10-28-shadow-contact-clearance.md)에 연결한다.
+
+
+## LOCAL-1 이후 입력·속도·DR 검토
+
+[2026-10-28 시간/속도 정책과 AIMDrive DR pilot](../records/planning/2026-10-28-local-timing-and-dr-pilot.md)에
+최신 원인과 LOCAL-2A~2D 작업 순서를 둔다. 후진의 forward-only 상태 reset,
+카메라 계산용10Hz 공급,50ms 로컬 join,3km/h 가림 회복,20m 관측/제동 상한을
+성능 문제와 구분했다. 다음 단위는 signed 상대 상태·원본 관측 표시와 비차단
+snapshot을 정리하는 LOCAL-2A다. 무장애25km/h, 인지 노이즈 응답, 정적 회피는
+각각 후속 수락 단위다. AIMDrive 전체 이식 또는 GPS 무효 검사의 제거가 아니다.
