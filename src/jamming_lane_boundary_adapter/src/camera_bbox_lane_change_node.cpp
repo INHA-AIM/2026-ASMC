@@ -3,6 +3,8 @@
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
 #include "lane_boundary_adapter/contact_clearance.hpp"
 #include "lane_boundary_adapter/drivable_clearance.hpp"
+#include "lane_boundary_adapter/local_obstacle_support.hpp"
+#include <asmc_msgs/CameraGroundProjection.h>
 #include <sensor_msgs/Image.h>
 #include <memory>
 
@@ -44,7 +46,7 @@ struct Parameters {
     // Internal trial profile. Legacy lane-occupancy policy is the recovery path.
     bool contact_clearance_enabled = false;
     bool contact_local_required = false;
-    std::string bev_mode="off"; // off / audit; internal experiment only
+    std::string bev_mode="off"; // off / audit / semantic_trial; no operational promotion
     double contact_speed_kph = 5.0;
     double contact_max_skew = 0.15; // no ego-motion alignment is claimed
 
@@ -259,6 +261,14 @@ struct BevEntry {
 };
 std::deque<sensor_msgs::Image::ConstPtr> bev_probability,bev_coverage;
 std::deque<BevEntry> bev_frames;
+std::deque<asmc_msgs::CameraGroundProjection::ConstPtr> semantic_contexts;
+lane_boundary_adapter::LocalObstacleSupport semantic_local;
+ros::Time semantic_selected_stamp;
+int semantic_home=-1,semantic_target=-1;
+unsigned semantic_confirm=0;
+ros::Time semantic_last_decision;
+double semantic_safe_length=0.;
+
 lane_boundary_adapter::clearance::GridSpec bev_spec;
 ros::Time bev_last_stamp,bev_cutoff,bev_status_stamp;
 ros::SteadyTime bev_status_received;
@@ -269,7 +279,7 @@ std::deque<std::string> bev_retired;
 std::string bev_status="off";
 unsigned bev_rejected=0,bev_invalid=0;
 double bev_pair_skew=0.;
-void clearBev(){bev_probability.clear();bev_coverage.clear();bev_frames.clear();bev_last_stamp=ros::Time();}
+void clearBev(){bev_probability.clear();bev_coverage.clear();bev_frames.clear();semantic_contexts.clear();bev_last_stamp=ros::Time();semantic_home=semantic_target=-1;semantic_confirm=0;semantic_last_decision=ros::Time();}
 void bevEpoch(const asmc_msgs::InferenceStatus::ConstPtr& m){
     if(m->producer_session_id.empty()||m->header.stamp.isZero()||m->model!="twinlite")return;
     if(std::find(bev_retired.begin(),bev_retired.end(),m->producer_session_id)!=bev_retired.end())return;
@@ -292,6 +302,15 @@ void bevInput(const sensor_msgs::Image::ConstPtr& m,bool probability) {
     auto& queue=probability?bev_probability:bev_coverage;queue.push_back(m);while(queue.size()>4)queue.pop_front();
     for(const auto& p:bev_probability)for(const auto& c:bev_coverage)if(p->header.stamp==c->header.stamp){
         if(p->header.stamp<=bev_last_stamp)continue;
+        if(params.bev_mode=="semantic_trial"){
+            if(p->header.seq!=c->header.seq)continue;
+            bool exact=false;
+            for(const auto& context:semantic_contexts)
+                exact |= context->header.stamp==p->header.stamp && context->header.seq==p->header.seq &&
+                    context->producer_session_id==bev_session && context->generation==bev_generation &&
+                    context->imu_corrected && context->config_id==params.expected_config_sha256;
+            if(!exact)continue;
+        }
         std::vector<uint8_t> a,b;a.reserve(p->width*p->height);b.reserve(a.capacity());
         for(unsigned r=0;r<p->height;++r){a.insert(a.end(),p->data.begin()+r*p->step,p->data.begin()+r*p->step+p->width);
             b.insert(b.end(),c->data.begin()+r*c->step,c->data.begin()+r*c->step+c->width);}
@@ -308,6 +327,7 @@ std::shared_ptr<lane_boundary_adapter::clearance::DrivableClearance> selectBev(r
        (ros::Time::now()-bev_status_stamp).toSec()>1.5 || image<bev_cutoff || lane<bev_cutoff)return nullptr;
     std::shared_ptr<lane_boundary_adapter::clearance::DrivableClearance> best;double distance=.050000001;
     for(const auto& e:bev_frames){double age=(ros::Time::now()-e.stamp).toSec();
+        if(params.bev_mode=="semantic_trial" && e.stamp!=lane)continue;
         if(age<-.05||age>.35||(ros::SteadyTime::now()-e.received).toSec()>.35||std::abs((lane-e.stamp).toSec())>.050000001)continue;
         double d=std::abs((image-e.stamp).toSec());if(d<distance){distance=d;best=e.grid;}}
     bev_pair_skew=best?distance:-1.;return best;
@@ -325,6 +345,7 @@ std::string bboxStopReason();
 bool ignoreBboxDuringLaneChange();
 std::string updateLaneChangePlan();
 std::string updateContactPathPlan();
+std::string updateSemanticPathPlan();
 const LaneChain* getPlanningLane(int lane_index, const std::vector<LaneChain>* geometry = nullptr, double required_x = -1.0);
 bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample);
 bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0, double change_length = 0.0, bool full_shift = false, double supported_end = -1.0);
@@ -544,13 +565,14 @@ void cameraLaneFollowingProcess() {
 
     // 2. 입력 상태와 비상정지 확인. 추종할 수 없으면 기본 명령은 제동.
     std::string stop_reason = getStopReason(now);
-    if (change_state.change_failed) stop_reason = change_state.change_failure_reason;
+    if (change_state.change_failed && params.bev_mode!="semantic_trial") stop_reason = change_state.change_failure_reason;
     if (stop_reason.empty()) {
         stop_reason = bboxStopReason();
     }
     if (stop_reason.empty() && follower_state.target_ready) {
         const auto plan_started=ros::SteadyTime::now();
-        stop_reason = params.contact_clearance_enabled ? updateContactPathPlan() : updateLaneChangePlan();
+        stop_reason = params.bev_mode=="semantic_trial" ? updateSemanticPathPlan() :
+            (params.contact_clearance_enabled ? updateContactPathPlan() : updateLaneChangePlan());
         contact_plan_wall_ms=(ros::SteadyTime::now()-plan_started).toSec()*1000.;
         contact_plan_evaluated=params.contact_clearance_enabled;
     } else {
@@ -632,6 +654,13 @@ double calculateSteering(double curvature, double dt) {
 double calculateTargetSpeed(double curvature) {
     double target_speed = params.target_speed_kph;
     if(params.contact_clearance_enabled) target_speed=std::min(target_speed,params.contact_speed_kph);
+    if(params.bev_mode=="semantic_trial"){
+        // Candidate braking envelope:1m/s² +350ms sensing/actuation budget.
+        // Full footprint already checked to the path end. Never drive into
+        // an unknown shadow expecting the next replan to reveal free space.
+        const double d=std::max(0.,semantic_safe_length-.5);
+        target_speed=std::min(target_speed,3.6*(std::sqrt(.35*.35+2*d)-.35));
+    }
     // 변경 중에는 BBOX 때문에 속도 0이나 감속 명령이 생기지 않도록 한다.
     if (!ignoreBboxDuringLaneChange()) {
         if (change_state.clipped_association) target_speed = std::min(target_speed, params.clipped_tracking_speed_kph);
@@ -750,10 +779,11 @@ void laneBoundaryCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& msg) {
 
     // 4. 같은 차로가 연속으로 확인되면 고정. 이후 유실되어도 옆 차로로 바꾸지 않는다.
     const LaneCandidate& candidate = candidates.front();
-    if (!change_state.changing && !confirmOwnLane(candidate.lane.lane_index)) {
+    if (params.bev_mode!="semantic_trial" && !change_state.changing && !confirmOwnLane(candidate.lane.lane_index)) {
         return;
     }
 
+    if(params.bev_mode=="semantic_trial" && follower_state.locked_lane<0)follower_state.locked_lane=candidate.lane.lane_index;
     follower_state.selected_lane = candidate.lane;
     follower_state.target_point = candidate.target;
     follower_state.target_ready = true;
@@ -1170,7 +1200,10 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "contact_clearance_enabled", params.contact_clearance_enabled?"true":"false");
     addDiagnosticValue(status, "contact_decision", contact_decision);
     addDiagnosticValue(status,"bev_mode",params.bev_mode);
-    addDiagnosticValue(status,"bev_coordinate_policy","fixed_plane_sensitivity_only");
+    addDiagnosticValue(status,"bev_coordinate_policy",params.bev_mode=="semantic_trial"?"exact_family_imu_context":"fixed_plane_sensitivity_only");
+    addDiagnosticValue(status,"semantic_safe_length_m",std::to_string(semantic_safe_length));
+    addDiagnosticValue(status,"semantic_home_lane",std::to_string(semantic_home));
+    addDiagnosticValue(status,"semantic_target_lane",std::to_string(semantic_target));
     addDiagnosticValue(status,"bev_status",bev_status);
     addDiagnosticValue(status,"bev_rejected",std::to_string(bev_rejected));
     addDiagnosticValue(status,"bev_invalid",std::to_string(bev_invalid));
@@ -1218,13 +1251,13 @@ void initializeRosInterface(ros::NodeHandle& nh) {
     }
 
     ros::NodeHandle("~").param<std::string>("bev_mode",params.bev_mode,"off");
-    if(params.bev_mode!="off" && params.bev_mode!="audit")throw std::runtime_error("BEV execution guard is not accepted: use off/audit until shared-plane visibility is validated");
+    if(params.bev_mode!="off" && params.bev_mode!="audit" && params.bev_mode!="semantic_trial")throw std::runtime_error("BEV execution guard is not accepted: use off/audit until shared-plane visibility is validated");
     if(params.bev_mode!="off") {
         if(!params.contact_clearance_enabled || !params.contact_local_required)throw std::runtime_error("BEV trial requires measured local clearance");
         double xmin,ymin;std::string frame;
-        if(!nh.getParam("/camera_bev/x_max_m",bev_spec.x_max)||!nh.getParam("/camera_bev/y_max_m",bev_spec.y_max)||
-           !nh.getParam("/camera_bev/x_min_m",xmin)||!nh.getParam("/camera_bev/y_min_m",ymin)||
-           !nh.getParam("/camera_bev/resolution_m",bev_spec.resolution)||!nh.getParam("/camera_bev/frame_id",frame)||
+        if(!nh.getParam((params.bev_mode=="semantic_trial"?"/experimental/shadow/semantic_space_trial/":"/camera_bev/")+std::string("x_max_m"),bev_spec.x_max)||!nh.getParam((params.bev_mode=="semantic_trial"?"/experimental/shadow/semantic_space_trial/":"/camera_bev/")+std::string("y_max_m"),bev_spec.y_max)||
+           !nh.getParam((params.bev_mode=="semantic_trial"?"/experimental/shadow/semantic_space_trial/":"/camera_bev/")+std::string("x_min_m"),xmin)||!nh.getParam((params.bev_mode=="semantic_trial"?"/experimental/shadow/semantic_space_trial/":"/camera_bev/")+std::string("y_min_m"),ymin)||
+           !nh.getParam((params.bev_mode=="semantic_trial"?"/experimental/shadow/semantic_space_trial/":"/camera_bev/")+std::string("resolution_m"),bev_spec.resolution)||!nh.getParam((params.bev_mode=="semantic_trial"?"/experimental/shadow/semantic_space_trial/":"/camera_bev/")+std::string("frame_id"),frame)||
            frame!="base_link"||!std::isfinite(bev_spec.resolution)||bev_spec.resolution<=0.||
            !std::isfinite(xmin)||!std::isfinite(ymin)||!std::isfinite(bev_spec.x_max)||!std::isfinite(bev_spec.y_max))
             throw std::runtime_error("canonical camera BEV grid unavailable");
@@ -1233,10 +1266,23 @@ void initializeRosInterface(ros::NodeHandle& nh) {
         if(bev_spec.rows<1||bev_spec.rows>1000||bev_spec.cols<1||bev_spec.cols>1000)throw std::runtime_error("invalid camera BEV grid dimensions");
         static ros::Subscriber probability,coverage,epoch;
         epoch=nh.subscribe("/perception/camera/lane/status",1,bevEpoch);
-        probability=nh.subscribe<sensor_msgs::Image>("/perception/bev/camera/drivable_probability",1,
+        const std::string bev_prefix=params.bev_mode=="semantic_trial"?"/experimental/shadow/semantic_space_trial":"/perception/bev/camera";
+        probability=nh.subscribe<sensor_msgs::Image>(bev_prefix+"/drivable_probability",1,
             +[](const sensor_msgs::Image::ConstPtr& m){bevInput(m,true);});
-        coverage=nh.subscribe<sensor_msgs::Image>("/perception/bev/camera/coverage",1,
+        coverage=nh.subscribe<sensor_msgs::Image>(bev_prefix+"/coverage",1,
             +[](const sensor_msgs::Image::ConstPtr& m){bevInput(m,false);});
+    }
+    if(params.bev_mode=="semantic_trial"){
+        static ros::Subscriber context_sub,local_sub;
+        context_sub=nh.subscribe<asmc_msgs::CameraGroundProjection>("/experimental/shadow/semantic_space_trial/context",2,
+            +[](const asmc_msgs::CameraGroundProjection::ConstPtr& m){
+                if(m->header.frame_id!="base_link" || !m->imu_corrected || m->producer_session_id!=bev_session || m->generation!=bev_generation)return;
+                semantic_contexts.push_back(m);while(semantic_contexts.size()>8)semantic_contexts.pop_front();
+                // A context can arrive after its images on separate ROS sockets.
+                auto pending=bev_probability;for(const auto& image:pending)bevInput(image,true);
+            });
+        local_sub=nh.subscribe<asmc_msgs::LidarTrackingObservation>("/perception/lidar/tracks_local",1,
+            +[](const asmc_msgs::LidarTrackingObservation::ConstPtr& m){semantic_local.accept(m,ros::Time::now(),ros::SteadyTime::now());});
     }
     bbox_subscriber = nh.subscribe(params.bbox_topic, 1, bboxCallback);
     reference_lane_publisher = nh.advertise<std_msgs::Int8>(params.reference_lane_topic, 1);
@@ -1513,6 +1559,7 @@ std::string bboxStopReason() {
         // entry into this low-speed experiment. No stale velocity is reused.
         if(contact_actual_speed>(contact_speed_ready?2.0:1.6)){contact_speed_ready=false;return "contact_actual_speed_above_trial_limit";}
         contact_speed_ready=true;
+        if(params.bev_mode=="semantic_trial")return ""; // Geometry/freshness checked independently, no YOLO classification gate.
         if(params.contact_local_required && (!contact_result || !contact_result->local_obstacles_valid))
             return "contact_local_obstacles_unavailable";
     }
@@ -1679,6 +1726,102 @@ void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>&
 // Experimental clearance policy uses the SAME path generator, road/curvature
 // checks, controller and selector. It never uses a semantic class to skip an
 // obstacle. Lane overlap and vehicle-corridor collision are separate facts.
+// S3: family is the road reference; semantic free space chooses a continuous
+// lateral path. Camera bbox classification is deliberately not a prerequisite.
+// The same controller/selector owns control. No previous-frame XY is reused.
+std::string updateSemanticPathPlan() {
+    namespace cc=lane_boundary_adapter::clearance;
+    contact_candidates=contact_road_rejected=contact_collision_rejected=bev_rejected=0;
+    contact_geometry_ready=false;semantic_safe_length=0.;
+    auto fail=[](const std::string& reason){contact_decision=bev_status=reason;return reason;};
+    const std::vector<LaneChain>* geometry=nullptr;
+    std::shared_ptr<cc::DrivableClearance> grid;
+    ros::Time stamp;
+    for(auto i=contact_lane_history.rbegin();i!=contact_lane_history.rend();++i){
+        grid=selectBev(i->stamp,i->stamp);
+        if(grid){geometry=&i->lanes;stamp=i->stamp;break;}
+    }
+    if(!geometry || !grid)return fail("semantic_exact_family_space_unavailable");
+    const auto local=semantic_local.select(stamp,ros::Time::now(),ros::SteadyTime::now());
+    // Require fresh local health during this trial, independently of YOLO.
+    // Its positive measured footprints veto a path; no empty array clears a
+    // semantic hole or unknown region. No map pose is used in the tunnel.
+    if(!local)return fail("semantic_local_health_or_time_unavailable");
+    std::vector<cc::Polygon> occupied;
+    for(const auto& object:local->observation.objects.objects){
+        if(object.observation_state!=object.OBSERVED || object.miss_count)continue;
+        geometry_msgs::Polygon polygon;
+        if(!lane_boundary_adapter::LocalObstacleSupport::footprint(object,polygon))return fail("semantic_local_geometry_invalid");
+        cc::Polygon points;for(const auto& p:polygon.points)points.push_back({p.x,p.y});
+        points=cc::paddedHull(points,0.);if(points.empty())return fail("semantic_local_geometry_invalid");
+        occupied.push_back(std::move(points));
+    }
+    double horizon=bev_spec.x_max;
+    if(geometry->empty())return fail("semantic_family_empty");
+    for(const auto& lane:*geometry){
+        if(lane.left_boundary.empty()||lane.right_boundary.empty())return fail("semantic_family_support_missing");
+        horizon=std::min({horizon,lane.left_boundary.back().x,lane.right_boundary.back().x});
+    }
+    const cc::Vehicle vehicle{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,
+        params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
+    const double supported_end=std::floor((horizon-std::hypot(vehicle.front+vehicle.longitudinal_margin+params.path_sample_step,
+        vehicle.half_width+vehicle.lateral_margin)-.1)/params.path_sample_step)*params.path_sample_step;
+    if(supported_end<3.)return fail("semantic_full_body_horizon_short");
+    if(semantic_home<0)semantic_home=follower_state.selected_lane.lane_index;
+    if(semantic_target<0)semantic_target=semantic_home;
+    struct Candidate {LaneChain lane;std::vector<FamilyPoint2d> path;double offset=0.,length=0.,curvature=0.;};
+    auto find=[&](int index,double end,Candidate& found){
+        const auto* original=getPlanningLane(index,geometry,horizon);if(!original)return false;
+        for(double offset:{0.,-.15,.15,-.3,.3,-.45,.45})for(double length:{6.,8.,10.,12.,15.,4.}){
+            ++contact_candidates;
+            LaneChain lane=*original;for(auto& p:lane.centerline)p.y+=offset;
+            std::vector<FamilyPoint2d> path;
+            if(!buildPath(lane,true,path,1.,length,true,end) || !pathInsideRoad(path,geometry)){
+                ++contact_road_rejected;continue;
+            }
+            std::vector<cc::Point> points;for(const auto& p:path)points.push_back({p.x,p.y});
+            if(!grid->check(points,vehicle,params.path_sample_step).clear){++bev_rejected;continue;}
+            if(!cc::pathClearOfPolygons(points,occupied,vehicle,horizon,params.path_sample_step)){
+                ++contact_collision_rejected;continue;
+            }
+            found={std::move(lane),std::move(path),offset,length,change_state.maximum_path_curvature};return true;
+        }return false;
+    };
+    Candidate chosen;int target=-1;
+    // Prefer longer verified progress, then retained maneuver side, then home.
+    // Partial paths do not require an unseen return endpoint. They must still
+    // contain the entire inflated body and a stopping prefix in observed space.
+    for(double requested:{15.,8.,5.,3.}){
+        const double end=std::min(requested,supported_end);
+        if(target>=0)break;
+        if(find(semantic_target,end,chosen))target=semantic_target;
+        else if(find(1-semantic_target,end,chosen))target=1-semantic_target;
+    }
+    if(target<0)return fail("semantic_all_paths_blocked_or_unobserved");
+    const bool fresh=stamp!=semantic_last_decision;
+    if(target!=semantic_home){
+        Candidate returning;
+        if(find(semantic_home,chosen.path.back().x,returning)){
+            if(fresh)++semantic_confirm;
+            if(semantic_confirm>=3){chosen=std::move(returning);target=semantic_home;}
+        }else if(fresh)semantic_confirm=0;
+    }else semantic_confirm=0;
+    semantic_last_decision=stamp;semantic_target=target;semantic_selected_stamp=stamp;
+    contact_geometry_ready=true;semantic_safe_length=chosen.path.back().x;
+    contact_maneuver_length=chosen.length;
+    contact_pursuit_x=std::min({4.,chosen.length*.5,semantic_safe_length});
+    change_state.maximum_path_curvature=chosen.curvature;
+    change_state.entry_lane=semantic_home;change_state.target_lane=target;
+    // The semantic planner keeps only intent; it replans in the new frame.
+    // Legacy change timeout/completion and YOLO occupancy are not reused.
+    change_state.changing=false;change_state.returning_to_entry=false;
+    change_state.deferred_far=false;change_state.clipped_association=false;
+    storePlannedTarget(chosen.lane,chosen.path);
+    contact_decision="semantic_checked:lane="+std::to_string(target)+":offset="+std::to_string(chosen.offset);
+    bev_status="shared_imu_observed_prefix";
+    return "";
+}
+
 std::string updateContactPathPlan() {
     contact_candidates=contact_road_rejected=contact_collision_rejected=bev_rejected=0; contact_geometry_ready=false;
     auto fail=[](const std::string& reason){contact_decision=reason;return reason;};
