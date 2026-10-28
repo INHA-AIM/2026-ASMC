@@ -327,3 +327,11 @@ LOCAL-2D는 리베이스·클린 빌드·NORMAL/LOCAL 경계 검증을 완료했
 기본 camera와350ms freshness를 유지하고 노면 reference 후보는 기본 OFF로 둔다.
 다음은 준비 경로의 시간 여유·첫 계산 위상과 reference 전환을 다루는 LOCAL-2E다.
 이전25km/h 목표를 반복하거나 보호 동작을 제거해 성공으로 표시하지 않는다.
+
+## LOCAL-2E 반복 회피·전환 보완
+
+[LOCAL-2E 결과와 실행 profile](../records/planning/2026-10-29-local-avoidance-continuity.md)에
+모드 즉시 첫 계산, source-aged 방향 선호, 짧은/0진행 prefix 재탐색과 공정한 측방 후보
+계산 순서를 기록한다. 일반 판제·차체 외곽·신선도는 유지하며 별도 localization 연구를
+병합하지 않는다.10km/h 배치와12km/h 확장 시험을 구분하고, 복구/미관측 보조와
+남은 terminal braking 실패를 정규 회피 수락으로 표시하지 않는다.

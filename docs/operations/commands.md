@@ -522,6 +522,8 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 폐루프 미수락 항목은 이 연결로 해결된 것으로 처리하지 않는다.
 노면 reference 복구 후보는 기본 OFF다. 실험 profile의 접촉 없는 통과를 기본 선택의
 전환·회피 수락으로 혼동하지 않는다.
+후속 실험 profile·반복 회피 결과는 [LOCAL-2E 기록](../records/planning/2026-10-29-local-avoidance-continuity.md)을 따른다.
+기본 camera 선택과 LOCAL10km/h 상한은 유지하며, 실험용 노면 reference는 기본 OFF다.
 
 ## LOCAL 실험 계산과 모니터
 
