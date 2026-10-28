@@ -115,7 +115,7 @@ def main():
             sequence = 0
 
             prepare_mode = False
-            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0):
+            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0, family_valid=True):
                 nonlocal sequence
                 rows.clear()
                 plans.clear()
@@ -148,7 +148,7 @@ def main():
                         family = LaneBoundaryFamily()
                         family.header.stamp = stamp
                         family.header.frame_id = "base_link"
-                        family.valid = True
+                        family.valid = family_valid
                         family.operating_domain = "shadow_two_way_v1"
                         family.config_sha256 = "fixture"
                         family.algorithm_id = (
@@ -167,6 +167,9 @@ def main():
                             if role == folded_role:
                                 line.polyline[10].x = line.polyline[9].x - .2
                             family.boundaries.append(line)
+                        if not family_valid:
+                            family.boundaries=[]
+                            family.status_reason='too_few_observed_roles'
                         raster = Image()
                         raster.header.stamp = stamp
                         raster.header.frame_id = "base_link"
@@ -236,6 +239,9 @@ def main():
             result, _ = feed(.7, 1., status=empty, folded_role=3)
             assert result[-1]['reason']=='family_not_monotonic'
             print('Unused opposite boundary cannot invalidate home; required boundary remains strict PASS')
+            result, _ = feed(.7, 1., status=empty, family_valid=False)
+            assert result[-1]['reason']=='family_plane_invalid'
+            print('Unvalidated semantic-reference candidate remains OFF in default runtime PASS')
             result, _ = feed(1.5, 1.0, status=empty, camera_age=.275)
             late = [r for r in result if r.get('valid')]
             assert late, [r['reason'] for r in result]

@@ -28,6 +28,8 @@ def main():
     parser.add_argument("--planner-config", type=Path)
     parser.add_argument("--near-blind-assist", action="store_true")
     args = parser.parse_args()
+    if not any((p/'registration.json').is_file() for p in args.output.parents):
+        raise ValueError('replay output must be a new child of a registered run')
     args.output.mkdir(parents=False, exist_ok=False)
     from scen_runner.runtime.private_master import available_port
     args.port = available_port(args.port)

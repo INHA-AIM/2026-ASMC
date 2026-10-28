@@ -3,6 +3,13 @@ from scen_runner.records.local_gallery import select_cases
 
 
 class LocalGalleryTest(unittest.TestCase):
+    def test_rejected_family_keeps_exact_selected_source_for_visual_review(self):
+        selected=select_cases([dict(plan_sequence=1,scene_stamp_ns=0,
+            input_join=dict(selected_stamp_ns=123),reason='family_plane_invalid',
+            valid=False,path=[])])
+        self.assertEqual(selected[123][0]['plan_sequence'],1)
+        self.assertNotIn(0,selected)
+
     def test_failure_matches_exact_plan_not_nearest_stamp(self):
         rows = [
             dict(

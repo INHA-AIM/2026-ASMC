@@ -32,10 +32,14 @@ def summarize(root):
         r for r in rows(root / "control.jsonl") if begin <= r["decision_stamp"] <= end
     ]
     result = json.loads((root / "trial-result.json").read_text())
+    provenance=root/'runtime-provenance.json'
+    result['integrated']=bool(json.loads(provenance.read_text()).get('options',{}).get('integrated')) if provenance.exists() else False
     valid = [r for r in plans if r["valid"]]
+    following_file=next((root/n for n in ['following-analysis-v3.json','following-analysis-v2.json','following-analysis.json']
+                         if (root/n).exists()),root/'following-analysis.json')
     following = (
-        json.loads((root / "following-analysis.json").read_text())
-        if (root / "following-analysis.json").exists()
+        json.loads(following_file.read_text())
+        if following_file.exists()
         else {}
     )
     command_times = [r["decision_stamp"] for r in control if r.get("command_published")]
@@ -50,7 +54,7 @@ def summarize(root):
         ),
         control_reasons=dict(Counter(r["reason"] for r in control)),
         plan_reasons=dict(Counter(r["reason"] for r in plans)),
-        hard_brake_ticks=sum(r.get("brake", 0) > 0.9 for r in control),
+        hard_brake_ticks=sum(r.get("command_published",True) and r.get("brake",0)>.9 for r in control),
         command_gap_ms=quantiles(
             [(b - a) * 1000 for a, b in zip(command_times, command_times[1:])]
         ),
@@ -140,7 +144,8 @@ def build(output, roots, title="LOCAL-2B 경로·속도·실패 검수"):
 <title>__TITLE__</title>
 <style>body{background:#101a24;color:#e9f3fb;font:16px system-ui;margin:24px auto;max-width:1250px;padding:0 16px}a{color:#61dcff}select{padding:10px;font-size:16px;max-width:100%}svg{width:100%;background:#142432}table{border-collapse:collapse;width:100%;margin:18px 0}td,th{text-align:left;padding:8px;border-bottom:1px solid #405064}pre{white-space:pre-wrap}article{padding:16px;background:#182d3b;margin:16px 0}</style>
 <h1>__TITLE__</h1>
-<p>실제 주행 구간만 집계합니다. 시작 준비·정차 입력도 원본 로그에 보존했습니다. 횡오차는 family 내부 일관성이며 독립 차선 GT가 아닙니다. 빈 터널 시험은 장애물 회피·전체 터널·25km/h 수락을 의미하지 않습니다.</p>
+<p>실제 주행 구간만 집계합니다. 시작 준비·정차 입력도 원본 로그에 보존했습니다. 횡오차는 방향 reference와의 차이로, family/노면 reference를 전체 JSON에서 구분합니다. 독립 차선 GT가 아닙니다. 접촉 없는 저속 복구 통과를 정규 회피 수락으로 간주하지 않습니다.</p>
+<p>통합 전환 시험의 속도 상한은 LOCAL에만 적용합니다. NORMAL의 기존 속도는 별도이며 전체 속도 곡선에 함께 보존합니다. 미선택 MPC의 발행하지 않은 STOP trace는 실제 급제동 명령으로 집계하지 않습니다.</p>
 <p>파랑: 실측 속도(km/h), 청록: 선택 경로(m), 점선: 탐색 한계(m), 노랑: 속도 상한(km/h), 빨강: 브레이크×20. 세로축은 비교를 위한 공통 눈금입니다.</p>
 <p><a href="aborted.json">시작 전 차단/준비 실패도 확인</a></p>__SUPPLEMENTS__
 <select id="pick"></select><svg id="plot" viewBox="0 0 1100 340" role="img" aria-label="시간에 따른 속도와 경로 길이"></svg>
@@ -150,8 +155,8 @@ def build(output, roots, title="LOCAL-2B 경로·속도·실패 검수"):
 const esc=x=>String(x??'-').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=x=>x==null?'-':Number(x).toFixed(2);
 pick.innerHTML=data.map((r,i)=>`<option value="${i}">${esc(r.run_id)} · 설정 ${r.cap_kph}km/h</option>`).join('');
-function draw(){const r=data[+pick.value], seconds=Math.max(1,...r.series.speed.map(p=>p[0]));const X=t=>50+t/seconds*1010,Y=v=>300-v/30*270;let s='';
-for(let v=0;v<=30;v+=5)s+=`<path d="M50 ${Y(v)}H1060" stroke="#354a59"/><text x="5" y="${Y(v)}" fill="#bacdda">${v}</text>`;
+function draw(){const r=data[+pick.value], seconds=Math.max(1,...r.series.speed.map(p=>p[0])), ymax=Math.max(30,5*Math.ceil(Math.max(...r.series.speed.map(p=>p[1]))/5));const X=t=>50+t/seconds*1010,Y=v=>300-v/ymax*270;let s='';
+for(let v=0;v<=ymax;v+=5)s+=`<path d="M50 ${Y(v)}H1060" stroke="#354a59"/><text x="5" y="${Y(v)}" fill="#bacdda">${v}</text>`;
 for(const [k,color,dash] of [['speed','#54b9ff',''],['path','#40e4ba',''],['horizon','#80aaa5','6 4'],['cap','#ffe081',''],['brake','#ff7777','']]) s+=`<polyline fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="${dash}" points="${r.series[k].map(p=>X(p[0])+','+Y(p[1])).join(' ')}"/>`;
 s+=`<text x="50" y="328" fill="white">0s</text><text x="990" y="328" fill="white">${num(seconds)}s</text>`;plot.innerHTML=s;
 detail.innerHTML=`<article><a href="${esc(r.link)}">RGB·노면·선택/탈락 경로·실패 갤러리 열기</a><p>접촉 ${r.native_contacts.length}, ${num(r.travel_m)}m, 급제동 명령 ${r.hard_brake_ticks}tick · 계산 p95 ${num(r.planning_ms.p95)}ms · MPC p95 ${num(r.mpc_ms.p95)}ms · 명령 공백 최대 ${num(r.command_gap_ms.max)}ms</p><pre>${esc(JSON.stringify({계획:r.plan_reasons,제어:r.control_reasons,실패:r.failures},null,2))}</pre></article>`;}

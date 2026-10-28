@@ -137,7 +137,7 @@ def category(row):
 
 
 def friendly_group(group):
-    if group.startswith('local2d-'):return 'LOCAL-2D · 리베이스·오프라인 준비 · '+group[len('local2d-'):]
+    if group.startswith('local2d-'):return 'LOCAL-2D · 공급·전환·주행 검수 · '+group[len('local2d-'):]
     if group.startswith('local2c-'):return 'LOCAL-2C · 속도 연속성·지면 OBB · '+group[len('local2c-'):]
     if group.startswith('local2b-'):return 'LOCAL-2B · 경로 길이·안정화 · '+group[len('local2b-'):]
     if group.startswith('local2a-'):return 'LOCAL-2A · 입력 정렬·벽 간격 · '+group[len('local2a-'):]
@@ -182,7 +182,7 @@ def main():
     local=next((r for r in pages if r['path'].startswith('local2b-') and r['path'].endswith('/campaign/index.html')),None)
     prepared_review='camera-v11-preflight-20261013-r1/index.html'
     local2d=next((r for r in pages if r['path'].startswith('local2d-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
-    wishes=[('LOCAL-2D 준비·오프라인 검수',local2d['path'] if local2d else None),
+    wishes=[('LOCAL-2D 공급·전환·주행 검수',local2d['path'] if local2d else None),
             ('LOCAL-2C 속도·노면 OBB 검수',local2c['path'] if local2c else None),
             ('LOCAL-2B 주행·실패 검수',local['path'] if local else None),
             ('최근 본학습',live['path'] if live else None),

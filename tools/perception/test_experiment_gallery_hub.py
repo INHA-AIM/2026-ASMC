@@ -7,9 +7,9 @@ from build_experiment_gallery_hub import catalogue, number_pages, collect_pages,
 
 
 class GalleryChronologyTest(unittest.TestCase):
-    def test_local2d_review_is_planning_with_explicit_preflight_role(self):
+    def test_local2d_review_is_planning_without_implying_acceptance(self):
         self.assertEqual(category({'path':'local2d-run/index.html'}),'planning')
-        self.assertIn('오프라인',friendly_group('local2d-run'))
+        self.assertIn('검수',friendly_group('local2d-run'))
 
     def test_source_snapshots_are_not_experiment_pages(self):
         with tempfile.TemporaryDirectory() as temp:

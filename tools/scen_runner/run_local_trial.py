@@ -24,6 +24,8 @@ def main():
     p.add_argument("--seconds", type=float, default=40)
     p.add_argument("--cap", type=float, default=10)
     p.add_argument("--master-port", type=int, default=11348)
+    p.add_argument("--lease-wait-seconds", type=float, default=0,
+                   help="bounded wait before SDK/UDP startup; never stop another owner")
     p.add_argument("--integrated", action="store_true", help="exercise real NORMAL/JAMMING mode transitions")
     p.add_argument("--bridge-invert-steer", choices=("true", "false"), default="false")
     p.add_argument("--distance", type=float, default=35)
@@ -53,6 +55,7 @@ def main():
         not 0 < args.seconds <= 120
         or not 0 < args.cap <= 25
         or not 0 < args.distance <= 300
+        or not 0 <= args.lease_wait_seconds <= 600
     ):
         raise ValueError("bounded duration/cap required")
     if args.near_blind_assist and args.cap > 5:
@@ -69,7 +72,7 @@ def main():
     from google.protobuf.json_format import MessageToDict
     from scen_runner.config import load_config
     from scen_runner.runtime.validation_episode import EpisodeLink
-    from scen_runner.runtime.validation_lease import ValidationLease
+    from scen_runner.runtime.validation_lease import ValidationBusy, ValidationLease
     from scen_runner.records.collision_archive import actor_state, load_collision
     from scen_runner.records.collision_replay import ReplaySection
     from scen_runner.runtime.signal_trial_fixture import StaticFixture
@@ -152,7 +155,17 @@ def main():
 
     link = EpisodeLink(load_config())
     lease = ValidationLease(link.host, link.port)
-    lease.acquire()
+    wait_started=time.monotonic()
+    while True:
+        try:
+            lease.acquire()
+            break
+        except ValidationBusy:
+            waited=time.monotonic()-wait_started
+            if waited>=args.lease_wait_seconds: raise
+            emit(dict(event='lease_wait',elapsed_s=waited,simulator_mutated=False))
+            time.sleep(min(1.,args.lease_wait_seconds-waited))
+    emit(dict(event='lease_acquired',waited_s=time.monotonic()-wait_started))
     link.client_key = "local1_" + run_id
     link.connect()
     from proto.morai.common.type_pb2 import Empty

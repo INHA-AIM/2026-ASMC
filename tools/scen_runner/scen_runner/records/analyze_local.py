@@ -101,7 +101,36 @@ def analyze(root, output_name="summary.json"):
             return quantiles([(b-a)*1000 for a,b in zip(times,times[1:]) if b>=a])
         result['plan_decision_gap_ms'] = gaps_of(delivered)
         result['valid_plan_gap_ms'] = gaps_of([row for row in delivered if row['valid']])
-        result['delivery_metric_clock'] = 'monotonic subscriber receipt; no actuation in preview'
+        result['delivery_metric_clock'] = 'monotonic subscriber receipt; command delivery is measured separately'
+        events = root / 'events.jsonl'
+        if events.exists():
+            markers = {r['event']:r['monotonic'] for r in read_rows(events)
+                       if r['event'] in ('driving_started','driving_ended')}
+            if len(markers)==2:
+                begin,end=markers['driving_started'],markers['driving_ended']
+                valid_times=[r['received_steady'] for r in delivered if r['valid'] and begin<=r['received_steady']<=end]
+                edges=[begin,*valid_times,end]
+                result['driving_valid_plan_max_silence_ms']=max((b-a)*1000 for a,b in zip(edges,edges[1:]))
+                result['driving_valid_plan_hz']=len(valid_times)/max(1e-6,end-begin)
+                # NORMAL intentionally publishes no LOCAL plan. Keep the full
+                # trial silence above, but never score NORMAL idle as a LOCAL
+                # outage in an integrated transition experiment.
+                spans=[];active=None
+                for event in read_rows(events):
+                    if event['event']!='mode': continue
+                    if event['value']==1 and active is None:
+                        active=max(begin,event['monotonic'])
+                    elif event['value']==0 and active is not None:
+                        if min(end,event['monotonic'])>active:
+                            spans.append((active,min(end,event['monotonic'])))
+                        active=None
+                if active is not None and end>active: spans.append((active,end))
+                silences=[]
+                for a,b in spans:
+                    edges=[a,*[t for t in valid_times if a<=t<=b],b]
+                    silences.extend((r-l)*1000 for l,r in zip(edges,edges[1:]))
+                result['active_local_valid_plan_max_silence_ms']=max(silences) if silences else None
+                result['active_local_seconds']=sum(b-a for a,b in spans)
     timings = root / 'timings.jsonl'
     if timings.exists():
         rows = [json.loads(line) for line in timings.read_text().splitlines()]

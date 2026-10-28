@@ -19,7 +19,7 @@ def select_cases(rows, controls=(), limit=24):
     seen = set()
 
     def add(row, why):
-        stamp = row.get("scene_stamp_ns")
+        stamp = row.get("scene_stamp_ns") or row.get('input_join',{}).get('selected_stamp_ns')
         if stamp and len(chosen) < limit:
             chosen.setdefault(stamp, (row, why))
 
