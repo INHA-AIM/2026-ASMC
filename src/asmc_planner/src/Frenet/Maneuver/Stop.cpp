@@ -368,7 +368,8 @@ void FrenetPlanner::AppendExternalStopSpatialCandidates(
             ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
                 request.stop.cruise_speed, request.stop.comfortable_decel,
                 generator, limits, request.stop.acceleration_limit,
-                SpatialStopOptions{request.stop.braking_only,request.stop.allow_partial_horizons})
+                SpatialStopOptions{request.stop.braking_only,request.stop.allow_partial_horizons,
+                                   request.stop.complete_profile})
             : GenerateStoppingCandidates(start, request.stop.stop_s, generator);
     } else {
         longitudinal = GenerateVelocityKeepingCandidates(start, request.target_speed, generator);
@@ -391,6 +392,8 @@ void FrenetPlanner::AppendExternalStopSpatialCandidates(
             const auto& lateral = geometry.polynomial;
             const double distance = geometry.distance;
             FrenetPath path = lon;
+            if(departure_road_recovery_.active)
+                path.spatial_lateral={true,start.s,distance,lateral};
             path.d.clear(); path.d_d.clear(); path.d_dd.clear();
             path.jerk_cost_lat = 0.0;
             for (std::size_t i = 0; i < lon.s.size(); ++i) {

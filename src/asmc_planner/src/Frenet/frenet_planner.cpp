@@ -52,7 +52,7 @@ bool FrenetPlanner::SetPreparedReference(const RefLine& reference) {
             (i&&p.s<=reference.points[i-1].s)) return false;
     }
     ref_=reference;
-    keep_road_recovery_ = KeepRoadRecovery{};
+    departure_road_recovery_ = DepartureRoadRecovery{};
     ResetHighwayMerge(); // prior confirmation/READY belongs to the old reference
     debug_writer_.reset(); // an isolated probe must not overwrite production debug files
     // These mission stations belong to the original reference. A local trial
@@ -64,7 +64,7 @@ bool FrenetPlanner::SetPreparedReference(const RefLine& reference) {
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     ref_loaded_ = false;
-    keep_road_recovery_ = KeepRoadRecovery{};
+    departure_road_recovery_ = DepartureRoadRecovery{};
     highway_route_.reset();highway_prediction_map_.reset();highway_owned_lanes_.clear();highway_areas_path_.clear();ResetHighwayMerge();
     solid_paint_contact_active_ = false;
     solid_paint_contact_elapsed_s_ = 0.0;
@@ -440,38 +440,34 @@ bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
     if (actuation_blocked) *actuation_blocked=false;
     CartesianPath initial_pose;
     initial_pose.x={ego.x};initial_pose.y={ego.y};initial_pose.yaw={ego.yaw};
-    const bool recovering=keep_road_recovery_.active||!KeepDepartureRoadClear(initial_pose);
+    const bool recovering=departure_road_recovery_.active;
     auto exterior=vehicle_shape_;
     exterior.width=std::max(exterior.width,exterior.road_outer_width);
-    if (recovering) {
-        const double overlap=avoid_road_map_.FootprintOverlapDepth(
-            ego.x,ego.y,ego.yaw,exterior);
-        // Reuse AVOID's bounded initial-overlap recovery. Large/off-map starts
-        // still fail; a fresh departure from an inside start remains strict.
-        if(!std::isfinite(overlap)||overlap>.35||
-           (!keep_road_recovery_.active&&std::fabs(ego.v)>limits_.near_low_speed_fallback_v)) {
-            if (road_blocked) *road_blocked=true;
-            out_path=CartesianPath{};return false;
-        }
-        if(!keep_road_recovery_.active) {
-            keep_road_recovery_.active=true;
-            keep_road_recovery_.last_x=ego.x;keep_road_recovery_.last_y=ego.y;
-            keep_road_recovery_.travel_m=keep_road_recovery_.settled_travel_m=0.0;
-            keep_road_recovery_.overlap_limit_m=std::min(.35,overlap+.10);
-        }
+    if (!recovering&&!KeepDepartureRoadClear(initial_pose)) {
+        if(road_blocked)*road_blocked=true;
+        out_path=CartesianPath{};return false;
     }
     const double initial_distance = LowSpeedLateralTransitionDistance(d, 0.0);
+    double recovery_cost=0.0;
     auto generate = [&](double target_d, double transition_distance,
                         CartesianPath& candidate) {
         // Recovery must include the return and settled clearance, not merely
-        // a short prefix pointing toward the road. Existing AVOID distance,
-        // overlap and predicted-time bounds are checked on the complete path.
+        // a short prefix pointing toward the road. The explicit departure
+        // policy scores exposure without changing existing maneuver limits.
         const double required_distance=recovering
             ? std::max(minimum_path_distance,transition_distance+.5)
             : minimum_path_distance;
         if (!PlanLowSpeedFallback(ego, s, d, target_d, candidate, duration_s,
                                   resolved_target_speed,
                                   transition_distance,required_distance)) {
+            return false;
+        }
+        if(recovering&&
+           (std::hypot(candidate.x.front()-ego.x,candidate.y.front()-ego.y)>1e-6||
+            std::fabs(normalizeAngle(candidate.yaw.front()-ego.yaw))>1e-6)) {
+            // A spatial profile must not silently choose the opposite branch
+            // of atan(tan(yaw)) or rotate a near-perpendicular starting body.
+            if(actuation_blocked)*actuation_blocked=true;
             return false;
         }
         if (!PathObeysCurvatureLimit(candidate, limits_.max_curvature)) return false;
@@ -482,12 +478,12 @@ bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
             if (actuation_blocked) *actuation_blocked=true;
             return false;
         }
-        const bool road_clear=recovering
-            ? avoid_road_map_.EvaluateRecoveryPath(candidate,exterior,path_cfg_.dt,
-                std::max(0.0,6.0-keep_road_recovery_.travel_m),
-                keep_road_recovery_.overlap_limit_m,true,
-                keep_road_recovery_.settled_travel_m).drivable
-            : KeepDepartureRoadClear(candidate);
+        const auto road=recovering
+            ? avoid_road_map_.EvaluateDepartureRecoveryPath(candidate,exterior,path_cfg_.dt,
+                true,departure_road_recovery_.settled_travel_m)
+            : avoid_road_map_.EvaluatePath(candidate,exterior,path_cfg_.dt);
+        const bool road_clear=road.drivable;
+        recovery_cost=AvoidRoadMap::DepartureRecoveryCost(road);
         if (!road_clear) {
             if (road_blocked) *road_blocked=true;
             return false;
@@ -519,6 +515,7 @@ bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
     double infeasible_distance = initial_distance;
     double feasible_distance = std::numeric_limits<double>::quiet_NaN();
     CartesianPath feasible_path;
+    double best_recovery_cost=std::numeric_limits<double>::infinity();
     double trial_distance = initial_distance;
     for (int attempt = 0; attempt < kMaximumExpansionAttempts; ++attempt) {
         trial_distance *= kExpansionFactor;
@@ -526,6 +523,7 @@ bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
         if (generate(0.0, trial_distance, candidate)) {
             feasible_distance = trial_distance;
             feasible_path = std::move(candidate);
+            best_recovery_cost=recovery_cost;
             break;
         }
         infeasible_distance = trial_distance;
@@ -537,7 +535,10 @@ bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
             CartesianPath candidate;
             if (generate(0.0, midpoint, candidate)) {
                 feasible_distance = midpoint;
-                feasible_path = std::move(candidate);
+                if(!recovering||recovery_cost<best_recovery_cost) {
+                    feasible_path = std::move(candidate);
+                    best_recovery_cost=recovery_cost;
+                }
             } else {
                 infeasible_distance = midpoint;
             }
@@ -1107,26 +1108,46 @@ bool FrenetPlanner::PlanInternal(
     if (external_command->mode != LANE_KEEPING) {
         speed_profiler_.Reset();
         last_profiled_acceleration_ = 0.0;
-        keep_road_recovery_ = KeepRoadRecovery{};
-    } else if(keep_road_recovery_.active) {
-        const double movement=std::hypot(ego.x-keep_road_recovery_.last_x,
-                                         ego.y-keep_road_recovery_.last_y);
-        keep_road_recovery_.travel_m+=movement;
-        keep_road_recovery_.last_x=ego.x;keep_road_recovery_.last_y=ego.y;
+    }
+    const bool departure_mode=external_command->mode==LANE_KEEPING ||
+        (external_command->mode==STOP&&external_command->merge_type==MergeType::NONE);
+    // Entry permission belongs to a departure, not every slow sample of an
+    // existing maneuver. In particular, ordinary STOP braking must not change
+    // policy merely because it slows beside a raster boundary near its goal.
+    const bool departure_entry=!has_last_s_||last_mode_!=external_command->mode;
+    if(!departure_mode||!avoid_road_map_.enabled()||!std::isfinite(ego.x)||
+       !std::isfinite(ego.y)||!std::isfinite(ego.yaw)||!std::isfinite(ego.v)) {
+        departure_road_recovery_ = DepartureRoadRecovery{};
+    } else if(departure_road_recovery_.active) {
+        const double movement=std::hypot(ego.x-departure_road_recovery_.last_x,
+                                         ego.y-departure_road_recovery_.last_y);
+        departure_road_recovery_.last_x=ego.x;departure_road_recovery_.last_y=ego.y;
         auto settled_shape=vehicle_shape_;
         settled_shape.width=std::max(settled_shape.width,settled_shape.road_outer_width)+.10;
         settled_shape.length+=.10;settled_shape.rear_overhang+=.05;
-        keep_road_recovery_.settled_travel_m=avoid_road_map_.FootprintInside(
+        departure_road_recovery_.settled_travel_m=avoid_road_map_.FootprintInside(
             ego.x,ego.y,ego.yaw,settled_shape)
-            ? keep_road_recovery_.settled_travel_m+movement : 0.0;
-        if(keep_road_recovery_.settled_travel_m>=.5)
-            keep_road_recovery_ = KeepRoadRecovery{};
+            ? departure_road_recovery_.settled_travel_m+movement : 0.0;
+        if(departure_road_recovery_.settled_travel_m>=.5)
+            departure_road_recovery_ = DepartureRoadRecovery{};
     }
     if (!ref_loaded_) {
         speed_profiler_.Reset();
         last_profiled_acceleration_ = 0.0;
         last_failure_reason_ = PlanFailureReason::NOT_INITIALIZED;
         return false;
+    }
+
+    if(departure_mode&&departure_entry&&avoid_road_map_.enabled()&&!departure_road_recovery_.active&&
+       std::isfinite(ego.v)&&std::fabs(ego.v)<limits_.near_low_speed_fallback_v) {
+        auto exterior=vehicle_shape_;
+        exterior.width=std::max(exterior.width,exterior.road_outer_width);
+        if(!avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,exterior)&&
+           avoid_road_map_.IntersectsDrivable(MakeEgoFootprint(ego,exterior,0),true)) {
+            departure_road_recovery_.active=true;
+            departure_road_recovery_.last_x=ego.x;departure_road_recovery_.last_y=ego.y;
+            departure_road_recovery_.settled_travel_m=0.0;
+        }
     }
 
     if (avoid_road_map_.enabled()) {
@@ -1281,7 +1302,7 @@ bool FrenetPlanner::PlanInternal(
         return ok;
     }
     if ((std::fabs(ego.v) < limits_.low_speed_fallback_v ||
-         (external_command->mode==LANE_KEEPING&&keep_road_recovery_.active)) &&
+         (external_command->mode==LANE_KEEPING&&departure_road_recovery_.active)) &&
         !external_command->recovery_clear &&
         !external_stop && !external_follow && !avoid_prepare &&
         !avoid_committed && !lane_change_prepare && !lane_change_committed) {
