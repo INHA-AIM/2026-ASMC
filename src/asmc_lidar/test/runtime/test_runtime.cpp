@@ -545,7 +545,7 @@ TEST(RuntimeConfig, FrontRearReleaseProfileAndLegacyYamlFallback) {
   EXPECT_FLOAT_EQ(legacy.pipeline.clustering.f32_AdaptiveRearFarEps,c.f32_AdaptiveFarEps);
 }
 
-TEST(RuntimeConfig, LoadsShippedConfigWithMainValues) {
+TEST(RuntimeConfig, LoadsShippedConfigWithLocalGroundFitAndMainValues) {
   const auto c = ShippedRuntimeConfig();
   const auto& p = c.pipeline;
   EXPECT_EQ(p.vehicle.f32_Length, 4.635f);
@@ -581,7 +581,7 @@ TEST(RuntimeConfig, LoadsShippedConfigWithMainValues) {
   EXPECT_EQ(p.ground.near_threshold_m, 0.30);
   EXPECT_FALSE(p.camera_point_refinement.enabled);
   EXPECT_EQ(p.ground.far_threshold_m, 0.40);
-  EXPECT_EQ(p.ground.fit_threshold_m, 0.);  // Optional audit; deployed fit unchanged.
+  EXPECT_DOUBLE_EQ(p.ground.fit_threshold_m, .10);  // LOCAL-2D worktree candidate.
   EXPECT_EQ(p.ground.seed_max_z_m, -0.65);
   EXPECT_EQ(p.ground.maximum_iterations, 80);
   EXPECT_EQ(p.ground.minimum_seed_points, 30);
@@ -650,12 +650,22 @@ TEST(RuntimeConfig, Mission15AndOldProfilesKeepGroupSemantics) {
   }
 }
 
+TEST(RuntimeConfig, RemovingLocalGroundFitRestoresLegacyConsensus) {
+  TempDir dir;
+  auto n = YAML::LoadFile(ShippedConfig());
+  n["ground"].remove("fit_distance_threshold_m");
+  const auto c = sh::LoadRuntimeConfig(dir.Write("ground-rollback.yaml", n), PackageDir());
+  EXPECT_DOUBLE_EQ(c.pipeline.ground.fit_threshold_m, 0.);
+  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .30);
+  EXPECT_DOUBLE_EQ(c.pipeline.ground.far_threshold_m, .40);
+}
+
 TEST(RuntimeConfig, GroundFitAuditIsExplicitAndDoesNotChangeRemovalBands) {
   TempDir dir;
   auto n = YAML::LoadFile(ShippedConfig());
-  n["ground"]["fit_distance_threshold_m"] = .10;
+  n["ground"]["fit_distance_threshold_m"] = .08;
   const auto c = sh::LoadRuntimeConfig(dir.Write("ground-fit.yaml", n), PackageDir());
-  EXPECT_DOUBLE_EQ(c.pipeline.ground.fit_threshold_m, .10);
+  EXPECT_DOUBLE_EQ(c.pipeline.ground.fit_threshold_m, .08);
   EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .30);
   EXPECT_DOUBLE_EQ(c.pipeline.ground.far_threshold_m, .40);
   EXPECT_NE(c.config_sha256, ShippedRuntimeConfig().config_sha256);
