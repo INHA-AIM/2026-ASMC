@@ -26,6 +26,22 @@ Scene empty() {
 }
 int main() {
   try {
+    // Tiny overspeed must converge, not become a full-brake trough. The old
+    // scalar-cap + average-acceleration loop reached3.8m/s for a4.1667m/s cap.
+    for (double initial_a : {-1., 0., 1.}) {
+      double v = 4.3, a = initial_a;
+      for (int i = 0; i < 100; ++i) {
+        auto next =
+            AdvancePhysicalSpeed({15. / 3.6, v, a, .05}, {1., 1.5, 4.8});
+        expect(std::abs(next.target_acceleration - a) <= 4.8 * .05 + 1e-8,
+               "physical speed jerk bound");
+        v = next.target_speed;
+        a = next.target_acceleration;
+        expect(v >= 4.14, "small overspeed cannot create braking trough");
+      }
+      expect(std::abs(v - 15. / 3.6) < 1e-8 && std::abs(a) < 1e-8,
+             "physical profile settles at cap with zero acceleration");
+    }
     MotionHistory h;
     expect(h.add(1, 1, .1), "first motion");
     expect(h.add(1.1, 1, .1), "second motion");

@@ -133,9 +133,9 @@ def main():
                             "plan_replacement_pending",
                         ):
                             assert not row["command_published"]
-                        if row['reason'] == 'ok':
-                            assert row['scene_age_s'] <= .35
-                            assert row['motion_age_s'] <= .10
+                        if row["reason"] == "ok":
+                            assert row["scene_age_s"] <= 0.35
+                            assert row["motion_age_s"] <= 0.10
                     received.clear()
                 for wanted in [expected] if isinstance(expected, str) else expected:
                     assert wanted in seen, (name, wanted, seen)
@@ -155,7 +155,7 @@ def main():
             plan = LocalTrajectory()
             plan.header = copy.deepcopy(state.header)
             plan.ego_at_plan = copy.deepcopy(state)
-            plan.scene_stamp = plan.header.stamp - rospy.Duration(0.27)
+            plan.scene_stamp = plan.header.stamp - rospy.Duration(0.17)
             plan.valid = True
             plan.reason = "ok"
             plan.dt = 0.05
@@ -168,7 +168,7 @@ def main():
             received.clear()
             states.publish(state)
             plans.publish(plan)
-            until = time.monotonic() + 0.35
+            until = time.monotonic() + 0.45
             while time.monotonic() < until:
                 state.header.stamp = rospy.Time.now()
                 states.publish(state)
@@ -178,13 +178,20 @@ def main():
                 "ok" in reasons and 1 <= reasons.count("plan_replacement_pending") <= 3
             ), reasons
             assert "local_source_stale" in reasons, reasons
+            assert any(
+                r["reason"] == "plan_replacement_pending"
+                and 0.20 < r["plan_age_s"] <= 0.25
+                for r in received
+            ), received
             assert not any(
                 r["command_published"]
                 for r in received
                 if r["reason"] == "plan_replacement_pending"
             )
             print(
-                "bounded source-replacement hold; sustained expiry fails", reasons, "PASS"
+                "bounded source-replacement hold; sustained expiry fails",
+                reasons,
+                "PASS",
             )
             received.clear()
             seq = plan.plan_sequence

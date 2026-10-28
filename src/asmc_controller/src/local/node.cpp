@@ -74,7 +74,8 @@ class LocalController {
     plan_received = ros::SteadyTime::now();
   }
   void report(bool valid, const morai_msgs::CtrlCmd &cmd, double cost = 0,
-              double reference = 0, double cross = 0, double heading = 0) {
+              double reference = 0, double cross = 0, double heading = 0,
+              const MPCOutput *solve = nullptr) {
     std::ostringstream s;
     s << std::setprecision(17) << "{\"valid\":" << (valid ? "true" : "false")
       << ",\"command_published\":" << (command_published ? "true" : "false")
@@ -95,6 +96,11 @@ class LocalController {
       << (state ? (evaluation_time - state->header.stamp).toSec() : -1.)
       << ",\"speed_mps\":" << (state ? state->twist.twist.linear.x : 0)
       << ",\"reference_speed_mps\":" << reference
+      << ",\"reference_acceleration_mps2\":"
+      << (solve ? solve->first_reference_acceleration : 0)
+      << ",\"solver_acceleration_mps2\":" << (solve ? solve->control.accel : 0)
+      << ",\"acceleration_residual_mps2\":"
+      << (solve ? solve->first_acceleration_residual : 0)
       << ",\"steering\":" << cmd.steering << ",\"throttle\":" << cmd.accel
       << ",\"brake\":" << cmd.brake << ",\"processing_ms\":" << cost
       << ",\"tracking_error_m\":" << cross
@@ -259,9 +265,13 @@ class LocalController {
       // command for at most150ms since its valid solve, without publishing or
       // refreshing it. This covers a measured17ms missed handoff; the external
       // 250ms watchdog remains authoritative. Sustained loss still fails.
+      // LOCAL-2C: the planner is10Hz; a200.9ms-old plan can still have a
+      // valid solve less than150ms ago. Do not turn that polling jitter into
+      // full braking. Plan age is bounded250ms; last_solved still bounds the
+      // command hold150ms and no expired source is recomputed/re-published.
       if (last_good &&
           candidate->header.frame_id == last_good->header.frame_id &&
-          candidate->scene_stamp >= last_good->scene_stamp && age <= .20 &&
+          candidate->scene_stamp >= last_good->scene_stamp && age <= .25 &&
           state_age <= .10 && std::isfinite(state->twist.twist.angular.z) &&
           (steady - last_solved).toSec() < .15) {
         reason = "plan_replacement_pending";
@@ -327,7 +337,7 @@ class LocalController {
                    std::cos(ref.yaw_ref.front()) * dy;
     report(true, command, (ros::SteadyTime::now() - start).toSec() * 1000,
            output.first_reference_speed, error,
-           std::remainder(ego.yaw - ref.yaw_ref.front(), 2 * M_PI));
+           std::remainder(ego.yaw - ref.yaw_ref.front(), 2 * M_PI), &output);
     ROS_INFO_THROTTLE(5., "LOCAL MPC v=%.1f target=%.1fkm/h control=%d",
                       ego.vx * 3.6, output.first_reference_speed * 3.6,
                       enabled && selected);

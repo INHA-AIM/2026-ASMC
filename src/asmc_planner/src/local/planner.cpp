@@ -754,7 +754,6 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
     out.elapsed_ms = elapsed(start);
     return out;
   }
-  SpeedProfiler profiler;
   double travelled = 0, v = s.speed, a = std::max(-c.decel, s.acceleration);
   size_t index = 1;
   for (int i = 0; i < 400; ++i) {
@@ -770,20 +769,15 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
     double remaining = std::max(0., distance - travelled);
     double cap =
         std::min(out.chosen_cap, spaceSpeed(remaining - .1, a, lag, c));
-    auto step = profiler.Update({cap, v, a, .05}, {c.accel, c.decel, c.jerk});
-    double new_v = step.target_speed; // Profiler's downward cap is not
-                                      // instantaneous physical braking.
-    const double lower = std::max(-c.decel, a - c.jerk * .05);
-    a = std::clamp((new_v - v) / .05, lower,
-                   std::max(lower, std::min(c.accel, a + c.jerk * .05)));
-    new_v = std::max(0., v + a * .05);
-    // The shared NORMAL profiler clips its internal target at a lowered cap.
-    // Local physical integration is jerk-bounded: commit that realized state,
-    // not the instantaneous clipped target, before the next time step.
-    auto committed = step;
-    committed.target_speed = new_v;
-    committed.target_acceleration = a;
-    profiler.Commit(committed);
+    // LOCAL-2C: scalar SpeedProfiler clips a lower cap immediately and is
+    // deliberately unsuitable for a physical v/a trajectory. Use its shared
+    // analytical transition, retaining endpoint acceleration (not average
+    // delta-v/dt). Otherwise a tiny overspeed provokes a brake/reaccelerate
+    // loop.
+    const auto step =
+        AdvancePhysicalSpeed({cap, v, a, .05}, {c.accel, c.decel, c.jerk});
+    const double new_v = step.target_speed;
+    a = step.target_acceleration;
     travelled += .5 * (v + new_v) * .05;
     v = new_v;
     if (travelled > distance + .05) {
