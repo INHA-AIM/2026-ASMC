@@ -8,6 +8,10 @@ import http.server
 import json
 import threading
 import time
+from urllib.parse import parse_qs, urlsplit
+from sensor_msgs.msg import Image
+from asmc_msgs.msg import CameraObjectObservation
+from local_debug_cache import LocalDebugCache
 
 import rospy
 from asmc_msgs.msg import (BehaviorCommand, BehaviorContext,
@@ -27,6 +31,7 @@ from dashboard_startup import run_on_port
 from dashboard_observation import LocalScene, family_payload, markers_payload, objects_payload, stamp_ns
 
 local_scene = LocalScene()
+local_debug = LocalDebugCache()
 
 
 TRAJECTORY_FAILURE_NAMES = {
@@ -87,6 +92,21 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
+        if urlsplit(self.path).path == "/api/local-scene":
+            args = parse_qs(urlsplit(self.path).query)
+            with self.snapshot_lock:
+                plan = self.snapshot.get("local_experiment") or {}
+            wanted = args.get("sequence", [""])[0]
+            if wanted != str(plan.get("plan_sequence")):
+                self.send_error(409, "plan changed; fetch snapshot again")
+                return
+            body = json.dumps(local_debug.snapshot(plan.get("scene_stamp_ns", 0)), separators=(",", ":")).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if self.path.split("?", 1)[0] == "/api/snapshot":
             with self.snapshot_lock:
                 # Encoding candidate paths must not block high-rate ROS callbacks.
@@ -94,6 +114,8 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
                 snapshot["received_at"] = dict(self.snapshot["received_at"])
             # Receive age uses server monotonic time, source age uses ROS time.
             # Browser/Windows clocks never decide ROS observation freshness.
+            received = snapshot.get("received_at", {}).get("local_experiment")
+            snapshot["local_receive_age_s"] = time.time()-received if received else None
             snapshot["shadow"] = local_scene.snapshot(rospy.Time.now().to_nsec())
             body = json.dumps(snapshot, separators=(",", ":")).encode()
             self.send_response(200)
@@ -107,8 +129,33 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         # Avoid printing one line for every 10 Hz snapshot request.
-        if not self.path.startswith("/api/snapshot"):
+        if not self.path.startswith("/api/"):
             super().log_message(fmt, *args)
+
+
+def set_local_experiment(key, message):
+    """Optional LOCAL-1 observer; no control or map pose fallback."""
+    if len(message.data) > 256 * 1024:
+        return
+    try:
+        value = json.loads(message.data)
+    except (TypeError, ValueError):
+        return
+    if not isinstance(value, dict):
+        return
+    with DashboardHandler.snapshot_lock:
+        DashboardHandler.snapshot[key] = value
+        DashboardHandler.snapshot["received_at"][key] = time.time()
+
+
+def set_local_camera(message):
+    d = message.detections
+    local_debug.camera(dict(view=d.header.frame_id, stamp_ns=str(d.header.stamp.to_nsec()),
+        valid=d.valid, width=d.image_width, height=d.image_height,
+        session=message.producer_session_id, generation=message.generation,
+        boxes=[dict(name=b.source_class_name, group=b.class_name, confidence=b.confidence,
+                    bbox=[b.xmin,b.ymin,b.xmax,b.ymax]) for b in d.boxes[:64]],
+        omitted=max(0,len(d.boxes)-64)))
 
 
 def set_snapshot(key, message):
@@ -352,6 +399,17 @@ def run_dashboard(server=None, reserved_port=None):
     rospy.Subscriber(
         "/planning/markers", MarkerArray,
         set_planning_markers, queue_size=1)
+    rospy.Subscriber("/planning/local/trace", String,
+                     lambda m: set_local_experiment("local_experiment", m), queue_size=1)
+    rospy.Subscriber("/planning/local/control_trace", String,
+                     lambda m: set_local_experiment("local_control", m), queue_size=1)
+    prefix = "/experimental/shadow/semantic_space_trial/"
+    for key, topic in (("probability", "drivable_probability"), ("coverage", "coverage")):
+        rospy.Subscriber(prefix + topic, Image,
+            lambda m, key=key: local_debug.grid(key, m.header.stamp.to_nsec(), m.width, m.height, m.step, m.encoding, m.data),
+            queue_size=1)
+    rospy.Subscriber("/perception/camera/objects/observations", CameraObjectObservation,
+                     set_local_camera, queue_size=3)
     DashboardHandler.snapshot["debug_config"] = load_debug_config()
     handler = functools.partial(DashboardHandler, directory=package_path)
     if server is None:  # Legacy direct rosrun invocation without --port.

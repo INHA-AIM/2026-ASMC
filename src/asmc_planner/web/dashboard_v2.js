@@ -1,6 +1,7 @@
 (() => {
   const canvas = document.getElementById('map');
   const ctx = canvas.getContext('2d');
+  const localRenderer = window.createLocalExperimentRenderer(canvas);
   const $ = id => document.getElementById(id);
   const maneuverNames = ['KEEP', 'FOLLOW', 'MERGE', 'LANE CHANGE', 'AVOID', 'STOP', 'EMERGENCY STOP'];
   const decisionNames = ['KEEP', 'FOLLOW', 'LEFT CHANGE', 'RIGHT CHANGE', 'STOP', 'YIELD', 'EMERGENCY STOP', 'AVOID', 'MERGE'];
@@ -29,7 +30,7 @@
     links: [], nodes: [], route: [], lights: {}, command: null, feedback: null,
     feature: null, trajectory: null, ego: null, lidarObjects: null,
     lidarMotionDebug: null, debugConfig: null, planningMarkers: null,
-    recentPlanningIssue: null, receivedAt: {}, shadow: {}, shadowReceived: 0
+    recentPlanningIssue: null, receivedAt: {}, shadow: {}, shadowReceived: 0, localExperiment:null, localControl:null, localDetail:null, localReceived:0, localReceiveAge:Infinity, localLastGood:null, localLastDetail:null, localLastTime:0
   };
   const view = {scale: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0, follow: false};
   const tracks = new Map();
@@ -382,7 +383,18 @@
 
   function draw() {
     for (const id of ['fit','follow','showDroppedObjects','showVelocity','showCorridor','showSignals'])
-      $(id).disabled = localView();
+      $(id).disabled = localView() || localExperimentView();
+    if (localExperimentView()) {
+      const invalid=data.localExperiment && !data.localExperiment.valid;
+      const retained=invalid && data.localLastGood?.frame===data.localExperiment.frame && performance.now()-data.localLastTime<1000;
+      $('lidarStatus').textContent='LOCAL OBB '+(data.localExperiment?.scene?.obstacles?.length||0);
+      $('lidarStatus').className='chip '+(localExperimentFresh()&&data.localExperiment?.valid?'ok':'bad');
+      localRenderer.draw(retained?data.localLastGood:data.localExperiment,localExperimentFresh()&&!invalid,
+        retained?data.localLastDetail:data.localDetail,{
+        road:$('showLocalRoad').checked,family:$('showLocalFamily').checked,
+        candidates:$('showLocalCandidates').checked,sweep:$('showLocalSweep').checked,
+        objects:$('showObjects').checked,trajectory:$('showTrajectory').checked,labels:$('showLabels').checked,rejected:$('showLocalCandidates').checked});return;
+    }
     if (localView()) { drawLocalScene(); return; }
     if (view.follow) centerEgo();
     const rect = canvas.getBoundingClientRect();
@@ -709,9 +721,41 @@
     return {...entry, available: Boolean(entry.available && entry.receive_age_s + elapsed <= limit)};
   }
 
+  function localExperimentFresh() {
+    return data.localExperiment && data.localReceiveAge+(performance.now()-data.localReceived)/1000 < .6;
+  }
+  function localExperimentView() {
+    const choice=$('sceneMode').value;
+    const normalFresh=data.command && Date.now()/1000-(data.receivedAt.command||0)<1;
+    return choice==='experiment' || (choice==='auto' && localExperimentFresh() &&
+      (data.localControl?.control_enabled || !normalFresh));
+  }
+  function updateLocalExperimentPanel(){
+    const r=data.localExperiment,c=data.localControl,fresh=localExperimentFresh();
+    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL-1 CONTROL':'LOCAL-1 PREVIEW'):'LOCAL-1 STALE'):'LOCAL-1 WAIT';
+    $('localStatus').className='chip '+(fresh?'ok':'bad');
+    $('localExperimentPanel').hidden=!r;
+    if(!r)return;
+    $('localExperimentState').textContent=(fresh?'':'STALE · ')+(r.valid?r.reason:'계산 불가: '+r.reason);
+    $('localExperimentGrid').innerHTML=kv([
+      ['run / plan',r.run_id+' / '+r.plan_sequence],['실제 제어',c?.control_enabled?'연결됨':'계산 전용'],
+      ['목표 / 제한 속도',fmt(r.requested_kph)+' / '+fmt(r.selected_kph)+' km/h'],
+      ['최종 속도 제한',r.speed_reason],['계획 / MPC',fmt(r.processing_ms,2)+' / '+fmt(c?.processing_ms,2)+' ms'],
+      ['입력 나이',fmt(r.age_s,3)+'s'],['LiDAR/source 차이',fmt((r.inputs?.lidar_skew_s||0)*1000,1)+'ms'],
+      ['노면 대응',data.localDetail?.reason||'같은 시각 격자 대기'],
+      ['무효 시 회색 표시',!r.valid?'최근 유효 기하 최대1초 · 현재 판단은 무효':'현재 계획 기하'],
+      ['MPC 상태',c?.reason||'대기'],['경로 오차',fmt(c?.tracking_error_m,3)+'m (본차로 오차와 별도)']]);
+    $('localExperimentReasons').textContent=JSON.stringify({blocked_object:r.blocking_id,rejections:r.rejected,
+      speed_reason:r.speed_reason,recovery_obb_overlap:r.recovery_obb_overlap,candidates_omitted:r.candidates_omitted},null,2);
+    $('localExperimentEvidence').textContent=JSON.stringify({inputs:r.inputs,obstacles:r.scene?.obstacles,
+      yolo_note:'원본 영상 좌표 관측; 로컬 충돌 판단은 시간 정렬한 fusion OBB를 사용',
+      yolo:data.localDetail?.cameras,input_join:r.input_join},null,2);
+    $('localExperimentControl').textContent=JSON.stringify(c||{},null,2);
+  }
+
   function localView() {
     const choice = $('sceneMode').value || 'auto';
-    return choice === 'local' || (choice === 'auto' &&
+    return choice === 'local' || (choice === 'auto' && !localExperimentView() &&
       (data.shadow?.selector?.payload?.mode === 'JAMMING' || data.shadow?.mode?.payload?.mode === 1));
   }
 
@@ -783,7 +827,7 @@
 
   canvas.addEventListener('wheel', event => {
     event.preventDefault();
-    if (localView()) return;
+    if (localView() || localExperimentView()) return;
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
@@ -796,7 +840,7 @@
     draw();
   }, {passive: false});
   canvas.addEventListener('mousedown', event => {
-    if (localView()) return;
+    if (localView() || localExperimentView()) return;
     view.dragging = true;
     view.lastX = event.clientX;
     view.lastY = event.clientY;
@@ -829,7 +873,7 @@
     $('follow').textContent = view.follow ? '추적 중' : 'Ego 추적';
     draw();
   };
-  for (const id of ['showObjects', 'showDroppedObjects', 'showVelocity', 'showLabels', 'showCorridor', 'showSignals', 'showTrajectory']) $(id).onchange = draw;
+  for (const id of ['showObjects', 'showDroppedObjects', 'showVelocity', 'showLabels', 'showCorridor', 'showSignals', 'showTrajectory','showLocalRoad','showLocalFamily','showLocalCandidates','showLocalSweep']) $(id).onchange = draw;
   window.addEventListener('resize', resize);
 
   async function loadMap() {
@@ -870,6 +914,18 @@
       let snapshot;
       try { snapshot = await fetch('../api/snapshot', {cache: 'no-store', signal: abort.signal}).then(response => response.json()); }
       finally { clearTimeout(timer); }
+      data.localExperiment=snapshot.local_experiment||null;
+      data.localControl=snapshot.local_control||null;
+      data.localReceived=performance.now();
+      data.localReceiveAge=snapshot.local_receive_age_s??Infinity;
+      if(data.localExperiment && data.localDetail?.plan_sequence!==data.localExperiment.plan_sequence){
+        const response=await fetch('../api/local-scene?sequence='+data.localExperiment.plan_sequence,{cache:'no-store'});
+        data.localDetail=response.ok?{...await response.json(),plan_sequence:data.localExperiment.plan_sequence}:null;
+      }
+      if(data.localExperiment?.valid && data.localDetail?.raster_available){
+        data.localLastGood=data.localExperiment;data.localLastDetail=data.localDetail;data.localLastTime=performance.now();
+      }
+      updateLocalExperimentPanel();
       data.shadow = snapshot.shadow || {};
       data.shadowReceived = performance.now();
       data.command = snapshot.command || data.command;
@@ -903,7 +959,7 @@
     }
   }
 
-  setInterval(() => { updateHealth(); updateShadowPanel(); if (localView()) draw(); }, 200);
+  setInterval(() => { updateHealth(); updateShadowPanel(); updateLocalExperimentPanel(); if (localView() || localExperimentView()) draw(); }, 200);
   // Schedule after completion: a slow HTTP response must not build an overlapping queue.
   loadMap();
   pollSnapshot();

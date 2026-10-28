@@ -17,8 +17,9 @@ const hook = "  canvas.addEventListener('wheel',";
 assert(source.includes(hook), 'dashboard event boundary missing');
 source = source.replace(hook,
   "  globalThis.probe = {data, objectMotion, drawLidarObject, motionDebugById, updateLidarPanel, updateHealth}; return;\n" + hook);
-const sandbox = {document: {getElementById: element}, console, Date, performance: {now: () => 1000}};
+const sandbox = {window:{},document: {getElementById: element}, console, Date, performance: {now: () => 1000}};
 vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname,"../../web/local_scene_renderer.js"),"utf8"),sandbox);
 vm.runInContext(source, sandbox);
 const p = sandbox.probe;
 assert.strictEqual(p.objectMotion({motion_state: 0}, {motion_state: 'DYNAMIC'}).name, 'UNKNOWN');

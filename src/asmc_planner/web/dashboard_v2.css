@@ -243,3 +243,9 @@
 #shadowBoxes { max-height: 150px; overflow-y: auto; }
 #shadowGrid strong { white-space: normal; overflow-wrap: anywhere; }
 #shadowGrid > div:nth-child(3) { grid-column: 1 / -1; }
+
+#localExperimentPanel[hidden] { display:none; }
+#localExperimentPanel pre { max-height:240px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px monospace; }
+#localExperimentPanel h3 { font-size:12px;margin-top:12px; }
+
+#localExperimentGrid strong { white-space:normal;overflow-wrap:anywhere; }
