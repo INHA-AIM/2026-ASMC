@@ -64,4 +64,12 @@ TEST(LocalSupport,PredictionAndMalformedGeometryCannotSupport){
  o=object();o.source_point_count=2;EXPECT_FALSE(Support::footprint(o,p));
 }
 
+TEST(LocalSupport, TiltedEightCornersKeepConvexFootprint) {
+ auto o=object();for(auto& p:o.obb_corners){double x=p.x,y=p.y;
+   p.x=std::cos(.7)*x-std::sin(.7)*y+.1*p.z;
+   p.y=std::sin(.7)*x+std::cos(.7)*y+.03*p.z;}
+ geometry_msgs::Polygon out;ASSERT_TRUE(Support::footprint(o,out));EXPECT_GT(out.points.size(),4u);
+ o=object();for(auto& p:o.obb_corners)p.x=p.y=0.;EXPECT_FALSE(Support::footprint(o,out));
+ o=object();EXPECT_FALSE(Support::footprint(o,out,NAN));EXPECT_FALSE(Support::footprint(o,out,-.1));
+}
 int main(int argc,char** argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}

@@ -3,6 +3,7 @@
 // class or advance fusion confirmation; geometry must already be published by
 // asmc_lidar. Empty input is never evidence that an unresolved image is clear.
 #include <asmc_msgs/LidarTrackingObservation.h>
+#include "lane_boundary_adapter/contact_clearance.hpp"
 #include <lane_boundary_adapter/CameraBBox.h>
 #include <geometry_msgs/Polygon.h>
 #include <opencv2/core.hpp>
@@ -56,13 +57,20 @@ class LocalObstacleSupport {
   static bool footprint(const asmc_msgs::LidarObject& o,geometry_msgs::Polygon& out,double padding=.25) {
     out.points.clear();
     if(o.observation_state!=o.OBSERVED||o.miss_count||o.source_point_count<3||!std::isfinite(o.length)||!std::isfinite(o.width)||!std::isfinite(o.height)||o.length<=0||o.width<=0||o.height<=0)return false;
-    double xmin=1e100,xmax=-1e100,ymin=1e100,ymax=-1e100;
-    for(const auto& p:o.obb_corners){if(!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.z))return false;
-      xmin=std::min(xmin,p.x);xmax=std::max(xmax,p.x);ymin=std::min(ymin,p.y);ymax=std::max(ymax,p.y);}
-    if(xmax-xmin<1e-5||ymax-ymin<1e-5)return false;
-    for(const auto& p:std::vector<cv::Point2d>{{xmin-padding,ymin-padding},{xmax+padding,ymin-padding},
-        {xmax+padding,ymax+padding},{xmin-padding,ymax+padding}}){geometry_msgs::Point32 q;q.x=p.x;q.y=p.y;out.points.push_back(q);}return true;
+    std::vector<clearance::Point> points;points.reserve(8);
+    for(const auto& p:o.obb_corners){
+      if(!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.z))return false;
+      points.push_back({p.x,p.y});
+    }
+    // Reject a degenerate measurement before adding uncertainty; padding is
+    // not evidence that a collapsed/invalid box has a physical footprint.
+    if(clearance::paddedHull(points,0.).empty())return false;
+    const auto hull=clearance::paddedHull(points,padding);
+    if(hull.empty())return false;
+    for(const auto& p:hull){geometry_msgs::Point32 q;q.x=p.x;q.y=p.y;out.points.push_back(q);}
+    return true;
   }
+
   static bool projectedBox(const asmc_msgs::LidarObject& o,const cv::Matx33d& K,const cv::Matx33d& R,
                            const cv::Vec3d& t,CameraBBox& b){
     b.xmin=b.ymin=std::numeric_limits<float>::infinity();b.xmax=b.ymax=-b.xmin;
