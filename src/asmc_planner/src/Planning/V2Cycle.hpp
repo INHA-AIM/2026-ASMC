@@ -134,16 +134,21 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     // 경로에 들어오지 않으므로 잘못된 명령이 잠금을 해제하지도 않는다.
     const CommandAcceptance acceptance = has_rejected_acceptance
         ? rejected_acceptance
-        : port.command_manager_.AcceptRequest({command, port.planner_.avoid_tracking(),requested_signal_stop});
+        : port.command_manager_.AcceptRequest({command, port.planner().avoid_tracking(),requested_signal_stop});
 
     // manager와 core의 transaction boundary를 맞춘다. 새 AVOID/LANE_CHANGE뿐
     // 아니라 새 KEEP/FOLLOW/STOP/E-STOP도 freshness/conversion 조기 반환
     // 전에 이전 maneuver-specific context를 끊는다. same-ID refresh와 거부된
     // 교체에는 플래그가 서지 않아 실행 중인 lock을 보존한다.
     if (acceptance.transaction_started) {
-        port.planner_.ResetExternalAvoidance();
-        port.planner_.ResetExternalLaneChange();
-        port.planner_.ResetRoundaboutMerge(command.maneuver_type == asmc_msgs::BehaviorCommand::KEEP);
+        const bool retain_highway=port.highway_reference_&&
+            port.highway_reference_->preserveInterruptedTransition(command.command_id);
+        port.highway_recovered_command_id_=0;
+        port.planner().ResetExternalAvoidance();
+        port.planner().ResetExternalLaneChange();
+        port.planner().ResetRoundaboutMerge(command.maneuver_type == asmc_msgs::BehaviorCommand::KEEP);
+        if(!retain_highway||&port.planner()!=&port.planner_)port.planner_.ResetHighwayMerge();
+        if(!retain_highway && &port.planner()!=&port.planner_)port.planner().ResetHighwayMerge();
     }
 
     // ===== 계획 대상 재결속 (D6-0a) =====
@@ -198,10 +203,10 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         // 그때 planning_target은 ACTIVE_TRANSACTION이므로 위에서 계획을
         // 계속한다. 잠긴 목표가 사라지지 않는다.
         if (ShouldResetAvoidContext(acceptance)) {
-            port.planner_.ResetExternalAvoidance();
+            port.planner().ResetExternalAvoidance();
         }
         if (ShouldResetLaneChangeContext(acceptance)) {
-            port.planner_.ResetExternalLaneChange();
+            port.planner().ResetExternalLaneChange();
         }
 
         // planner를 호출하지 않는 사이클이다. 다만 **궤적 출력을 멈추면 안
@@ -214,8 +219,11 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         // STOP이 HOLD에 도달해 COMPLETED로 latch된 경우, 마지막으로 만든
         // 0속도 HOLD 궤적을 계속 보낸다. 여기서 일괄 안전정지로 빠지면 정지
         // 유지 궤적이 매 사이클 교체되어 MPC 입장에서 불필요한 흔들림이 된다.
-        if (acceptance.transaction_cancelled) port.planner_.ResetRoundaboutMerge();
+        if (acceptance.transaction_cancelled) port.planner().ResetRoundaboutMerge();
         const InputSnapshot latch_snapshot = port.takeSnapshot();
+        if(port.highway_recovered_command_id_==command.command_id&&
+           port.continueRecoveredHighwayLane(command,feedback_command_id,acceptance,latch_snapshot))
+            return true;
         if (port.command_manager_.completed_normally() && port.has_last_v2_trajectory_ &&
             port.last_v2_trajectory_command_id_ == command.command_id) {
             // 재발행일 뿐 내용은 바뀌지 않았다 - source/reference time도
@@ -315,7 +323,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         // 만 막고, 입력이 회복되면 같은 transaction으로 계속한다(계약 11.3절).
         if (port.command_manager_.maneuver_type() == asmc_msgs::BehaviorCommand::MERGE) {
             port.command_manager_.NotifyPlanFailed(false);
-            port.planner_.RevokeRoundaboutReadiness();
+            port.planner().RevokeRoundaboutReadiness();
+            port.planner().RevokeHighwayMergeReadiness();
         }
         port.command_manager_.NotifyInputDataStale();
         CommandAcceptance stale = acceptance;
@@ -359,7 +368,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     port.has_stop_reference_vehicle_ = true;
 
     std::vector<TrackedObject> objects;
-    port.planner_.SetObjectObservationTime(context.perception.header.stamp.toSec(),
+    port.planner().SetObjectObservationTime(context.perception.header.stamp.toSec(),
                                          context.ego.header.stamp.toSec());
     if (ConvertDetectedObjects(context.perception, objects) !=
         ConversionStatus::OK) {
@@ -381,7 +390,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     //   2. FrenetFeedback.current_s
     // 새 core API를 만들지 않고 기존 public ProjectEgoToS 결과를 재사용한다.
     double ego_s = 0.0;
-    const bool ego_s_valid = port.planner_.ProjectEgoToS(ego, ego_s);
+    const bool ego_s_valid = port.planner().ProjectEgoToS(ego, ego_s);
 
     PlannerCommand planner_command{};
     if (!ConvertBehaviorCommand(command, planner_command)) {
@@ -424,22 +433,36 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                    path,port.planner_.vehicle_shape(),port.planner_.sample_dt()).drivable;
     };
 
-    if (planner_command.mode == MERGE) {
+    if(port.highway_reference_&&port.highway_reference_->recoveringTransition()&&
+       command.maneuver_type!=asmc_msgs::BehaviorCommand::EMERGENCY_STOP&&
+       command.maneuver_type!=asmc_msgs::BehaviorCommand::STOP)
+        return port.runInterruptedHighway(command,feedback_command_id,acceptance,snapshot,ego,objects,now.toSec());
+    if(port.highway_reference_&&command.maneuver_type==asmc_msgs::BehaviorCommand::LANE_CHANGE) {
+        const auto status=port.highway_reference_->status();
+        if(status.network&&status.network->indexForLink(command.source_link_id)<status.network->lanes.size())
+            return port.runHighwayMerge(command,feedback_command_id,acceptance,snapshot,ego,
+                objects,planner_command,now.toSec());
+    }
+    if (planner_command.mode == MERGE && planner_command.merge_type == MergeType::HIGHWAY)
+        return port.runHighwayMerge(command,feedback_command_id,acceptance,snapshot,ego,
+            objects,planner_command,now.toSec());
+
+    if (planner_command.mode == MERGE && planner_command.merge_type == MergeType::ROUNDABOUT) {
         using Feedback = asmc_msgs::FrenetFeedback;
         if (port.command_manager_.execution_state() == Feedback::COMMITTED)
             port.command_manager_.NotifyExecutionStarted();
         FrenetPlanner::MergePrepareResult result;
         CartesianPath path;
-        bool ok = CalculateFrenet(path, [&] { return port.planner_.PlanRoundaboutMerge(ego, objects, planner_command,
+        bool ok = CalculateFrenet(path, [&] { return port.planner().PlanRoundaboutMerge(ego, objects, planner_command,
             context.ego.header.stamp.toSec(), context.perception.header.stamp.toSec(), path, result); }).success;
-        bool execute = !port.planner_.roundabout_merge_committed() && result.ready &&
+        bool execute = !port.planner().roundabout_merge_committed() && result.ready &&
             command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE;
         if (execute) path = result.candidate_path;
         asmc_msgs::Trajectory trajectory;
-        bool converted = ok && ConvertCartesianPath(path, port.planner_.sample_dt(),
+        bool converted = ok && port.convertReferencePath(path, port.planner().sample_dt(),
             context.ego, trajectory) == ConversionStatus::OK;
         if (!converted) {
-            const bool terminal = port.planner_.last_failure_reason() == FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+            const bool terminal = port.planner().last_failure_reason() == FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
             port.command_manager_.NotifyPlanFailed(terminal);
             port.has_last_v2_trajectory_ = false;
             CommandAcceptance failed = acceptance;
@@ -451,13 +474,13 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             port.publishFeedbackV2(feedback_command_id, failed, &stop, Feedback::TRAJECTORY_SAFE_STOP, false, ego_s_valid, ego_s);
             return true;
         }
-        if (!port.planner_.roundabout_merge_committed()) {
+        if (!port.planner().roundabout_merge_committed()) {
             if (result.ready) port.command_manager_.NotifyPlanSucceeded();
             else port.command_manager_.NotifyPlanFailed(false);
             // Conversion, fresh inputs and today's candidate are all checked
             // before either half of the atomic commit changes state.
             if (execute) {
-                if (!port.planner_.CanCommitRoundaboutMerge(result) || !port.command_manager_.NotifyCommitted()) {
+                if (!port.planner().CanCommitRoundaboutMerge(result) || !port.command_manager_.NotifyCommitted()) {
                     port.command_manager_.NotifyPlanFailed(false);
                     port.has_last_v2_trajectory_ = false;
                     auto stopped = MakeStopTrajectory(port.stopReferenceVehicle(snapshot), port.trajectoryDt(), asmc_msgs::Trajectory::FAILURE_GENERATION);
@@ -468,7 +491,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                     port.publishFeedbackV2(feedback_command_id, failed, &stopped, Feedback::TRAJECTORY_SAFE_STOP, false);
                     return true;
                 }
-                port.planner_.ApplyRoundaboutMergeCommit(result);
+                port.planner().ApplyRoundaboutMergeCommit(result);
             }
         } else if (result.maneuver_completed) {
             port.command_manager_.NotifyManeuverCompleted();
@@ -483,12 +506,13 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         succeeded.execution_state = port.command_manager_.execution_state();
         if (succeeded.result_code == Feedback::RESULT_NONE)
             succeeded.detail = result.maneuver_completed ? "roundabout rear cleared; KEEP handoff" :
-                (port.planner_.roundabout_merge_committed() ? (result.candidate_valid ? "roundabout committed" : "roundabout collision braking") :
+                (port.planner().roundabout_merge_committed() ? (result.progress_stopping ? "roundabout progress with certified stop" :
+                    (result.candidate_valid ? "roundabout committed" : "roundabout collision braking")) :
                  (result.ready ? "roundabout ready after full traversal recheck" : "roundabout waiting/approaching stopline"));
         port.publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
-            port.planner_.roundabout_merge_committed() ?
-                (result.candidate_valid || result.maneuver_completed ? Feedback::TRAJECTORY_LOCKED : Feedback::TRAJECTORY_SAFE_STOP) : Feedback::TRAJECTORY_NEW,
-            result.candidate_valid || result.maneuver_completed, ego_s_valid, ego_s);
+            port.planner().roundabout_merge_committed() ?
+                (result.candidate_valid || result.progress_stopping || result.maneuver_completed ? Feedback::TRAJECTORY_LOCKED : Feedback::TRAJECTORY_SAFE_STOP) : Feedback::TRAJECTORY_NEW,
+            result.candidate_valid || result.progress_stopping || result.maneuver_completed, ego_s_valid, ego_s);
         return true;
     }
 
@@ -566,7 +590,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
 
         double avoid_s = 0.0;
         double avoid_d = 0.0;
-        if (!port.planner_.ProjectPointToFrenet(
+        if (!port.planner().ProjectPointToFrenet(
                 command.target_pose_map.position.x,
                 command.target_pose_map.position.y, ego_s,
                 port.runtime_.avoid_projection_search_window,
@@ -602,7 +626,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         // 나란히 지나가면 Cartesian 거리는 가깝지만 진행 방향이 반대인
         // 지점에 목표가 붙을 수 있다(계약 3.4절 4항).
         double reference_heading = 0.0;
-        if (!port.planner_.ReferenceHeadingAt(avoid_s, reference_heading)) {
+        if (!port.planner().ReferenceHeadingAt(avoid_s, reference_heading)) {
             port.command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -701,7 +725,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         double target_pose_s = 0.0;
         double target_pose_d = 0.0;
         if (!command.has_target_pose ||
-            !port.planner_.ProjectPointToFrenet(
+            !port.planner().ProjectPointToFrenet(
                 command.target_pose_map.position.x,
                 command.target_pose_map.position.y, ego_s,
                 port.runtime_.lane_change_projection_search_window,
@@ -740,7 +764,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
 
         // heading 검증. STOP/AVOID와 같은 이유다(계약 3.4절 4항).
         double reference_heading = 0.0;
-        if (!port.planner_.ReferenceHeadingAt(target_pose_s, reference_heading)) {
+        if (!port.planner().ReferenceHeadingAt(target_pose_s, reference_heading)) {
             port.command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -810,7 +834,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         constexpr double kMinimumDirectionDelta = 0.5;  // [m]
         // 현재 ego d는 매 Plan() 사이클마다 갱신되는 진단 getter
         // (last_d())를 재사용한다 - 새 core API를 만들지 않는다.
-        const double delta_d = target_pose_d - port.planner_.last_d();
+        const double delta_d = target_pose_d - port.planner().last_d();
         const bool direction_ok =
             (planner_command.mode == LANE_CHANGE_LEFT &&
              delta_d > kMinimumDirectionDelta) ||
@@ -866,14 +890,14 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         avoid_route == AvoidPlanningRoute::POST_COMMIT) {
         CartesianPath committed_path;
         FrenetPlanner::AvoidPrepareResult committed;
-        const bool plan_ok = CalculateFrenet(committed_path, [&] { return port.planner_.PlanCommittedAvoid(
+        const bool plan_ok = CalculateFrenet(committed_path, [&] { return port.planner().PlanCommittedAvoid(
             ego, objects, planner_command, committed_path,
             committed); }).success && complete_recovery_path(committed_path);
 
         if (!plan_ok) {
             ++port.v2_plan_fail_streak_;
             const FrenetPlanner::PlanFailureReason reason =
-                port.planner_.last_failure_reason();
+                port.planner().last_failure_reason();
             const bool terminal_target_lost =
                 reason == FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST;
             const uint8_t result_code = terminal_target_lost
@@ -909,7 +933,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                            : asmc_msgs::Trajectory::FAILURE_GENERATION));
             asmc_msgs::Trajectory braking;
             if (!terminal_target_lost && committed_path.x.size() > 1 &&
-                ConvertCartesianPath(committed_path, port.planner_.sample_dt(),
+                port.convertReferencePath(committed_path, port.planner().sample_dt(),
                                      snapshot.vehicle, braking) == ConversionStatus::OK &&
                 !braking.points.empty()) {
                 braking.failure_reason = stop.failure_reason;
@@ -943,8 +967,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             // 이유로 last_target_speed_를 쓰지 않는다.
             blocked_fields.applied_speed_mps =
                 stop.points.empty() ? -1.0 : stop.points.back().velocity;
-            blocked_fields.target_d_valid = port.planner_.avoid_committed();
-            blocked_fields.target_d = port.planner_.avoid_locked_target_d();
+            blocked_fields.target_d_valid = port.planner().avoid_committed();
+            blocked_fields.target_d = port.planner().avoid_locked_target_d();
             blocked_fields.generated_candidate_count =
                 static_cast<uint32_t>(committed.generated_candidate_count);
             blocked_fields.valid_candidate_count =
@@ -956,7 +980,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             // UpdateCommittedAvoidLifecycle가 호출되지 않아 result 쪽은
             // sentinel이므로 core 값을 읽는다.
             blocked_fields.maneuver_progress =
-                port.planner_.avoid_committed() ? port.planner_.avoid_maneuver_progress()
+                port.planner().avoid_committed() ? port.planner().avoid_maneuver_progress()
                                            : -1.0;
 
             port.publishFeedbackV2(feedback_command_id, failed, &stop,
@@ -967,7 +991,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         }
 
         asmc_msgs::Trajectory trajectory;
-        if (ConvertCartesianPath(committed_path, port.planner_.sample_dt(),
+        if (port.convertReferencePath(committed_path, port.planner().sample_dt(),
                                  context.ego, trajectory) !=
                 ConversionStatus::OK || trajectory.points.empty()) {
             ++port.v2_plan_fail_streak_;
@@ -991,7 +1015,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         AvoidFeedbackFields avoid_fields;
         avoid_fields.applied_speed_mps = trajectory.points.back().velocity;
         avoid_fields.target_d_valid = true;
-        avoid_fields.target_d = port.planner_.avoid_locked_target_d();
+        avoid_fields.target_d = port.planner().avoid_locked_target_d();
         avoid_fields.generated_candidate_count =
             static_cast<uint32_t>(committed.generated_candidate_count);
         avoid_fields.valid_candidate_count =
@@ -1069,13 +1093,13 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         lane_change_route == LaneChangePlanningRoute::POST_COMMIT) {
         CartesianPath committed_path;
         FrenetPlanner::LaneChangePrepareResult committed;
-        const bool plan_ok = CalculateFrenet(committed_path, [&] { return port.planner_.PlanCommittedLaneChange(
+        const bool plan_ok = CalculateFrenet(committed_path, [&] { return port.planner().PlanCommittedLaneChange(
             ego, objects, planner_command, committed_path, committed); }).success;
 
         if (!plan_ok) {
             ++port.v2_plan_fail_streak_;
             const FrenetPlanner::PlanFailureReason reason =
-                port.planner_.last_failure_reason();
+                port.planner().last_failure_reason();
             port.command_manager_.NotifyPlanFailed(/*terminal=*/false);
             port.has_last_v2_trajectory_ = false;
             CommandAcceptance failed = acceptance;
@@ -1098,8 +1122,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             LaneChangeFeedbackFields blocked_fields;
             blocked_fields.applied_speed_mps =
                 stop.points.empty() ? -1.0 : stop.points.back().velocity;
-            blocked_fields.target_d_valid = port.planner_.lane_change_committed();
-            blocked_fields.target_d = port.planner_.lane_change_locked_target_d();
+            blocked_fields.target_d_valid = port.planner().lane_change_committed();
+            blocked_fields.target_d = port.planner().lane_change_locked_target_d();
             blocked_fields.generated_candidate_count =
                 static_cast<uint32_t>(committed.generated_candidate_count);
             blocked_fields.valid_candidate_count =
@@ -1107,8 +1131,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             blocked_fields.selected_cost = -1.0;
             blocked_fields.blocking_object_id = committed.blocking_object_id;
             blocked_fields.maneuver_progress =
-                port.planner_.lane_change_committed()
-                    ? port.planner_.lane_change_maneuver_progress() : -1.0;
+                port.planner().lane_change_committed()
+                    ? port.planner().lane_change_maneuver_progress() : -1.0;
 
             port.publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1118,7 +1142,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         }
 
         asmc_msgs::Trajectory trajectory;
-        if (ConvertCartesianPath(committed_path, port.planner_.sample_dt(),
+        if (port.convertReferencePath(committed_path, port.planner().sample_dt(),
                                  context.ego, trajectory) !=
                 ConversionStatus::OK || trajectory.points.empty()) {
             ++port.v2_plan_fail_streak_;
@@ -1143,7 +1167,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         lane_change_fields.applied_speed_mps =
             trajectory.points.back().velocity;
         lane_change_fields.target_d_valid = true;
-        lane_change_fields.target_d = port.planner_.lane_change_locked_target_d();
+        lane_change_fields.target_d = port.planner().lane_change_locked_target_d();
         lane_change_fields.generated_candidate_count =
             static_cast<uint32_t>(committed.generated_candidate_count);
         lane_change_fields.valid_candidate_count =
@@ -1241,7 +1265,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
 
         CartesianPath maintenance;
         FrenetPlanner::AvoidPrepareResult prepare;
-        const bool prepare_ok = port.planner_.PrepareAvoid(
+        const bool prepare_ok = port.planner().PrepareAvoid(
             ego, objects, planner_command, maintenance,
             prepare);
 
@@ -1255,7 +1279,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             // 전부 WAITING으로 만들면 대상 소실이 조용히 묻힌다.
             ++port.v2_plan_fail_streak_;
             const FrenetPlanner::PlanFailureReason reason =
-                port.planner_.last_failure_reason();
+                port.planner().last_failure_reason();
             const bool terminal =
                 reason == FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST ||
                 reason == FrenetPlanner::PlanFailureReason::INVALID_COMMAND ||
@@ -1310,7 +1334,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
 
         // maintenance를 ROS 궤적으로 변환한다.
         asmc_msgs::Trajectory trajectory;
-        if (ConvertCartesianPath(maintenance, port.planner_.sample_dt(),
+        if (port.convertReferencePath(maintenance, port.planner().sample_dt(),
                                  context.ego, trajectory) !=
             ConversionStatus::OK) {
             ++port.v2_plan_fail_streak_;
@@ -1370,8 +1394,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         if (execute_requested && was_ready_before_planning &&
             prepare.candidate_valid) {
             // 2번: 변환을 **먼저** 시도한다.
-            const ConversionStatus convert_status = ConvertCartesianPath(
-                prepare.candidate_path, port.planner_.sample_dt(), context.ego,
+            const ConversionStatus convert_status = port.convertReferencePath(
+                prepare.candidate_path, port.planner().sample_dt(), context.ego,
                 avoid_trajectory);
             if (convert_status == ConversionStatus::OK &&
                 !avoid_trajectory.points.empty()) {
@@ -1379,7 +1403,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 // preflight가 실패하면 manager는 READY 그대로이므로
                 // COMMITTED/core-unlocked 분리 상태가 남지 않는다.
                 committed_now = CommitAvoidAtomically(
-                    port.command_manager_, port.planner_, prepare);
+                    port.command_manager_, port.planner(), prepare);
             } else {
                 ROS_WARN_THROTTLE(1.0,
                                   "v2 AVOID candidate conversion failed; "
@@ -1398,7 +1422,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         // 보냈다가 다음 주기에 중앙 maintenance로 되돌리면 불필요한 급조향이
         // 생긴다. 실제 committed phase와 첫 발행 궤적을 일치시킨다.
         const bool publish_committed_candidate =
-            committed_now && !port.planner_.avoid_tracking();
+            committed_now && !port.planner().avoid_tracking();
         const asmc_msgs::Trajectory& published =
             publish_committed_candidate ? avoid_trajectory : trajectory;
 
@@ -1461,8 +1485,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                           prepare.candidate_valid ? 1 : 0,
                           committed_now ? 1 : 0,
                           prepare.selected_target_d,
-                          port.planner_.avoid_locked_target_d(),
-                          port.planner_.avoid_phase_name(),
+                          port.planner().avoid_locked_target_d(),
+                          port.planner().avoid_phase_name(),
                           prepare.low_speed_context ? 1 : 0,
                           prepare.direction_conflict ? 1 : 0,
                           prepare.target_behind_ego ? 1 : 0,
@@ -1490,13 +1514,13 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
 
         CartesianPath maintenance;
         FrenetPlanner::LaneChangePrepareResult prepare;
-        const bool prepare_ok = port.planner_.PrepareLaneChange(
+        const bool prepare_ok = port.planner().PrepareLaneChange(
             ego, objects, planner_command, maintenance, prepare);
 
         if (!prepare_ok) {
             ++port.v2_plan_fail_streak_;
             const FrenetPlanner::PlanFailureReason reason =
-                port.planner_.last_failure_reason();
+                port.planner().last_failure_reason();
             const bool terminal =
                 reason == FrenetPlanner::PlanFailureReason::INVALID_COMMAND ||
                 reason == FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR ||
@@ -1542,7 +1566,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         }
 
         asmc_msgs::Trajectory trajectory;
-        if (ConvertCartesianPath(maintenance, port.planner_.sample_dt(),
+        if (port.convertReferencePath(maintenance, port.planner().sample_dt(),
                                  context.ego, trajectory) !=
             ConversionStatus::OK) {
             ++port.v2_plan_fail_streak_;
@@ -1573,13 +1597,13 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         asmc_msgs::Trajectory lane_change_trajectory;
         if (execute_requested && was_ready_before_planning &&
             prepare.candidate_valid) {
-            const ConversionStatus convert_status = ConvertCartesianPath(
-                prepare.candidate_path, port.planner_.sample_dt(),
+            const ConversionStatus convert_status = port.convertReferencePath(
+                prepare.candidate_path, port.planner().sample_dt(),
                 context.ego, lane_change_trajectory);
             if (convert_status == ConversionStatus::OK &&
                 !lane_change_trajectory.points.empty()) {
                 committed_now = CommitLaneChangeAtomically(
-                    port.command_manager_, port.planner_, prepare);
+                    port.command_manager_, port.planner(), prepare);
             } else {
                 ROS_WARN_THROTTLE(
                     1.0,
@@ -1614,7 +1638,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         lane_change_fields.blocking_object_id =
             static_cast<int32_t>(prepare.blocking_object_id);
         lane_change_fields.maneuver_progress = committed_now
-            ? port.planner_.lane_change_maneuver_progress() : -1.0;
+            ? port.planner().lane_change_maneuver_progress() : -1.0;
 
         CommandAcceptance prepared = acceptance;
         prepared.execution_state = port.command_manager_.execution_state();
@@ -1645,7 +1669,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                           prepare.candidate_valid ? 1 : 0,
                           committed_now ? 1 : 0,
                           prepare.selected_target_d,
-                          port.planner_.lane_change_locked_target_d(),
+                          port.planner().lane_change_locked_target_d(),
                           prepare.valid_candidate_count,
                           prepare.generated_candidate_count,
                           published.points.size(),
@@ -1655,14 +1679,16 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
 
     // ---- 5. planning ----------------------------------------------------
     CartesianPath path;
-    port.planner_.ObserveRoundaboutExit(objects, context.perception.header.stamp.toSec());
-    const bool plan_ok = CalculateFrenet(path, [&] { return port.planner_.Plan(ego, objects,
+    port.planner().ObserveRoundaboutExit(objects, context.perception.header.stamp.toSec());
+    const PlannerCommand continuation_command=planner_command;
+    if(port.highway_reference_)port.highway_reference_->guardFiniteEnd(ego,planner_command);
+    const bool plan_ok = CalculateFrenet(path, [&] { return port.planner().Plan(ego, objects,
                                        planner_command, path); }).success;
 
     if (!plan_ok) {
         ++port.v2_plan_fail_streak_;
         const FrenetPlanner::PlanFailureReason reason =
-            port.planner_.last_failure_reason();
+            port.planner().last_failure_reason();
 
         // 재사용은 "이번 사이클만 후보를 못 만든" 일시적 실패에만 허용한다.
         // 그리고 반드시 **같은 command_id + 같은 fingerprint**여야 한다 -
@@ -1772,7 +1798,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
 
     // ---- 6. 궤적 변환 및 발행 -------------------------------------------
     asmc_msgs::Trajectory trajectory;
-    if (ConvertCartesianPath(path, port.planner_.sample_dt(), context.ego,
+    if (port.convertReferencePath(path, port.planner().sample_dt(), context.ego,
                              trajectory) != ConversionStatus::OK) {
         ++port.v2_plan_fail_streak_;
         port.command_manager_.NotifyPlanFailed(/*terminal=*/false);
@@ -1792,12 +1818,31 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         return true;
     }
 
+    if(!port.tryMissionReferenceReturn(snapshot,ego,objects,continuation_command,path,trajectory,now.toSec())) {
+        port.has_last_v2_trajectory_=false;port.command_manager_.NotifyPlanFailed(false);
+        auto failed=acceptance;failed.execution_state=port.command_manager_.execution_state();
+        failed.detail="inputs_expired_during_reference_preparation";
+        const auto stop=MakeStopTrajectory(port.stopReferenceVehicle(snapshot),port.trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_GENERATION);
+        port.trajectory_pub_.publish(stop);
+        port.publishFeedbackV2(feedback_command_id,failed,&stop,
+            asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,false);
+        return true;
+    }
+    if(port.highway_reference_) {
+        const auto mission=port.planner_.highway_route();
+        if(mission)port.highway_reference_->observeMissionStation(
+            FindClosestS(mission->reference,ego.x,ego.y,nullptr,50));
+    }
     port.v2_plan_fail_streak_ = 0;
     port.last_v2_trajectory_ = trajectory;
     port.has_last_v2_trajectory_ = true;
     port.last_v2_trajectory_command_id_ = command.command_id;
     port.last_v2_trajectory_fingerprint_ = fingerprint;
-    port.command_manager_.NotifyPlanSucceeded();
+    const bool follow_releasing=planner_command.mode==FOLLOWING&&
+        port.planner().follow_release_pending();
+    if(follow_releasing)port.command_manager_.NotifyPlanFailed(/*terminal=*/false);
+    else port.command_manager_.NotifyPlanSucceeded();
 
     // STOP이 HOLD에 도달하면 기하학적으로 완료다. HOLD 판정은 stop_cfg_의
     // position/speed tolerance로 core가 이미 계산했으므로 그 결과를 읽는다 -
@@ -1805,7 +1850,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     //
     // COMPLETED로 latch되면 다음 사이클부터 위 latch 분기가 이 궤적을 계속
     // 보낸다(TRAJECTORY_LOCKED).
-    if (planner_command.mode == STOP && port.planner_.stop_goal_reached()) {
+    if (planner_command.mode == STOP && command.maneuver_type==asmc_msgs::BehaviorCommand::STOP &&
+        port.planner().stop_goal_reached()) {
         port.command_manager_.NotifyManeuverCompleted();
     }
 
@@ -1813,15 +1859,19 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
     port.publishDebugMarkersV2(trajectory, command);
     CommandAcceptance succeeded = acceptance;
     succeeded.execution_state = port.command_manager_.execution_state();
+    if(follow_releasing) {
+        succeeded.result_code=asmc_msgs::FrenetFeedback::TARGET_OBJECT_LOST;
+        succeeded.detail="visible FOLLOW target left lane; checked continuation awaiting Behavior handoff";
+    }
     port.publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
                       asmc_msgs::FrenetFeedback::TRAJECTORY_NEW,
-                      /*plan_valid=*/true, ego_s_valid, ego_s);
+                      /*plan_valid=*/!follow_releasing, ego_s_valid, ego_s);
 
     ROS_INFO_THROTTLE(1.0,
                       "v2 plan ready: command_id=%u maneuver=%u points=%zu "
                       "dt=%.3f vehicle_age=%.3f objects_age=%.3f",
                       command.command_id, command.maneuver_type, path.x.size(),
-                      port.planner_.sample_dt(), vehicle_age, objects_age);
+                      port.planner().sample_dt(), vehicle_age, objects_age);
     return true;
 }
 }

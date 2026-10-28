@@ -57,6 +57,18 @@ int main(){
  ego=zone.waiting_pose;ego.v=.1;ego.a=-3;
  planner.ResetRoundaboutMerge();expect(tick(300,300)&&r.candidate_valid,"low-speed braking boundary can reach zero and depart without reverse rejection");
  ego=pose_at(zone.stop_s-6);planner.ResetRoundaboutMerge();
+ bool distant_stop=tick(301,301)&&tick(301.1,301.1)&&tick(301.2,301.2);
+ // Distant PREPARE may have a valid stop while a complete departure is not
+ // yet feasible. Assert the actual authority/frontier contract, rather than
+ // requiring that an unused departure candidate always exists at this pose.
+ double distant_hint=zone.stop_s-6;
+ distant_stop&=!out.x.empty()&&!out.v.empty()&&out.v.back()==0;
+ for(std::size_t i=0;i<out.x.size();++i) {
+  distant_hint=FindClosestS(ref,out.x[i],out.y[i],&distant_hint,5);
+  distant_stop&=distant_hint<=zone.stop_s+.02;
+ }
+ expect(distant_stop&&!r.ready&&!planner.CanCommitRoundaboutMerge(r),
+  "distant PREPARE retains a complete stop behind the frontier without premature commit");
  tick(301,301);tick(301.1,301.1);tick(301.2,301.2);
  // A departure from rest need not fit the horizon six metres before the
  // stopline. Candidate availability and permission to commit are independent.
@@ -172,12 +184,27 @@ int main(){
  expect(rolling_ready&&r.ready&&rolling_entry.CanCommitRoundaboutMerge(r)&&ego.v>0,
   "full fresh clearance authorizes departure without requiring zero measured speed");
  auto early_token=r;auto early_candidate=r.candidate_path;
- // Empty traffic does not justify committing while a strong measured brake
- // is still changing the planned arrival schedule.
+ // A measured brake is part of the departure schedule, rather than a blanket
+ // veto. The full candidate must preserve it and unwind under the jerk limit.
  FrenetPlanner braking_entry;bool braking_ready=braking_entry.Init(file.string());
  ego.a=-2;
  for(int i=0;i<3&&braking_ready;++i)braking_ready=braking_entry.PlanRoundaboutMerge(ego,{},cmd,407+i*.1,407+i*.1,frontier,r);
- expect(braking_ready&&!r.ready,"strong braking approach retains its stop option instead of authorizing rolling entry");
+ expect(braking_ready&&r.ready&&braking_entry.CanCommitRoundaboutMerge(r),
+  "fresh full clearance can certify a rolling departure during measured braking");
+ const auto braking_candidate=r.candidate_path;
+ expect(braking_ready&&!braking_candidate.a.empty()&&
+  std::fabs(braking_candidate.a.front()-ego.a)<1e-6&&
+  std::fabs(braking_candidate.v.front()-ego.v)<1e-6,
+  "braking departure timing starts at the observed acceleration and speed");
+ bool braking_dynamics=!braking_candidate.v.empty();
+ const double jerk_limit=cfg["planner"]["kinematic_limits"]["max_longitudinal_jerk"].as<double>();
+ for(size_t i=0;i<braking_candidate.v.size();++i) {
+  braking_dynamics&=std::isfinite(braking_candidate.v[i])&&braking_candidate.v[i]>=0;
+  if(i)braking_dynamics&=std::fabs(braking_candidate.a[i]-braking_candidate.a[i-1])<=jerk_limit*planner.sample_dt()+1e-6;
+ }
+ expect(braking_dynamics,"braking departure remains non-reversing and jerk limited");
+ expect(!frontier.v.empty()&&frontier.v.back()==0&&!braking_entry.roundabout_merge_committed(),
+  "braking READY retains a complete waiting stop until execution is accepted");
  ego.a=0;
  // A partial moving vehicle close to the conflict is uncertain even when its
  // instantaneous small box is outside the candidate footprint.

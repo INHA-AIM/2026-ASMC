@@ -11,6 +11,9 @@
 #include "Frenet/Geometry/ObservedMotion.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutMerge.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
+#include "Frenet/Maneuver/Merge/HighwayMerge.hpp"
+#include "Frenet/Maneuver/Merge/HighwayTransitionPath.hpp"
+#include "Frenet/Maneuver/Merge/HighwayReadiness.hpp"
 #include "Frenet/Common/BehaviorTypes.hpp"
 #include "Frenet/Common/CartesianTypes.hpp"
 #include "Frenet/Common/FrenetTypes.hpp"
@@ -30,6 +33,7 @@
 #include "Frenet/Speed/SpeedProfiler.hpp"
 #include "Frenet/Speed/MergeAccelerationMemory.hpp"
 #include "Frenet/visualization/planner_debug_writer.hpp"
+namespace asmc_planner::lane_reference { class LaneReference; }
 
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
 // 외부 FSM이 이미 결정한 PlannerCommand를 받아 실행한다(IsSupportedExternalMode의
@@ -47,6 +51,8 @@ public:
         object_evaluation_time_=evaluation_time < 0 ? time : evaluation_time;
     }
     void BindExecutionState(asmc_planner::execution::ManeuverState& state) { execution_.bind(state); }
+    void DetachExecutionState() { execution_.detach(); }
+    asmc_planner::execution::ManeuverState executionSnapshot() const { return *execution_.operator->(); }
     // Plan() 실패 원인. 호출자(ROS node)가 "이전 궤적 재사용"과 "즉시 정지"를
     // 구분하려면 일시적 생성 실패와 명령 자체의 결함이 분리되어야 한다.
     // TRANSIENT_GENERATION_FAILURE만 재사용 대상이다.
@@ -74,6 +80,12 @@ public:
     // yaml_path: config/params.yaml
     bool Init(const std::string& yaml_path);
 
+    // Preparation-only entry for an isolated reference-handover trial. Never
+    // replace the reference of an executing planner: prepare a second core,
+    // validate its continuation, then exchange the owning pointer atomically.
+    bool SetPreparedReference(const RefLine& reference);
+    const RefLine& reference() const { return ref_; }
+
     // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING /
     // STOP / EMERGENCY / FOLLOWING / AVOID / LANE_CHANGE_LEFT /
     // LANE_CHANGE_RIGHT이며(IsSupportedExternalMode 참고), MERGE는 core
@@ -92,6 +104,7 @@ public:
         // A checked PREPARE approach is usable even before a complete
         // departure fits the horizon. This never grants gap/COMMIT authority.
         bool waiting_path_valid = false;
+        bool progress_stopping = false;  // post-commit prefix plus certified complete stop
         std::uint64_t epoch = 0;
         double entry_time = -1, exit_time = -1, progress = 0;
         std::size_t generated = 0, valid = 0;
@@ -103,7 +116,7 @@ public:
     bool PlanRoundaboutMerge(const CartesianState& ego,
         const std::vector<TrackedObject>& obstacles, const PlannerCommand& command,
         double planning_time, double observation_stamp, CartesianPath& out_path,
-        MergePrepareResult& result);
+        MergePrepareResult& result,double ego_observation_time=-1);
     bool CanCommitRoundaboutMerge(const MergePrepareResult& result) const;
     void ApplyRoundaboutMergeCommit(const MergePrepareResult& result);
     void ResetRoundaboutMerge(bool preserve_exit_prediction = false);
@@ -111,6 +124,57 @@ public:
     void RevokeRoundaboutReadiness();
     bool roundabout_merge_committed() const { return execution_->merge.committed; }
     const MergePrepareResult& last_roundabout_result() const { return last_roundabout_result_; }
+
+    bool EnableHighwayMerge(std::string& error);
+    std::shared_ptr<const HighwayMergeRoute> highway_route() const { return highway_route_; }
+    bool highway_merge_enabled() const { return bool(highway_route_); }
+    bool highway_merge_committed() const { return highway_committed_; }
+    struct HighwayMergeResult {
+        bool candidate_valid=false,ready=false,maneuver_completed=false;
+        std::uint64_t epoch=0;
+        std::size_t generated=0,valid=0;
+        double progress=0,transition_terminal_s=0;
+        HighwayCandidateCheck check;
+        CartesianPath candidate_path;
+        HighwayTransitionGeometry transition_geometry;
+        bool transition_reused=false,transition_recovered=false;
+        bool returning_to_source=false,source_return_completed=false;
+        int following_object_id=-1;
+        bool output_requires_commit=false;
+        std::string detail;
+    };
+    const HighwayMergeResult& last_highway_result() const { return highway_last_result_; }
+    bool PlanHighwayMerge(const CartesianState&,const std::vector<TrackedObject>&,
+        const PlannerCommand&,double planning_time,double observation_stamp,
+        CartesianPath& output,HighwayMergeResult&,double ego_stamp=-1,
+        const RefLine* target_reference=nullptr,const RefLine* source_reference=nullptr,
+        bool execute_requested=false);
+    // The same candidate generator/certificate serves requested highway lane
+    // changes and mandatory downstream joins. The supplied zone is immutable
+    // for this command and its stations belong to this core's reference.
+    bool PlanHighwayLaneContinuation(const CartesianState&,const std::vector<TrackedObject>&,
+        double speed,const std::string& source,CartesianPath&);
+    bool PlanHighwayTransition(const HighwayMergeRoute&,const HighwayMergeRoute::Zone&,
+        bool optional,const CartesianState&,const std::vector<TrackedObject>&,
+        const PlannerCommand&,double now,double observation,CartesianPath&,
+        HighwayMergeResult&,double ego_stamp,const RefLine& target,bool execute_requested=false);
+    // Called only after the ROS queue converted a fresh READY and will publish it.
+    void MarkHighwayReadyIssued(double now) {
+        if(highway_last_result_.ready&&highway_last_result_.candidate_valid)
+            highway_readiness_.MarkIssued(now);
+    }
+    bool HighwayReadyWasIssued(double now) const;
+    bool CanCommitHighwayMerge(const HighwayMergeResult&) const;
+    void ApplyHighwayMergeCommit(const HighwayMergeResult&);
+    void ResetHighwayMerge();
+    void MarkHighwayReferenceCompleted() {
+        highway_last_result_.maneuver_completed=true;highway_last_result_.progress=1;
+        highway_last_result_.detail="highway_reference_and_continuation_adopted";
+    }
+    void RevokeHighwayMergeReadiness() {
+        highway_readiness_.Reset();highway_settled_since_=-1;
+        highway_last_result_.ready=false;++highway_epoch_;
+    }
 
     // Cartesian 점을 reference line의 종방향 좌표 s로 투영한다.
     // 외부 STOP 명령의 (stop_x, stop_y)를 PlannerCommand.stop_position으로
@@ -170,6 +234,34 @@ public:
     // tracking)을 할 수 있다 (frenet_planner.cpp의 dt와 mpc_params.dt가 서로
     // 달라서 그냥 index를 맞춰 쓸 수 없음).
     double sample_dt() const { return path_cfg_.dt; }
+    const ReferenceConfig& reference_config() const { return ref_config_; }
+    const KinematicLimits& kinematic_limits() const { return limits_; }
+    bool RuntimeRoadFootprintClear(double x,double y,double yaw) const {
+        return avoid_road_map_.enabled()&&avoid_road_map_.FootprintInside(x,y,yaw,vehicle_shape_);
+    }
+    // Only a dormant, prebuilt core may reset its local projection hint. Its
+    // immutable reference is retained; no old lane_s crosses a handover.
+    void ResetProjectionHistory() { has_last_s_=false; }
+    void ConfigureHighwayTrafficLanes(
+        std::vector<std::shared_ptr<const asmc_planner::lane_reference::LaneReference>> lanes) {
+        highway_traffic_lanes_=std::move(lanes);
+    }
+    // Preparation only: carry the executing path's longitudinal intent into
+    // a dormant core. New road/leader caps still apply in its normal Plan().
+    void SeedPreparedReferenceContinuation(double speed) {
+        if(std::isfinite(speed)&&speed>=0)speed_profiler_.Commit({speed,0,true});
+    }
+    void ConfigurePreparedHighwayLane(const HighwayMergeConfig& c,
+        std::shared_ptr<const asmc_planner::lane_reference::HdLaneMap> map={},
+        std::vector<std::string> owned_lanes={}) {
+        highway_prediction_map_=std::move(map);
+        highway_owned_lanes_=std::move(owned_lanes);
+        highway_merge_cfg_=c;
+        curve_speed_cfg_.target_vel=c.speed_cap_mps;
+        curve_speed_cfg_.lateral_accel_safety_factor=c.curve_lateral_accel_safety_factor;
+        curve_speed_cfg_.comfortable_decel_factor=c.curve_comfortable_decel_factor;
+        limits_.max_forward_accel=std::min(limits_.max_forward_accel,c.forward_accel_mps2);
+    }
 
     // 진단용: 매 Plan() 호출마다 갱신되는 현재 d(차선 중앙 기준 오프셋)/d_dot(횡방향
     // 속도). 횡방향 오차가 조향 포화 때문인지(모델/액추에이션 문제) 아니면 여유가
@@ -281,6 +373,7 @@ public:
     }
 
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
+    bool follow_release_pending() const { return v2_following_.release_pending; }
     const std::vector<CartesianPath>& last_candidate_paths() const {
         return last_candidate_paths_;
     }
@@ -856,6 +949,27 @@ private:
     //
     // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     AvoidRoadMap avoid_road_map_;
+    std::string highway_areas_path_;
+    bool PlanHighwayTransitionImpl(const CartesianState&,const std::vector<TrackedObject>&,
+        const PlannerCommand&,double,double,CartesianPath&,HighwayMergeResult&,double,
+        const RefLine*,const RefLine*,const HighwayMergeRoute*,const HighwayMergeRoute::Zone*,bool,bool);
+    std::vector<std::string> highway_owned_lanes_;
+    std::shared_ptr<const HighwayMergeRoute> highway_route_;
+    std::shared_ptr<const asmc_planner::lane_reference::HdLaneMap> highway_prediction_map_;
+    std::vector<std::shared_ptr<const asmc_planner::lane_reference::LaneReference>> highway_traffic_lanes_;
+    bool highway_committed_=false;
+    bool highway_returning_to_source_=false;
+    int highway_unresolved_return_object_=-1;
+    double highway_unresolved_return_stamp_=-1;
+    double highway_transition_terminal_s_=0;
+    HighwayTransitionGeometry highway_transition_geometry_;
+    int highway_zone_index_=-1;
+    HighwayReadiness highway_readiness_;
+    double highway_preferred_target_=-1;
+    double highway_last_observation_=-1,highway_last_plan_=-1,highway_settled_since_=-1;
+    std::uint64_t highway_epoch_=0;
+    HighwayMergeResult highway_last_result_;
+    MergeAccelerationMemory highway_acceleration_memory_;
     // Physical solid-paint contact belongs to the vehicle, not a local AVOID
     // trajectory; replanning and maneuver changes must not restart its clock.
     bool solid_paint_contact_active_ = false;
@@ -986,6 +1100,8 @@ private:
 
     struct FollowingContext {
         bool recent_binding = false; // Explicit ID handoff resolved from history.
+        bool release_pending = false;
+        double release_since = -1;
         double leader_s = 0.0;
         double leader_d = 0.0;
         double leader_speed = 0.0;
@@ -1051,6 +1167,9 @@ private:
         VALID,
         // 관측되지 않았지만 직전에 확보한 상태가 있어 유예 중이다.
         GRACE,
+        // A previously bound, visible forward target has left the lane. Keep
+        // a bounded, collision-checked continuation while Behavior releases it.
+        RELEASED,
         // 대상을 쓸 수 없다. 관측 자체가 없거나(첫 binding 실패), 관측되었지만
         // 차선/방향/범위를 벗어났거나, 유예를 초과했다.
         LOST,
@@ -1259,6 +1378,14 @@ private:
                                  double service_decel = 0.0,
                                  double target_d = 0.0,
                                  double lateral_distance = 0.0) const;
+    // Explicit highway-only fallback: an achieved out-of-limit state is not
+    // a new maneuver. Follow the present corridor under full jerk-limited
+    // braking until normal bounds return; never use it for merge readiness.
+    bool PlanCollisionBrakingPath(const CartesianState& ego, double s, double d,
+                                 const std::vector<TrackedObject>& obstacles,
+                                 CartesianPath& out_path, double service_decel,
+                                 double target_d, double lateral_distance,
+                                 bool recover_initial_state) const;
 
     bool GenerateDecelToZeroPath(double s, double d, double s_dot,
                                  CartesianPath& out_path) const;
@@ -1276,7 +1403,10 @@ private:
     // 위한 선행 작업(R3 1/4단계)이며, 이 시점에는 아직 pipeline 내부에서
     // 개별 멤버 접근 대신 이 번들을 통해서만 읽도록 바꾸는 순수 구조
     // 이동만 한다.
+    bool HighwayCruiseFor(const PlannerCommand&) const;
+    CurveSpeedConfig CurveSpeedFor(const PlannerCommand&) const;
     PlannerConfigBundle MakePipelineConfigBundle() const;
+    PlannerConfigBundle MakePipelineConfigBundle(const CurveSpeedConfig&) const;
 
     RefLine ref_;
     ReferenceConfig ref_config_{};

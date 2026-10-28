@@ -122,9 +122,46 @@ std::vector<FrenetPath> GenerateFollowingCandidates(const FrenetState& start,
 }
 
 // =========================================================
-// [Sec.V-A] Stopping
+// Following recovery when exact finite endpoints are unreachable
 // =========================================================
 
+std::vector<FrenetPath> GenerateFollowingRecoveryCandidates(const FrenetState& start,
+    double leader_s,double leader_speed,double leader_accel,double time_gap,
+    double min_gap,double cruise_target_speed,double gap_gain,
+    const PathGeneratorConfig& cfg,const KinematicLimits& limits) {
+    for(double x:{start.s,start.s_d,start.s_dd,leader_s,leader_speed,leader_accel,
+                  time_gap,min_gap,cruise_target_speed,gap_gain})
+        if(!std::isfinite(x))return {};
+    const double gap=leader_s-start.s;
+    const double desired_gap=min_gap+time_gap*leader_speed;
+    if(gap<=0||gap>=desired_gap||time_gap<=0||min_gap<0||leader_speed<0||gap_gain<=0||
+       cruise_target_speed<0||cfg.time_horizon.max<=0||cfg.dt<=0)return {};
+    const double target=std::clamp(leader_speed+gap_gain*(gap-desired_gap),0.0,cruise_target_speed);
+    if(target>=start.s_d)return {}; // acceleration starvation keeps its existing policy
+    // Do not repair an out-of-contract starting acceleration by inventing a
+    // different boundary. Normal planner projection already supplies headroom.
+    const double a_limit=limits.max_longitudinal_accel*
+        std::clamp(limits.boundary_condition_accel_fraction,1e-6,1.0);
+    if(std::abs(start.s_dd)>a_limit+1e-6)return {};
+    const double span=std::max({start.s_d,leader_speed,cruise_target_speed,cfg.dt})*
+        cfg.time_horizon.max;
+    const std::vector<SpeedEnvelopePoint> envelope{
+        {start.s,target*target},{start.s+span,target*target}};
+    auto candidates=GenerateEnvelopeVelocityCandidates(start,target,envelope,cfg,limits);
+    for(auto& path:candidates) {
+        if(path.t.empty()||path.s.empty()||path.s_d.empty())continue;
+        const double t=path.t.back();
+        const double leader_end=leader_s+leader_speed*t+.5*leader_accel*t*t;
+        const double leader_v_end=leader_speed+leader_accel*t;
+        path.delta_s=path.s.back()-(leader_end-min_gap-time_gap*leader_v_end);
+        path.delta_s_dot=path.s_d.back()-(leader_v_end-time_gap*leader_accel);
+    }
+    return candidates;
+}
+
+// =========================================================
+// [Sec.V-A] Stopping
+// =========================================================
 std::vector<FrenetPath> GenerateStoppingCandidates(const FrenetState& start,
                                                     double stop_s,
                                                     const PathGeneratorConfig& cfg) {
@@ -294,6 +331,7 @@ std::vector<FrenetPath> GenerateEnvelopeVelocityCandidates(
     const double headroom = std::clamp(limits.boundary_condition_accel_fraction,
                                       1e-6, 1.0);
     const double accel_limit = limits.max_longitudinal_accel * headroom;
+    const double forward_limit = std::min(accel_limit,limits.max_forward_accel);
     // Leave only numerical headroom for the existing strict hard-limit filter.
     const double jerk_limit = limits.max_longitudinal_jerk * headroom * (1.0 - 1e-12);
     // Tracking time is derived from existing physical limits, not horizon T.
@@ -321,7 +359,7 @@ std::vector<FrenetPath> GenerateEnvelopeVelocityCandidates(
                 const double h = path.t[i] - path.t[i - 1];
                 const EnvelopeSample ceiling = SampleSpeedEnvelope(envelope, s, offset);
                 double desired_a = std::clamp(ceiling.acceleration +
-                    (ceiling.speed - v) / response_time, -accel_limit, accel_limit);
+                    (ceiling.speed - v) / response_time, -accel_limit, forward_limit);
                 // Preserve enough speed to release the next braking acceleration
                 // at +jerk_limit: v_next >= a_next^2/(2*jerk_limit).
                 // Solving this with trapezoidal acceleration integration gives

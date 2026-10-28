@@ -59,7 +59,7 @@ int main() {
     FrenetState red_replan{};
     red_replan.s_d=4.37;red_replan.s_dd=-3.64;
     auto released=GenerateSpatialStoppingCandidates(red_replan,9.24,6.94,1.5,
-        Grid(20),Limits(),.5,true);
+        Grid(20),Limits(),.5,SpatialStopOptions{true,false});
     bool released_safe=!released.empty();
     if(released_safe) {
         const auto& path=released.front();

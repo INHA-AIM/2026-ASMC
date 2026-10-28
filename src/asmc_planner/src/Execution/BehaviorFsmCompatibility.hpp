@@ -16,7 +16,8 @@ class Fsm {
                                 uint32_t active_command_id,
                                 bool stop_preempts_committed,
                                 bool cancel_reclassified_avoid = false,
-                                bool follow_owns_avoid_target = false);
+                                bool follow_owns_avoid_target = false,
+                                bool allow_merge_left_prepare = false);
   bool updateEmergency(bool requested, double min_ttc, double timestamp) {
     return stability_.updateEmergency(requested, min_ttc, timestamp);
   }

@@ -98,6 +98,35 @@ TEST(AdaptiveClustering, RetainsFixedRadiusWhenDisabled) {
   EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(50.0F, config), 0.5F);
 }
 
+// The release profile uses leveled sensor-local x, without a body translation.
+TEST(AdaptiveClustering, FrontRearReleaseProfileAndMissingRearFallback) {
+  auto c=AdaptiveConfig();c.f32_AdaptiveNearRange=10.f;c.f32_AdaptiveFarRange=50.f;
+  c.f32_AdaptiveNearEps=1.30f;c.f32_AdaptiveFarEps=1.32f;
+  for(float range:{10.f,30.f,50.f})
+    EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(range,c,-range),AdaptiveClusterTolerance(range,c,range));
+  c.f32_AdaptiveRearNearEps=1.60f;c.f32_AdaptiveRearFarEps=1.62f;
+  for(int i=0;i<3;++i) {
+    const float range=10.f+20.f*i;
+    EXPECT_NEAR(AdaptiveClusterTolerance(range,c,range),1.30f+.01f*i,1e-6f);
+    EXPECT_NEAR(AdaptiveClusterTolerance(range,c,-range),1.60f+.01f*i,1e-6f);
+  }
+  EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(0,c,0),1.30f);
+  EXPECT_FLOAT_EQ(AdaptiveClusterTolerance(0,c,-0.f),1.30f);
+  c.s32_MinPoints=1;
+  for(float gap:{1.25f,1.45f,1.61f}) {
+    CloudPtr a=NewCloud();a->push_back(P(-.1f,0,0));a->push_back(P(.1f,gap,0));
+    const auto original=RunClustering(a,c);
+    CloudPtr b=NewCloud();b->push_back(a->points[1]);b->push_back(a->points[0]);
+    EXPECT_EQ(ClusterSets(*a,original.clusters),ClusterSets(*b,RunClustering(b,c).clusters));
+    EXPECT_EQ(original.clusters.size(),gap<1.30f?1u:2u);
+  }
+  // Identical separation joins only behind the sensor origin.
+  for(float x:{-10.f,10.f}) {
+    CloudPtr cloud=NewCloud();cloud->push_back(P(x,0,0));cloud->push_back(P(x,1.45f,0));
+    EXPECT_EQ(RunClustering(cloud,c).clusters.size(),x<0?1u:2u);
+  }
+}
+
 // ------------------------------------------------- new
 TEST(AdaptiveClustering, LinearInterpolationAndSanitizedConfig) {
   auto c = AdaptiveConfig();

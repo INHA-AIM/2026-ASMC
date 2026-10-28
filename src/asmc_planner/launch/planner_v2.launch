@@ -1,6 +1,7 @@
 <launch>
   <!-- Current single-package planner. Standalone defaults below are development
        MORAI inputs; autonomy_no_bridges_v2 selects canonical planning inputs. -->
+  <arg name="highway_merge" default="false"/>
   <arg name="state_topic" default="/vehicle/state"/>
   <arg name="behavior_objects_topic" default="/Object_topic"/>
   <arg name="objects_input_type" default="morai"/>
@@ -15,6 +16,7 @@
   <param name="/behavior_planner/topics/ego" value="$(arg state_topic)"/>
   <param name="/behavior_planner/topics/objects" value="$(arg behavior_objects_topic)"/>
   <param name="/frenet_planner/planner/config_path" value="$(find asmc_planner)/config/frenet/params.yaml"/>
+  <param name="/frenet_planner/highway_merge_enabled" value="$(arg highway_merge)"/>
   <node pkg="asmc_planner" type="asmc_planner_node" name="asmc_planner" output="screen">
     <remap from="/vehicle/state" to="$(arg state_topic)"/>
     <remap from="/perception/objects" to="$(arg planning_objects_topic)"/>

@@ -238,6 +238,10 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
+| `highway_merge` | `false` | — |
+| `dashboard` | `true` | — |
+| `dashboard_port` | `8088` | — |
+| `open_dashboard` | `false` | — |
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
@@ -252,6 +256,7 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
+| `highway_merge` | `false` | — |
 | `state_topic` | `/vehicle/state` | — |
 | `behavior_objects_topic` | `/Object_topic` | — |
 | `objects_input_type` | `morai` | — |
@@ -375,17 +380,18 @@
 | `diagnostics_topic` | `/planning/camera_bbox_lane_change/diagnostics` | — |
 | `emergency_stop_topic` | `/planning/camera_bbox_lane_change/emergency_stop` | — |
 | `bbox_topic` | `/planning/camera_bbox_lane/result` | — |
-| `bbox_conf_thres` | `0.7` | — |
 | `reference_lane_topic` | `/planning/camera_bbox_lane_change/reference_lane` | — |
 | `far_obstacle_speed_kph` | `5.0` | — |
 | `bbox_source_timeout` | `0.5` | — |
 | `bbox_receive_timeout` | `0.5` | — |
+| `person_stop` | `true` | — |
+| `person_stop_sec` | `3.0` | — |
+| `person_ignore_sec` | `4.0` | — |
 | `max_sensor_skew` | `0.4` | — |
 | `obstacle_confirm_frames` | `2` | — |
 | `adjacent_clear_frames` | `3` | — |
 | `ignore_bbox_during_lane_change` | `true` | — |
 | `one_lane_change_only` | `false` | — |
-| `return_to_entry_lane` | `false` | — |
 | `obstacle_lateral_margin` | `0.30` | — |
 | `obstacle_longitudinal_margin` | `0.5` | — |
 | `vehicle_front` | `3.845` | — |
@@ -403,6 +409,45 @@
 | `lane_change_pause_timeout` | `30.0` | — |
 | `lane_change_timeout` | `15.0` | — |
 | `lane_change_cooldown` | `4.0` | — |
+| `straddle_avoidance` | `true` | — |
+| `ego_topic` | `/Ego_topic` | — |
+| `ego_speed_timeout` | `0.3` | — |
+| `avoid_clearance` | `0.5` | — |
+| `avoid_speed_kph` | `8.0` | — |
+| `avoid_obstacle_length` | `6.0` | — |
+| `avoid_pass_margin` | `2.0` | — |
+| `avoid_lane_tie` | `0.10` | — |
+| `avoid_shift_length` | `5.0` | — |
+| `avoid_lookahead_distance` | `5.0` | — |
+| `avoid_line_straddle` | `true` | — |
+| `avoid_max_offset` | `3.5` | — |
+| `avoid_max_shoulder` | `2.0` | — |
+| `avoid_wall_margin` | `0.3` | — |
+| `avoid_line_overrun` | `1.0` | — |
+| `avoid_line_step` | `0.25` | — |
+| `avoid_line_extra` | `0.0` | — |
+| `line_edge_expand` | `0.0` | — |
+| `lane_hold_distance` | `15.0` | — |
+| `lane_hold_time` | `8.0` | — |
+| `imu_topic` | `/imu` | — |
+| `pedal_speed_control` | `true` | — |
+| `speed_kp` | `0.3` | — |
+| `speed_ki` | `0.1` | — |
+| `speed_integral_limit` | `3.0` | — |
+| `max_accel_pedal` | `0.5` | — |
+| `max_brake_pedal` | `0.5` | — |
+| `avoid_reconsider_distance` | `0.5` | — |
+| `avoid_plan_margin` | `0.05` | — |
+| `use_lidar_obstacles` | `false` | — |
+| `lidar_objects_topic` | `/perception/lidar/objects_local` | — |
+| `lidar_timeout` | `0.6` | — |
+| `lidar_max_x` | `30.0` | — |
+| `lidar_min_height` | `0.15` | — |
+| `lidar_max_length` | `20.0` | — |
+| `lidar_min_points` | `5` | — |
+| `lidar_road_min_overlap` | `0.20` | — |
+| `lidar_lane_min_overlap` | `0.10` | — |
+| `lidar_structure_hold` | `1.5` | — |
 | `use_rviz` | `true` | — |
 | `bbox_consumer_x_max` | `20.0` | — |
 | `start_classifier` | `true` | — |
@@ -505,3 +550,15 @@
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
 | — | 최상위 공개 인자 없음 | 구성은 소스/포함 launch 확인 |
+
+## Controlled reference handover trial
+
+[소스](../../src/asmc_planner/launch/reference_handover_trial.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `enable_control` | `false` | — |
+| `data_root` | `/data` | — |
+| `state_topic` | `/planning/vehicle/state` | — |
+| `objects_topic` | `/planning/objects` | — |
+| `config` | `$(find asmc_planner)/config/reference_handover_trial.yaml` | — |

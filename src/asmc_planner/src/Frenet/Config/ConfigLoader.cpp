@@ -281,6 +281,79 @@ bool LoadParams(const std::string& yaml_path,
         return false;
     }
 
+    const auto highway_policy=root["planner"]["highway_merge"];
+    const HighwayMergeConfig highway_defaults{};
+    try {
+        highway_merge_cfg.curve_lateral_accel_safety_factor =
+            highway_policy["curve_lateral_accel_safety_factor"].as<double>(
+                highway_defaults.curve_lateral_accel_safety_factor);
+        highway_merge_cfg.curve_comfortable_decel_factor =
+            highway_policy["curve_comfortable_decel_factor"].as<double>(
+                highway_defaults.curve_comfortable_decel_factor);
+    } catch (const std::exception&) {
+        error_message="invalid planner/highway_merge curve policy";return false;
+    }
+    try {highway_merge_cfg.speed_cap_mps=highway_policy["speed_cap_mps"]
+        ?highway_policy["speed_cap_mps"].as<double>():highway_defaults.speed_cap_mps;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/speed_cap_mps";return false;}
+    try {highway_merge_cfg.forward_accel_mps2=
+        highway_policy["forward_accel_mps2"].as<double>(highway_defaults.forward_accel_mps2);}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/forward_accel_mps2";return false;}
+    try {highway_merge_cfg.max_horizon_s=highway_policy["max_horizon_s"]
+        ?highway_policy["max_horizon_s"].as<double>():highway_defaults.max_horizon_s;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/max_horizon_s";return false;}
+    try {highway_merge_cfg.post_merge_horizon_s=highway_policy["post_merge_horizon_s"]
+        ?highway_policy["post_merge_horizon_s"].as<double>():highway_defaults.post_merge_horizon_s;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/post_merge_horizon_s";return false;}
+    try {highway_merge_cfg.source_max_age_s=highway_policy["source_max_age_s"]
+        ?highway_policy["source_max_age_s"].as<double>():highway_defaults.source_max_age_s;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/source_max_age_s";return false;}
+    try {highway_merge_cfg.confirmation_gap_s=highway_policy["confirmation_gap_s"]
+        ?highway_policy["confirmation_gap_s"].as<double>():highway_defaults.confirmation_gap_s;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/confirmation_gap_s";return false;}
+    try {
+        const auto tracking=highway_policy["transition_tracking"];
+        if(tracking) {
+            highway_merge_cfg.transition_tracking_position_m=tracking["position_m"].as<double>(
+                highway_defaults.transition_tracking_position_m);
+            highway_merge_cfg.transition_tracking_heading_rad=tracking["heading_rad"].as<double>(
+                highway_defaults.transition_tracking_heading_rad);
+            highway_merge_cfg.transition_tracking_curvature_inv_m=tracking["curvature_inv_m"].as<double>(
+                highway_defaults.transition_tracking_curvature_inv_m);
+        }
+    } catch(const std::exception&) {error_message="invalid planner/highway_merge/transition_tracking";return false;}
+    try {highway_merge_cfg.speed_error_mps=highway_policy["speed_error_mps"]
+        ?highway_policy["speed_error_mps"].as<double>():highway_defaults.speed_error_mps;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/speed_error_mps";return false;}
+    try {
+        highway_merge_cfg.speed_error_floor_mps=highway_policy["speed_error_floor_mps"].as<double>(highway_defaults.speed_error_floor_mps);
+        highway_merge_cfg.speed_error_correlation_s=highway_policy["speed_error_correlation_s"].as<double>(highway_defaults.speed_error_correlation_s);
+        highway_merge_cfg.motion_fit_min_span_s=highway_policy["motion_fit_min_span_s"].as<double>(highway_defaults.motion_fit_min_span_s);
+        highway_merge_cfg.provisional_lateral_speed_mps=highway_policy["provisional_lateral_speed_mps"].as<double>(highway_defaults.provisional_lateral_speed_mps);
+    } catch(const std::exception&) {error_message="invalid planner/highway_merge motion uncertainty policy";return false;}
+    try {highway_merge_cfg.max_rear_decel_mps2=highway_policy["max_rear_decel_mps2"]
+        ?highway_policy["max_rear_decel_mps2"].as<double>():highway_defaults.max_rear_decel_mps2;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/max_rear_decel_mps2";return false;}
+    try {highway_merge_cfg.completion_settle_s=highway_policy["completion_settle_s"]
+        ?highway_policy["completion_settle_s"].as<double>():highway_defaults.completion_settle_s;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/completion_settle_s";return false;}
+    try {highway_merge_cfg.completion_heading_rad=highway_policy["completion_heading_rad"]
+        ?highway_policy["completion_heading_rad"].as<double>():highway_defaults.completion_heading_rad;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/completion_heading_rad";return false;}
+    try {highway_merge_cfg.completion_lateral_m=highway_policy["completion_lateral_m"]
+        ?highway_policy["completion_lateral_m"].as<double>():highway_defaults.completion_lateral_m;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/completion_lateral_m";return false;}
+    try {highway_merge_cfg.collision_max_step_m=highway_policy["collision_max_step_m"]
+        ?highway_policy["collision_max_step_m"].as<double>():highway_defaults.collision_max_step_m;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/collision_max_step_m";return false;}
+    try {highway_merge_cfg.max_collision_samples=highway_policy["max_collision_samples"]
+        ?highway_policy["max_collision_samples"].as<int>():highway_defaults.max_collision_samples;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/max_collision_samples";return false;}
+
+    try {highway_merge_cfg.planning_budget_ms=highway_policy["planning_budget_ms"]
+        ?highway_policy["planning_budget_ms"].as<double>():highway_defaults.planning_budget_ms;}
+    catch(const std::exception&){error_message="invalid planner/highway_merge/planning_budget_ms";return false;}
+
     highway_merge_cfg.zones.clear();
     const YAML::Node highway_zones = root["planner"]["highway_merge"]["zones"];
     if (highway_zones && !highway_zones.IsSequence()) {
@@ -335,6 +408,12 @@ bool LoadParams(const std::string& yaml_path,
                     }
                     zone.checkpoints.push_back(checkpoint);
                 }
+            }
+            zone.source_link=node["source_link"].as<std::string>("");
+            if(node["target_lanes"]) {
+                if(!node["target_lanes"].IsSequence()) {error_message="highway target_lanes must be a sequence";return false;}
+                try {zone.target_lanes=node["target_lanes"].as<std::vector<std::string>>();}
+                catch(const std::exception&) {error_message="highway target_lanes must contain lane IDs";return false;}
             }
             highway_merge_cfg.zones.push_back(zone);
         }

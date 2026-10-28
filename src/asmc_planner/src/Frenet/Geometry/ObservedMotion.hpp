@@ -3,6 +3,7 @@
 #include <cmath>
 #include <deque>
 #include "Frenet/Geometry/ObjectTypes.hpp"
+#include "Frenet/Geometry/ObservationContinuity.hpp"
 
 // Sensor-frame time and velocity direction, never the fitted OBB angle.
 struct ObservedObjectMotion {
@@ -11,12 +12,21 @@ struct ObservedObjectMotion {
     TrackedObject last{};
     double stamp = -1, yaw_rate = 0;
     int missing_cycles = 0;
+    bool continuity_reset = false;
     void Observe(const TrackedObject& object, double time, double clamp,
-                 double minimum_direction_change=.05) {
+                 double minimum_direction_change=.05,std::size_t maximum_samples=6,
+                 double history_window_s=.5,bool preserve_missing_velocity=false) {
         if (!std::isfinite(time) || time <= stamp + 1e-9) return;
-        if (stamp >= 0 && time - stamp > .5) samples.clear();
+        continuity_reset=stamp>=0&&!ObservationContinuous(last,object,time-stamp);
+        if (continuity_reset) { samples.clear(); yaw_rate=0; }
         last = object; stamp = time; missing_cycles = 0;
         const double speed = std::hypot(object.vx, object.vy);
+        // Highway callers may bridge a missing velocity using still-fresh
+        // VALID samples. Do not append the missing value as measured zero.
+        if (preserve_missing_velocity && object.velocity_unavailable) {
+            while(!samples.empty()&&time-samples.front().time>history_window_s) samples.pop_front();
+            yaw_rate=0;return;
+        }
         if (object.velocity_unavailable || object.motion_state == ObjectMotionState::LOW_THREAT || speed < .5) {
             samples.clear(); yaw_rate = 0; return;
         }
@@ -24,7 +34,7 @@ struct ObservedObjectMotion {
         if (!samples.empty()) direction = samples.back().direction +
             std::remainder(direction - samples.back().direction, 2*M_PI);
         samples.push_back({time,direction,object.x,object.y,object.vx,object.vy});
-        while (samples.size()>6 || time-samples.front().time>.5) samples.pop_front();
+        while (samples.size()>maximum_samples || time-samples.front().time>history_window_s) samples.pop_front();
         yaw_rate = 0;
         if (samples.size()<3 || time-samples.front().time<.1) return;
         double mt=0,md=0;

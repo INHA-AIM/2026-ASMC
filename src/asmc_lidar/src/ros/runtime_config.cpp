@@ -158,6 +158,9 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   cl.f32_AdaptiveFarRange = r.Get<float>("lidar.Clustering.Adaptive.FarRange");
   cl.f32_AdaptiveNearEps = r.Get<float>("lidar.Clustering.Adaptive.NearEps");
   cl.f32_AdaptiveFarEps = r.Get<float>("lidar.Clustering.Adaptive.FarEps");
+  const auto adaptive=r.Node("lidar.Clustering.Adaptive");
+  cl.f32_AdaptiveRearNearEps=adaptive["RearNearEps"].as<float>(cl.f32_AdaptiveNearEps);
+  cl.f32_AdaptiveRearFarEps=adaptive["RearFarEps"].as<float>(cl.f32_AdaptiveFarEps);
   auto& tr = p.tracking;
   tr.b_UseMapAssociation = r.Get<bool>("lidar.Tracking.UseMapAssociation");
   tr.f32_COST_W_DIST = r.Get<float>("lidar.Tracking.DistanceWeight");

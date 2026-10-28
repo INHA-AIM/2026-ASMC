@@ -4,6 +4,7 @@
 
 #include "Behavior/Feature/object_projector.hpp"
 #include "Parser/Traffic/traffic_light_provider.hpp"
+#include "Execution/HighwayReferenceStatus.hpp"
 namespace behavior_planner {
 struct SafetyConfig {
   double front_min_gap = 8.0;
@@ -50,6 +51,13 @@ struct AvoidTargetConfig {
 };
 class FeatureBuilder {
  public:
+  void setHighwayRoute(std::shared_ptr<const HighwayMergeRoute> route) { highway_route_=std::move(route);highway_approach_={}; }
+  void setHighwayReference(asmc_planner::lane_reference::HighwayReferenceStatus status) {
+    if(status.epoch!=highway_reference_.epoch) {
+      avoid_overlap_states_.clear();recent_lead_={};last_lead_vehicle_id_=-1;
+    }
+    highway_reference_=std::move(status);
+  }
   void setRoundaboutMerge(bool enabled, const std::string& stop_node, const std::string& source, const std::string& target) {
     roundabout_enabled_=enabled;roundabout_stop_node_=stop_node;roundabout_source_=source;roundabout_target_=target;
   }
@@ -67,8 +75,13 @@ class FeatureBuilder {
                      const RouteManager&, const TrafficLightProvider&,
                      const std::function<bool(const ObjectFeature&)>& static_avoid_eligible = {},
                      const std::function<PerceptionObjects(UrbanFeature&,const PerceptionObjects&)>& object_policy = {});
+  UrbanFeature build(const EgoState&, const PerceptionObjects&,
+                     const RouteManager&, const TrafficLightProvider&,double evaluation_time,
+                     const std::function<bool(const ObjectFeature&)>& static_avoid_eligible = {},
+                     const std::function<PerceptionObjects(UrbanFeature&,const PerceptionObjects&)>& object_policy = {});
 
  private:
+  void buildHighwayLaneChange(UrbanFeature&,const PerceptionObjects&,double evaluation_time);
   struct AvoidOverlapState {
     int enter_cycles = 0;
     int exit_cycles = 0;
@@ -97,6 +110,9 @@ class FeatureBuilder {
     double width = 0.0;
   };
 
+  std::shared_ptr<const HighwayMergeRoute> highway_route_;
+  HighwayMergeApproach highway_approach_;
+  asmc_planner::lane_reference::HighwayReferenceStatus highway_reference_;
   bool roundabout_enabled_=false;
   std::string roundabout_stop_node_,roundabout_source_,roundabout_target_;
   int frame_ = 0;

@@ -48,7 +48,7 @@ bool PlanningPort::prepareStopTarget(
     double stop_s = 0.0;
     // ego_s를 hint로 넘겨 트랙이 자기 자신과 가까워지는 구간에서 최근접점이
     // 다른 구간으로 튀지 않게 한다. 목표가 경로에서 너무 멀면 false다.
-    if (!planner_.ProjectPointToS(command.target_pose_map.position.x,
+    if (!planner().ProjectPointToS(command.target_pose_map.position.x,
                                   command.target_pose_map.position.y, ego_s,
                                   stop_s)) {
         command_manager_.NotifyPlanFailed(
@@ -82,7 +82,7 @@ bool PlanningPort::prepareStopTarget(
     // 가깝지만 진행 방향이 반대인 지점에 목표가 붙을 수 있다.
     // 계약 3.4절 4항의 heading 검증이다.
     double reference_heading = 0.0;
-    if (!planner_.ReferenceHeadingAt(stop_s, reference_heading)) {
+    if (!planner().ReferenceHeadingAt(stop_s, reference_heading)) {
         command_manager_.NotifyPlanFailed(
             /*terminal=*/true,
             asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,

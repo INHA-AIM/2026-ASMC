@@ -12,6 +12,7 @@
 #include <yaml-cpp/yaml.h>
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <deque>
 #include <limits>
 #include <stdexcept>
@@ -83,6 +84,7 @@ struct Camera {
     int width = 0, height = 0;
     cv::Matx33d intrinsic;
     cv::Matx33d homography;                // base_link 지면 xy -> 원본 영상 uv.
+    cv::Matx33d ground_from_image;         // homography 역행렬. BBOX 하단 접점의 지면 좌표 추정용.
     cv::Matx33d rotation;
     cv::Vec3d translation;
     double ground_z = 0.0;
@@ -308,6 +310,29 @@ void laneCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& message) {
 bool projectPoint(const Point& point, cv::Point2d& pixel) {
     return lane_boundary_adapter::projectGroundPoint(camera.intrinsic,camera.rotation,
         camera.translation,camera.selected_plane,point.x,point.y,pixel);
+}
+
+// 영상 uv -> base_link 지면 xy. 평지 가정이며 소실선 위/카메라 뒤 점은 거부한다.
+bool imageToGround(double u, double v, Point& point) {
+    const cv::Vec3d ground = camera.ground_from_image * cv::Vec3d(u, v, 1.0);
+    if (std::abs(ground[2]) < 1e-12) return false;
+    point.x = ground[0] / ground[2];
+    point.y = ground[1] / ground[2];
+    cv::Point2d pixel;
+    // 역투영 결과를 다시 투영해 같은 픽셀로 돌아오는지 확인한다(카메라 뒤쪽 해 제거).
+    return std::isfinite(point.x) && std::isfinite(point.y) && point.x > 0.0 &&
+        projectPoint(point, pixel) && std::hypot(pixel.x - u, pixel.y - v) < 1.0;
+}
+
+// 분류된 BBOX의 하단 모서리 두 점을 지면에 투영한다. 비스듬한 물체의 먼 쪽 측면은
+// 같은 픽셀이 더 가까운 깊이로 투영되므로 자차 중심선 쪽으로 넓게(보수적으로) 추정된다.
+bool measureGroundContact(const lane_boundary_adapter::CameraBBox& box, double& x, double& y_min, double& y_max) {
+    Point left, right;
+    if (!imageToGround(box.xmin, box.ymax, left) || !imageToGround(box.xmax, box.ymax, right)) return false;
+    x = std::min(left.x, right.x);
+    y_min = std::min(left.y, right.y);
+    y_max = std::max(left.y, right.y);
+    return true;
 }
 
 std::vector<LaneQuad> projectLanes(const Context& context) {
@@ -630,6 +655,11 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
         camera.selected_plane=projection->plane;
         camera.homography=lane_boundary_adapter::groundHomography(camera.intrinsic,camera.rotation,
             camera.translation,camera.selected_plane);
+        // 역행렬도 같은 프레임 평면으로 갱신한다. 갱신하지 않으면 imageToGround가
+        // 정적 평면으로 역투영하고 projectPoint가 프레임 평면으로 재투영해 왕복 검사가
+        // 어긋나고, BBOX 하단 접점이 항상 측정 실패(nan)가 된다.
+        if (std::abs(cv::determinant(camera.homography)) >= 1e-12)
+            camera.ground_from_image=camera.homography.inv();
     }
     Result result;
     result.header = message->header;
@@ -667,6 +697,21 @@ void processFrame(const lane_boundary_adapter::CameraBBoxFrame::ConstPtr& messag
         }
         result.assignments.push_back(assignment);
         result.box_reasons.push_back(reason);
+        // 정상 접점이 보이는 차로 점유 박스만 지면 좌표를 낸다. 잘린 연속 추적 박스는 측정하지 않는다.
+        double contact_x = std::numeric_limits<double>::quiet_NaN(), contact_y_min = contact_x, contact_y_max = contact_x;
+        if (!associated && (assignment == Result::OWN || assignment == Result::ADJACENT || assignment == Result::BOTH) &&
+            !measureGroundContact(box, contact_x, contact_y_min, contact_y_max)) {
+            contact_x = contact_y_min = contact_y_max = std::numeric_limits<double>::quiet_NaN();
+            // 측정 실패와 "측정 대상이 아님"을 진단에서 구분한다. 회피 판단은 접점이
+            // 없으면 장애물을 기억하지 못하므로 어느 쪽인지가 중요하다.
+            char detail[96];
+            std::snprintf(detail, sizeof(detail), ";ground_contact_unprojectable:u=%.0f-%.0f,v=%.0f",
+                          box.xmin, box.xmax, box.ymax);
+            result.box_reasons.back() += detail;
+        }
+        result.contact_x.push_back(contact_x);
+        result.contact_y_min.push_back(contact_y_min);
+        result.contact_y_max.push_back(contact_y_max);
         own_hit |= assignment == Result::OWN || assignment == Result::BOTH;
         adjacent_hit |= assignment == Result::ADJACENT || assignment == Result::BOTH;
         unknown |= assignment == Result::UNKNOWN;
@@ -704,7 +749,7 @@ void publishResult(Result result) {
     add("own_state", std::to_string(result.own_state));
     add("adjacent_state", std::to_string(result.adjacent_state));
     add("publishes_control", "false");
-    add("estimates_obstacle_distance", "false");
+    add("estimates_obstacle_distance", "flat_ground_bottom_contact_only");
     add("projection_policy",params.projection_context_required?"exact_image_context":"legacy_static_replay");
     add("projection_pending",std::to_string(pending_frames.size()));
     add("projection_pending_overflow",std::to_string(pending_overflow));
@@ -801,6 +846,13 @@ void publishImage(cv::Mat image, const std_msgs::Header& header, const Result& r
                     "% / ADJ " + std::to_string(static_cast<int>(100*contact.adjacent_ratio)) + "%";
                 cv::putText(image, text, cv::Point(tl.x,std::min(camera.height-10,bottom+20)),
                             cv::FONT_HERSHEY_SIMPLEX,.5,cv::Scalar(0,220,255),1);
+                if (i < result.contact_x.size() && std::isfinite(result.contact_x[i])) {
+                    char ground[96];
+                    std::snprintf(ground, sizeof(ground), "x %.1fm  y [%.2f, %.2f]m",
+                                  result.contact_x[i], result.contact_y_min[i], result.contact_y_max[i]);
+                    cv::putText(image, ground, cv::Point(tl.x,std::min(camera.height-10,bottom+38)),
+                                cv::FONT_HERSHEY_SIMPLEX,.5,cv::Scalar(0,220,255),1);
+                }
             }
         }
         cv::putText(image, box.label + " " + names[label], cv::Point(tl.x,std::max(18,tl.y-4)), cv::FONT_HERSHEY_SIMPLEX,.55,color,2);
@@ -928,5 +980,7 @@ void loadCalibration() {
         projection_buffer=std::make_unique<lane_boundary_adapter::GroundProjectionBuffer>(
             params.expected_hash,ids,camera.selected_plane);
     }
+    if (std::abs(cv::determinant(camera.homography)) < 1e-12) throw std::runtime_error("singular ground homography");
+    camera.ground_from_image=camera.homography.inv();
 }
 }  // namespace

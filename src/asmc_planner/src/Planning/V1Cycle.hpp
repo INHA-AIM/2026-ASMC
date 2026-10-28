@@ -105,7 +105,7 @@ void Planner::RunV1(RuntimePort& port) {
     // RefLine을 가진 planner가 여기서 Frenet s로 투영해 명령을 완성한다.
     if (command.mode == STOP) {
         double ego_s = 0.0;
-        if (!port.planner_.ProjectEgoToS(ego, ego_s)) {
+        if (!port.planner().ProjectEgoToS(ego, ego_s)) {
             ROS_WARN_THROTTLE(
                 1.0, "Frenet STOP required: cannot project ego onto reference line");
             port.publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
@@ -114,7 +114,7 @@ void Planner::RunV1(RuntimePort& port) {
         double stop_s = 0.0;
         // ego_s를 hint로 넘겨 트랙이 자기 자신과 가까워지는 구간에서 최근접점이
         // 다른 구간으로 튀지 않게 한다. 목표가 경로에서 너무 멀면 false.
-        if (!port.planner_.ProjectPointToS(snapshot.behavior.stop_x,
+        if (!port.planner().ProjectPointToS(snapshot.behavior.stop_x,
                                       snapshot.behavior.stop_y,
                                       ego_s, stop_s)) {
             ROS_WARN_THROTTLE(
@@ -129,7 +129,7 @@ void Planner::RunV1(RuntimePort& port) {
         command.stop_position = stop_s;
     }
 
-    port.planner_.SetObjectObservationTime(snapshot.objects.header.stamp.toSec());
+    port.planner().SetObjectObservationTime(snapshot.objects.header.stamp.toSec());
     const ConversionStatus objects_status =
         ConvertDetectedObjects(snapshot.objects, objects);
     if (objects_status != ConversionStatus::OK) {
@@ -141,7 +141,7 @@ void Planner::RunV1(RuntimePort& port) {
     }
 
     CartesianPath path;
-    if (!CalculateFrenet(path, [&] { return port.planner_.Plan(ego, objects, command, path); }).success) {
+    if (!CalculateFrenet(path, [&] { return port.planner().Plan(ego, objects, command, path); }).success) {
         ++port.plan_fail_streak_;
         // 이전 궤적 재사용은 "이번 사이클만 후보를 못 만든" 일시적 실패에만
         // 허용된다. 명령 자체가 잘못됐거나(INVALID_COMMAND) 지원하지 않는
@@ -149,7 +149,7 @@ void Planner::RunV1(RuntimePort& port) {
         // STOP 명령을 받고도 직전 KEEP 궤적을 따라 계속 주행하게 된다.
         // 이런 실패는 재사용 없이 즉시 정지한다.
         const FrenetPlanner::PlanFailureReason reason =
-            port.planner_.last_failure_reason();
+            port.planner().last_failure_reason();
         bool immediate_stop = true;
         uint8_t failure_code = asmc_msgs::Trajectory::FAILURE_GENERATION;
         const char* reason_name = "UNKNOWN";
@@ -210,8 +210,8 @@ void Planner::RunV1(RuntimePort& port) {
     }
 
     asmc_msgs::Trajectory trajectory;
-    const ConversionStatus trajectory_status = ConvertCartesianPath(
-        path, port.planner_.sample_dt(), snapshot.vehicle, trajectory);
+    const ConversionStatus trajectory_status = port.convertReferencePath(
+        path, port.planner().sample_dt(), snapshot.vehicle, trajectory);
     if (trajectory_status != ConversionStatus::OK) {
         ++port.plan_fail_streak_;
         if (port.has_last_valid_trajectory_ &&
@@ -238,7 +238,7 @@ void Planner::RunV1(RuntimePort& port) {
         "Frenet KEEP plan ready: command_id=%u points=%zu dt=%.3f "
         "vehicle_age=%.3f objects_age=%.3f behavior_age=%.3f; "
         "trajectory published",
-        snapshot.behavior.command_id, path.x.size(), port.planner_.sample_dt(),
+        snapshot.behavior.command_id, path.x.size(), port.planner().sample_dt(),
         vehicle_age, objects_age, behavior_age);
 }
 }

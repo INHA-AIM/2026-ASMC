@@ -78,10 +78,12 @@ lidar:
     MinPoints: 5
     Adaptive:
       Enabled: true
-      NearRange: 8.0
+      NearRange: 10.0
       FarRange: 50.0
-      NearEps: 0.55
-      FarEps: 0.85
+      NearEps: 1.30
+      FarEps: 1.32
+      RearNearEps: 1.60
+      RearFarEps: 1.62
   # Main setting.yaml LiDAR.Tracking.
   Tracking:
     UseMapAssociation: true
