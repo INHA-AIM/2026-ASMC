@@ -1,8 +1,11 @@
 // Separate LOCAL-1 input boundary. Normal map converter/behavior stays intact.
 #include "MPC/MPC.hpp"
 #include "local/execution_history.hpp"
+#include "local/ownership_watch.hpp"
+#include <memory>
 #include "MPC/Reference/path_resampler.hpp"
 #include "MPC/Reference/reference_validator.hpp"
+#include "MPC/Reference/braking_reference.hpp"
 #include "Util/MessageConverter.hpp"
 #include "Util/ParameterLoader.hpp"
 #include <asmc_msgs/LocalTrajectory.h>
@@ -19,7 +22,9 @@
 
 class LocalController {
   ros::NodeHandle nh, p{"~"};
-  ros::Subscriber state_sub, path_sub, mode_sub;
+  ros::Subscriber state_sub, path_sub, mode_sub, issued_sub;
+  std::unique_ptr<asmc_local::OwnershipWatch> ownership;
+  asmc_local::OwnershipWatch::Snapshot ownership_state;
   ros::Publisher command_pub, trace_pub, diagnostics_pub;
   std::string last_json = "{}";
   ros::SteadyTimer timer, diagnostic_timer;
@@ -48,16 +53,37 @@ class LocalController {
   void mode(const std_msgs::UInt8::ConstPtr &m) {
     bool next = m->data == 1;
     if (next != selected) {
-      resetExecution();
-      plan.reset();
+      ResetMPCOnFailSafe();
+      execution_history.Pending();
+      // A mode change is not a producer/frame reset. A freshly prepared
+      // trajectory remains eligible under the ordinary source-time checks.
       last_good.reset();
       last_solved = ros::SteadyTime();
     }
     selected = next;
   }
+  void issued(const morai_msgs::CtrlCmd::ConstPtr &m) {
+    if (selected || !enabled || !m || m->longlCmdType != 1 ||
+        !std::isfinite(m->steering + m->accel + m->brake)) return;
+    const auto &params = GetMPCParams();
+    auto response = [](double pedal, const std::vector<double> &x,
+                       const std::vector<double> &y, double full) {
+      if (x.size() < 2 || x.size() != y.size()) return pedal * full;
+      size_t i = 1;
+      while (i + 1 < x.size() && pedal > x[i]) ++i;
+      return y[i-1] + (pedal-x[i-1])*(y[i]-y[i-1])/(x[i]-x[i-1]);
+    };
+    MPCControl value;
+    value.delta = std::clamp(m->steering, -params.steering_max, params.steering_max);
+    value.accel = m->brake > 0 ? -BrakePedalDeceleration(m->brake, params) :
+        params.use_calibrated_pedal_mapping ? response(m->accel, params.accel_pedal_lut,
+        params.accel_response_lut, params.accel_max) : m->accel*params.accel_max;
+    execution_history.Issued(ros::SteadyTime::now().toSec(), value);
+  }
   void receiveState(const nav_msgs::Odometry::ConstPtr &m) {
     if (!state || m->header.frame_id != state->header.frame_id) {
       resetExecution();
+      frame = m->header.frame_id;
       plan.reset();
       last_good.reset();
       last_solved = ros::SteadyTime();
@@ -117,6 +143,9 @@ class LocalController {
       << ",\"brake\":" << cmd.brake << ",\"processing_ms\":" << cost
       << ",\"tracking_error_m\":" << cross
       << ",\"heading_error_rad\":" << heading
+      << ",\"ownership_verified\":" << (ownership_state.verified ? "true" : "false")
+      << ",\"ownership_age_s\":" << ownership_state.age_s
+      << ",\"ownership_query_ms\":" << ownership_state.query_ms
       << ",\"control_enabled\":" << (enabled && selected ? "true" : "false")
       << "}";
     last_json = s.str();
@@ -141,47 +170,22 @@ class LocalController {
     }
     report(false, cmd);
   }
-  std::string controlConflict() {
-    XmlRpc::XmlRpcValue args, result, payload;
-    args[0] = ros::this_node::getName();
-    if (!ros::master::execute("getSystemState", args, result, payload, false))
-      return "ROS master ownership unavailable";
-    for (int i = 0; i < payload[0].size(); ++i) {
-      const std::string topic = payload[0][i][0];
-      // /ctrl_cmd/jamming is the existing selector slot, not the old BBox
-      // follower. Local control owns this slot exclusively. A NORMAL command
-      // producer is allowed only when explicitly named by the integrated
-      // autonomy launch. Standalone trials retain the strict exclusion rule.
-      if (topic == command_pub.getTopic() || topic == "/ctrl_cmd/normal") {
-        for (int j = 0; j < payload[0][i][1].size(); ++j) {
-          const std::string owner = payload[0][i][1][j];
-          if (topic == "/ctrl_cmd/normal" && !normal_controller_node.empty() &&
-              owner == normal_controller_node)
-            continue;
-          if (owner != ros::this_node::getName())
-            return topic + " owned by " + owner;
-        }
-      }
-      if (topic == "/ctrl_cmd" && !selector_node.empty()) {
-        for (int j = 0; j < payload[0][i][1].size(); ++j)
-          if (std::string(payload[0][i][1][j]) != selector_node)
-            return topic + " owned by " + std::string(payload[0][i][1][j]);
-      }
-    }
-    return {};
-  }
   void tick(const ros::SteadyTimerEvent &) {
     evaluation_time = ros::Time::now();
     command_published = false;
-    static unsigned cycles = 0;
-    if (enabled && cycles++ % 20 == 0) {
-      const auto conflict = controlConflict();
-      duplicate = !conflict.empty();
+    if (enabled) {
+      ownership_state = ownership->read();
+      duplicate = ownership_state.conflict;
       if (duplicate) {
         ROS_FATAL("LOCAL control ownership conflict: %s; refusing control",
-                  conflict.c_str());
+                  ownership_state.reason.c_str());
         ros::shutdown();
         return;
+      }
+      if (!ownership_state.verified) {
+        reason = ownership_state.reason;
+        report(false, morai_msgs::CtrlCmd());
+        return; // The selector watchdog remains responsible for lost control.
       }
     }
     used_plan = plan;
@@ -375,6 +379,20 @@ class LocalController {
     }
     auto command =
         mpc_controller_ros::ToRosControlCommand(output.control, GetMPCParams());
+    // The solver predicts future states, but may not renew expired input.
+    // This also prevents recording a computed-but-never-issued command.
+    if ((ros::Time::now()-candidate->scene_stamp).toSec() > (grace ? .55 : .35)) {
+      execution_history.Pending();
+      reason = "control_publish_source_expired";
+      report(false, command, (ros::SteadyTime::now()-start).toSec()*1000.);
+      return;
+    }
+    if (enabled && !ownership->read().verified) {
+      execution_history.Pending();
+      reason = "ownership_changed_during_solve";
+      report(false, command);
+      return;
+    }
     last_solved = ros::SteadyTime::now();
     last_steering = command.steering;
     // Preview has its own simulated command timeline. It never publishes.
@@ -448,6 +466,11 @@ public:
     path_sub = nh.subscribe("/planning/local/trajectory", 1,
                             &LocalController::receivePlan, this);
     mode_sub = nh.subscribe("/planning/mode", 1, &LocalController::mode, this);
+    if (enabled) {
+      issued_sub = nh.subscribe("/ctrl_cmd", 16, &LocalController::issued, this);
+      ownership = std::make_unique<asmc_local::OwnershipWatch>(
+          command_pub.getTopic(), normal_controller_node, selector_node);
+    }
     diagnostic_timer = nh.createSteadyTimer(
         ros::WallDuration(1.), [this](const ros::SteadyTimerEvent &) {
           diagnostic_msgs::DiagnosticArray d;

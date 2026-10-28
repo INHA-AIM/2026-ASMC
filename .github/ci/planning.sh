@@ -15,3 +15,20 @@ done
   cd "$ASMC_CI_BUILD/asmc_planner"
   ctest --output-on-failure -R '^(command_avoid_target_test|roundabout_execution_test|avoid_road_constraints_test|polygon_collision_test|prepared_static_inputs_test|_ctest_asmc_planner_gtest_detected_msg_converter_test|_ctest_asmc_planner_gtest_feature_builder_avoid_test|_ctest_asmc_planner_gtest_dynamic_object_policy_test)$'
 )
+# LOCAL uses the same single build. Tests own private masters; no MORAI/GPU/bag required.
+python3 tools/scen_runner/test_local_alignment.py
+python3 tools/scen_runner/test_local_boundary.py
+python3 tools/scen_runner/test_local_autonomy.py
+python3 tools/scen_runner/test_local_handoff.py
+python3 tools/scen_runner/test_local_ownership.py
+python3 src/asmc_planner/tests/behavior/local_debug_cache_test.py
+(
+  cd "$ASMC_CI_BUILD/asmc_planner"
+  ctest --output-on-failure -R '^local_planner_regression$'
+)
+
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_private_master.py'
+(
+  cd "$ASMC_CI_BUILD/asmc_controller"
+  ctest --output-on-failure -R 'local_execution_history_test'
+)

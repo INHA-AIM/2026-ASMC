@@ -18,7 +18,7 @@ def check_launches():
     def load(*args):
         return roslaunch.config.load_config_default([(path, list(args))], None)
     baseline = load('dashboard:=false')
-    local = load('jamming_planner:=local', 'dashboard:=false', 'local_speed_cap_kph:=10')
+    local = load('jamming_planner:=local', 'dashboard:=false')
     for config in (baseline, local):
         names = [n.namespace + n.name for n in config.nodes]
         assert len(names) == len(set(names)), names
@@ -37,7 +37,9 @@ def check_launches():
                        '/local_controller/normal_controller_node': '/mpc_controller',
                        '/local_controller/selector_node': '/asmc_control_selector',
                        '/local_planner/active_in_jamming_only': True,
-                       '/local_planner/speed_cap_kph': 10}.items():
+                       '/local_planner/speed_cap_kph': 10,
+                       '/asmc_control_selector/local_handoff_enabled': True,
+                       '/planning_mode/local_prepare_enabled': True}.items():
         assert local.params[key].value == value, (key, local.params[key].value)
     external = load('jamming_planner:=local', 'local_semantic_input:=false')
     assert not any(n.name == 'semantic_space_trial' for n in external.nodes)

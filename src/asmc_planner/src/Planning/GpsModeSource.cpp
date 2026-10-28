@@ -33,6 +33,16 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
     params.param("shadow_zone/heading_tolerance_rad", heading_rad, heading_rad);
     // 경로를 못 읽으면 조용히 끄지 않는다. 음영 진입을 놓치면 MPC가 GPS 없이 달린다.
     zone_.reset(new ShadowZone(path_file, start_m, end_m, lateral_m, heading_rad));
+    bool local_prepare = false;
+    params.param("local_prepare_enabled", local_prepare, false);
+    if (local_prepare) {
+      // Preparation is additional to the existing entry station, not a change
+      // to GPS blackout/mission detection. No map pose is used after blackout.
+      prepare_zone_.reset(new ShadowZone(path_file, std::max(0.0, start_m-30.0),
+                                         start_m, lateral_m, heading_rad));
+      local_prepare_pub_ = nh_.advertise<std_msgs::Bool>(
+          "/planning/mode/local_prepare", 1, true);
+    }
     std::string state_topic;
     params.param("shadow_zone/state_topic", state_topic, std::string("/planning/vehicle/state"));
     state_sub_ = nh_.subscribe(state_topic, 1, &GpsModeSource::stateCallback, this);
@@ -56,6 +66,7 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   publishStatus(Now());
   publishLidarPause();
   publishGpsReturn();
+  publishLocalPrepare(Now());
   timer_ = nh_.createSteadyTimer(ros::WallDuration(0.05), &GpsModeSource::timerCallback, this);
   ROS_INFO("Planning mode NORMAL: waiting for raw /gps");
 }
@@ -72,8 +83,14 @@ void GpsModeSource::gpsCallback(const morai_msgs::GPSMessage::ConstPtr& message)
 
 void GpsModeSource::stateCallback(const asmc_msgs::VehicleState::ConstPtr& message) {
   // blackout 동안의 추정 자세로 구간을 다시 판정하지 않는다. 마지막 판정을 유지한다.
+  in_prepare_zone_ = false;
   if (!message || !message->valid || detector_.gps_zero() || detector_.gps_no_fix() ||
       detector_.cause() == JammingReason::GPS_TIMEOUT) return;
+  const double age = (ros::Time::now()-message->header.stamp).toSec();
+  if (prepare_zone_ && age >= 0.0 && age <= .35) {
+    in_prepare_zone_ = prepare_zone_->Contains(message->x, message->y, message->yaw);
+    prepare_state_received_s_ = Now();
+  }
   double station = -1.0;
   const bool inside = zone_->Contains(message->x, message->y, message->yaw, &station);
   zone_station_m_ = inside ? station : -1.0;
@@ -109,7 +126,20 @@ void GpsModeSource::timerCallback(const ros::SteadyTimerEvent&) {
   }
   publishLidarPause();
   publishGpsReturn();
+  publishLocalPrepare(now);
   if (last_status_s_ < 0.0 || now - last_status_s_ >= 0.5) publishStatus(now);
+}
+
+void GpsModeSource::publishLocalPrepare(double now) {
+  if (!prepare_zone_ || (last_prepare_publish_s_ >= 0.0 && now-last_prepare_publish_s_ < .2))
+    return;
+  last_prepare_publish_s_ = now;
+  std_msgs::Bool output;
+  output.data = mode_ == PlanningMode::NORMAL && in_prepare_zone_ &&
+      prepare_state_received_s_ >= 0.0 && now-prepare_state_received_s_ <= .35 &&
+      !detector_.gps_zero() && !detector_.gps_no_fix() &&
+      detector_.cause() != JammingReason::GPS_TIMEOUT;
+  local_prepare_pub_.publish(output);
 }
 
 void GpsModeSource::onDetectorChange() {

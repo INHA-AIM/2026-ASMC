@@ -76,7 +76,7 @@ struct Result {
     int object_id;
   };
   std::vector<Rejected> rejected_examples;
-  double alignment_ms = 0, search_ms = 0, speed_ms = 0;
+  double alignment_ms = 0, search_ms = 0, speed_ms = 0, index_ms = 0;
   struct Candidate {
     std::vector<Pose> path;
     std::string reason;
@@ -88,7 +88,7 @@ struct Result {
 };
 // Distance-normalized final score; does not certify collision validity.
 double SegmentQualityCost(const Scene &, const Config &, const Pose &, const Pose &, unsigned soft_cells);
-Result Plan(const Scene &, const Config &);
+Result Plan(Scene, const Config &);
 bool CheckFootprint(const Scene &, const Config &, const Pose &, Result &);
 std::array<double, 3> Rotate(const std::array<double, 9> &, double, double,
                              double);

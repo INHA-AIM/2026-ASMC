@@ -29,7 +29,7 @@ def main():
     from geometry_msgs.msg import Point
     from sensor_msgs.msg import Image, Imu
     from morai_msgs.msg import EgoVehicleStatus
-    from std_msgs.msg import String, UInt8
+    from std_msgs.msg import String, UInt8, Bool
 
     processes = []
     logs = []
@@ -66,6 +66,7 @@ def main():
                 ],
                 "planner.log",
             )
+            preparation = rospy.Publisher("/planning/mode/local_prepare", Bool, queue_size=1)
             mode = rospy.Publisher("/planning/mode", UInt8, queue_size=1, latch=True)
             pub = {}
             for name, topic, kind in [
@@ -113,13 +114,16 @@ def main():
             time.sleep(.1)
             sequence = 0
 
-            def feed(seconds, speed, status=1, session="camera-a", duplicate=False):
+            prepare_mode = False
+            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20):
                 nonlocal sequence
                 rows.clear()
                 plans.clear()
                 begin = time.monotonic()
                 next_scene = 0
                 while time.monotonic() - begin < seconds:
+                    if prepare_mode:
+                        preparation.publish(Bool(True))
                     now = rospy.Time.now()
                     v = EgoVehicleStatus()
                     v.header.stamp = now
@@ -132,7 +136,7 @@ def main():
                     if time.monotonic() >= next_scene:
                         next_scene = time.monotonic() + 0.1
                         sequence += 1
-                        stamp = now - rospy.Duration(0.20)
+                        stamp = now - rospy.Duration(camera_age)
                         ctx = CameraGroundProjection()
                         ctx.header.stamp = stamp
                         ctx.producer_session_id = session
@@ -225,6 +229,13 @@ def main():
             assert any(r["reason"] == "local_objects_invalid" for r in result)
             assert not any(r.get("scene_valid") for r in result[-3:])
             print("latest INVALID never revives older valid scan PASS")
+            result, _ = feed(1.5, 1.0, status=empty, camera_age=.275)
+            late = [r for r in result if r.get('valid')]
+            assert late, [r['reason'] for r in result]
+            assert all(r['frame_budget_ms'] <= 30 for r in late), late[-1]
+            print('Late complete bundles use a shorter compute budget;350ms freshness unchanged PASS')
+            result, _ = feed(.6, 1.0, status=empty, camera_age=.36)
+            assert not any(r.get('valid') for r in result[-3:])
             result, _ = feed(1.5, 1.0, status=empty, session="camera-b")
             valid = [r for r in result if r.get("scene_valid")]
             assert valid and valid[-1]["inputs"]["camera_session"] == "camera-b"
@@ -238,11 +249,16 @@ def main():
             time.sleep(.2)
             result, _ = feed(.6, 1.0, status=empty, session="camera-b")
             assert result and all(r["reason"] == "inactive_normal_mode" for r in result)
-            mode.publish(UInt8(1))
-            time.sleep(.2)
+            prepare_mode = True
             result, _ = feed(1.0, 1.0, status=empty, session="camera-b")
+            assert any(r.get("scene_valid") and r.get("phase") == "prepare" for r in result)
+            before_frames = {r['frame'] for r in result if r.get('scene_valid')}
+            mode.publish(UInt8(1))
+            time.sleep(.05)
+            result, _ = feed(1.0, 1.0, status=empty, session="camera-b")
+            assert any(r.get('phase') == 'active' and r['frame'] in before_frames for r in result if r.get('scene_valid'))
             assert any(r.get("scene_valid") for r in result)
-            print("NORMAL input remains warm without planning; fresh re-entry scene PASS")
+            print("NORMAL idle / bounded preparation / same-frame ACTIVE entry PASS")
             assert node.poll() is None
             assert not dict(master.getSystemState()[0]).get("/ctrl_cmd")
             assert not dict(master.getSystemState()[0]).get("/ctrl_cmd/jamming")

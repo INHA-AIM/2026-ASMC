@@ -24,6 +24,7 @@ public:
       throw std::runtime_error("cannot open registered journal");
     worker = std::thread([this] { run(); });
   }
+  bool enabled() const { return worker.joinable(); }
   void push(std::string row) {
     if (!worker.joinable())
       return;

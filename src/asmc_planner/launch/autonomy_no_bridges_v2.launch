@@ -7,7 +7,9 @@
        local selects the independent GPS-free planner/MPC through the SAME
        mode source and selector. Bridge/camera inference/LiDAR stay external. -->
   <arg name="jamming_planner" default="camera" doc="camera: 기존 BBox 방식, local: GPS 독립 노면·family·LiDAR 경로/MPC"/>
-  <arg name="local_speed_cap_kph" default="25" doc="LOCAL 목표 상한. 첫 수동 확인은 10 권장; 관측·곡률·회복 제한은 유지"/>
+  <arg name="local_speed_cap_kph" default="10" doc="LOCAL 목표 상한. 첫 수동 확인은 10 권장; 관측·곡률·회복 제한은 유지"/>
+  <arg name="local_run_id" default="local-autonomy"/>
+  <arg name="local_journal_path" default=""/>
   <arg name="local_semantic_input" default="true" doc="LOCAL 노면 투영 입력 시작. 같은 semantic_space_trial이 이미 실행 중이면 false"/>
   <!-- Integrated planner, input adapters and controller. Bridges and asmc_lidar
        remain separately managed. This wrapper currently supports LiDAR input. -->
@@ -58,6 +60,7 @@
     <param name="shadow_zone/station_start_m" value="$(arg shadow_zone_start_m)"/>
     <param name="shadow_zone/station_end_m" value="1996.730791531"/>
     <param name="shadow_zone/state_topic" value="$(arg state_topic)"/>
+    <param name="local_prepare_enabled" value="$(eval arg('jamming_planner') == 'local')"/>
   </group>
 
   <!-- Dictionary lookup rejects unsupported sources during launch loading. -->
@@ -95,7 +98,9 @@
     <arg name="state_topic" value="$(arg state_topic)"/>
   </include>
   <node pkg="asmc_planner" type="asmc_control_selector_node"
-        name="asmc_control_selector" output="screen" required="true"/>
+        name="asmc_control_selector" output="screen" required="true">
+    <param name="local_handoff_enabled" value="$(eval arg('jamming_planner') == 'local')"/>
+  </node>
   <!-- 재밍 BBOX 입력은 camera_bbox_frame_bridge가 /perception/camera/objects를 직접 받는다
        (별도 YOLO 변환 어댑터 없음, 소비 cutoff는 bbox_conf_thres 0.7). -->
   <include if="$(eval {'camera': True, 'local': False}[arg('jamming_planner')])"
@@ -137,7 +142,8 @@
     <arg name="selector_node" value="/asmc_control_selector"/>
     <arg name="semantic_input" value="$(arg local_semantic_input)"/>
     <arg name="speed_cap_kph" value="$(arg local_speed_cap_kph)"/>
-    <arg name="run_id" value="local-autonomy"/>
+    <arg name="run_id" value="$(arg local_run_id)"/>
+    <arg name="journal_path" value="$(arg local_journal_path)"/>
   </include>
   <include if="$(arg dashboard)" file="$(find asmc_planner)/launch/dashboard.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>

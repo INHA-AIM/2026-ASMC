@@ -396,10 +396,9 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
 }
 } // namespace
 static Result PlanPrepared(const Scene &, const Config &);
-Result Plan(const Scene &input, const Config &c) {
+Result Plan(Scene indexed, const Config &c) {
   const auto started = std::chrono::steady_clock::now();
   Result out;
-  Scene indexed = input;
   auto &grid = indexed.grid;
   if (grid.rows <= 0 || grid.cols <= 0 || grid.rows > 1000 ||
       grid.cols > 1000 || !std::isfinite(grid.resolution) ||
@@ -416,7 +415,9 @@ Result Plan(const Scene &input, const Config &c) {
       if (grid.coverage[index] != 255 || grid.probability[index] < 153)
         grid.blocked_columns[row].push_back(col);
     }
+  const double index_ms = elapsed(started);
   auto out_prepared = PlanPrepared(indexed, c);
+  out_prepared.index_ms = index_ms;
   out_prepared.elapsed_ms = elapsed(started);
   return out_prepared;
 }

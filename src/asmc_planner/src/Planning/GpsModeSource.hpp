@@ -30,6 +30,7 @@ class GpsModeSource final {
   void publishStatus(double now);
   void publishLidarPause();
   void publishGpsReturn();
+  void publishLocalPrepare(double now);
   ros::NodeHandle nh_;
   ros::Subscriber gps_sub_;
   ros::Subscriber state_sub_;
@@ -38,9 +39,13 @@ class GpsModeSource final {
   ros::Publisher status_pub_;
   ros::Publisher lidar_pause_pub_;
   ros::Publisher gps_return_pub_;
+  ros::Publisher local_prepare_pub_;
   ros::SteadyTimer timer_;
   JammingDetector detector_;
   std::unique_ptr<ShadowZone> zone_;
+  std::unique_ptr<ShadowZone> prepare_zone_;
+  bool in_prepare_zone_ = false;
+  double prepare_state_received_s_ = -1.0, last_prepare_publish_s_ = -1.0;
   double zone_station_m_ = -1.0;
   double last_status_s_ = -1.0;
   PlanningMode mode_ = PlanningMode::NORMAL;  // 발행 중인 모드. detector_ 판정보다 늦게 NORMAL이 된다.

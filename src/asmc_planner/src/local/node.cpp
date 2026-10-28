@@ -20,6 +20,7 @@
 #include <set>
 #include <sstream>
 #include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
 #include <std_msgs/UInt8.h>
 
 namespace local_planning {
@@ -45,14 +46,23 @@ class Node {
   RoadMemory road_memory;
   bool use_road_memory = true;
   bool active_in_jamming_only = false, jamming_selected = false;
-  uint64_t mode_generation = 0;
+  uint64_t mode_generation = 0, scene_generation = 0, calculated_generation = ~uint64_t(0);
+  bool preparing = false;
+  double prepare_received = 0;
+  std::string evaluation_frame, phase = "idle";
+  uint64_t expected_scene_generation = 0, expected_mode_generation = 0;
+  std::mutex diagnostic_mutex;
+  double input_lock_wait_ms = 0, input_lock_hold_ms = 0, snapshot_ms = 0;
+  double memory_ms = 0, debug_geometry_ms = 0, frame_budget_ms = 0;
+  uint64_t deadline_discarded = 0;
+  bool detail = false, scene_assembled = false;
   // Callbacks own the small input cache. Expensive Plan runs outside this lock;
   // a second callback thread keeps signed odometry and arrivals current.
   std::mutex input_mutex, calculation_mutex;
   uint64_t discarded_plans = 0;
   std::string session, run, frame, camera_epoch, speed_caller, config_id;
   ros::Subscriber speed_sub, imu_sub, prob_sub, cover_sub, context_sub,
-      family_sub, objects_sub, mode_sub;
+      family_sub, objects_sub, mode_sub, prepare_sub;
   ros::Publisher odom_pub, path_pub, trajectory_pub, trace_pub, diagnostics_pub;
   ros::SteadyTimer planner_timer, diagnostic_timer;
   std::map<uint64_t, sensor_msgs::Image::ConstPtr> probs, covers;
@@ -87,7 +97,9 @@ class Node {
   uint64_t last_deferred_scene = 0, aged_bundle_deferred = 0;
   std::unique_ptr<Journal> journal;
   std::deque<std::string> recent;
-  std::string reason = "initializing", last_json = "{}";
+  std::string reason = "initializing", last_json = "{}", cached_reason = "initializing";
+  bool cached_valid = false;
+  std::deque<std::array<double, 10>> timing_recent;
   std::vector<Pose> previous;
   Motion previous_origin;
   std::string input_ids = "{}";
@@ -105,10 +117,7 @@ class Node {
     objects.clear();
     family_arrivals.clear();
     lidar_arrivals.clear();
-    previous.clear();
-    road_memory.clear();
-    last_scene = 0;
-    home_role = 0;
+    ++scene_generation; // Derived state is owned/reset by the calculation path.
   }
   void reset() {
     motion.reset();
@@ -119,12 +128,14 @@ class Node {
     const bool next = m->data == 1;
     if (next != jamming_selected) {
       ++mode_generation;
-      // Retain short motion history, but never reuse an earlier mode's scene,
-      // recovery memory or path. An in-flight Plan is rejected by generation.
-      clear_scene();
-      next_plan_due = 0;
+      // Keep fresh preparation across entry; only in-flight mode results expire.
     }
     jamming_selected = next;
+  }
+  void prepare(const std_msgs::Bool::ConstPtr &m) {
+    std::lock_guard<std::mutex> lock(input_mutex);
+    preparing = m->data;
+    prepare_received = ros::SteadyTime::now().toSec();
   }
   std::string current_frame() {
     return "local/" + session + "/" + std::to_string(motion.epoch);
@@ -182,10 +193,10 @@ class Node {
       return;
     odom_pub.publish(odometry(*state));
   }
-  nav_msgs::Odometry odometry(const Motion &m) {
+  nav_msgs::Odometry odometry(const Motion &m, const std::string &frame_id = "") {
     nav_msgs::Odometry o;
     o.header.stamp.fromSec(m.t);
-    o.header.frame_id = current_frame();
+    o.header.frame_id = frame_id.empty() ? current_frame() : frame_id;
     o.child_frame_id = "base_link";
     o.pose.pose.position.x = m.x;
     o.pose.pose.position.y = m.y;
@@ -241,14 +252,15 @@ class Node {
       objects.pop_front();
   }
   void report(const Result &r, double age, uint64_t stamp) {
+    const auto serialization_start = ros::SteadyTime::now();
     std::ostringstream s;
     s << std::setprecision(17) << "{\"schema\":\"local1\",\"run_id\":\"" << run
-      << "\",\"frame\":\"" << current_frame()
+      << "\",\"frame\":\"" << evaluation_frame
       << "\",\"plan_sequence\":" << sequence << ",\"inputs\":" << input_ids
       << ",\"scene\":" << scene_debug << ",\"input_join\":" << join_debug
       << ",\"scene_stamp_ns\":" << stamp
       << ",\"decision_stamp\":" << ros::Time::now().toSec()
-      << ",\"scene_valid\":" << (scene_debug != "{}" ? "true" : "false")
+      << ",\"scene_valid\":" << (scene_assembled ? "true" : "false")
       << ",\"valid\":" << (r.valid ? "true" : "false") << ",\"reason\":\""
       << r.reason << "\",\"age_s\":" << age
       << ",\"processing_ms\":" << r.elapsed_ms
@@ -259,6 +271,17 @@ class Node {
       << ",\"soft_semantic_margin_visits\":" << r.soft_margin_cells
       << ",\"search_ms\":" << r.search_ms << ",\"speed_ms\":" << r.speed_ms
       << ",\"alignment_ms\":" << r.alignment_ms
+      << ",\"critical_path_ms\":" << r.alignment_ms + r.elapsed_ms + snapshot_ms
+      << ",\"frame_budget_ms\":" << frame_budget_ms
+      << ",\"deadline_discarded\":" << deadline_discarded
+      << ",\"index_ms\":" << r.index_ms
+      << ",\"input_lock_wait_ms\":" << input_lock_wait_ms
+      << ",\"input_lock_hold_ms\":" << input_lock_hold_ms
+      << ",\"snapshot_ms\":" << snapshot_ms
+      << ",\"memory_ms\":" << memory_ms
+      << ",\"debug_geometry_ms\":" << debug_geometry_ms
+      << ",\"phase\":" << std::quoted(phase)
+      << ",\"detail_enabled\":" << (detail ? "true" : "false")
       << ",\"requested_kph\":" << config.speed_cap * 3.6
       << ",\"curve_kph\":" << r.curve_cap * 3.6
       << ",\"space_kph\":" << r.space_cap * 3.6
@@ -283,7 +306,7 @@ class Node {
     }
     s << "},\"path\":[";
     first = true;
-    for (auto &q : r.path) {
+    if (detail) for (auto &q : r.path) {
       if (!first)
         s << ",";
       first = false;
@@ -291,7 +314,7 @@ class Node {
     }
     s << "],\"goals\":[";
     first = true;
-    for (auto &q : r.goals) {
+    if (detail) for (auto &q : r.goals) {
       if (!first)
         s << ",";
       first = false;
@@ -299,7 +322,7 @@ class Node {
     }
     s << "],\"rejected_examples\":[";
     first = true;
-    for (auto &q : r.rejected_examples) {
+    if (detail) for (auto &q : r.rejected_examples) {
       if (!first)
         s << ",";
       first = false;
@@ -308,7 +331,7 @@ class Node {
         << "}";
     }
     s << "],\"candidates\":[";
-    for (size_t i = 0; i < r.candidates.size(); ++i) {
+    if (detail) for (size_t i = 0; i < r.candidates.size(); ++i) {
       if (i)
         s << ',';
       const auto &candidate = r.candidates[i];
@@ -327,14 +350,28 @@ class Node {
     s << ",\"vehicle\":{\"width\":" << config.width
       << ",\"front\":" << config.length - config.rear
       << ",\"rear\":" << config.rear << ",\"margin\":" << config.margin << "}}";
-    last_json = s.str();
-    journal->push(last_json);
-    recent.push_back(last_json);
+    std::string encoded = s.str();
+    encoded.pop_back();
+    encoded += ",\"serialization_ms\":" + std::to_string(
+        (ros::SteadyTime::now()-serialization_start).toSec()*1000.) + "}";
+    {
+      std::lock_guard<std::mutex> cache(diagnostic_mutex);
+      last_json = encoded;
+      cached_reason = r.reason;
+      cached_valid = r.valid;
+      timing_recent.push_back({double(sequence), r.valid ? 1. : 0., input_lock_wait_ms,
+          input_lock_hold_ms, r.alignment_ms + r.elapsed_ms + snapshot_ms,
+          debug_geometry_ms, (ros::SteadyTime::now()-serialization_start).toSec()*1000.,
+          r.index_ms, r.elapsed_ms, ros::Time::now().toSec()});
+      if (timing_recent.size() > 100) timing_recent.pop_front();
+    }
+    journal->push(encoded);
+    recent.push_back(encoded);
     if (recent.size() > 100)
       recent.pop_front();
     if (trace_pub.getNumSubscribers()) {
       std_msgs::String m;
-      m.data = last_json;
+      m.data = encoded;
       trace_pub.publish(m);
     }
     if (reason != r.reason) {
@@ -353,16 +390,24 @@ class Node {
     last_invalid = now;
     input_ids = "{}";
     scene_debug = "{}";
+    scene_assembled = false;
     previous.clear();
     Result r;
     r.reason = why;
     asmc_msgs::LocalTrajectory t;
     t.header.stamp = ros::Time::now();
-    t.header.frame_id = current_frame();
+    t.header.frame_id = evaluation_frame;
     t.reason = why;
     t.run_id = run;
     t.plan_sequence = ++sequence;
-    trajectory_pub.publish(t);
+    {
+      std::lock_guard<std::mutex> lock(input_mutex);
+      if (scene_generation != expected_scene_generation || mode_generation != expected_mode_generation) {
+        ++discarded_plans;
+        return;
+      }
+      trajectory_pub.publish(t);
+    }
     report(r, 0, 0);
   }
   void tick(const ros::SteadyTimerEvent &) {
@@ -370,8 +415,44 @@ class Node {
                                              std::try_to_lock);
     if (!computation.owns_lock())
       return;
+    const auto wait_start = ros::SteadyTime::now();
     std::unique_lock<std::mutex> lock(input_mutex);
-    if (active_in_jamming_only && !jamming_selected) {
+    const auto locked = ros::SteadyTime::now();
+    // Bounded pointer/history snapshot. No raster copy or JSON under this lock.
+    const auto motion = this->motion;
+    const auto contexts = this->contexts;
+    const auto probs = this->probs, covers = this->covers;
+    const auto families = this->families;
+    const auto objects = this->objects;
+    const auto family_arrivals = this->family_arrivals;
+    const auto lidar_arrivals = this->lidar_arrivals;
+    const auto camera_epoch = this->camera_epoch, lidar_epoch = this->lidar_epoch;
+    const auto imu_received = this->imu_received;
+    const auto expected_epoch = motion.epoch;
+    const auto expected_mode = mode_generation;
+    const auto expected_camera = camera_epoch, expected_lidar = lidar_epoch;
+    expected_scene_generation = scene_generation;
+    expected_mode_generation = mode_generation;
+    evaluation_frame = current_frame();
+    const bool selected_mode = jamming_selected;
+    const bool preparation = preparing && locked.toSec()-prepare_received <= .5;
+    const bool compute = !active_in_jamming_only || selected_mode || preparation;
+    lock.unlock();
+    input_lock_wait_ms = (locked-wait_start).toSec()*1000.;
+    input_lock_hold_ms = (ros::SteadyTime::now()-locked).toSec()*1000.;
+    snapshot_ms = input_lock_hold_ms;
+    memory_ms = debug_geometry_ms = 0;
+    frame_budget_ms = config.budget_ms;
+    detail = trace_pub.getNumSubscribers() || journal->enabled();
+    scene_debug = join_debug = input_ids = "{}";
+    scene_assembled = false;
+    phase = selected_mode ? "active" : preparation ? "prepare" :
+        active_in_jamming_only ? "idle" : "preview";
+    if (calculated_generation != expected_scene_generation || !compute) {
+      previous.clear(); road_memory.clear(); last_scene = 0; home_role = 0;
+      calculated_generation = expected_scene_generation;
+    }
+    if (!compute) {
       invalid("inactive_normal_mode");
       return;
     }
@@ -389,6 +470,7 @@ class Node {
       selected = it->first;
       break;
     }
+    if (detail) {
     std::ostringstream join;
     join << std::setprecision(17) << "{\"selected_stamp_ns\":" << selected
          << ",\"selection_policy\":\"independent_latest_to_plan\",\"newest_"
@@ -412,6 +494,7 @@ class Node {
     }
     join << "]}";
     join_debug = join.str();
+    }
     if (!selected) {
       invalid("no_complete_scene");
       return;
@@ -424,16 +507,16 @@ class Node {
     if (selected == last_scene ||
         ros::SteadyTime::now().toSec() < next_plan_due)
       return;
-    // Keep350ms source freshness at the control boundary. A250ms-old bundle
-    // can expire during up to50ms planning plus the next20Hz control tick.
-    // Wait for the next complete bundle instead of publishing a path that its
-    // first consumer must reject. This does not renew the previous command.
-    if (age > .25) {
+    // Preserve350ms source freshness and reserve one20Hz control period.
+    // Old fixed250ms preflight rejected usable270ms bundles and could wait
+    // another full camera/plan cycle. Shorten THIS search budget instead of
+    // extending freshness or treating an older observation as new.
+    if (age > .295) {
       if (last_deferred_scene != selected) {
         last_deferred_scene = selected;
         ++aged_bundle_deferred;
       }
-      ROS_WARN_THROTTLE(5., "LOCAL waiting for fresher bundle: age=%.3fs", age);
+      ROS_WARN_THROTTLE(5., "LOCAL waiting for source deadline headroom: age=%.3fs", age);
       return;
     }
     const auto plan_stamp = ros::Time::now();
@@ -514,6 +597,7 @@ class Node {
     const auto fi = family_arrivals.find(selected);
     const auto li = lidar_arrivals.find(array.header.stamp.toNSec());
     const double signed_skew = array.header.stamp.toSec() - t;
+    if (detail) {
     std::ostringstream ids;
     ids << std::setprecision(17) << "{\"camera_session\":\""
         << ctx->producer_session_id
@@ -549,6 +633,7 @@ class Node {
       ids << ",\"timing_available\":false";
     ids << "}";
     input_ids = ids.str();
+    }
     const auto alignment_start = ros::SteadyTime::now();
     Scene scene;
     scene.age = age;
@@ -628,7 +713,7 @@ class Node {
     if (begin > config.length - config.rear || end <= begin) {
       // Preserve the exact rejection evidence in input diagnostics, including
       // during body-motion cases where one role loses its near support.
-      join_debug.insert(join_debug.size() - 1,
+      if (detail) join_debug.insert(join_debug.size() - 1,
                         ",\"family_support_begin_m\":" + std::to_string(begin) +
                             ",\"family_support_end_m\":" + std::to_string(end));
       invalid("family_disconnected_support");
@@ -698,12 +783,19 @@ class Node {
       q.yaw += previous_origin.yaw - origin->yaw;
       scene.previous.push_back(q);
     }
+    const auto memory_start = ros::SteadyTime::now();
     if (use_road_memory) {
       road_memory.apply(g, Pose{origin->x, origin->y, origin->yaw},
                         plan_stamp.toSec());
       road_memory.observe(
           g, Pose{camera_origin->x, camera_origin->y, camera_origin->yaw}, t);
+    } else {
+      g.recent_road_age.assign(g.rows*g.cols, 0.f);
     }
+    memory_ms = (ros::SteadyTime::now()-memory_start).toSec()*1000.;
+    scene_assembled = true;
+    const auto geometry_start = ros::SteadyTime::now();
+    if (detail) {
     // Bounded debug geometry, never a second projection or image encoder.
     std::ostringstream debug;
     debug << std::setprecision(17) << "{\"ground_z\":" << g.ground_z
@@ -780,26 +872,46 @@ class Node {
     }
     debug << "]}";
     scene_debug = debug.str();
+    }
+    debug_geometry_ms = (ros::SteadyTime::now()-geometry_start).toSec()*1000.;
     double alignment_ms =
-        (ros::SteadyTime::now() - alignment_start).toSec() * 1000;
-    const auto expected_epoch = motion.epoch;
-    const auto expected_mode = mode_generation;
-    const auto expected_camera = camera_epoch, expected_lidar = lidar_epoch;
+        (ros::SteadyTime::now() - alignment_start).toSec() * 1000 - debug_geometry_ms;
     const auto scheduled = ros::SteadyTime::now().toSec();
     next_plan_due = next_plan_due == 0
                         ? scheduled + .1
                         : std::max(next_plan_due + .1, scheduled);
-    lock.unlock();
+    Config frame_config = config;
+    frame_budget_ms = std::min(config.budget_ms,
+        (.30 - (ros::Time::now().toSec()-t))*1000.);
+    if (frame_budget_ms < 5.) {
+      Result skipped;
+      skipped.reason = "planning_deadline_before_search";
+      ++deadline_discarded;
+      last_scene = selected;
+      report(skipped, age, selected);
+      return;
+    }
+    frame_config.budget_ms = frame_budget_ms;
     Result result;
     if (scene.speed < -.05)
       result.reason = "reverse_control_not_supported";
     else
-      result = Plan(scene, config);
+      result = Plan(std::move(scene), frame_config);
     lock.lock();
-    if (expected_mode != mode_generation || expected_epoch != motion.epoch || expected_camera != camera_epoch ||
-        expected_lidar != lidar_epoch) {
+    if (expected_mode != mode_generation || expected_epoch != this->motion.epoch || expected_camera != this->camera_epoch ||
+        expected_lidar != this->lidar_epoch || expected_scene_generation != scene_generation) {
       ++discarded_plans;
       return; // Reset/restart cannot publish an already computing old scene.
+    }
+    if (result.valid && ros::Time::now().toSec()-t > .30) {
+      ++deadline_discarded;
+      last_scene = selected;
+      lock.unlock();
+      result.valid = false;
+      result.reason = "planning_publish_deadline";
+      result.alignment_ms = alignment_ms;
+      report(result, age, selected);
+      return; // Never publish a path lacking one control tick of headroom.
     }
     result.alignment_ms = alignment_ms;
     last_scene = selected;
@@ -807,13 +919,13 @@ class Node {
     asmc_msgs::LocalTrajectory output;
     output.header = family->header;
     output.header.stamp = plan_stamp;
-    output.header.frame_id = current_frame();
+    output.header.frame_id = evaluation_frame;
     output.valid = result.valid;
     output.reason = result.reason;
     output.run_id = run;
     output.plan_sequence = sequence;
     output.scene_stamp = family->header.stamp;
-    output.ego_at_plan = odometry(*origin);
+    output.ego_at_plan = odometry(*origin, evaluation_frame);
     // Integration uses double seconds; the public identity keeps the exact
     // integer ROS stamp. Reconstructing it from double loses nanoseconds at
     // epoch-scale timestamps and falsely trips the controller contract.
@@ -839,6 +951,7 @@ class Node {
     }
     trajectory_pub.publish(output);
     path_pub.publish(path);
+    lock.unlock();
     report(result, age, selected);
     if (result.valid) {
       previous = result.path;
@@ -847,17 +960,30 @@ class Node {
       previous.clear();
   }
   void diagnose(const ros::SteadyTimerEvent &) {
-    std::lock_guard<std::mutex> lock(input_mutex);
+    std::lock_guard<std::mutex> lock(diagnostic_mutex);
     diagnostic_msgs::DiagnosticArray d;
     d.header.stamp = ros::Time::now();
     diagnostic_msgs::DiagnosticStatus s;
     s.name = "planning/local";
-    s.level = reason == "ok" ? s.OK : s.WARN;
-    s.message = reason;
+    s.level = cached_valid ? s.OK : s.WARN;
+    s.message = cached_reason;
     diagnostic_msgs::KeyValue v;
     v.key = "decision";
     v.value = last_json;
     s.values.push_back(v);
+    std::ostringstream timings;
+    timings << std::setprecision(17) << '[';
+    for (size_t i=0; i<timing_recent.size(); ++i) {
+      if (i) timings << ',';
+      timings << '[';
+      for (size_t j=0; j<timing_recent[i].size(); ++j) {
+        if (j) timings << ',';
+        timings << timing_recent[i][j];
+      }
+      timings << ']';
+    }
+    timings << ']';
+    v.key = "timings"; v.value = timings.str(); s.values.push_back(v);
     d.status.push_back(s);
     diagnostics_pub.publish(d);
   }
@@ -905,8 +1031,10 @@ public:
     diagnostics_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(
         "/planning/local/diagnostics", 1);
     speed_sub = nh.subscribe("/Ego_topic", 64, &Node::speed, this);
-    if (active_in_jamming_only)
-      mode_sub = nh.subscribe("/planning/mode", 1, &Node::mode, this);
+    mode_sub = nh.subscribe("/planning/mode", 1, &Node::mode, this);
+    if (active_in_jamming_only) {
+      prepare_sub = nh.subscribe("/planning/mode/local_prepare", 1, &Node::prepare, this);
+    }
     imu_sub = nh.subscribe("/imu", 64, &Node::imu, this);
     prob_sub = nh.subscribe<sensor_msgs::Image>(
         "/experimental/shadow/semantic_space_trial/drivable_probability", 1,

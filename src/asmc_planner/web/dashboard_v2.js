@@ -734,14 +734,14 @@
   }
   function updateLocalExperimentPanel(){
     const r=data.localExperiment,c=data.localControl,fresh=localExperimentFresh();
-    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL-1 CONTROL':'LOCAL-1 PREVIEW'):'LOCAL-1 STALE'):'LOCAL-1 WAIT';
+    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL ACTIVE':r.phase==='prepare'?'LOCAL PREPARE':r.phase==='idle'?'LOCAL IDLE':'LOCAL PREVIEW'):'LOCAL-1 STALE'):'LOCAL-1 WAIT';
     $('localStatus').className='chip '+(fresh?'ok':'bad');
     $('localExperimentPanel').hidden=!r;
     if(!r)return;
     if(!localPanelOpened){const sidebar=document.querySelector?.('aside');if(sidebar)sidebar.scrollTop=0;localPanelOpened=true;}
     $('localExperimentState').textContent=(fresh?'':'STALE · ')+(r.valid?r.reason:'계산 불가: '+r.reason);
     $('localExperimentGrid').innerHTML=kv([
-      ['run / plan',r.run_id+' / '+r.plan_sequence],['실제 제어',c?.control_enabled?'연결됨':'계산 전용'],
+      ['run / plan',r.run_id+' / '+r.plan_sequence],['실행 단계',r.phase||'기존 기록'],['실제 제어',c?.control_enabled?'연결됨':'계산 전용'],
       ['목표 / 제한 속도',fmt(r.requested_kph)+' / '+fmt(r.selected_kph)+' km/h'],
       ['최종 속도 제한',r.speed_reason],
       ['선택 길이 / 탐색 한계',fmt(r.selected_length_m,1)+' / '+fmt(r.search_horizon_m,1)+'m'],
@@ -754,6 +754,9 @@
       ['family 기준시각→수신',fmt(r.inputs?.family_source_to_receive_ms,1)+'ms'],
       ['LiDAR 기준시각→수신',fmt(r.inputs?.lidar_source_to_receive_ms,1)+'ms'],
       ['callback 대기 family / LiDAR',fmt(r.inputs?.family_callback_queue_ms,1)+' / '+fmt(r.inputs?.lidar_callback_queue_ms,1)+'ms'],
+      ['입력 잠금 대기 / 유지',fmt(r.input_lock_wait_ms,2)+' / '+fmt(r.input_lock_hold_ms,2)+'ms'],
+      ['노면 기억 / debug 생성',fmt(r.memory_ms,2)+' / '+fmt(r.debug_geometry_ms,2)+'ms'],
+      ['소유권 확인 나이 / 조회',fmt(c?.ownership_age_s,2)+'s / '+fmt(c?.ownership_query_ms,2)+'ms'],
       ['정렬 / 탐색 / 속도 계산',fmt(r.alignment_ms,2)+' / '+fmt(r.search_ms,2)+' / '+fmt(r.speed_ms,2)+'ms'],
       ['노면 대응',data.localDetail?.reason||'같은 시각 격자 대기'],
       ['관측 / 계획',r.scene_valid?'현재 관측 표시 · '+(r.valid?'전진 계획 유효':'전진 계획 무효'):'관측 무효 · 최근 기하 최대1초 회색'],
