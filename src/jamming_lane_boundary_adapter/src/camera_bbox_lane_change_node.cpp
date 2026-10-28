@@ -1696,17 +1696,20 @@ std::string updateContactPathPlan() {
        contact_result->ground_contact_valid.size()!=contact_result->boxes.size()) return fail("contact_contract_invalid");
     std::vector<lane_boundary_adapter::clearance::Polygon> contacts;
     std::vector<lane_boundary_adapter::clearance::Polygon> local_occupied;
-    auto polygonFromMessage=[](const geometry_msgs::Polygon& input){
+    auto polygonFromMessage=[](const geometry_msgs::Polygon& input,bool measured){
         lane_boundary_adapter::clearance::Polygon polygon;
         for(const auto& p:input.points)polygon.push_back({p.x,p.y});
-        return polygon;
+        // Point32 serialization can make a nearly-collinear hull edge turn
+        // by a few ulps. Rebuild only MEASURED convex envelopes, never reorder
+        // an image quadrilateral whose ray order is part of its contract.
+        return measured?lane_boundary_adapter::clearance::paddedHull(polygon,0.):polygon;
     };
     for(std::size_t i=0;i<contact_result->boxes.size();++i){
         if(!contact_result->ground_contact_valid[i])return fail("contact_ground_unavailable");
-        auto polygon=polygonFromMessage(contact_result->ground_contacts[i]);
-        if(!lane_boundary_adapter::clearance::convexValid(polygon))return fail("contact_geometry_invalid");
         const bool measured=contact_result->ground_contact_sources.size()==contact_result->boxes.size() &&
             contact_result->ground_contact_sources[i]=="lidar_observed";
+        auto polygon=polygonFromMessage(contact_result->ground_contacts[i],measured);
+        if(!lane_boundary_adapter::clearance::convexValid(polygon))return fail("contact_geometry_invalid");
         if(measured)local_occupied.push_back(std::move(polygon));
         else {
             if(polygon.size()!=4)return fail("contact_ground_unavailable");
@@ -1720,7 +1723,7 @@ std::string updateContactPathPlan() {
         if(std::abs((contact_result->header.stamp-contact_result->local_obstacles_stamp).toSec())>.050000001)
             return fail("local_obstacle_timestamp_skew");
         for(const auto& poly:contact_result->local_obstacle_footprints){
-            auto polygon=polygonFromMessage(poly);
+            auto polygon=polygonFromMessage(poly,true);
             if(!lane_boundary_adapter::clearance::convexValid(polygon))return fail("local_obstacle_geometry_invalid");
             local_occupied.push_back(std::move(polygon));
         }

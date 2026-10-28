@@ -69,6 +69,9 @@ TEST(LocalSupport, TiltedEightCornersKeepConvexFootprint) {
    p.x=std::cos(.7)*x-std::sin(.7)*y+.1*p.z;
    p.y=std::sin(.7)*x+std::cos(.7)*y+.03*p.z;}
  geometry_msgs::Polygon out;ASSERT_TRUE(Support::footprint(o,out));EXPECT_GT(out.points.size(),4u);
+ std::vector<lane_boundary_adapter::clearance::Point> transmitted;
+ for(const auto& p:out.points)transmitted.push_back({p.x,p.y});
+ EXPECT_TRUE(lane_boundary_adapter::clearance::convexValid(lane_boundary_adapter::clearance::paddedHull(transmitted,0.)));
  o=object();for(auto& p:o.obb_corners)p.x=p.y=0.;EXPECT_FALSE(Support::footprint(o,out));
  o=object();EXPECT_FALSE(Support::footprint(o,out,NAN));EXPECT_FALSE(Support::footprint(o,out,-.1));
 }

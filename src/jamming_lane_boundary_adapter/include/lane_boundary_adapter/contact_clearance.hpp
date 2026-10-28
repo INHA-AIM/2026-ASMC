@@ -58,7 +58,7 @@ inline bool convexValid(const std::vector<Point>& p) {
   }return true;
 }
 inline std::vector<Point> paddedHull(const std::vector<Point>& points,double padding) {
-  if(points.size()<3 || points.size()>8 || !std::isfinite(padding)||padding<0.)return {};
+  if(points.size()<3 || points.size()>32 || !std::isfinite(padding)||padding<0.)return {};
   std::vector<Point> p;p.reserve(points.size()*4);
   for(const auto& v:points){if(!finite(v))return {};
     for(double dx:{-padding,padding})for(double dy:{-padding,padding})p.push_back({v.x+dx,v.y+dy});}
