@@ -171,5 +171,9 @@ inline TrackedObject PrepareHighwayObjectPrediction(
     const double predicted_speed=std::hypot(predicted.vx,predicted.vy);
     predicted.prediction_min_speed=std::max(0.0,predicted_speed-error);
     predicted.prediction_max_speed=predicted_speed+error;
+    if(std::isfinite(object.prediction_min_speed))
+        predicted.prediction_min_speed=std::min(predicted.prediction_min_speed,object.prediction_min_speed);
+    if(std::isfinite(object.prediction_max_speed))
+        predicted.prediction_max_speed=std::max(predicted.prediction_max_speed,object.prediction_max_speed);
     return predicted;
 }

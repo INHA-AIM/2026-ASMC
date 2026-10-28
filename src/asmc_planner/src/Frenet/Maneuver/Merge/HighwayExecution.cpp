@@ -1,3 +1,5 @@
+#include <unordered_set>
+#include "Frenet/Maneuver/Merge/HighwayVelocityRecovery.hpp"
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/SpatialStop.hpp"
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
@@ -44,6 +46,7 @@ bool FrenetPlanner::EnableHighwayMerge(std::string& error) {
 void FrenetPlanner::ResetHighwayMerge() {
     highway_committed_=false;highway_zone_index_=-1;highway_readiness_.Reset();
     highway_returning_to_source_=false;
+    highway_unresolved_return_object_=-1;highway_unresolved_return_stamp_=-1;
     highway_preferred_target_=-1;
     highway_transition_terminal_s_=0;highway_transition_geometry_={};
     highway_last_observation_=highway_last_plan_=highway_settled_since_=-1;
@@ -156,9 +159,12 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
         result.detail="highway_source_or_target_mismatch";return false;
     }
     auto candidate_obstacles=ctx.predicted_obstacles;
+    std::unordered_set<int> missing_velocity_ids;
     for(auto& object:candidate_obstacles) {
+        if(object.velocity_unavailable)missing_velocity_ids.insert(object.id);
         const auto track=object_tracks_.find(object.id);
         const auto heading=route->map->laneHeading(object.x,object.y,object.vx,object.vy);
+        object=RecoverHighwayVelocity(object,track==object_tracks_.end()?nullptr:&track->second,cfg);
         object=PrepareHighwayObjectPrediction(object,
             track==object_tracks_.end()?nullptr:&track->second,cfg,nullptr,heading.value_or(NAN),
             object_tracking_cfg_.min_motion_direction_change_rad);
@@ -169,7 +175,8 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
     // the additional full-merge speed interval. Preserve the fitted motion.
     ctx.predicted_obstacles=candidate_obstacles;
     for(auto& object:ctx.predicted_obstacles) {
-        object.prediction_min_speed=object.prediction_max_speed=NAN;
+        if(!missing_velocity_ids.count(object.id))
+            object.prediction_min_speed=object.prediction_max_speed=NAN;
         object=AdvanceObjectObservation(object,std::max(0.0,ego_stamp-observation));
     }
     if(highway_last_observation_>=0&&observation-highway_last_observation_>cfg.confirmation_gap_s) {
@@ -415,7 +422,22 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
     }
     // Complete the accepted change before considering an abort. A selected,
     // still-safe abort retains ownership instead of following a flickering gap.
-    const bool was_returning=highway_returning_to_source_;
+    // A safe return remains authoritative while velocity is unresolved. A
+    // NEW valid velocity can reopen target search once, with full fresh checks.
+    // It grants neither clearance nor reuse of an earlier approval.
+    bool reconsider_target=false;
+    if(optional&&highway_committed_&&highway_unresolved_return_object_>=0) {
+        const auto fresh=std::find_if(objects.begin(),objects.end(),[&](const auto& o){
+            return o.id==highway_unresolved_return_object_;});
+        if(observation>highway_unresolved_return_stamp_&&fresh!=objects.end()&&
+           !fresh->velocity_unavailable) {
+            reconsider_target=true;highway_unresolved_return_object_=-1;
+        } else if(observation-highway_unresolved_return_stamp_>cfg.source_max_age_s) {
+            highway_unresolved_return_object_=-1;
+        }
+    }
+    const bool was_returning=highway_returning_to_source_&&!reconsider_target;
+    int unresolved_forward_blocker=-1;bool definite_forward_block=false;
     const bool abort_allowed=optional&&highway_committed_&&transition_target&&
         (was_returning||!zone.target_region->coversPolygon(MakeEgoFootprint(ego,vehicle_shape_,0)));
     const bool approaching_transition=transition_target&&!highway_committed_&&ctx.s<zone.config.start_s;
@@ -423,7 +445,7 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
     bool primary_blocked=false;auto search_deadline=deadline;
     for(int family=0;family<(abort_allowed?2:1)&&!result.candidate_valid&&!approaching_transition;++family) {
       if(family>0) {
-          if(result.detail=="planning_time_budget"&&!primary_blocked)break;
+          if(result.detail=="planning_time_budget"&&!primary_blocked&&!reconsider_target)break;
           // Share the existing maintenance budget with recovery. A known
           // collision must not starve a safe return just because inspecting
           // other forward alternatives exhausted the first search budget.
@@ -443,7 +465,9 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
           transition_distance=std::hypot(p.x-ego.x,p.y-ego.y);
       }
       double tracking_guard=0;
-      const bool retained=destination&&highway_committed_&&returning==was_returning&&
+      const bool same_destination=(!reconsider_target&&returning==was_returning)||
+          (reconsider_target&&returning&&highway_returning_to_source_);
+      const bool retained=destination&&highway_committed_&&same_destination&&
           std::abs(ego.kappa)<=limits_.max_curvature&&
           ego.v*ego.v*std::abs(ego.kappa)<=limits_.max_lateral_accel&&
           HighwayTransitionTrackingGuard(ref_,*destination,highway_transition_geometry_,
@@ -549,7 +573,14 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
                       cfg,body,collision_cfg_,path_cfg_.dt,!highway_committed_,ego_stamp-observation,search_deadline,
                       destination!=nullptr);
                   if(!check.safe) {
-                      if(family==0&&check.reason=="candidate_collision")primary_blocked=true;
+                      if(family==0&&check.reason=="candidate_collision") {
+                          primary_blocked=true;
+                          const auto blocked=std::find_if(objects.begin(),objects.end(),[&](const auto& o){
+                              return o.id==check.blocking_object_id;});
+                          if(optional&&!was_returning&&blocked!=objects.end()&&blocked->velocity_unavailable)
+                              unresolved_forward_blocker=blocked->id;
+                          else definite_forward_block=true;
+                      }
                       if(!highway_committed_&&check.reason!="planning_time_budget")
                           rejected_candidate=true;
                       if(!result.candidate_valid){result.check=check;result.detail=check.reason;}continue;
@@ -606,6 +637,11 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
       }
     }
     if(result.candidate_valid) {
+        if(result.returning_to_source&&!was_returning&&unresolved_forward_blocker>=0&&
+           !definite_forward_block) {
+            highway_unresolved_return_object_=unresolved_forward_blocker;
+            highway_unresolved_return_stamp_=observation;
+        } else if(!result.returning_to_source)highway_unresolved_return_object_=-1;
         highway_returning_to_source_=result.returning_to_source;
         result.ready=highway_readiness_.ObserveSafe(now,observation,cfg.safe_confirm_cycles,evidence_gap);
         result.detail=highway_committed_?"highway_executing":
@@ -635,6 +671,8 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
         result.detail=result.maneuver_completed?"highway_completed_on_existing_target_reference":"highway_executing";
         if(result.returning_to_source)result.detail=result.source_return_completed?
             "optional_change_source_lane_recovered":"optional_change_returning_to_source";
+        if(highway_unresolved_return_object_>=0)
+            result.detail+="; awaiting_motion_observation="+std::to_string(highway_unresolved_return_object_);
         output=result.candidate_path;
         if(transition_target) {
             highway_transition_geometry_=result.transition_geometry;
