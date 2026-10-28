@@ -188,3 +188,10 @@ F1 matching 임계값을 정확도 검증 없이 늘려서 문제를 감추지 �
 - 전역 AVOID/로터리/도로 제약/충돌 기하와 기존 입력·MPC 참조 관련14개 회귀 통과.
 - V2 motion/shadow/local 표시와 source-exact raster 캐시, 문서 명령·링크 검사 통과.
 - 일반 controller.yaml·planner 행동 정책 변경 없음. hosted CI는 로컬 검사와 별도다.
+
+검증 이후 직접 관찰에서 `family_disconnected_support`도 나타날 수 있으므로
+이를 시간 지연으로 뭉뚱그리지 않는다. 진단에 실제3역할의 공통 support 시작/
+끝 X를 추가했다. 이 사유는 family 전체 메시지가 유효하더라도 근단의 끊김을
+건너 연결하지 않는 현재 local 입력 조건에 해당한다. 명시적 무효를 M1 실패나
+정상 빈 결과로 바꾸지 않는다. 해당 조건을 완화하려면 semantic-only 저속
+회복의 관측 범위와 차체 sweep을 별도로 검증해야 한다.

@@ -550,6 +550,11 @@ class Node {
     double end = std::min(
         {bounds[1].back()[0], bounds[2].back()[0], bounds[3].back()[0]});
     if (begin > config.length - config.rear || end <= begin) {
+      // Preserve the exact rejection evidence in input diagnostics, including
+      // during body-motion cases where one role loses its near support.
+      join_debug.insert(join_debug.size() - 1,
+                        ",\"family_support_begin_m\":" + std::to_string(begin) +
+                            ",\"family_support_end_m\":" + std::to_string(end));
       invalid("family_disconnected_support");
       return;
     }
