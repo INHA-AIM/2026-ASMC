@@ -211,6 +211,16 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   g.minimum_seed_points = r.Get<int>("ground.ground_minimum_seed_points");
   if (root["ground"]["ground_remove_below_plane"])
     g.remove_below_plane = root["ground"]["ground_remove_below_plane"].as<bool>();
+  if (root["ground"]["fit_distance_threshold_m"]) {
+    try {
+      g.fit_threshold_m = root["ground"]["fit_distance_threshold_m"].as<double>();
+    } catch (const YAML::Exception&) {
+      Fail(file, "fit_distance_threshold_m must be numeric");
+    }
+    if (!std::isfinite(g.fit_threshold_m) || g.fit_threshold_m <= 0. ||
+        g.fit_threshold_m > g.far_threshold_m)
+      Fail(file, "fit_distance_threshold_m must be positive and <= removal far band");
+  }
 
   p.tunnel.enabled = r.Get<bool>("experimental.tunnel_filter.enabled");
   p.tunnel.suppress_ceiling = r.Get<bool>("experimental.tunnel_filter.suppress_ceiling");

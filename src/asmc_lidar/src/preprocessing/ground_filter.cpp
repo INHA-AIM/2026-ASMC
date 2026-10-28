@@ -67,7 +67,8 @@ bool FitGroundPlane(const Cloud::ConstPtr& input, const GroundConfig& config,
   segmentation.setEpsAngle(maximum_tilt_rad);
   segmentation.setMaxIterations(config.maximum_iterations);
   // Main fits with the far threshold over the whole cloud (removal is adaptive).
-  segmentation.setDistanceThreshold(config.far_threshold_m);
+  segmentation.setDistanceThreshold(config.fit_threshold_m > 0.
+      ? config.fit_threshold_m : config.far_threshold_m);
   segmentation.setInputCloud(seeds);
 
   pcl::PointIndices inliers;
