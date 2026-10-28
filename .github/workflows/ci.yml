@@ -144,7 +144,10 @@ jobs:
       - name: Install only the essential CPU math stack
         run: |
           python3 -m pip install --disable-pip-version-check -r .github/ci/bootstrap-requirements.txt
-          python3 -m pip install --disable-pip-version-check -r .github/ci/essential-requirements.txt
+          # Keep apt-owned distutils packages; job-local wheels take precedence.
+          python3 -m pip install --disable-pip-version-check --ignore-installed -r .github/ci/essential-requirements.txt
+          python3 -m pip check
+          python3 -c 'import numpy, scipy, yaml, cv2; from scipy.spatial import cKDTree; print(numpy.__version__, scipy.__version__, yaml.__version__)'
       - name: Run critical perception checks
         run: bash .github/ci/essential-perception.sh 2>&1 | tee .ci-essential/tests.log
       - name: Preserve essential logs
