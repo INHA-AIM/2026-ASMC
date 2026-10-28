@@ -308,3 +308,9 @@ GPS 무효 검사의 제거가 아니다.
 
 [main 리베이스·전용 실행 경계](../records/planning/2026-10-29-local-rebase.md)를 따른다.
 PR127 기존 음영 방식과 독립 LOCAL 제어를 동시에 실행하지 않는다.
+
+LOCAL-2D는 리베이스·클린 빌드·NORMAL/LOCAL 경계 검증을 완료했다. 실제 시각의 MPC
+이력, fitting0.10m, 공통 후보 비용은 독립 worktree에 구현됐으며
+[오프라인 결과와 남은 수락](../records/planning/2026-10-29-local-rebase.md#local-2d-오프라인-구현검증)을 따른다.
+다음 시작점은 공유 실행을 충돌 없이 확보한 뒤10km/h 무장애물, 좌/우 단일 장애물 각3회
+시험이다. 이전25km/h 목표를 반복하지 않는다. source/clock 무효와 공급 공백은 별도 유지한다.
