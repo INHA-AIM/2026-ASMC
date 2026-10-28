@@ -35,6 +35,17 @@ class LocalContactTest(unittest.TestCase):
             self.assertEqual(list(self.result.ground_contact_sources),['lidar_observed'])
             self.assertTrue(self.result.ground_contact_valid[0])
             self.assertEqual(len(self.result.local_obstacle_footprints),1)
+            # End-to-end private wire keeps a tilted eight-corner projection,
+            # rather than accepting the native hull and reboxing it downstream.
+            tilted=copy.deepcopy(o)
+            for p in tilted.obb_corners:
+                x,y=p.x-5.45,p.y+1.8
+                p.x=5.45+np.cos(.25)*x-np.sin(.25)*y+.03*p.z
+                p.y=-1.8+np.sin(.25)*x+np.cos(.25)*y+.02*p.z
+            self.objects=[tilted];self.feed([box],duration=.5)
+            self.assertEqual(list(self.result.ground_contact_sources),['lidar_observed'])
+            self.assertGreater(len(self.result.local_obstacle_footprints[0].points),4)
+            self.assertGreater(len(self.result.ground_contacts[0].points),4)
             # Two projected candidates: geometry stays available, image identity
             # is ambiguous and cannot authorize masked-contact continuation.
             self.objects=[o,copy.deepcopy(o)];self.objects[1].track_id=9

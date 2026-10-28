@@ -47,12 +47,14 @@ inline double cross(const Point& a,const Point& b,const Point& c) {
 }
 inline bool convexValid(const std::vector<Point>& p) {
   if(p.size()<3 || p.size()>32)return false;
-  double sign=0.;
-  for(std::size_t i=0;i<p.size();++i){
+  double area=0.;for(std::size_t i=0;i<p.size();++i){
     if(!finite(p[i]))return false;
-    const double c=cross(p[i],p[(i+1)%p.size()],p[(i+2)%p.size()]);
-    if(std::abs(c)<1e-10 || (sign!=0. && c*sign<0.))return false;
-    sign=c;
+    area+=p[i].x*p[(i+1)%p.size()].y-p[i].y*p[(i+1)%p.size()].x;
+  }
+  if(!std::isfinite(area)||std::abs(area)<1e-10)return false;
+  for(std::size_t i=0;i<p.size();++i){
+    if(std::abs(cross(p[i],p[(i+1)%p.size()],p[(i+2)%p.size()]))<1e-10)return false;
+    for(const auto& v:p)if(cross(p[i],p[(i+1)%p.size()],v)*area < -1e-10)return false;
   }return true;
 }
 inline std::vector<Point> paddedHull(const std::vector<Point>& points,double padding) {
@@ -70,8 +72,7 @@ inline std::vector<Point> paddedHull(const std::vector<Point>& points,double pad
   hull.pop_back();return convexValid(hull)?hull:std::vector<Point>{};
 }
 // Separating-axis test, including boundary contact. Invalid input is occupied.
-inline bool overlaps(const std::vector<Point>& a,const std::vector<Point>& b) {
-  if(!convexValid(a)||!convexValid(b))return true;
+inline bool overlapsConvex(const std::vector<Point>& a,const std::vector<Point>& b) {
   for(const auto& p:a) if(!finite(p)) return true;
   for(const auto& p:b) if(!finite(p)) return true;
   for(const auto* polygon:{&a,&b}) for(std::size_t i=0;i<polygon->size();++i) {
@@ -84,6 +85,9 @@ inline bool overlaps(const std::vector<Point>& a,const std::vector<Point>& b) {
     if(amax<bmin-1e-9||bmax<amin-1e-9)return false;
   }
   return true;
+}
+inline bool overlaps(const std::vector<Point>& a,const std::vector<Point>& b) {
+  return !convexValid(a)||!convexValid(b)||overlapsConvex(a,b);
 }
 using Polygon = std::vector<Point>;
 inline bool referenceY(const std::vector<Point>& reference,double x,double& y) {
@@ -155,6 +159,9 @@ inline bool projectedContactOccupancy(const std::vector<Polygon>& contacts,const
 inline bool pathClearOfPolygons(const std::vector<Point>& path,const std::vector<Polygon>& occupied,
                       const Vehicle& v,double supported_horizon,double sample_padding=.25) {
   for(const auto& p:occupied)if(!convexValid(p))return false;
+  for(const auto& p:path)if(!finite(p))return false;
+  for(double x:{v.front,v.rear,v.half_width,v.lateral_margin,v.longitudinal_margin,sample_padding})
+    if(!std::isfinite(x)||x<0.)return false;
   if(path.size()<2||!std::isfinite(supported_horizon)||supported_horizon<=0)return false;
   for(std::size_t i=0;i<path.size();++i){
     if(!finite(path[i]))return false;
@@ -176,7 +183,7 @@ inline bool pathClearOfPolygons(const std::vector<Point>& path,const std::vector
       double omin=1e100,omax=-1e100;
       for(const auto& p:obstacle){omin=std::min(omin,p.x);omax=std::max(omax,p.x);}
       if(omax<xmin||omin>xmax)continue;
-      if(overlaps(ego,obstacle))return false;
+      if(overlapsConvex(ego,obstacle))return false;
     }
   }
   return true;
