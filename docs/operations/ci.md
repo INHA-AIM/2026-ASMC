@@ -16,7 +16,9 @@
   실패로 전달한다. workflow 소속이 바뀌므로 workflow까지 제한하는 외부 보호 규칙이 있다면 확인한다.
 - `Planning integration build / planning-standalone-build`: 수동 실행에서만 기존 6패키지 whitelist를
   최소 의존성 환경에서 클린 빌드한다. PR에서는 실행하지 않는다.
-- `validated-lidar-build`: 구 실행 의존성과 입력 소유권의 정적 검사다. 실제 LiDAR 회귀는 전체 CI에서 필수 실행한다.
+- `validated-lidar-build`: 구 실행 의존성과 입력 소유권의 정적 검사다. 소스 전체를 유지하되
+  검사하지 않는 PT/engine/ONNX/보존 tar.gz만 sparse checkout에서 제외한다. 실제 배포 파일 존재·회귀
+  검사는 모든 파일을 받는 전체 CI에서 유지한다. Git 정본이나 로컬 운영 파일을 삭제하지 않는다.
 
 같은 job의 LiDAR/음영 어댑터/카메라/bridge/판제 시험은 각각 다른 ROS master와 시험 소유 프로세스를
 사용한다. ROS 시험 내부 timeout·freshness·수치 기준은 줄이지 않는다. 같은 workspace에서 반복하던
@@ -46,6 +48,9 @@ Noetic Python3.8을 지원하는 pip24.3.1 resolver를 CI에서 먼저 준비하
 이전 pip의 dependency conflict 경고를 성공으로 넘기지 않는다. 운영 컨테이너의 pip/모델 환경은 변경하지 않는다. NumPy1.24.4·SciPy1.10.1을 함께 고정하고
 설치 후 공간 검색/회전·OpenCV·Torch의 실제 import도 확인한다. C++ cache는 빌드 성공 직후 저장해
 나중의 시험 실패로 같은 소스를 다시 컴파일하는 낭비를 줄인다. 시험 성공이나 build/devel은 저장하지 않는다.
+
+저장소 추적 파일은 약 1.56 GB이며 다운로드 자체도 병목이다. source audit job의 sparse view는
+약 333 MB다. 전체 회귀 job은 가중치·보존 근거를 계속 받으므로 그 checkout 시간은 남는다.
 
 소요 시간은 runner·cache 영향을 받으므로 wall time과 병렬 job 시간 합계를 함께 비교한다.
 [초기 측정](../records/repository/2026-10-26-ci-runtime.md)과

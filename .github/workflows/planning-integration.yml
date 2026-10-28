@@ -28,6 +28,16 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Only this source audit excludes binary assets. The full regression
+          # checkout keeps deployment weights and historical evidence intact.
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !**/*.pt
+            !**/*.engine
+            !**/*.onnx
+            !**/*.tar.gz
       - name: Check canonical LiDAR dependencies and input ownership
         run: python3 tools/audit/check_lidar_canonicalization.py
 

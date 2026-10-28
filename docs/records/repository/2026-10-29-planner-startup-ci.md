@@ -125,10 +125,25 @@ GitHub 보호 규칙 API가 계정 기능 제한(403)으로 조회되지 않아 
 
 ## 사용자 후속 요청 — 통합 판제 패널
 
-통합 launch 한 번으로 판제 패널도 사용하도록 `dashboard=true`를 유지하고
-`open_dashboard=true`를 기본값으로 바꿨다. 별도 dashboard launch는 기본 운용 절차에서 제외했다.
-자동 브라우저 열기가 필요 없는 headless 실행은 `open_dashboard:=false`로 서버만 유지한다.
-현재 운영 컨테이너에는 브라우저/xdg-open/wslview가 없어 Windows 브라우저에서 8088 주소를
-직접 여는 단계가 필요하다. 이 요청 때문에 공용 컨테이너 마운트·호스트 실행 서비스를 추가하지 않았다.
-위 10개 노드 통합 smoke는 이 후속 변경 전의 `open_dashboard=false` 조건이다. 후속 변경은
-opener 노드 1개를 추가하며, launch 기본값/forwarding 회귀와 ROS parameter/node 전개로 확인한다.
+통합 launch 한 번으로 판제 패널 서버도 사용하도록 `dashboard=true`를 유지한다.
+브라우저 자동 열기는 사용자 요청대로 **`open_dashboard=false`**를 유지한다.
+별도 dashboard launch는 기본 운용 절차에서 제외하고 터미널의 HTTP 주소를 눌러 패널을 연다.
+서버 default/forwarding과 브라우저 OFF를 launch 계약 회귀로 검사한다. 기존 10개 노드 통합
+smoke와 동일한 기본 구성이다. 공용 컨테이너 마운트·호스트 실행 서비스는 변경하지 않았다.
+
+
+## 원격 실행에서 추가 확인한 다운로드 비용
+
+첫 PR run `40725154074`는 사용자 후속 기본값 반영으로 취소됐다. 그 실행의 checkout은
+16:23:54~16:30:33 UTC, **399초**였고 fetch가 대부분이었다. 이전 성공 run의 약 57초와 달라
+다운로드 환경 편차가 크며, 빌드 중복만으로 모든 지연을 설명할 수 없다. Git 추적 바이트는
+1,558,508,776이다. 대형 배포 모델과 51개 tar.gz 보존 근거(718,253,777 bytes)가 포함된다.
+
+`validated-lidar-build`는 코드·launch·의존성만 검사하므로 해당 job에만 non-cone sparse checkout을
+적용했다. PT/engine/ONNX/tar.gz를 받지 않되 전체 소스, 기존 퇴역 경로 탐지와 보존 참조 문서는
+유지한다. 로컬 독립 임시 clone에서 실제 materialized bytes **332,776,604(78.6% 감소)**,
+일반 감사 통과 및 퇴역 Main/package.xml을 심었을 때의 탐지까지 확인했다. 이는 전송 압축 바이트나
+확정 소요 시간이 아니라 working-tree 바이트 비교다. 전체 회귀 CI checkout은 변경하지 않았다.
+
+[actions/checkout v4 구현](https://github.com/actions/checkout/blob/v4/src/git-source-provider.ts)은
+sparse-checkout을 지정하면 fetch에 blob:none을 적용한다. 별도 filter 인자로 덮어쓰지 않았다.
