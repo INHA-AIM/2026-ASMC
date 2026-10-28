@@ -78,10 +78,18 @@ int RunHighwayRuntimeTest() {
         auto objects_pub=nh.advertise<planning_inputs::DetectedObjectArray>("/perception/objects",2);
         asmc_planner::ProductionRuntime runtime;runtime.start();
         ros::AsyncSpinner transport(1);transport.start();
-        const auto p=Interpolate(route->reference,route->zones[0].entry_s-10);
+        // Use the same rolling approach as highway_source_approach_test. The
+        // old entry_s-10 spawn at 12 m/s was already past the stop-safe source
+        // frontier: production correctly refused PREPARE maintenance and never
+        // issued READY. Keep those production safety gates unchanged.
+        const double initial_s=route->zones[0].config.start_s+5;
+        const auto p=Interpolate(route->reference,initial_s);
         asmc_msgs::VehicleState vehicle;vehicle.header.frame_id="map";
         vehicle.valid=true;vehicle.source=asmc_msgs::VehicleState::SOURCE_GPS_IMU;
         vehicle.x=p.x;vehicle.y=p.y;vehicle.yaw=p.theta;vehicle.speed=12;
+        const double decel=original["planner"]["stop"]["comfortable_decel"].as<double>();
+        if(!(decel>0)||vehicle.speed*vehicle.speed/(2*decel)>=route->zones[0].source_stop_s-initial_s)
+            throw std::runtime_error("runtime fixture must start before the braking frontier");
         bool success=false;
         ros::WallRate rate(20);
         for(int tick=0;tick<500&&ros::ok();++tick) {
