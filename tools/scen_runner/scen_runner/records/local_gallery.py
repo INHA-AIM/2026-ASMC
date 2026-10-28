@@ -84,22 +84,30 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
     rgb = {}
     needed = set()
     bags = sorted(Path(bag_root or root).glob("sensors*.bag"))
+    read_errors=[]
+    def messages(path, wanted):
+        try:
+            with rosbag.Bag(str(path)) as bag:
+                yield from bag.read_messages(topics=wanted)
+        except Exception as exc:
+            error=dict(file=path.name,error=str(exc))
+            if error not in read_errors: read_errors.append(error)
+            # Retain exact readable prefix, label incomplete evidence, and
+            # never reindex/repair or silently declare the source bag healthy.
     for path in bags:
-        with rosbag.Bag(str(path)) as bag:
-            for topic, m, _ in bag.read_messages(topics=list(topics)):
-                stamp = m.header.stamp.to_nsec()
-                if stamp not in frames:
-                    continue
-                frames[stamp][topics[topic]] = m
-                if topics[topic] == "context":
-                    i = list(m.views).index("front")
-                    needed.add(m.image_headers[i].stamp.to_nsec())
+        for topic, m, _ in messages(path,list(topics)):
+            stamp = m.header.stamp.to_nsec()
+            if stamp not in frames:
+                continue
+            frames[stamp][topics[topic]] = m
+            if topics[topic] == "context":
+                i = list(m.views).index("front")
+                needed.add(m.image_headers[i].stamp.to_nsec())
     for path in bags:
-        with rosbag.Bag(str(path)) as bag:
-            for _, m, _ in bag.read_messages(topics=["/image_jpeg/compressed"]):
-                stamp = m.header.stamp.to_nsec()
-                if stamp in needed:
-                    rgb[stamp] = m.data
+        for _, m, _ in messages(path,["/image_jpeg/compressed"]):
+            stamp = m.header.stamp.to_nsec()
+            if stamp in needed:
+                rgb[stamp] = m.data
     cases = []
     missing = Counter()
     for stamp, row in selected.items():
@@ -220,11 +228,13 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
                 selection=selection[stamp][1],
                 recovery=row.get("recovery", False),
                 plan_sequence=row["plan_sequence"],
+                reference_source=row.get('input_join',{}).get('reference_source','family'),
             )
         )
     summary = dict(
         cases=cases,
         missing=dict(missing),
+        read_errors=read_errors,
         interpretation="Exact RGB/semantic stamp; projected path is proposed, not proof of executed path or collision clearance.",
     )
     (out / "index.json").write_text(json.dumps(summary, indent=2))
@@ -234,7 +244,7 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
         + " · plan "
         + str(c["plan_sequence"])
         + "</h2><p>"
-        + html.escape(c["selection"])
+        + html.escape(c["selection"]+' · reference: '+c['reference_source'])
         + '</p><img width="640" src="'
         + c["stem"]
         + '.jpg"><img width="360" src="'
@@ -247,7 +257,8 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>LOCAL 경로·실패 검수</title><style>body{background:#141a22;color:#eee;font:16px sans-serif;margin:24px}img{vertical-align:top;max-width:100%}article{border-top:1px solid #555;margin-top:24px}</style><h1>'
         + html.escape(root.name)
-        + '</h1><p>청록=선택 경로, 옅은 보라=후보, 파랑=우측 본차로 기준, 노란 외곽=차체 sweep. 청회색 셀=과거 실제 관측 노면(현재 프레임 추론 아님). 초록=노면 확률, 빨강=비노면/가림 그림자, 보라=차체 가림, 갈색=시야 밖. 회복 경로는 충돌 무결성이 검증된 경로가 아닙니다. 실제 진행·접촉은 events/trial-result와 대조합니다.</p><a href="index.json">시각 대응·누락</a>'
+        + '</h1><p>청록=선택 경로, 옅은 보라=후보, 파랑=방향 reference(출처는 사례/JSON에 표시), 노란 외곽=차체 sweep. 청회색 셀=과거 실제 관측 노면(현재 프레임 추론 아님). 초록=노면 확률, 빨강=비노면/가림 그림자, 보라=차체 가림, 갈색=시야 밖. 회복 경로는 충돌 무결성이 검증된 경로가 아닙니다. 실제 진행·접촉은 events/trial-result와 대조합니다.</p><a href="index.json">시각 대응·누락</a>'
+        + ('<p style="color:#ff9999">bag 읽기 오류: 완전한 기록이 아닙니다. 원본은 수정하지 않았으며 읽을 수 있는 정확한 시각의 사례만 표시합니다.</p>' if read_errors else '')
         + cards,
         encoding="utf-8",
     )
