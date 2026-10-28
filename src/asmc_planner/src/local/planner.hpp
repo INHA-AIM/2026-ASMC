@@ -80,6 +80,7 @@ struct Result {
   struct Candidate {
     std::vector<Pose> path;
     std::string reason;
+    double lateral_target = 0, transition = 0;
   };
   std::vector<Candidate> candidates;
   unsigned candidates_omitted = 0;

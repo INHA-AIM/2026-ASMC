@@ -298,11 +298,12 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
         open = true;
       }
       if (open && (!road || column == 100)) {
-        if (last - first >= c.width * .65) {
+        if (last - first >= c.width) {
           goals.push_back({x, .5 * (first + last)});
           // A broad connected road should not pull an empty-road vehicle
           // away from its original lane merely to reach the whole-road mean.
-          const double preferred = std::clamp(homeAt(s, x), first, last);
+          const double preferred = std::clamp(homeAt(s, x), first+c.width*.5,
+                                                          last-c.width*.5);
           if (std::abs(preferred - .5 * (first + last)) > .15)
             goals.push_back({x, preferred});
         }
@@ -508,9 +509,13 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
               return std::abs(y - (goal[1] - homeAt(s, goal[0]))) < .05;
             }))
       lateral_targets.push_back(goal[1] - homeAt(s, goal[0]));
-  for (double lateral : lateral_targets)
-    for (double transition :
-         {3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 14., 16.}) {
+  // Round-robin lateral alternatives at each transition distance. Previously
+  // all12 straight-reference seeds could consume the analytic time slice
+  // before either bypass side was tried. Geometry/collision/ranking stay the
+  // same; no extra search budget or rollout is added.
+  for (double transition :
+       {3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 14., 16.})
+    for (double lateral : lateral_targets) {
       if (elapsed(start) > c.budget_ms * .6)
         break;
       if (transition > horizon - .3)
@@ -553,6 +558,8 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       }
       if (out.candidates.size() < 12) {
         Result::Candidate example;
+        example.lateral_target=lateral;
+        example.transition=transition;
         example.reason =
             candidate.path.back().x >= horizon - .21
                 ? "sweep_passed"

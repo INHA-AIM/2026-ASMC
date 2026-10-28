@@ -339,7 +339,9 @@ class Node {
       if (i)
         s << ',';
       const auto &candidate = r.candidates[i];
-      s << "{\"reason\":" << std::quoted(candidate.reason) << ",\"path\":[";
+      s << "{\"reason\":" << std::quoted(candidate.reason)
+        << ",\"lateral_target_m\":" << candidate.lateral_target
+        << ",\"transition_m\":" << candidate.transition << ",\"path\":[";
       for (size_t k = 0; k < candidate.path.size(); ++k) {
         if (k)
           s << ',';

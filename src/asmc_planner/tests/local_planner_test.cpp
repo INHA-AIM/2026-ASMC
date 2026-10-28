@@ -126,6 +126,19 @@ int main() {
       for(const auto &p:obstructed.path) {Result check;
         expect(CheckFootprint(scene,config,p,check),"reused path obeys new current OBB");}
     }
+    {
+      auto s=empty();Config c;c.recovery=true;c.budget_ms=300.;
+      for(int row=0;row<250;++row) for(int col=0;col<160;++col) {
+        const double x=20.-.1*row,y=8.-.1*col;
+        s.grid.probability[row*160+col]=(y>=.3 && y<=4.3)?255:0;
+        if(x<4.6) s.grid.coverage[row*160+col]=128;
+      }
+      auto r=Plan(s,c);
+      expect(r.valid && r.recovery,"partial near-body raster exercises recovery goal generation");
+      for(const auto& goal:r.goals)
+        expect(goal[1]>=.3+c.width*.5-1e-6 && goal[1]<=4.3-c.width*.5+1e-6,
+               "recovery goals contain the physical body inside their observed road interval");
+    }
     // Tiny overspeed must converge, not become a full-brake trough. The old
     // scalar-cap + average-acceleration loop created an unnecessary trough.
     for (double initial_a : {-1., 0., 1.}) {
@@ -269,6 +282,13 @@ int main() {
              "selected path continuous collision validation");
     }
     expect(avoid.goals.size() >= 2, "split openings produce separate goals");
+    bool tried_left=false,tried_right=false;
+    for(const auto& candidate:avoid.candidates) {
+      tried_left|=candidate.lateral_target>.1;
+      tried_right|=candidate.lateral_target<-.1;
+    }
+    expect(tried_left && tried_right,
+           "bounded first candidate window tries both bypass sides before exhausting straight transitions");
     bool beyond_paint = false;
     for (const auto &q : avoid.path)
       beyond_paint |= std::abs(q.y) + c.width * .5 > 1.75;
