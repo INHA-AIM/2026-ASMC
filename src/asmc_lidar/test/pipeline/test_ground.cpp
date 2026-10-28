@@ -310,6 +310,52 @@ TEST(GroundFilter, AdaptiveBandAbsoluteDistance) {
   EXPECT_EQ(out->points[2].intensity, 5.f);
 }
 
+TEST(GroundFilter, SignedHalfspaceRemovesBelowPlaneWithoutChangingElevatedReturns) {
+  for (float slope : {0.f, 0.025f, -0.025f}) {
+    auto cloud = NewCloud(), legacy = NewCloud(), signed_out = NewCloud();
+    AddFlatGround(*cloud);
+    for (auto& p : cloud->points) p.z += slope * p.x;
+    // Include low returns above the existing upper band and a far sparse return.
+    cloud->push_back(P(3, 0, -1.5f + slope * 3 + .36f, 1));
+    cloud->push_back(P(60, 0, -1.5f + slope * 60 + .48f, 2));
+    cloud->push_back(P(12, 0, -1.5f + slope * 12 - .65f, 3));
+    cloud->push_back(P(12, 0, -1.5f + slope * 12 + .1f, 4));
+    GroundConfig c;
+    GroundFilter before(c);
+    c.remove_below_plane = true;
+    GroundFilter after(c);
+    std::vector<int> indices;
+    before.Filter(cloud, legacy, nullptr);
+    after.Filter(cloud, signed_out, &indices);
+    ASSERT_TRUE(after.CurrentPlane().valid);
+    EXPECT_EQ(before.CurrentPlane().coefficients, after.CurrentPlane().coefficients);
+    ASSERT_EQ(legacy->size(), 3u);
+    ASSERT_EQ(signed_out->size(), 2u);
+    ASSERT_EQ(indices.size(), 2u);
+    for (std::size_t i = 0; i < signed_out->size(); ++i) {
+      EXPECT_TRUE(SameBits(legacy->points[i], signed_out->points[i]));
+      EXPECT_TRUE(SameBits(cloud->points[indices[i]], signed_out->points[i]));
+    }
+  }
+}
+
+TEST(GroundFilter, SignedHalfspaceDoesNotInventPlaneAfterFitFailure) {
+  GroundConfig c;
+  c.remove_below_plane = true;
+  GroundFilter filter(c);
+  auto cloud = NewCloud(), out = NewCloud();
+  AddFlatGround(*cloud);
+  filter.Filter(cloud, out, nullptr);
+  ASSERT_TRUE(filter.CurrentPlane().valid);
+  cloud->clear();
+  for (int i = 0; i < 15; ++i) cloud->push_back(P(float(i), 0, -2.5f));
+  filter.Filter(cloud, out, nullptr);
+  EXPECT_FALSE(filter.CurrentPlane().valid);
+  ASSERT_EQ(out->size(), cloud->size());
+  for (std::size_t i = 0; i < out->size(); ++i)
+    EXPECT_TRUE(SameBits(out->points[i], cloud->points[i]));
+}
+
 TEST(GroundFilter, KeptIndicesMatchOutputExactly) {
   const float nan = std::numeric_limits<float>::quiet_NaN();
   const float inf = std::numeric_limits<float>::infinity();

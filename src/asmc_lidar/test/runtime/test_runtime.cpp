@@ -1107,9 +1107,14 @@ int main(int argc, char** argv) { testing::InitGoogleTest(&argc, argv); return R
 
 TEST(RuntimeIdentity, EffectiveChoicesAndCalibrationAreBoundToConfigId) {
   auto cfg = sh::LoadRuntimeConfig(ShippedConfig(), PackageDir());
+  EXPECT_TRUE(cfg.pipeline.ground.remove_below_plane);
   sh::FinalizeRuntimeIdentity(cfg, "camera-a");
   const auto id=cfg.config_id, calibration=cfg.calibration_id;
   sh::FinalizeRuntimeIdentity(cfg, "camera-a"); EXPECT_EQ(cfg.config_id,id);
+  cfg.pipeline.ground.remove_below_plane=false;
+  sh::FinalizeRuntimeIdentity(cfg,"camera-a"); EXPECT_NE(cfg.config_id,id);
+  cfg.pipeline.ground.remove_below_plane=true;
+  sh::FinalizeRuntimeIdentity(cfg,"camera-a"); EXPECT_EQ(cfg.config_id,id);
   cfg.pipeline.use_roll=!cfg.pipeline.use_roll;
   sh::FinalizeRuntimeIdentity(cfg,"camera-a"); EXPECT_NE(cfg.config_id,id);
   EXPECT_EQ(cfg.calibration_id,calibration);
@@ -1195,4 +1200,12 @@ TEST(LidarRuntime, ThreeViewLocalClassificationSurvivesGpsLossAndMapRecovery) {
     }
     EXPECT_TRUE(saw_denied); EXPECT_TRUE(saw_recovery);
   }
+}
+
+TEST(RuntimeConfig, LegacyGroundConfigKeepsExplicitCompatibilityPolicy) {
+  TempDir dir;
+  auto yaml=YAML::LoadFile(ShippedConfig());
+  yaml["ground"].remove("ground_remove_below_plane");
+  auto cfg=sh::LoadRuntimeConfig(dir.Write("legacy-ground.yaml",yaml),PackageDir());
+  EXPECT_FALSE(cfg.pipeline.ground.remove_below_plane);
 }

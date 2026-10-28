@@ -22,6 +22,8 @@ struct GroundConfig {
   double seed_max_z_m = -0.65;
   int maximum_iterations = 80;
   int minimum_seed_points = 30;
+  // GPS-independent signed half-space removal. False preserves legacy replay behavior.
+  bool remove_below_plane = false;
 };
 
 // Main NormalVectorFiltering() common branch. The constructor applies Main's

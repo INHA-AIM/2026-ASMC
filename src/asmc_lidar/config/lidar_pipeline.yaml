@@ -105,6 +105,8 @@ ground:
   ground_seed_max_z_m: -0.65
   ground_ransac_maximum_iterations: 80
   ground_minimum_seed_points: 30
+  # Keep only points above the existing upper band; missing key in old YAML defaults false.
+  ground_remove_below_plane: true
 
 # Main SensorPoseHistory parameters (main.launch).
 pose:

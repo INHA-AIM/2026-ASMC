@@ -209,6 +209,8 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   g.seed_max_z_m = r.Get<double>("ground.ground_seed_max_z_m");
   g.maximum_iterations = r.Get<int>("ground.ground_ransac_maximum_iterations");
   g.minimum_seed_points = r.Get<int>("ground.ground_minimum_seed_points");
+  if (root["ground"]["ground_remove_below_plane"])
+    g.remove_below_plane = root["ground"]["ground_remove_below_plane"].as<bool>();
 
   p.tunnel.enabled = r.Get<bool>("experimental.tunnel_filter.enabled");
   p.tunnel.suppress_ceiling = r.Get<bool>("experimental.tunnel_filter.suppress_ceiling");
@@ -516,6 +518,7 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
             << config.pipeline.use_roll << ',' << config.enable_camera_fusion << ','
             << config.pipeline.tunnel.enabled << ',' << config.pipeline.capture_debug << '\n';
   effective << config.hd_map_audit_mode << '\n' << config.hd_map_manifest_sha256 << '\n';
+  effective << "normal-ground-signed-halfspace-v1," << config.pipeline.ground.remove_below_plane << '\n';
   effective << config.pipeline.height_roi.enabled << ',' << config.pipeline.height_roi.max_height_above_ground_m
             << ',' << config.pipeline.height_roi.nominal_base_height_m << '\n';
   if (config.hd_map_audit) effective << config.hd_map_audit->bundle_sha256() << '\n'
