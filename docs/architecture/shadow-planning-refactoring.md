@@ -149,7 +149,12 @@ map planner/controller와 구 BBox follower 및 selector를 시작한다. previe
 외곽 흰선과 실제 터널 벽/통과 가능한 노면 끝은 다른 경계다. 좌우 각각의 여유를 실제
 센서와 시뮬 장면으로 측정하고 곡선·입출구·벽 소실·오차를 검수한 뒤 통로 사전값으로
 사용한다. 차선폭을 단순히 두 배 해서 벽 위치로 고정하거나 흰선 밖을 미리 차단하지 않는다.
-현재 통로폭은 측정·수락하지 않았으므로 새 상수를 추가하지 않았다.
+[LOCAL-2A 측정](../records/planning/2026-10-28-local-input-alignment.md#흰선과-실제-수직-벽-사이-여유)에서
+겹치는 두35m 구간의 흰선–수직 벽 간격을 기록했다. 첫 구간 중앙값은 좌1.42m/우2.20m,
+25m 앞에서 시작한 구간은 좌1.87m/우2.13m였다. 원본 RGB에 재투영해 확인했지만
+터널 전체·독립 충돌 mesh·통과 가능한 노면의 수락은 아니다. 좌측 간격이 구간별로 달라
+고정 대칭 통로폭을 만들지 않았으며, 점 지지·시각·거리별 측정과 불가 사유를 보존했다.
+턱·비노면·장애물을 확인하기 전에는 이 폭으로 semantic 구멍을 자유공간으로 채우지 않는다.
 
 연산은 한 번 만든 scene·grid index를 재사용하고, 물리 통로로 명백히 불가능한 후보를
 먼저 줄인 뒤 필요한 차체 footprint에서 노면·OBB를 상세 검사하는 방향이 적절하다.
@@ -167,9 +172,11 @@ map planner/controller와 구 BBox follower 및 selector를 시작한다. previe
   반복한다. 이는 구 jamming 중복 실행과 다른 **새 local 내부의 중복 계산**이다.
   동일 prepared scene에서 후보와 근거 등급을 평가하도록 정리할 대상이다.
 
-다음 구현은 [LOCAL-2A](../records/planning/2026-10-28-local-timing-and-dr-pilot.md#local-2a의-첫-구현-경계)의
-시각·상태/관측 분리를 먼저 수행한다. 이어2B에서 위 우측 reference·자유공간 역할과
-단일 scene 재사용을 적용하고 무장애 추종을 검증한다. entry-route/DR 대조는 같은
+[LOCAL-2A 결과](../records/planning/2026-10-28-local-input-alignment.md)에서 signed 상태·독립
+입력 선택·한 번의 상대 정렬·계산 밖 callback 수신을 연결했다. 같은 bag의 유효 계획
+최대 공백은376ms에서170~188ms로 줄었고 저속35m를3회 주행했다.3km/h 가림 보조
+제한은 남아 있으며25km/h로 승격하지 않았다. 다음2B에서 위 우측 reference·자유공간
+역할과 단일 scene 재사용을 적용하고 무장애 추종을 검증한다. entry-route/DR 대조는 같은
 입력·MPC 경계의 보조 후보이며 전체 map planner를 두 번째로 실행하는 방식은 사용하지 않는다.
 
 ## 두 개선 방향의 비교
@@ -269,8 +276,8 @@ S1의 추가 여유·조기 차로 변경 선택 후보는 concrete 통과를 �
 ## LOCAL-1 이후 입력·속도·DR 검토
 
 [2026-10-28 시간/속도 정책과 AIMDrive DR pilot](../records/planning/2026-10-28-local-timing-and-dr-pilot.md)에
-최신 원인과 LOCAL-2A~2D 작업 순서를 둔다. 후진의 forward-only 상태 reset,
-카메라 계산용10Hz 공급,50ms 로컬 join,3km/h 가림 회복,20m 관측/제동 상한을
-성능 문제와 구분했다. 다음 단위는 signed 상대 상태·원본 관측 표시와 비차단
-snapshot을 정리하는 LOCAL-2A다. 무장애25km/h, 인지 노이즈 응답, 정적 회피는
-각각 후속 수락 단위다. AIMDrive 전체 이식 또는 GPS 무효 검사의 제거가 아니다.
+원인과 LOCAL-2A~2D 작업 순서를 보존한다. 후속 [LOCAL-2A 구현·실험](../records/planning/2026-10-28-local-input-alignment.md)은
+후진 시 관측 소실·카메라 계산용 추가10Hz 제한·50ms local join과 callback 차단을
+정리했다.3km/h 가림 회복·20m 관측/제동 상한은 남는다. 무장애25km/h는2B,
+인지 노이즈 응답은2C, 정적 회피는2D의 별도 수락 단위다. AIMDrive 전체 이식 또는
+GPS 무효 검사의 제거가 아니다.
