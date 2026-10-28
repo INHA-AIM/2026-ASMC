@@ -86,6 +86,8 @@ TEST(ContactClearance, ConvexHullPaddingPreservesRotationAndEveryCorner) {
  EXPECT_LT(area(hull),(18.282587-17.590937+.5)*(-1.569104+2.853337+.5));
  EXPECT_TRUE(overlaps(hull,{{18.,-2.},{18.1,-2.},{18.1,-1.9},{18.,-1.9}}));
  EXPECT_TRUE(overlaps({},hull));
+ Polygon star;for(int i:{0,2,4,1,3})star.push_back({std::cos(i*2*3.141592653589793/5),std::sin(i*2*3.141592653589793/5)});
+ EXPECT_FALSE(convexValid(star));EXPECT_TRUE(overlaps(star,hull));
  EXPECT_FALSE(pathClearOfPolygons(straight(),{Polygon{{30.,0.},{30.,1.}}},Vehicle{},15.));
  std::vector<Polygon> occupied;EXPECT_FALSE(projectedContactOccupancy({hull},{{0.,0.},{30.,0.}},20.,occupied));
 }

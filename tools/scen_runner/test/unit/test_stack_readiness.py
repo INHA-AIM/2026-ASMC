@@ -72,6 +72,23 @@ class ReadinessTest(unittest.TestCase):
         self.probe.reset(self.pose, 200.)
         self.assertFalse(self.probe.messages)
 
+    def test_local_readiness_requires_real_gps_sentinel_and_checked_control(self):
+        cfg=settings();cfg['readiness_profile']='shadow_local';probe=Readiness(cfg);probe.reset(self.pose,100.)
+        def sample(now):
+            h=S(stamp=S(to_sec=lambda:now),frame_id='base_link')
+            objects=S(header=h,status=2)
+            rows=dict(family=S(header=h,valid=True),local=S(observation=S(objects=objects)),
+                gps=S(header=h,latitude=0.,longitude=0.),speed=S(header=h,velocity=S(x=0.)),
+                mode=S(data=1),control=S(longlCmdType=2,velocity=5.,brake=0.))
+            for key,m in rows.items():probe.observe(key,m,now)
+            return rows
+        sample(101.);self.assertFalse(probe.evaluate(101.,101.))
+        rows=sample(101.6);self.assertTrue(probe.evaluate(101.6,101.6))
+        rows['control'].brake=1.;self.assertFalse(probe.evaluate(101.6,101.6))
+        rows=sample(102.);rows['gps'].latitude=37.;self.assertFalse(probe.evaluate(102.,102.))
+        rows=sample(103.);rows['local'].observation.objects.status=3;self.assertFalse(probe.evaluate(103.,103.))
+        sample(104.);self.assertFalse(probe.evaluate(104.4,104.4))
+
 
 if __name__ == '__main__':
     unittest.main()

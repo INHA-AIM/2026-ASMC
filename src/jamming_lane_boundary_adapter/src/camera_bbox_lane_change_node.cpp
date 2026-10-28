@@ -44,7 +44,7 @@ struct Parameters {
     // Internal trial profile. Legacy lane-occupancy policy is the recovery path.
     bool contact_clearance_enabled = false;
     bool contact_local_required = false;
-    std::string bev_mode="off"; // off / audit / guard; internal experiment only
+    std::string bev_mode="off"; // off / audit; internal experiment only
     double contact_speed_kph = 5.0;
     double contact_max_skew = 0.15; // no ego-motion alignment is claimed
 
@@ -1170,6 +1170,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "contact_clearance_enabled", params.contact_clearance_enabled?"true":"false");
     addDiagnosticValue(status, "contact_decision", contact_decision);
     addDiagnosticValue(status,"bev_mode",params.bev_mode);
+    addDiagnosticValue(status,"bev_coordinate_policy","fixed_plane_sensitivity_only");
     addDiagnosticValue(status,"bev_status",bev_status);
     addDiagnosticValue(status,"bev_rejected",std::to_string(bev_rejected));
     addDiagnosticValue(status,"bev_invalid",std::to_string(bev_invalid));
@@ -1690,7 +1691,7 @@ std::string updateContactPathPlan() {
     if(!geometry)return fail("contact_exact_lane_context_missing");
     auto bev=params.bev_mode=="off"?nullptr:selectBev(contact_result->header.stamp,contact_result->lane_stamp);
     bev_status=params.bev_mode=="off"?"off":(bev?"paired":"unavailable_or_time_skew");
-    if(params.bev_mode=="guard" && !bev)return fail("bev_unavailable_or_time_skew");
+
     if(contact_result->ground_contacts.size()!=contact_result->boxes.size() ||
        contact_result->ground_contact_valid.size()!=contact_result->boxes.size()) return fail("contact_contract_invalid");
     std::vector<lane_boundary_adapter::clearance::Polygon> contacts;
@@ -1740,11 +1741,9 @@ std::string updateContactPathPlan() {
     if(!reference_lane)return fail("contact_road_reference_missing");
     for(const auto& p:reference_lane->left_boundary)road_reference.push_back({p.x,p.y});
     std::vector<lane_boundary_adapter::clearance::Polygon> occupied;
-    // Guard uses measured semantic NEW swept space instead of inventing the
-    // unseen length of image contacts. Visible polygons and all local OBBs
-    // remain hard obstacles. Audit leaves every existing decision unchanged.
-    if(params.bev_mode=="guard")occupied=contacts;
-    else if(!lane_boundary_adapter::clearance::projectedContactOccupancy(contacts,road_reference,horizon,occupied))
+    // Fixed-plane semantic BEV is a diagnostic sensitivity comparison only.
+    // Deployment needs source-exact shared IMU projection AND visibility masks.
+    if(!lane_boundary_adapter::clearance::projectedContactOccupancy(contacts,road_reference,horizon,occupied))
         return fail("contact_occlusion_geometry_invalid");
     occupied.insert(occupied.end(),local_occupied.begin(),local_occupied.end());
     const bool fresh=change_state.decision_sequence!=change_state.bbox_sequence;
@@ -1788,10 +1787,6 @@ std::string updateContactPathPlan() {
             std::vector<lane_boundary_adapter::clearance::Point> points;points.reserve(path.size());
             for(const auto& p:path)points.push_back({p.x,p.y});
             if(!lane_boundary_adapter::clearance::pathClearOfPolygons(points,occupied,shape,horizon,params.path_sample_step)){++contact_collision_rejected;continue;}
-            if(params.bev_mode=="guard"){
-                auto report=bev->check(points,shape,params.path_sample_step);bev_status=report.reason;
-                if(!report.clear){++bev_rejected;continue;}
-            }
             found={std::move(lane),std::move(path),offset,length};return true;
         }
         return false;
