@@ -269,6 +269,8 @@ int semantic_home=-1,semantic_target=-1;
 unsigned semantic_confirm=0;
 ros::Time semantic_last_decision;
 double semantic_safe_length=0.;
+unsigned semantic_assisted_cells=0;
+double semantic_blocked_x=0.,semantic_blocked_y=0.;
 
 lane_boundary_adapter::clearance::GridSpec bev_spec;
 ros::Time bev_last_stamp,bev_cutoff,bev_status_stamp;
@@ -1204,6 +1206,9 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status,"bev_mode",params.bev_mode);
     addDiagnosticValue(status,"bev_coordinate_policy",params.bev_mode=="semantic_trial"?"exact_family_imu_context":"fixed_plane_sensitivity_only");
     addDiagnosticValue(status,"semantic_safe_length_m",std::to_string(semantic_safe_length));
+    addDiagnosticValue(status,"semantic_assisted_cell_visits",std::to_string(semantic_assisted_cells));
+    addDiagnosticValue(status,"semantic_first_blocked_x_m",std::to_string(semantic_blocked_x));
+    addDiagnosticValue(status,"semantic_first_blocked_y_m",std::to_string(semantic_blocked_y));
     addDiagnosticValue(status,"semantic_near_ego_lidar_assist",params.semantic_near_ego_lidar_assist?"true":"false");
     addDiagnosticValue(status,"semantic_home_lane",std::to_string(semantic_home));
     addDiagnosticValue(status,"semantic_target_lane",std::to_string(semantic_target));
@@ -1736,7 +1741,7 @@ void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>&
 std::string updateSemanticPathPlan() {
     namespace cc=lane_boundary_adapter::clearance;
     contact_candidates=contact_road_rejected=contact_collision_rejected=bev_rejected=0;
-    contact_geometry_ready=false;semantic_safe_length=0.;
+    contact_geometry_ready=false;semantic_safe_length=0.;semantic_assisted_cells=0;semantic_blocked_x=semantic_blocked_y=0.;
     auto fail=[](const std::string& reason){contact_decision=bev_status=reason;return reason;};
     const std::vector<LaneChain>* geometry=nullptr;
     std::shared_ptr<cc::DrivableClearance> grid;
@@ -1749,7 +1754,8 @@ std::string updateSemanticPathPlan() {
     const auto local=semantic_local.select(stamp,ros::Time::now(),ros::SteadyTime::now());
     // Require fresh local health during this trial, independently of YOLO.
     // Its positive measured footprints veto a path; no empty array clears a
-    // semantic hole or unknown region. No map pose is used in the tunnel.
+    // observed semantic hole. Explicit near-blind assistance is reported and
+    // does NOT certify LiDAR-negative space as free. No map pose is used.
     if(!local)return fail("semantic_local_health_or_time_unavailable");
     std::vector<cc::Polygon> occupied;
     for(const auto& object:local->observation.objects.objects){
@@ -1773,7 +1779,7 @@ std::string updateSemanticPathPlan() {
     if(supported_end<3.)return fail("semantic_full_body_horizon_short");
     if(semantic_home<0)semantic_home=follower_state.selected_lane.lane_index;
     if(semantic_target<0)semantic_target=semantic_home;
-    struct Candidate {LaneChain lane;std::vector<FamilyPoint2d> path;double offset=0.,length=0.,curvature=0.;};
+    struct Candidate {LaneChain lane;std::vector<FamilyPoint2d> path;double offset=0.,length=0.,curvature=0.;unsigned assisted=0;};
     auto find=[&](int index,double end,Candidate& found){
         const auto* original=getPlanningLane(index,geometry,horizon);if(!original)return false;
         for(double offset:{0.,-.15,.15,-.3,.3,-.45,.45})for(double length:{6.,8.,10.,12.,15.,4.}){
@@ -1784,11 +1790,12 @@ std::string updateSemanticPathPlan() {
                 ++contact_road_rejected;continue;
             }
             std::vector<cc::Point> points;for(const auto& p:path)points.push_back({p.x,p.y});
-            if(!grid->check(points,vehicle,params.path_sample_step).clear){++bev_rejected;continue;}
+            const auto space=grid->check(points,vehicle,params.path_sample_step);
+            if(!space.clear){if(!bev_rejected){semantic_blocked_x=space.blocked_x;semantic_blocked_y=space.blocked_y;}++bev_rejected;continue;}
             if(!cc::pathClearOfPolygons(points,occupied,vehicle,horizon,params.path_sample_step)){
                 ++contact_collision_rejected;continue;
             }
-            found={std::move(lane),std::move(path),offset,length,change_state.maximum_path_curvature};return true;
+            found={std::move(lane),std::move(path),offset,length,change_state.maximum_path_curvature,space.assisted};return true;
         }return false;
     };
     Candidate chosen;int target=-1;
@@ -1811,7 +1818,7 @@ std::string updateSemanticPathPlan() {
         }else if(fresh)semantic_confirm=0;
     }else semantic_confirm=0;
     semantic_last_decision=stamp;semantic_target=target;semantic_selected_stamp=stamp;
-    contact_geometry_ready=true;semantic_safe_length=chosen.path.back().x;
+    contact_geometry_ready=true;semantic_safe_length=chosen.path.back().x;semantic_assisted_cells=chosen.assisted;
     contact_maneuver_length=chosen.length;
     contact_pursuit_x=std::min({4.,chosen.length*.5,semantic_safe_length});
     change_state.maximum_path_curvature=chosen.curvature;
@@ -1822,7 +1829,7 @@ std::string updateSemanticPathPlan() {
     change_state.deferred_far=false;change_state.clipped_association=false;
     storePlannedTarget(chosen.lane,chosen.path);
     contact_decision="semantic_checked:lane="+std::to_string(target)+":offset="+std::to_string(chosen.offset);
-    bev_status="shared_imu_observed_prefix";
+    bev_status=semantic_assisted_cells?"shared_imu_prefix_with_near_blind_lidar_assist":"shared_imu_observed_prefix";
     return "";
 }
 

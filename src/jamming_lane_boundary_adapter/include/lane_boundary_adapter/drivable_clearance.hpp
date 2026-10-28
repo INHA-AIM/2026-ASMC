@@ -26,11 +26,11 @@ class DrivableClearance {
           std::abs(y)<=vehicle.half_width+lateral;
       const size_t k=size_t(r)*spec.cols+c,base=size_t(r)*(spec.cols+1);
       // Explicit S3 sensitivity candidate, never "observed free": only
-      // original-camera ego masks in the calibrated near blind region may
+      // camera ego masks/FOV absence in the measured near blind region may
       // defer to a fresh, paired local LiDAR health/positive-footprint check.
       // Low-probability OBSERVED shadow pixels never enter this exception.
-      const bool assisted=near_ego_lidar_assist && coverage[k]==128 &&
-          x>=-vehicle.rear && x<=6.0 && std::abs(y)<=1.6;
+      const bool assisted=near_ego_lidar_assist && (coverage[k]==128 || coverage[k]==0) &&
+          x>=-vehicle.rear-vehicle.longitudinal_margin-.25 && x<=6.0 && std::abs(y)<=1.6;
       const bool bad=!initial && !assisted && (coverage[k]!=255 || probability[k]<threshold);
       assisted_[base+c+1]=assisted_[base+c]+unsigned(assisted && !initial);
       prefix_[base+c+1]=prefix_[base+c]+unsigned(bad);
