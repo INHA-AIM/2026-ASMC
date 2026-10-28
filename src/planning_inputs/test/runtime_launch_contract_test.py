@@ -20,11 +20,11 @@ class LaunchContracts(unittest.TestCase):
         self.assertTrue(all(n.get('type') not in ('lidar_pipeline_node','asmc_planner_node')
                             for tree in (dashboard,lidar) for n in tree.findall('node')))
 
-    def test_integrated_planning_includes_dashboard_and_opener_by_default(self):
+    def test_integrated_planning_includes_dashboard_without_opening_browser(self):
         launch=ET.parse(ROOT/'src/asmc_planner/launch/autonomy_no_bridges_v2.launch').getroot()
         args={a.get('name'):a.get('default') for a in launch.findall('arg')}
         self.assertEqual(args['dashboard'],'true')
-        self.assertEqual(args['open_dashboard'],'true')
+        self.assertEqual(args['open_dashboard'],'false')
         includes=[node for node in launch.findall('include')
                   if node.get('file','').endswith('/dashboard.launch')]
         self.assertEqual(len(includes),1)

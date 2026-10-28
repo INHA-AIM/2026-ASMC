@@ -243,7 +243,7 @@
 | `highway_merge` | `true` | — |
 | `dashboard` | `true` | — |
 | `dashboard_port` | `8088` | — |
-| `open_dashboard` | `true` | — |
+| `open_dashboard` | `false` | — |
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
