@@ -13,7 +13,9 @@ from urllib.parse import quote, unquote, urljoin, urlsplit
 
 def catalogue(root, output):
     pages = []
-    for directory, _, filenames in os.walk(root, followlinks=False):
+    for directory, directories, filenames in os.walk(root, followlinks=False):
+        # Reproduction sources are not rendered experiments (keep them on disk).
+        directories[:] = [d for d in directories if d not in ("source-snapshot", "source-untracked")]
         for name in filenames:
             if not name.lower().endswith('.html'):
                 continue
@@ -99,11 +101,12 @@ def check_local_links(root, pages):
 CATEGORIES = [
     ('training', '학습·성능 평가'), ('data', '데이터·라벨 검수'),
     ('models', '모델 비교·선정'), ('collection', 'Capture·자동 수집'),
-    ('fusion', '센서·퓨전'), ('other', '기타 실험')]
+    ('fusion', '센서·퓨전'), ('planning', '로컬 경로·주행·실패 검수'), ('other', '기타 실험')]
 
 
 def category(row):
     path=row['path'].lower()
+    if path.startswith(('local1-', 'local2a-', 'local2b-', 'shadow-')):return 'planning'
     if path.startswith('lidar') or 'fusion' in path:return 'fusion'
     if any(v in path for v in ('training-data','data-expansion','teacher','dataset','supervision','background-full','validation16','capture-size','tiny-gt','training-audit','source-coverage','capture-restoration','v11-preflight')):return 'data'
     if any(v in path for v in ('bbox-main','bbox-pilot','bbox-regression','vehicle-diagnostic','epoch8-decision')):return 'training'
@@ -113,6 +116,9 @@ def category(row):
 
 
 def friendly_group(group):
+    if group.startswith('local2b-'):return 'LOCAL-2B · 경로 길이·안정화 · '+group[len('local2b-'):]
+    if group.startswith('local2a-'):return 'LOCAL-2A · 입력 정렬·벽 간격 · '+group[len('local2a-'):]
+    if group.startswith('local1-'):return 'LOCAL-1 · 초기 주행·실패 · '+group[len('local1-'):]
     known={'camera-epoch8-decision-20261013-r1':'8 epoch 평가·이어 학습 판단',
            'camera-dataset-v10-review-20261013-r1':'v10 데이터 재분할·16종 검수',
            'camera-supervision-policy-review-20261013-r2':'극소 GT·ignore·배경 정책 검토',
@@ -148,8 +154,10 @@ def main():
     output=root/'index.html';pages=enrich(number_pages(root,catalogue(root,output)))
     # Shortcut choices are explicit roles. File existence is never model acceptance.
     live=next((r for r in pages if 'camera-bbox-main-' in r['path'] and r['path'].endswith('/live.html')),None)
+    local=next((r for r in pages if r['path'].startswith('local2b-') and r['path'].endswith('/campaign/index.html')),None)
     prepared_review='camera-v11-preflight-20261013-r1/index.html'
-    wishes=[('최근 본학습',live['path'] if live else None),
+    wishes=[('LOCAL-2B 주행·실패 검수',local['path'] if local else None),
+            ('최근 본학습',live['path'] if live else None),
             ('현재 데이터 검수',prepared_review if (root/prepared_review).is_file() else 'camera-dataset-v10-review-20261013-r1/index.html'),
             ('이전 학습 평가','camera-epoch8-decision-20261013-r1/index.html'),
             ('운영 모델 선정 근거','camera-coco7-live-v1/broad-model-summary-v1/index.html')]

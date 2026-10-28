@@ -23,6 +23,7 @@ def main():
     p.add_argument("--scene", type=Path, required=True)
     p.add_argument("--seconds", type=float, default=40)
     p.add_argument("--cap", type=float, default=5)
+    p.add_argument("--distance", type=float, default=35)
     p.add_argument("--near-blind-assist", action="store_true")
     p.add_argument("--empty", action="store_true")
     p.add_argument(
@@ -38,7 +39,7 @@ def main():
         or (root / "trial-result.json").exists()
     ):
         raise RuntimeError("new registered run required")
-    if not 0 < args.seconds <= 60 or not 0 < args.cap <= 25:
+    if not 0 < args.seconds <= 60 or not 0 < args.cap <= 25 or not 0 < args.distance <= 100:
         raise ValueError("bounded duration/cap required")
     if args.near_blind_assist and args.cap > 5:
         raise ValueError("unvalidated blind assist requires <=5km/h")
@@ -75,8 +76,12 @@ def main():
         for name in (
             "devel/lib/asmc_planner/asmc_local_planner_node",
             "devel/lib/asmc_controller/asmc_local_controller_node",
+            "devel/lib/libasmc_local_planner_core.so",
             "src/asmc_planner/src/local/node.cpp",
             "src/asmc_planner/src/local/planner.cpp",
+            "src/asmc_planner/src/local/planner.hpp",
+            "src/asmc_planner/src/local/road_memory.hpp",
+            "src/asmc_planner/src/local/motion.hpp",
             "src/asmc_controller/src/local/node.cpp",
             "src/asmc_planner/launch/local.launch",
             "src/asmc_planner/config/local_planner.yaml",
@@ -361,7 +366,7 @@ def main():
             if time.monotonic() - stationary > 12:
                 reason = "stationary_12s"
                 break
-            if travel >= 35:
+            if travel >= args.distance:
                 reason = "distance_limit"
                 break
             time.sleep(0.1)

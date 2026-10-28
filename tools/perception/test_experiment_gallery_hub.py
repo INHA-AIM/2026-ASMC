@@ -7,6 +7,14 @@ from build_experiment_gallery_hub import catalogue, number_pages
 
 
 class GalleryChronologyTest(unittest.TestCase):
+    def test_source_snapshots_are_not_experiment_pages(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            (root/"run/source-snapshot").mkdir(parents=True)
+            (root/"run/source-snapshot/index.html").write_text("<title>source</title>")
+            (root/"run/index.html").write_text("<title>result</title>")
+            self.assertEqual(["run/index.html"], [p["path"] for p in catalogue(root, root/"index.html")])
+
     def test_identifiers_and_dates_survive_regeneration_and_removal(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp); (root/'old').mkdir();(root/'new').mkdir()
