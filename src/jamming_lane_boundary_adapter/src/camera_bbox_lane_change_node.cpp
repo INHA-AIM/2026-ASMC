@@ -1210,6 +1210,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status,"semantic_first_blocked_x_m",std::to_string(semantic_blocked_x));
     addDiagnosticValue(status,"semantic_first_blocked_y_m",std::to_string(semantic_blocked_y));
     addDiagnosticValue(status,"semantic_near_ego_lidar_assist",params.semantic_near_ego_lidar_assist?"true":"false");
+    addDiagnosticValue(status,"semantic_source_stamp_ns",std::to_string(semantic_selected_stamp.toNSec()));
     addDiagnosticValue(status,"semantic_home_lane",std::to_string(semantic_home));
     addDiagnosticValue(status,"semantic_target_lane",std::to_string(semantic_target));
     addDiagnosticValue(status,"bev_status",bev_status);
@@ -1746,12 +1747,19 @@ std::string updateSemanticPathPlan() {
     const std::vector<LaneChain>* geometry=nullptr;
     std::shared_ptr<cc::DrivableClearance> grid;
     ros::Time stamp;
+    asmc_msgs::LidarTrackingObservation::ConstPtr local;
+    bool had_exact_space=false;
     for(auto i=contact_lane_history.rbegin();i!=contact_lane_history.rend();++i){
         grid=selectBev(i->stamp,i->stamp);
-        if(grid){geometry=&i->lanes;stamp=i->stamp;break;}
+        if(grid){
+            had_exact_space=true;
+            local=semantic_local.select(i->stamp,ros::Time::now(),ros::SteadyTime::now());
+            if(local){geometry=&i->lanes;stamp=i->stamp;break;}
+        }
     }
-    if(!geometry || !grid)return fail("semantic_exact_family_space_unavailable");
-    const auto local=semantic_local.select(stamp,ros::Time::now(),ros::SteadyTime::now());
+    // Newest complete source tuple, never independent latest messages. A
+    // newer pair waiting for LiDAR does not erase another fresh <=350ms tuple.
+    if(!geometry || !grid)return fail(had_exact_space?"semantic_local_health_or_time_unavailable":"semantic_exact_family_space_unavailable");
     // Require fresh local health during this trial, independently of YOLO.
     // Its positive measured footprints veto a path; no empty array clears a
     // observed semantic hole. Explicit near-blind assistance is reported and

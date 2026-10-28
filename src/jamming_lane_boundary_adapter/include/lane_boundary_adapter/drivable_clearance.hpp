@@ -30,7 +30,7 @@ class DrivableClearance {
       // defer to a fresh, paired local LiDAR health/positive-footprint check.
       // Low-probability OBSERVED shadow pixels never enter this exception.
       const bool assisted=near_ego_lidar_assist && (coverage[k]==128 || coverage[k]==0) &&
-          x>=-vehicle.rear-vehicle.longitudinal_margin-.25 && x<=6.0 && std::abs(y)<=1.6;
+          x>=-vehicle.rear-vehicle.longitudinal_margin-.25 && x<=6.5 && std::abs(y)<=1.6; // r06 mask extent max6.3m +2 grid cells; trial only
       const bool bad=!initial && !assisted && (coverage[k]!=255 || probability[k]<threshold);
       assisted_[base+c+1]=assisted_[base+c]+unsigned(assisted && !initial);
       prefix_[base+c+1]=prefix_[base+c]+unsigned(bad);
