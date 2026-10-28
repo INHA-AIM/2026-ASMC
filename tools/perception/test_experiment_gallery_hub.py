@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import tempfile
 import unittest
-from build_experiment_gallery_hub import catalogue, number_pages
+from build_experiment_gallery_hub import catalogue, number_pages, collect_pages
 
 
 class GalleryChronologyTest(unittest.TestCase):
@@ -14,6 +14,24 @@ class GalleryChronologyTest(unittest.TestCase):
             (root/"run/source-snapshot/index.html").write_text("<title>source</title>")
             (root/"run/index.html").write_text("<title>result</title>")
             self.assertEqual(["run/index.html"], [p["path"] for p in catalogue(root, root/"index.html")])
+
+    def test_partial_refresh_preserves_unselected_pages_and_titles(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            for group in ("old", "changed"):
+                (root/group).mkdir()
+                (root/group/"index.html").write_text("<title>"+group+"</title>")
+            first=number_pages(root,catalogue(root,root/"index.html"))
+            (root/"gallery-catalogue.json").write_text(json.dumps({"pages":first}))
+            (root/"changed/index.html").unlink()
+            (root/"changed/new.html").write_text("<title>new</title>")
+            second=number_pages(root,collect_pages(root,root/"index.html",["changed"]))
+            self.assertEqual({"old/index.html", "changed/new.html"}, {p["path"] for p in second})
+            old1=next(p for p in first if p["group"]=="old")
+            old2=next(p for p in second if p["group"]=="old")
+            self.assertEqual(old1["experiment_id"],old2["experiment_id"])
+            self.assertEqual(old1["title"],old2["title"])
+            with self.assertRaises(ValueError):collect_pages(root,root/"index.html",["../bad"])
 
     def test_identifiers_and_dates_survive_regeneration_and_removal(self):
         with tempfile.TemporaryDirectory() as temp:

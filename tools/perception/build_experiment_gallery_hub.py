@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime, timezone, timedelta
 import html
+from itertools import chain
 from html.parser import HTMLParser
 import json
 import os
@@ -11,9 +12,10 @@ import re
 from urllib.parse import quote, unquote, urljoin, urlsplit
 
 
-def catalogue(root, output):
+def catalogue(root, output, scan_roots=None):
     pages = []
-    for directory, directories, filenames in os.walk(root, followlinks=False):
+    for directory, directories, filenames in chain.from_iterable(
+            os.walk(p, followlinks=False) for p in (scan_roots or [root])):
         # Reproduction sources are not rendered experiments (keep them on disk).
         directories[:] = [d for d in directories if d not in ("source-snapshot", "source-untracked")]
         for name in filenames:
@@ -36,6 +38,25 @@ def catalogue(root, output):
             pages.append(dict(group=relative.parts[0], path=relative.as_posix(),
                               href=quote(relative.as_posix(), safe='/'), title=title.strip()[:180]))
     return sorted(pages, key=lambda row: (row['group'], row['path']))
+
+
+def collect_pages(root, output, groups=()):
+    """Explicit partial refresh preserves unselected registered experiment pages."""
+    if not groups:
+        return catalogue(root, output)
+    for group in groups:
+        if Path(group).name != group or group in (".", "..") or not (root/group).is_dir():
+            raise ValueError("group must be an existing direct child: " + group)
+        (root/group).resolve().relative_to(root.resolve())
+    previous_path = root/"gallery-catalogue.json"
+    if not previous_path.is_file():
+        raise ValueError("partial refresh requires an existing catalogue")
+    previous = json.loads(previous_path.read_text())["pages"]
+    kept = []
+    for p in previous:
+        if p["group"] not in groups:
+            kept.append(dict(p, title=p.get("original_title", p["title"])))
+    return kept + catalogue(root, output, [root/g for g in groups])
 
 
 def number_pages(root, pages):
@@ -149,9 +170,10 @@ def enrich(pages):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifacts',type=Path,required=True)
+    parser.add_argument('--group',action='append',default=[],help='Refresh only this direct child; preserve other catalogue entries')
     args=parser.parse_args();root=args.artifacts.resolve()
     if not root.is_dir():parser.error('artifacts directory does not exist')
-    output=root/'index.html';pages=enrich(number_pages(root,catalogue(root,output)))
+    output=root/'index.html';pages=enrich(number_pages(root,collect_pages(root,output,args.group)))
     # Shortcut choices are explicit roles. File existence is never model acceptance.
     live=next((r for r in pages if 'camera-bbox-main-' in r['path'] and r['path'].endswith('/live.html')),None)
     local=next((r for r in pages if r['path'].startswith('local2b-') and r['path'].endswith('/campaign/index.html')),None)
@@ -165,6 +187,7 @@ def main():
     featured=[dict(label=label,**by_path[path]) for label,path in wishes if path in by_path]
     updated=datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).isoformat(timespec='seconds')
     payload=dict(updated=updated,pages=pages,categories=CATEGORIES,featured=featured,
+                 refresh_scope=args.group or "all",
                  live_status_path=(str(Path(live['path']).parent/'supervisor.json') if live else None))
     template=Path(__file__).with_name('templates')/'experiment_catalogue.html'
     output.write_text(template.read_text().replace('__CATALOGUE_DATA__',json.dumps(payload,ensure_ascii=False).replace('<','\\u003c')),encoding='utf-8')
