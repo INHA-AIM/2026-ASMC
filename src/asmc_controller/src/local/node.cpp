@@ -25,6 +25,7 @@ class LocalController {
   nav_msgs::Odometry::ConstPtr state;
   asmc_msgs::LocalTrajectory::ConstPtr plan, last_good, used_plan;
   ros::SteadyTime state_received, plan_received;
+  ros::Time evaluation_time;
   std::string frame, reason = "initializing";
   bool enabled = false, selected = false, duplicate = false;
   double command_age = 0, last_steering = 0;
@@ -75,18 +76,16 @@ class LocalController {
       << ",\"plan_sequence\":" << (used_plan ? used_plan->plan_sequence : 0)
       << ",\"scene_stamp_ns\":"
       << (used_plan ? used_plan->scene_stamp.toNSec() : 0)
-      << ",\"decision_stamp\":" << ros::Time::now().toSec()
-      << ",\"plan_age_s\":"
-      << (used_plan ? (ros::Time::now() - used_plan->header.stamp).toSec()
-                    : -1.)
+      << ",\"decision_stamp\":" << evaluation_time.toSec() << ",\"plan_age_s\":"
+      << (used_plan ? (evaluation_time - used_plan->header.stamp).toSec() : -1.)
       << ",\"scene_age_s\":"
-      << (used_plan ? (ros::Time::now() - used_plan->scene_stamp).toSec() : -1.)
+      << (used_plan ? (evaluation_time - used_plan->scene_stamp).toSec() : -1.)
       << ",\"motion_age_s\":"
-      << (state ? (ros::Time::now() - state->header.stamp).toSec() : -1.)
+      << (state ? (evaluation_time - state->header.stamp).toSec() : -1.)
       << ",\"incoming_plan_sequence\":" << (plan ? plan->plan_sequence : 0)
       << ",\"incoming_reason\":"
       << std::quoted(plan ? plan->reason : std::string()) << ",\"state_age_s\":"
-      << (state ? (ros::Time::now() - state->header.stamp).toSec() : -1.)
+      << (state ? (evaluation_time - state->header.stamp).toSec() : -1.)
       << ",\"speed_mps\":" << (state ? state->twist.twist.linear.x : 0)
       << ",\"reference_speed_mps\":" << reference
       << ",\"steering\":" << cmd.steering << ",\"throttle\":" << cmd.accel
@@ -136,6 +135,7 @@ class LocalController {
     return {};
   }
   void tick(const ros::SteadyTimerEvent &) {
+    evaluation_time = ros::Time::now();
     static unsigned cycles = 0;
     if (enabled && cycles++ % 20 == 0) {
       const auto conflict = controlConflict();
@@ -148,7 +148,7 @@ class LocalController {
       }
     }
     used_plan = plan;
-    const auto now = ros::Time::now();
+    const auto now = evaluation_time;
     const auto steady = ros::SteadyTime::now();
     if (!state || !plan) {
       stop("missing_local_input");
