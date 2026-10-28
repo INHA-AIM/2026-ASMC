@@ -497,7 +497,7 @@ source /root/ws/devel/setup.bash
 export ROS_MASTER_URI=http://127.0.0.1:11311
 export ROS_HOSTNAME=127.0.0.1
 unset ROS_IP
-roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local local_speed_cap_kph:=10
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 ```
 
 이 명령은 **차량 제어를 포함**한다. bridge·camera·LiDAR는 공용 master에 각각 한 세트만
@@ -506,19 +506,22 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local loca
 
 - 기존 GPS/구간 mode 판단과 selector를 재사용한다. 일반 구간은 기존 NORMAL MPC,
   음영구간은 LOCAL planner/MPC가 담당하고, `/ctrl_cmd` 생산자는 selector 하나다.
-- 구 BBox classifier/follower를 시작하지 않는다. LOCAL은 NORMAL 중 경로 탐색·MPC
-  계산을 쉬며 짧은 속도/IMU 이력만 갱신한다. 모드 전환 때 이전 경로·노면 기억을 비운다.
+- 구 BBox classifier/follower를 시작하지 않는다. LOCAL MPC는 NORMAL 중 계산하지 않는다.
+  경로는 기존 음영 진입 지점30m 전부터 준비한다. 같은 session·설정·local frame이면
+  준비 입력과 경로를 진입 때 유지하며, 센서 초기화·세대 변경 때만 폐기한다.
 - 기존 카메라 결과에서 IMU 정합 노면 probability/coverage를 만드는 입력도 시작한다.
   추가 모델 추론은 없다. 같은 `semantic_space_trial`을 이미 사용 중이면
   `local_semantic_input:=false`를 지정한다.
-- `local_speed_cap_kph` 기본은25지만 첫 확인은 위처럼10을 사용한다. 관측·곡률·복구
+- `local_speed_cap_kph` 기본은10이다. 관측·곡률·복구
   제한은 그대로이며 속도/완주 수락을 보장하는 옵션이 아니다.
 - 웹은 동일한 `http://localhost:8088/web/index_v2.html`이다. LOCAL 경로·노면·family·
   OBB와 제어 trace를 표시한다. 별도 dashboard 서버를 켜지 않는다.
 
 판제 알고리즘 기본값 승격이 아니라 명시적 실행 선택이다.
-[LOCAL-2D 검증 상태](../records/planning/2026-10-29-local-rebase.md)의 공급 공백과
+[LOCAL-2D 검증 상태](../records/planning/2026-10-29-local-continuity.md)의 공급 공백과
 폐루프 미수락 항목은 이 연결로 해결된 것으로 처리하지 않는다.
+노면 reference 복구 후보는 기본 OFF다. 실험 profile의 접촉 없는 통과를 기본 선택의
+전환·회피 수락으로 혼동하지 않는다.
 
 ## LOCAL 실험 계산과 모니터
 

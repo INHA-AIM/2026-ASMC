@@ -1,5 +1,9 @@
 # LOCAL-2D 준비: main 리베이스와 실행 소유권
 
+**후속 공급·전환·실주행과 현재 수락 판단은
+[LOCAL-2D 연속성 기록](2026-10-29-local-continuity.md)이 정본이다.**
+아래 단계별 당시 결과·백업·실패를 보존한다.
+
 2026-10-29 기준. 기존 LOCAL 결과는 `3bb14526`이며
 `archive/local-before-rebase-20261029`로 보존했다. 원격 작업 브랜치의
 `1125582c`도 `archive/local-remote-before-rebase-20261029`에 보존했다.

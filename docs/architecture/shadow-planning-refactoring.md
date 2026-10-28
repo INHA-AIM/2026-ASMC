@@ -120,8 +120,10 @@ planner/controller·BBox lane classifier/follower·selector는 실행돼 있지 
 **독립 `local.launch`와 autonomy를 따로 겹쳐 실행하지 않는다.**
 2026-10-29부터 `autonomy_no_bridges_v2.launch jamming_planner:=local`이 LOCAL을 한 번
 include하고 구 BBox 경로를 제외한다. 기본 `camera`는 이전 행동을 유지한다.
-통합 LOCAL은 NORMAL 중 경로/MPC 계산을 쉬고, 속도/IMU 이력을 유지한다.
-모드 변경 시 이전 scene/노면 기억/path를 비우며 계산 중 이전 모드 결과도 버린다.
+통합 LOCAL MPC는 NORMAL 중 계산하지 않는다. 속도/IMU 이력을 유지하고 기존 음영
+진입30m 전부터 경로만 준비한다. 같은 센서 session·설정·local frame의 준비 입력과
+경로는 진입 때 유지한다. 모드 변경은 계산 중 이전 모드 결과만 차단하고, 센서 세대
+변경·재시작은 입력·노면 기억·경로도 폐기한다. 이 둘을 같은 초기화로 취급하지 않는다.
 통합 이름으로 허용된 `/mpc_controller` 외의 NORMAL 생산자, 다른 JAMMING 생산자,
 지정 selector 외 wire 생산자를 허용하지 않는다. 기존 selector의250ms watchdog은 유지한다.
 노면 투영 입력은 `asmc_camera/launch/semantic_space.launch`가 소유하며 시나리오 launch도
@@ -318,5 +320,10 @@ PR127 기존 음영 방식과 독립 LOCAL 제어를 동시에 실행하지 않�
 LOCAL-2D는 리베이스·클린 빌드·NORMAL/LOCAL 경계 검증을 완료했다. 실제 시각의 MPC
 이력, fitting0.10m, 공통 후보 비용은 독립 worktree에 구현됐으며
 [오프라인 결과와 남은 수락](../records/planning/2026-10-29-local-rebase.md#local-2d-오프라인-구현검증)을 따른다.
-다음 시작점은 공유 실행을 충돌 없이 확보한 뒤10km/h 무장애물, 좌/우 단일 장애물 각3회
-시험이다. 이전25km/h 목표를 반복하지 않는다. source/clock 무효와 공급 공백은 별도 유지한다.
+그 이후 공급·소유권·시각·인계 보완과 실제 반복 시험은
+[LOCAL-2D 연속성 결과](../records/planning/2026-10-29-local-continuity.md)가 정본이다.
+실험 profile은 통합 전환·좌/우 장애물 각3회 접촉 없이 통과했지만 저속 복구, 일부
+본차로 오차,250ms 초과 유효 경로 공백과 진입 full brake2회가 있어 **전체 미수락**이다.
+기본 camera와350ms freshness를 유지하고 노면 reference 후보는 기본 OFF로 둔다.
+다음은 준비 경로의 시간 여유·첫 계산 위상과 reference 전환을 다루는 LOCAL-2E다.
+이전25km/h 목표를 반복하거나 보호 동작을 제거해 성공으로 표시하지 않는다.

@@ -230,6 +230,7 @@
 | `local_speed_cap_kph` | `10` | LOCAL 목표 상한. 첫 수동 확인은 10 권장; 관측·곡률·회복 제한은 유지 |
 | `local_run_id` | `local-autonomy` | — |
 | `local_journal_path` | `(빈 문자열)` | — |
+| `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
 | `local_semantic_input` | `true` | LOCAL 노면 투영 입력 시작. 같은 semantic_space_trial이 이미 실행 중이면 false |
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
@@ -576,6 +577,7 @@
 | `enable_control` | `false` | — |
 | `run_id` | `local-preview` | — |
 | `journal_path` | `(빈 문자열)` | — |
+| `planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
 | `speed_cap_kph` | `25` | — |
 | `recovery` | `true` | — |
 | `near_blind_assist` | `false` | — |
