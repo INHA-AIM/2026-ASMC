@@ -127,6 +127,21 @@ int main() {
         expect(CheckFootprint(scene,config,p,check),"reused path obeys new current OBB");}
     }
     {
+      auto s=empty();Config c;c.budget_ms=300.;
+      for(auto& p:s.home) p[1]=2.;
+      auto bypass=Plan(s,c);expect(bypass.valid,"initial feasible lateral bypass");
+      s.previous=bypass.path;
+      for(auto& p:s.home) p[1]=0.;
+      auto returned=Plan(s,c);
+      expect(returned.valid && std::abs(returned.path.back().y)<.3,
+             "clear road returns home instead of locking in a previous bypass offset");
+      for(size_t i=1;i<returned.path.size();++i) {
+        Result check;
+        expect(CheckSweep(s,c,returned.path[i-1],returned.path[i],check),
+               "history decay never overrides the current full-body collision sweep");
+      }
+    }
+    {
       auto s=empty();Config c;c.recovery=true;c.budget_ms=300.;
       for(int row=0;row<250;++row) for(int col=0;col<160;++col) {
         const double x=20.-.1*row,y=8.-.1*col;

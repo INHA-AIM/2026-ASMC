@@ -253,7 +253,10 @@ double SegmentQualityCost(const Scene &s, const Config &c, const Pose &a,
   auto density = [&](double t) {
     const double x=a.x+t*(b.x-a.x), y=a.y+t*(b.y-a.y), k=a.k+t*(b.k-a.k);
     return .04*std::pow(y-homeAt(s,x),2) + .2*k*k +
-           .20*std::pow(y-previous_y(x,y),2);
+           // Preserve near-term control continuity, not an old avoidance
+           // offset over the whole horizon. A constant5x-home history weight
+           // kept drive16 about1.9m off home even after80m with no obstacle.
+           .20*std::exp(-std::max(0.,x)/3.)*std::pow(y-previous_y(x,y),2);
   };
   const int samples = 1 + std::max(1, int(std::ceil(
       (distance+std::abs(b.yaw-a.yaw)*c.length)/(.5*s.grid.resolution))));
@@ -383,7 +386,7 @@ bool Recovery(const Scene &s, const Config &c, Result &out) {
             s.previous.begin(), s.previous.end(), [&](auto &a, auto &b) {
               return std::abs(a.x - p.x) < std::abs(b.x - p.x);
             });
-        cost += .02 * std::pow(p.y - old->y, 2);
+        cost += .02 * std::exp(-std::max(0.,p.x)/3.) * std::pow(p.y - old->y, 2);
       }
     }
     cost += .3 * std::abs(goal[1] - homeAt(s, goal[0])) + .2 * (8. - goal[0]);
@@ -642,7 +645,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
               s.previous.begin(), s.previous.end(), [&](auto &p, auto &q) {
                 return std::abs(p.x - b.x) < std::abs(q.x - b.x);
               });
-          cost += .08 * (b.y - old->y) * (b.y - old->y);
+          cost += .08 * std::exp(-std::max(0.,b.x)/3.) * (b.y - old->y) * (b.y - old->y);
         }
         auto key = std::make_tuple(int(std::lround(b.y / .15)),
                                    int(std::lround(b.yaw / .06)),
