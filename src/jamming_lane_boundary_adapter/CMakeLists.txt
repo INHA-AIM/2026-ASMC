@@ -78,6 +78,9 @@ target_link_libraries(camera_bbox_lane_change_node lane_boundary_adapter ${catki
 catkin_install_python(PROGRAMS scripts/camera_bbox_crop.py scripts/camera_bbox_frame_bridge.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(decision_guard_test test/decision_guard_test.cpp)
+  catkin_add_gtest(dynamic_obstacle_risk_test test/dynamic_obstacle_risk_test.cpp)
+  catkin_add_gtest(obstacle_memory_test test/obstacle_memory_test.cpp)
   catkin_add_nosetests(test/test_rviz_launch_contract.py)
   find_package(rostest REQUIRED)
   add_rostest(test/camera_frame_bridge.test)

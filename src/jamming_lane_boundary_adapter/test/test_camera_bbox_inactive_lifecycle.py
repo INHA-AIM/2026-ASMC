@@ -83,7 +83,7 @@ class InactiveLifecycleTest(unittest.TestCase):
             self.assertEqual(reset['change_state'], 'following_lane')
             self.assertEqual(reset['target_lane'], '-1')
             self.assertEqual(reset['locked_lane'], '-1')
-            self.assertEqual(reset['bbox_valid'], 'false')
+            self.assertEqual(reset['object_camera_geometry_used'], 'false')
             helper.feed([], duration=.8)
             helper.following()
         finally:
