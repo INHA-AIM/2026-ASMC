@@ -66,7 +66,7 @@ class ComparisonProjection:
             confidence=fused.road_marking_confidence, coverage=fused.coverage,
             source_count=fused.source_count)
 
-    def drivable(self, planes, probabilities, masks):
+    def drivable(self, planes, probabilities, masks, visibility_margin_px=1):
         """Semantic-only experiment using the exact family planes.
 
         No RGB, IMU lookup, JPEG, or repeated fitting. Ego pixels remove camera
@@ -75,6 +75,8 @@ class ComparisonProjection:
         Low probability behind an obstacle remains unknown/occupied; this
         raster does not claim to recover the obstacle's depth or length.
         """
+        if not isinstance(visibility_margin_px,int) or not 1<=visibility_margin_px<=16:
+            raise ValueError('invalid source visibility margin')
         if set(probabilities) != set(self.cameras) or set(masks) != set(self.cameras):
             raise ValueError('drivable requires all views and visibility masks')
         projectors, quality = self.geometry(planes)
@@ -87,7 +89,9 @@ class ComparisonProjection:
             if mask.dtype != np.bool_ or mask.shape != p.shape:
                 raise ValueError('invalid ego visibility mask')
             # Bilinear projection must not borrow an excluded source neighbour.
-            visible = cv2.erode((~mask).astype(np.uint8), np.ones((3,3), np.uint8))
+            # Original-space resampling halo is excluded as UNKNOWN, never free.
+            kernel=2*visibility_margin_px+1
+            visible = cv2.erode((~mask).astype(np.uint8), np.ones((kernel,kernel), np.uint8))
             support = cv2.warpPerspective(visible, projector.homography.bev_from_image,
                 size, flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT)
             weight = quality[view] * (support > 0)

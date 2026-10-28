@@ -32,6 +32,10 @@ class SemanticSpaceTrial:
             projector_options=dict(max_ground_range_m=22., min_camera_depth_m=.1))
         self.masks = {v: HoodMask.load(True, rospy.get_param('~ego_masks/'+v)).geometry(c.height,c.width)[0]
                       for v,c in self.cameras.items()}
+        # r04 RGB/plane replay found hood-edge non-road interpolation2-3
+        # original pixels outside the object mask. Keep this4px margin only
+        # in experimental visibility; neither model output nor YOLO changes.
+        self.visibility_margin_px=int(rospy.get_param('~ego_visibility_margin_px',4))
         self.gate = LaneEpochGate()
         self.lock = threading.Lock()
         self.epoch = self.gate.context()
@@ -97,7 +101,7 @@ class SemanticSpaceTrial:
                 raise ValueError('wrong original semantic image shape/encoding')
             arrays[view]=np.frombuffer(msg.data,np.uint8).reshape(msg.height,msg.step)[:,:msg.width]
         planes={v:context.plane_coefficients[3*i:3*i+3] for i,v in enumerate(context.views)}
-        layers=self.renderer.drivable(planes,arrays,self.masks)
+        layers=self.renderer.drivable(planes,arrays,self.masks,self.visibility_margin_px)
         with self.gate.lock:
             if epoch!=self.gate.context() or not self.gate.allows(context.header.stamp):return False
             if (rospy.Time.now()-context.header.stamp).to_sec()>.35:self.counts['stale']+=1;return False
