@@ -58,7 +58,8 @@ python3 /root/ws/src/asmc_lidar/tools/check_runtime_build.py
 | C | `roslaunch asmc_lidar lidar.launch` | 공용 local/map 추적·속도/운동·전달 필터; 카메라 모델 미실행 |
 | D | `roslaunch asmc_planner autonomy_no_bridges_v2.launch` | **차량 제어 포함**, 새 공용 관측 직접 소비; GPS/IMU 위치와 Competition 종방향 실측 속도 조합, MPC/selector/재밍 어댑터 |
 
-고주로 통합 브랜치에서는 D에 `highway_merge:=true`를 지정합니다.
+D의 통합 판제 실행은 `highway_merge:=true`가 기본입니다. 고속도로 기능을 끌 때만
+`highway_merge:=false`를 지정합니다. 개별 `planner_v2.launch`는 기존 `false` 기본값을 유지합니다.
 GPU가 다른 PC에서 만든 객체 엔진을 사용하던 경우, 추론 노드를 정지한 뒤
 `bash tools/scen_runner/prepare_camera_engines.sh`로 현재 모델·GPU·TensorRT에 맞는
 엔진을 생성합니다. 검증을 마친 로컬 객체 엔진은 직접 실행하는 `camera.launch`와
