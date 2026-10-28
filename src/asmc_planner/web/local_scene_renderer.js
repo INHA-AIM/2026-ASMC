@@ -19,8 +19,11 @@ window.createLocalExperimentRenderer = canvas => {
     makeRaster(detail);ctx.save();
     const rect=canvas.getBoundingClientRect(),density=window.devicePixelRatio||1;
     ctx.setTransform(density,0,0,density,0,0);ctx.clearRect(0,0,rect.width,rect.height);
-    const scale=Math.min(rect.width/640,rect.height/760);
-    ctx.translate((rect.width-640*scale)/2,(rect.height-760*scale)/2);ctx.scale(scale,scale);
+    const toolbar=canvas.parentElement?.querySelector?.('.toolbar');
+    const top=toolbar?toolbar.offsetTop+toolbar.offsetHeight+8:8;
+    const scale=Math.min(rect.width/640,Math.max(100,rect.height-top-16)/720);
+    // Fit x=-2..20m below the wrapping toolbar, including rear axle/body.
+    ctx.translate((rect.width-640*scale)/2,top-40*scale);ctx.scale(scale,scale);
     ctx.globalAlpha=fresh?1:.3;
     if(row&&raster&&detail?.raster_available&&(options.road!==false)){const R=row.scene?.rotation||[1,0,0,0,1,0,0,0,1],z=row.scene?.ground_z??-.36;
       // Display the producer's plane grid in exactly the planner's level frame.

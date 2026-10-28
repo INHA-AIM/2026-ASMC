@@ -48,6 +48,23 @@ class Node {
   std::map<uint64_t, asmc_msgs::CameraGroundProjection::ConstPtr> contexts;
   std::map<uint64_t, asmc_msgs::LaneBoundaryFamily::ConstPtr> families;
   std::deque<asmc_msgs::LidarTrackingObservation::ConstPtr> objects;
+  struct Arrival {
+    double received, callback;
+  };
+  std::map<uint64_t, Arrival> family_arrivals, lidar_arrivals;
+  template <class E>
+  void arrival(std::map<uint64_t, Arrival> &history, uint64_t stamp,
+               const E &event) {
+    history[stamp] = {event.getReceiptTime().toSec(), ros::Time::now().toSec()};
+    while (history.size() > 32)
+      history.erase(history.begin());
+  }
+  void
+  family(const ros::MessageEvent<asmc_msgs::LaneBoundaryFamily const> &event) {
+    auto message = event.getMessage();
+    arrival(family_arrivals, message->header.stamp.toNSec(), event);
+    store(families, message);
+  }
   struct Speed {
     double stamp, value, received;
   };
@@ -73,6 +90,8 @@ class Node {
     contexts.clear();
     families.clear();
     objects.clear();
+    family_arrivals.clear();
+    lidar_arrivals.clear();
     previous.clear();
     last_scene = 0;
     home_role = 0;
@@ -167,7 +186,9 @@ class Node {
     camera_epoch = epoch;
     store(contexts, m);
   }
-  void lidar(const asmc_msgs::LidarTrackingObservation::ConstPtr &m) {
+  void lidar(const ros::MessageEvent<asmc_msgs::LidarTrackingObservation const>
+                 &event) {
+    const auto m = event.getMessage();
     const auto &o = m->observation;
     std::string epoch = o.producer_session_id + ":" +
                         std::to_string(o.generation) + ":" + o.config_id + ":" +
@@ -184,6 +205,7 @@ class Node {
       return;
     lidar_epoch = epoch;
     lidar_sequence = o.scan_sequence;
+    arrival(lidar_arrivals, o.objects.header.stamp.toNSec(), event);
     objects.push_back(m);
     while (objects.size() > 32)
       objects.pop_front();
@@ -427,6 +449,9 @@ class Node {
       invalid("object_motion_unavailable");
       return;
     }
+    const auto fi = family_arrivals.find(selected);
+    const auto li = lidar_arrivals.find(array.header.stamp.toNSec());
+    const double signed_skew = array.header.stamp.toSec() - t;
     std::ostringstream ids;
     ids << std::setprecision(17) << "{\"camera_session\":\""
         << ctx->producer_session_id
@@ -439,7 +464,23 @@ class Node {
         << "\",\"lidar_generation\":" << (*chosen)->observation.generation
         << ",\"lidar_scan\":" << (*chosen)->observation.scan_sequence
         << ",\"lidar_stamp_ns\":" << array.header.stamp.toNSec()
-        << ",\"lidar_skew_s\":" << delta << "}";
+        << ",\"lidar_skew_s\":" << delta
+        << ",\"lidar_minus_family_source_ms\":" << signed_skew * 1000;
+    if (fi != family_arrivals.end() && li != lidar_arrivals.end()) {
+      const auto &fa = fi->second, &la = li->second;
+      ids << ",\"timing_available\":true"
+          << ",\"family_source_to_receive_ms\":" << (fa.received - t) * 1000
+          << ",\"lidar_source_to_receive_ms\":"
+          << (la.received - array.header.stamp.toSec()) * 1000
+          << ",\"lidar_minus_family_receive_ms\":"
+          << (la.received - fa.received) * 1000
+          << ",\"family_callback_queue_ms\":"
+          << (fa.callback - fa.received) * 1000
+          << ",\"lidar_callback_queue_ms\":"
+          << (la.callback - la.received) * 1000;
+    } else
+      ids << ",\"timing_available\":false";
+    ids << "}";
     input_ids = ids.str();
     const auto alignment_start = ros::SteadyTime::now();
     Scene scene;
@@ -715,9 +756,8 @@ public:
     context_sub =
         nh.subscribe("/experimental/shadow/semantic_space_trial/context", 1,
                      &Node::context, this);
-    family_sub = nh.subscribe<asmc_msgs::LaneBoundaryFamily>(
-        "/perception/lane/boundary_family", 4,
-        [this](auto m) { store(families, m); });
+    family_sub = nh.subscribe("/perception/lane/boundary_family", 4,
+                              &Node::family, this);
     objects_sub =
         nh.subscribe("/perception/lidar/tracks_local", 4, &Node::lidar, this);
     planner_timer =

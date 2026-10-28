@@ -18,6 +18,7 @@ def audit(root):
     family = Counter()
     context = Counter()
     latest = {}
+    delays = defaultdict(list)
     gaps = defaultdict(list)
     previous = {}
     prefix = "/experimental/shadow/semantic_space_trial/"
@@ -53,6 +54,7 @@ def audit(root):
                 if kind in previous and 0 < t - previous[kind] < 3:
                     gaps[kind].append((t - previous[kind]) * 1000)
                 previous[kind] = t
+                delays[kind].append((arrival-t)*1000)
                 latest[kind] = dict(
                     source=t, arrival=arrival, age_at_arrival=arrival - t
                 )
@@ -84,6 +86,9 @@ def audit(root):
         family=dict(family),
         imu_corrected_context=dict(context),
         bundle_arrival_age_s=quantiles(complete),
+        source_to_bag_receive_ms={k:quantiles(v)for k,v in delays.items()},
+        semantic_ready_after_family_ms=quantiles([(max(v[x]for x in ('context','coverage','probability'))-v['family'])*1000
+            for v in frames.values()if all(x in v for x in ('family','context','coverage','probability'))]),
         source_gap_ms={k: quantiles(v) for k, v in gaps.items()},
         roll_abs_deg=quantiles([abs(x["roll_deg"]) for x in attitudes]),
         pitch_abs_deg=quantiles([abs(x["pitch_deg"]) for x in attitudes]),

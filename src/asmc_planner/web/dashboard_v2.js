@@ -34,7 +34,7 @@
   };
   const view = {scale: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0, follow: false};
   const tracks = new Map();
-  let bounds = null;
+  let bounds = null, localPanelOpened=false;
   let lidarFrameKey = null;
   let lidarFrameIndex = 0;
   let previousObjects = new Map();
@@ -382,6 +382,7 @@
   }
 
   function draw() {
+    document.body.classList.toggle('local-experiment-active',Boolean(localExperimentView()));
     for (const id of ['fit','follow','showDroppedObjects','showVelocity','showCorridor','showSignals'])
       $(id).disabled = localView() || localExperimentView();
     if (localExperimentView()) {
@@ -736,12 +737,19 @@
     $('localStatus').className='chip '+(fresh?'ok':'bad');
     $('localExperimentPanel').hidden=!r;
     if(!r)return;
+    if(!localPanelOpened){const sidebar=document.querySelector?.('aside');if(sidebar)sidebar.scrollTop=0;localPanelOpened=true;}
     $('localExperimentState').textContent=(fresh?'':'STALE · ')+(r.valid?r.reason:'계산 불가: '+r.reason);
     $('localExperimentGrid').innerHTML=kv([
       ['run / plan',r.run_id+' / '+r.plan_sequence],['실제 제어',c?.control_enabled?'연결됨':'계산 전용'],
       ['목표 / 제한 속도',fmt(r.requested_kph)+' / '+fmt(r.selected_kph)+' km/h'],
       ['최종 속도 제한',r.speed_reason],['계획 / MPC',fmt(r.processing_ms,2)+' / '+fmt(c?.processing_ms,2)+' ms'],
-      ['입력 나이',fmt(r.age_s,3)+'s'],['LiDAR/source 차이',fmt((r.inputs?.lidar_skew_s||0)*1000,1)+'ms'],
+      ['입력 나이',fmt(r.age_s,3)+'s'],
+      ['실제 선택 source 차 (LiDAR−family)',fmt(r.inputs?.lidar_minus_family_source_ms,1)+'ms · '+(r.inputs?.lidar_minus_family_source_ms>=0?'LiDAR 기준시각이 뒤':'family 기준시각이 뒤')],
+      ['결과 수신 순서',r.inputs?.timing_available?(r.inputs.lidar_minus_family_receive_ms>=0?'LiDAR':'family')+'가 '+fmt(Math.abs(r.inputs.lidar_minus_family_receive_ms),1)+'ms 늦게 도착':'수신 시각 대기'],
+      ['family 기준시각→수신',fmt(r.inputs?.family_source_to_receive_ms,1)+'ms'],
+      ['LiDAR 기준시각→수신',fmt(r.inputs?.lidar_source_to_receive_ms,1)+'ms'],
+      ['callback 대기 family / LiDAR',fmt(r.inputs?.family_callback_queue_ms,1)+' / '+fmt(r.inputs?.lidar_callback_queue_ms,1)+'ms'],
+      ['정렬 / 탐색 / 속도 계산',fmt(r.alignment_ms,2)+' / '+fmt(r.search_ms,2)+' / '+fmt(r.speed_ms,2)+'ms'],
       ['노면 대응',data.localDetail?.reason||'같은 시각 격자 대기'],
       ['무효 시 회색 표시',!r.valid?'최근 유효 기하 최대1초 · 현재 판단은 무효':'현재 계획 기하'],
       ['MPC 상태',c?.reason||'대기'],['경로 오차',fmt(c?.tracking_error_m,3)+'m (본차로 오차와 별도)']]);
@@ -781,7 +789,7 @@
       ['BBOX 입력 사유', c.bbox_input_error || b?.payload?.reason || '–'],
       ['family', `${state(f)} · ${ages(f)}`],
       ['local LiDAR', `${state(o)} · ${ages(o)}`],
-      ['LiDAR/family source 차이', f && o ? `${fmt((o.stamp_ns-f.stamp_ns)/1e6,1)} ms (운동 정렬 없음)` : '비교 불가'],
+      ['최신 관측 source 차 · 선택 입력 아님', f && o ? `${fmt((o.stamp_ns-f.stamp_ns)/1e6,1)} ms (LiDAR−family; 수신 지연 아님)` : '비교 불가'],
       ['local 생략 객체', o?.payload?.omitted_objects ?? '–'],
       ['일반 MPC 경고', selector?.payload?.mode === 'JAMMING' ? '비선택 제어기 — 음영 정지 이유와 별도' : '일반 실행 패널 참조']
     ]);

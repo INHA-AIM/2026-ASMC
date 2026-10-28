@@ -249,3 +249,12 @@
 #localExperimentPanel h3 { font-size:12px;margin-top:12px; }
 
 #localExperimentGrid strong { white-space:normal;overflow-wrap:anywhere; }
+
+/* Keep the grid row within the viewport: sidebar content must not stretch canvas. */
+main { height:calc(100dvh - 52px); min-height:0; grid-template-rows:minmax(0,1fr); }
+.map-panel { min-height:0; height:100%; padding:0; margin-bottom:0; overflow:hidden; }
+.map-panel canvas { height:100%; min-height:0; }
+aside { min-height:0; height:100%; }
+
+body.local-experiment-active aside .hero-v2,
+body.local-experiment-active aside .shadow-panel:not(#localExperimentPanel) { display:none; }
