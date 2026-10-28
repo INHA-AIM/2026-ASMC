@@ -10,6 +10,8 @@ int main(int argc,char**argv) {
   c.budget_ms=argc>2?std::stod(argv[2]):40.;
   if(argc>3)c.blind_assist=std::stoi(argv[3]);
   if(argc>4)c.recovery=std::stoi(argv[4]);
+  if(argc>5)c.controlled_decel=std::stod(argv[5]);
+  if(c.controlled_decel<1.5 || c.controlled_decel>3.)return 2;
   s.speed=root["speed"].as<double>(0.);s.acceleration=root["acceleration"].as<double>(0.);
   s.yaw_rate=root["yaw_rate"].as<double>(0.);s.age=root["age"].as<double>(0.);s.aligned_to_plan=true;
   s.grid.rows=g["rows"].as<int>();s.grid.cols=g["cols"].as<int>();
@@ -25,7 +27,7 @@ int main(int argc,char**argv) {
     for(auto p:x["polygon"])o.polygon.push_back({p[0].as<double>(),p[1].as<double>()});
     s.obstacles.push_back(o);}
   const auto r=Plan(s,c);
-  std::cout<<"{\"valid\":"<<(r.valid?"true":"false")<<",\"reason\":\""<<r.reason<<"\",\"length\":"<<(r.path.empty()?0:r.path.back().s)<<",\"chosen_kph\":"<<r.chosen_cap*3.6<<",\"elapsed_ms\":"<<r.elapsed_ms<<",\"rejected\":{";
+  std::cout<<"{\"valid\":"<<(r.valid?"true":"false")<<",\"reason\":\""<<r.reason<<"\",\"length\":"<<(r.path.empty()?0:r.path.back().s)<<",\"chosen_kph\":"<<r.chosen_cap*3.6<<",\"braking_limit_mps2\":"<<r.braking_limit<<",\"required_stopping_m\":"<<r.required_stopping_m<<",\"elapsed_ms\":"<<r.elapsed_ms<<",\"rejected\":{";
   bool first=true;for(auto p:r.rejected){if(!first)std::cout<<',';first=false;std::cout<<'"'<<p.first<<"\":"<<p.second;}std::cout<<"},\"path\":[";
   first=true;for(auto p:r.path){if(!first)std::cout<<',';first=false;std::cout<<'['<<p.x<<','<<p.y<<','<<p.yaw<<']';}std::cout<<"]}\n";
 }
