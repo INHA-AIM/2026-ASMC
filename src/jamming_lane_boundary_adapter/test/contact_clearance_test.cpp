@@ -101,4 +101,16 @@ TEST(DrivableClearance, WholeBodyAndUnknownCellsAreChecked) {
  EXPECT_FALSE(grid.check(straight(7.5),Vehicle{}).clear);
  EXPECT_FALSE(grid.prepare(spec,{},c,Vehicle{}));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
 }
+TEST(DrivableClearance, NearBlindAssistanceNeverClearsObservedHolesOrDistantUnknown) {
+ GridSpec spec{250,160,20.,8.,.1};std::vector<uint8_t> p(40000,255),c(40000,255);DrivableClearance grid;
+ const auto at=[](double x,double y){return int(std::round((20.-x)*10))*160+int(std::round((8.-y)*10));};
+ c[at(4.4,.7)]=0;p[at(4.4,.7)]=0;
+ ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,false));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
+ ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,true));const auto result=grid.check(straight(),Vehicle{});
+ EXPECT_TRUE(result.clear);EXPECT_GT(result.assisted,0u);
+ c[at(4.4,.7)]=255; // same cell observed non-road: never a blindness exemption
+ ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,true));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
+ c[at(4.4,.7)]=128;p[at(4.4,.7)]=0;c[at(8.,0.)]=0;
+ ASSERT_TRUE(grid.prepare(spec,p,c,Vehicle{},166,true,true));EXPECT_FALSE(grid.check(straight(),Vehicle{}).clear);
+}
 int main(int argc,char** argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}
