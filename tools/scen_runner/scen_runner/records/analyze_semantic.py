@@ -35,7 +35,7 @@ def analyze(root, output_name='semantic-analysis'):
     topics={prefix+'drivable_probability':'probability',prefix+'coverage':'coverage',
             prefix+'context':'context','/perception/lane/boundary_family':'family',
             '/image_jpeg/compressed':'rgb','/planning/camera_bbox_lane_change/diagnostics':'decision'}
-    frames=OrderedDict();rgb=OrderedDict();pending=OrderedDict();seen=set()
+    frames=OrderedDict();rgb=OrderedDict();pending=OrderedDict();seen=OrderedDict()
     counts=Counter();case_counts=Counter();cases=[];stats={}
     unmatched=Counter()
 
@@ -79,11 +79,12 @@ def analyze(root, output_name='semantic-analysis'):
                         v={x.key:x.value for x in status.values}
                         if v.get('bev_mode')!='semantic_trial':continue
                         counts[status.message]+=1
-                        stamp=int(v.get('semantic_source_stamp_ns','0'))
+                        stamp=int(v.get('semantic_input_stamp_ns','0'))
                         if not stamp:unmatched['no_decision_source']+=1;continue
                         key=(status.message,v.get('semantic_target_lane'))
                         if case_counts[key]>=2 or len(cases)>=16:continue
-                        if stamp not in seen:pending[stamp]=(v,status.message);seen.add(stamp)
+                        if stamp not in seen:pending[stamp]=(v,status.message);seen[stamp]=True
+                        while len(seen)>128:seen.popitem(last=False)
                 elif kind=='rgb':rgb[message.header.stamp.to_nsec()]=message
                 else:frames.setdefault(message.header.stamp.to_nsec(),{})[kind]=message
                 for stamp in list(pending):gallery(stamp)

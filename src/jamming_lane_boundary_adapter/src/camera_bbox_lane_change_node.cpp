@@ -1210,7 +1210,7 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status,"semantic_first_blocked_x_m",std::to_string(semantic_blocked_x));
     addDiagnosticValue(status,"semantic_first_blocked_y_m",std::to_string(semantic_blocked_y));
     addDiagnosticValue(status,"semantic_near_ego_lidar_assist",params.semantic_near_ego_lidar_assist?"true":"false");
-    addDiagnosticValue(status,"semantic_source_stamp_ns",std::to_string(semantic_selected_stamp.toNSec()));
+    addDiagnosticValue(status,"semantic_input_stamp_ns",std::to_string(semantic_selected_stamp.toNSec()));
     addDiagnosticValue(status,"semantic_home_lane",std::to_string(semantic_home));
     addDiagnosticValue(status,"semantic_target_lane",std::to_string(semantic_target));
     addDiagnosticValue(status,"bev_status",bev_status);
