@@ -2,6 +2,8 @@
 
 #include <utility>
 #include <cmath>
+#include <algorithm>
+#include <stdexcept>
 
 namespace asmc_planner {
 ControlSelector::ControlSelector(ros::NodeHandle nh) : nh_(std::move(nh)) {
@@ -10,6 +12,12 @@ ControlSelector::ControlSelector(ros::NodeHandle nh) : nh_(std::move(nh)) {
     command_timeout_s_ = 0.25;
   ros::NodeHandle("~").param("local_handoff_enabled", local_handoff_enabled_, false);
   if (local_handoff_enabled_) {
+    // Conservative first-command envelope from the same canonical controller
+    // YAML, not a second MPC/speed controller. Subsequent source commands keep
+    // their original behavior. This also covers LOCAL -> NORMAL sub50ms gaps.
+    ros::NodeHandle("~").param("handoff_model/constraints/steering/min_rate",handoff_steering_rate_,.1);
+    if (!std::isfinite(handoff_steering_rate_) || handoff_steering_rate_<=0)
+      throw std::runtime_error("invalid local handoff steering rate");
     local_plan_sub_ = nh_.subscribe<asmc_msgs::LocalTrajectory>(
         "/planning/local/trajectory", 1, [this](const asmc_msgs::LocalTrajectory::ConstPtr& plan) {
           local_plan_ = plan;
@@ -47,6 +55,7 @@ void ControlSelector::modeCallback(const std_msgs::UInt8::ConstPtr& message) {
   }
   const auto next = static_cast<PlanningMode>(message->data);
   if (!has_mode_ || next != mode_) {
+    handoff_steering_limited_=false;
     ROS_WARN("Control selector source: %s -> %s", has_mode_ ?
              PlanningModeName(mode_) : "NONE", PlanningModeName(next));
     const auto now = ros::SteadyTime::now();
@@ -70,10 +79,10 @@ void ControlSelector::normalCallback(
   normal_received_ = true;
   normal_received_at_ = ros::SteadyTime::now();
   if (has_mode_ && mode_ == PlanningMode::NORMAL) {
+    publishSelected(*message);
     selected_received_at_ = ros::SteadyTime::now();
     awaiting_selected_command_ = false;
     handoff_pending_ = false;
-    control_pub_.publish(*message);
   }
 }
 
@@ -82,10 +91,10 @@ void ControlSelector::jammingCallback(
   if (!message) return;
   jamming_received_ = true;
   if (has_mode_ && mode_ == PlanningMode::JAMMING) {
+    publishSelected(*message);
     selected_received_at_ = ros::SteadyTime::now();
     awaiting_selected_command_ = false;
     handoff_pending_ = false;
-    control_pub_.publish(*message);
   }
 }
 
@@ -116,6 +125,20 @@ void ControlSelector::publishStop() {
   stop.longlCmdType = 1;
   stop.brake = 1.0;
   control_pub_.publish(stop);
+  last_wire_command_=stop;wire_issued_at_=ros::SteadyTime::now();has_wire_command_=true;
+}
+
+void ControlSelector::publishSelected(const morai_msgs::CtrlCmd& input) {
+  auto command=input;
+  const auto now=ros::SteadyTime::now();
+  if (local_handoff_enabled_ && handoff_pending_ && has_wire_command_) {
+    const double span=handoff_steering_rate_*std::max(0.,(now-wire_issued_at_).toSec());
+    command.steering=std::clamp(command.steering,last_wire_command_.steering-span,
+                                                last_wire_command_.steering+span);
+    handoff_steering_limited_=command.steering!=input.steering;
+  }
+  control_pub_.publish(command);
+  last_wire_command_=command;wire_issued_at_=now;has_wire_command_=true;
 }
 
 void ControlSelector::watchdogCallback(const ros::SteadyTimerEvent&) {
@@ -142,7 +165,8 @@ void ControlSelector::publishDiagnostics() {
       " jamming_received=" + (jamming_received_ ? "true" : "false") +
       " command_fresh=" + (commandFresh() ? "true" : "false") +
       " local_ready=" + (localPlanFresh() ? "true" : "false") +
-      " handoff_pending=" + (handoffWaiting() ? "true" : "false");
+      " handoff_pending=" + (handoffWaiting() ? "true" : "false")+
+      " handoff_steering_limited="+(handoff_steering_limited_?"true":"false");
   diagnostics_pub_.publish(message);
 }
 }  // namespace asmc_planner

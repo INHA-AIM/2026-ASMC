@@ -101,6 +101,8 @@
   <node pkg="asmc_planner" type="asmc_control_selector_node"
         name="asmc_control_selector" output="screen" required="true">
     <param name="local_handoff_enabled" value="$(eval arg('jamming_planner') == 'local')"/>
+    <rosparam if="$(eval arg('jamming_planner') == 'local')" command="load"
+              file="$(find asmc_controller)/config/controller.yaml" ns="handoff_model"/>
   </node>
   <!-- 재밍 BBOX 입력은 camera_bbox_frame_bridge가 /perception/camera/objects를 직접 받는다
        (별도 YOLO 변환 어댑터 없음, 소비 cutoff는 bbox_conf_thres 0.7). -->

@@ -33,19 +33,22 @@ with tempfile.TemporaryDirectory(prefix='local-handoff-') as folder:
                 plans.publish(p)
                 normal.publish(CtrlCmd(longlCmdType=1,accel=.1,steering=.2))
                 time.sleep(.02)
+            before=output[-1]
             output.clear()
             mode.publish(UInt8(1));time.sleep(.065)
             assert not output, [(t,m.brake) for t,m in output]
-            local.publish(CtrlCmd(longlCmdType=1,accel=.1,steering=.15));time.sleep(.025)
+            local.publish(CtrlCmd(longlCmdType=1,accel=.1,steering=-.5));time.sleep(.025)
             assert output and all(m.brake<.9 for _,m in output), output
+            assert abs(output[0][1].steering-before[1].steering)<=.1*(output[0][0]-before[0])+.003
             print('Prepared entry: no inserted stop or old-command republish PASS')
             # Normal commands may arrive while unselected; only the selected
             # local command refreshes the active-source watchdog.
             normal.publish(CtrlCmd(longlCmdType=1,accel=.1,steering=.2));time.sleep(.01)
-            output.clear();mode.publish(UInt8(0));time.sleep(.055)
+            before=output[-1];output.clear();mode.publish(UInt8(0));time.sleep(.055)
             assert not output, output
             normal.publish(CtrlCmd(longlCmdType=1,accel=.1,steering=.2));time.sleep(.025)
             assert output and all(m.brake<.9 for _,m in output), output
+            assert abs(output[0][1].steering-before[1].steering)<=.1*(output[0][0]-before[0])+.003
             print('Prepared return: next NORMAL command takes over without an inserted stop PASS')
             # Fresh preparation exists, but the selected controller never responds.
             p.header.stamp=rospy.Time.now();p.scene_stamp=p.header.stamp;plans.publish(p)

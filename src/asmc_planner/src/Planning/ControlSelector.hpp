@@ -19,6 +19,7 @@ class ControlSelector final {
   void diagnosticsCallback(const ros::SteadyTimerEvent&);
   void watchdogCallback(const ros::SteadyTimerEvent&);
   void publishStop();
+  void publishSelected(const morai_msgs::CtrlCmd&);
   bool commandFresh() const;
   bool localPlanFresh() const;
   bool handoffWaiting() const;
@@ -40,5 +41,9 @@ class ControlSelector final {
   bool has_mode_ = false;
   bool normal_received_ = false;
   bool jamming_received_ = false;
+  bool has_wire_command_ = false, handoff_steering_limited_ = false;
+  double handoff_steering_rate_ = .1;
+  ros::SteadyTime wire_issued_at_;
+  morai_msgs::CtrlCmd last_wire_command_;
 };
 }  // namespace asmc_planner
