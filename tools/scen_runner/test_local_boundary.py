@@ -327,6 +327,17 @@ def main():
             )
             time.sleep(0.8)
 
+            # Wait for the new node's actual subscriptions, not a probabilistic
+            # process-start sleep. The future-stamp phase duration stays fixed.
+            deadline=time.monotonic()+5
+            while True:
+                subs=dict(master.getSystemState()[1])
+                if all('/local_clock_contract' in subs.get(t,[]) for t in
+                       ['/planning/local/odometry','/planning/local/trajectory','/clock']) and states.get_num_connections() and plans.get_num_connections() and clock_pub.get_num_connections():
+                    break
+                assert time.monotonic()<deadline,'clock contract node did not connect'
+                time.sleep(.02)
+
             def clock_phase(t, lead, duration, mutate=lambda s, p: None):
                 nonlocal seq
                 seq += 1
@@ -358,7 +369,8 @@ def main():
                 time.sleep(duration)
                 return [dict(r) for r in received]
 
-            assert any(r["reason"] == "ok" for r in clock_phase(100.0, -0.01, 0.10))
+            first_clock=clock_phase(100.0,-0.01,.10)
+            assert any(r["reason"] == "ok" for r in first_clock), first_clock
             tiny_future = clock_phase(100.05, 0.000067, 0.08)
             assert any(
                 r["reason"] == "motion_clock_pending" for r in tiny_future

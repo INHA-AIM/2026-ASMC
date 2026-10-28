@@ -37,6 +37,14 @@ int main() {
     expect(!reference.empty() && std::abs(reference[5][1]+.25)<.11,
            "semantic-only cue prefers right-side road without lane selection");
     expect(s.grid.probability==original,"semantic reference cannot fill or edit road");
+    auto moved=s.grid;
+    moved.rotation=GroundRotation(.01,-.03);
+    moved.source_in_plan={-.3,.1,.04};
+    auto aligned=SemanticReference(moved,c);
+    auto expected=GridToPlan(moved,19.6,-.25);
+    expect(!aligned.empty() && std::abs(aligned.back()[0]-expected[0])<1e-8 &&
+           std::abs(aligned.back()[1]-expected[1])<1e-8,
+           "semantic reference uses existing IMU/relative transform exactly once");
     for(int col=0;col<160;++col) s.grid.probability[100*160+col]=0;
     s.home=SemanticReference(s.grid,c);
     Result blocked;

@@ -60,6 +60,19 @@ public:
     return out;
   }
 };
+// The solver's first step is50ms; a handoff/early timer callback can issue
+// sooner. Bound that actual command interval without advancing the input clock.
+inline bool LimitToIssueCadence(MPCControl& command,
+                                const ExecutionHistory::Snapshot& actual,
+                                double rate, double solver_dt) {
+  if (actual.steering.empty()) return false;
+  const double span=std::clamp(actual.elapsed_s,0.,solver_dt)*rate;
+  const double limited=std::clamp(command.delta,actual.previous.delta-span,
+                                              actual.previous.delta+span);
+  const bool changed=limited!=command.delta;
+  command.delta=limited;
+  return changed;
+}
 // g_mpc is already process-local. Only the LOCAL node calls this boundary;
 // NORMAL MPCProcess and its fixed-cadence semantics remain untouched.
 inline void PrepareExecution(const ExecutionHistory::Snapshot &snapshot) {

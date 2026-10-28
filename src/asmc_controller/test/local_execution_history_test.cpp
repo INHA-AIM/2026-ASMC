@@ -64,3 +64,15 @@ TEST(LocalExecutionHistory, BoundedAfterLongRunAndPendingExpiresOnIssue) {
   EXPECT_FALSE(h.At(501.05,.05,.15).restart_seed);
   EXPECT_NEAR(h.At(501.15,.05,.15).steering.back(),.3,1e-10);
 }
+TEST(LocalExecutionHistory, EarlyHandoffUsesActualCommandInterval) {
+  ExecutionHistory h;h.Issued(1.,{.1,.2});
+  MPCControl command{.15,.2};
+  EXPECT_TRUE(asmc_local::LimitToIssueCadence(command,h.At(1.02,.05,.15),1.,.05));
+  EXPECT_NEAR(command.delta,.12,1e-12);
+  h.Issued(1.02,command);
+  command.delta=-.1;
+  EXPECT_TRUE(asmc_local::LimitToIssueCadence(command,h.At(1.03,.05,.15),1.,.05));
+  EXPECT_NEAR(command.delta,.11,1e-12);
+  command.delta=.13;
+  EXPECT_FALSE(asmc_local::LimitToIssueCadence(command,h.At(1.2,.05,.15),1.,.05));
+}

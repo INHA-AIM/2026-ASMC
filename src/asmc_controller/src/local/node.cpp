@@ -1,5 +1,6 @@
 // Separate LOCAL-1 input boundary. Normal map converter/behavior stays intact.
 #include "MPC/MPC.hpp"
+#include "MPC/Constraints/constraints.hpp"
 #include "local/execution_history.hpp"
 #include "local/ownership_watch.hpp"
 #include <memory>
@@ -34,6 +35,7 @@ class LocalController {
   ros::Time evaluation_time;
   ros::SteadyTime last_solved;
   bool command_published = false;
+  bool steering_cadence_limited = false;
   asmc_local::ExecutionHistory execution_history;
   asmc_local::ExecutionHistory::Snapshot execution_snapshot;
   void resetExecution() {
@@ -140,6 +142,7 @@ class LocalController {
       << ",\"execution_seed_restarted\":" << (execution_snapshot.restart_seed ? "true" : "false")
       << ",\"execution_history_samples\":" << execution_snapshot.steering.size()
       << ",\"steering\":" << cmd.steering << ",\"throttle\":" << cmd.accel
+      << ",\"steering_cadence_limited\":" << (steering_cadence_limited?"true":"false")
       << ",\"brake\":" << cmd.brake << ",\"processing_ms\":" << cost
       << ",\"tracking_error_m\":" << cross
       << ",\"heading_error_rad\":" << heading
@@ -173,6 +176,7 @@ class LocalController {
   void tick(const ros::SteadyTimerEvent &) {
     evaluation_time = ros::Time::now();
     command_published = false;
+    steering_cadence_limited = false;
     if (enabled) {
       ownership_state = ownership->read();
       duplicate = ownership_state.conflict;
@@ -394,6 +398,16 @@ class LocalController {
       return;
     }
     last_solved = ros::SteadyTime::now();
+    const auto actual_issue = execution_history.At(last_solved.toSec(), GetMPCParams().dt,
+                                                   GetMPCParams().steering_response_delay_s);
+    steering_cadence_limited=asmc_local::LimitToIssueCadence(output.control, actual_issue,
+        SteeringRateLimit(ego.vx,GetMPCParams()),GetMPCParams().dt);
+    if (steering_cadence_limited) {
+      // Subsequent prediction starts from the command actually issued, not the
+      // more aggressive first step solved on the nominal50ms grid.
+      g_mpc.warm_start.clear();
+      command=mpc_controller_ros::ToRosControlCommand(output.control,GetMPCParams());
+    }
     last_steering = command.steering;
     // Preview has its own simulated command timeline. It never publishes.
     execution_history.Issued(last_solved.toSec(), output.control);
