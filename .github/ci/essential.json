@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "wall_target_minutes": 7,
+  "jobs": {
+    "planning": {
+      "packages": [
+        "asmc_geometry",
+        "asmc_msgs",
+        "morai_msgs",
+        "planning_inputs",
+        "asmc_planner",
+        "asmc_controller"
+      ],
+      "targets": [
+        "asmc_planner_node",
+        "mpc_controller_node",
+        "asmc_control_selector_node",
+        "asmc_competition_speed_state_node",
+        "planning_vehicle_state_node",
+        "planning_objects_adapter",
+        "highway_merge_preflight",
+        "planning_lidar_observation_test",
+        "planning_group_conversion_test",
+        "planning_lidar_companion_test",
+        "planning_gps_recovery_test",
+        "stop_brake_response_test",
+        "reference_validator_test",
+        "asmc_mode_detector_test"
+      ],
+      "script": ".github/ci/essential-planning.sh"
+    },
+    "perception": {
+      "packages": [
+        "asmc_geometry",
+        "asmc_msgs",
+        "morai_msgs",
+        "asmc_bridge",
+        "asmc_camera",
+        "asmc_hd_map",
+        "asmc_lidar",
+        "lane_boundary_adapter"
+      ],
+      "targets": [
+        "lidar_pipeline_node",
+        "vehicle_state_node",
+        "camera_bbox_lane_node",
+        "camera_bbox_lane_change_node",
+        "_lane_association",
+        "asmc_camera_generate_messages",
+        "asmc_hd_map_generate_messages",
+        "lane_boundary_adapter_generate_messages",
+        "asmc_lidar_frame_time_core_test",
+        "asmc_lidar_geometry_boundary_test",
+        "ground_projection_test"
+      ],
+      "script": ".github/ci/essential-perception.sh"
+    }
+  }
+}

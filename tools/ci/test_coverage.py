@@ -34,32 +34,42 @@ done''')
         shutil.copytree(original/'.github', root/'.github')
         return root
 
-    def test_second_workspace_build_is_rejected(self):
+    def test_heavy_suite_cannot_run_automatically(self):
         root = self.copy_ci()
-        path = root/'.github/workflows/planning-integration.yml'
-        text = path.read_text().replace('run: python3 tools/audit/check_lidar_canonicalization.py',
-                                       'run: ./scripts/build_ws.sh')
-        path.write_text(text)
-        self.assertTrue(any('exactly once' in e for e in audit(root)[0]))
+        path = root/'.github/workflows/full-regression.yml'
+        path.write_text(path.read_text().replace('  workflow_dispatch:', '  pull_request:'))
+        self.assertTrue(any('manual-only' in e for e in audit(root)[0]))
 
-    def test_planning_gate_cannot_succeed_after_failed_shared_build(self):
+    def test_essential_budget_and_parallelism_are_enforced(self):
         root = self.copy_ci()
         path = root/'.github/workflows/ci.yml'
-        path.write_text(path.read_text().replace('test "$BUILD_RESULT" = success', 'echo passed'))
-        self.assertTrue(any('must fail unless' in e for e in audit(root)[0]))
+        path.write_text(path.read_text().replace('timeout-minutes: 6', 'timeout-minutes: 8', 1))
+        self.assertTrue(any('six minutes' in e for e in audit(root)[0]))
+        path.write_text(path.read_text().replace('    timeout-minutes: 8',
+                                                '    needs: catkin-build\n    timeout-minutes: 6', 1))
+        self.assertTrue(any('parallel' in e for e in audit(root)[0]))
 
     def test_missing_planner_runtime_regression_is_rejected(self):
         root = self.copy_ci()
         path = root/'.github/ci/planning.sh'
         path.write_text(path.read_text().replace('rostest asmc_planner highway_runtime.test', ''))
-        self.assertTrue(any('missing former planning check' in e for e in audit(root)[0]))
+        self.assertTrue(any('missing manual planning regression' in e for e in audit(root)[0]))
 
-    def test_duplicate_input_execution_is_rejected(self):
+    def test_critical_production_build_cannot_be_dropped(self):
+        import json
         root = self.copy_ci()
-        path = root/'.github/ci/planning.sh'
+        path = root/'.github/ci/essential.json'
+        spec = json.loads(path.read_text())
+        spec['jobs']['perception']['targets'].remove('lidar_pipeline_node')
+        path.write_text(json.dumps(spec))
+        self.assertTrue(any('targets missing' in e for e in audit(root)[0]))
+
+    def test_full_tensor_runtime_cannot_return_to_fast_ci(self):
+        root = self.copy_ci()
+        path = root/'.github/workflows/ci.yml'
         with path.open('a') as stream:
-            stream.write('devel/lib/planning_inputs/planning_gps_recovery_test\n')
-        self.assertTrue(any('exactly once' in e for e in audit(root)[0]))
+            stream.write('\n# cpu-requirements.txt\n')
+        self.assertTrue(any('slow full suite' in e for e in audit(root)[0]))
 
 
 if __name__ == '__main__':
