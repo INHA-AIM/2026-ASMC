@@ -45,6 +45,7 @@ def build(root, scene):
     cards = ''
     for name in ('empty-replay', 'barrier-replay'):
         data = json.loads((root/name/'summary.json').read_text())
+        data.pop('examples', None)  # Full cases already have source-exact gallery links.
         cards += f'<h2>{html.escape(name)}</h2><a href="{name}/local-gallery/index.html">동일 source 영상·노면·경로·실패 사례</a><pre>{html.escape(json.dumps(data,ensure_ascii=False,indent=2))}</pre>'
     with (root/'index.html').open('x') as f:
         f.write('''<!doctype html><meta charset="utf-8"><title>LOCAL-2D · 리베이스 이후 오프라인 검증</title>
