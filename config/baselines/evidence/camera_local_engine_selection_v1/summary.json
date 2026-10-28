@@ -83,13 +83,17 @@
     "both_engine_selectors_required": true,
     "legacy_dependency_guards_preserved": true,
     "local_facade_tests_passed": 18,
-    "local_camera_ci_group_tests_passed": 1011,
+    "local_camera_ci_group_tests_passed": 1007,
     "local_camera_ci_group_test_invocations": 78,
     "local_group_exit_code": 0,
     "local_group_log_sha256": "c0df6dbb0fa39879a08ecaffab704d1a55f0053c39ee7557649587e72fa051b1",
     "original_failure_log_sha256": "024e77da26756f7395d6aed3b805bc0cb1f1895d39f8ddfe9f2537fcfd963bde",
     "local_environment": "Noetic runtime image, no GPU or network, operational devel mounted read-only; distinct from hosted CPU runtime",
     "operational_checkout_changed": false,
-    "merge_gate": "All three hosted checks on the new PR head must succeed before merge."
+    "merge_gate": "All three hosted checks on the new PR head must succeed before merge.",
+    "local_camera_ci_group_tests_total": 1011,
+    "local_camera_ci_group_tests_skipped": 4,
+    "local_skipped_scope": "native lane association parity: donor devel lacks the extension",
+    "hosted_native_extension_required": true
   }
 }

@@ -59,8 +59,11 @@ E3 15종으로 맞췄다. E8 16종과 기존 실험 수치·출처는 복구·�
 lane/object 선택 모듈이 모두 카메라 패키지에 있어야 한다는 명시 검사도 추가했다.
 기존 소유권·금지된 구 패키지 의존성 검사는 유지한다.
 
-수정 후 facade18개와 **전체 `.github/ci/camera-unit.sh` 1,011개 검사(78회 호출)**가
-통과했다. 로컬 전체 그룹은 GPU·네트워크 없이 격리한 Noetic runtime에서 기존 devel을
-읽기 전용으로 사용했다. hosted CPU 환경과 구분하며, 최종 병합은 수정된 PR head의
-GitHub CI·planning-catkin-build·validated-lidar-build 통과를 확인한 뒤 진행한다.
+수정 후 facade18개와 전체 `.github/ci/camera-unit.sh`가 성공 종료했다.
+전체 **1,011개 검사(78회 호출) 중 1,007개 성공·4개 skip**이다. 로컬 전체 그룹은
+GPU·네트워크 없이 격리한 Noetic runtime에서 기존 devel을 읽기 전용으로 사용했으며,
+그 devel에 native 확장이 없어 native lane association 패리티4개는 실행되지 않았다.
+hosted CI는 확장 빌드·import를 필수로 검사한 뒤 해당 패리티도 실행한다.
+최종 병합은 수정된 PR head의 GitHub CI·planning-catkin-build·validated-lidar-build
+통과를 확인한 뒤 진행한다.
 이 마감은 테스트·검증 기록만 수정하며 운영 모델·노드·컨테이너와 다른 개발 worktree는 유지한다.
