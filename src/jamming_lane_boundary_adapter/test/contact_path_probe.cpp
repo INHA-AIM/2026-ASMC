@@ -95,7 +95,52 @@ int semanticRegression(){
  if(updateSemanticPathPlan()!="semantic_exact_family_space_unavailable")return 37;
  std::cout<<"semantic_primary_no_yolo_exact_epoch_unknown_and_partial_avoidance_passed\n";return 0;
 }
+// Exact recorded source pair; invokes production candidate, projection context
+// and local footprint checks. This is offline decision replay, not wall latency.
+int semanticFrame(const char* directory,bool assist){
+ const std::string d=directory;
+ auto family=read<asmc_msgs::LaneBoundaryFamily>((d+"/family.rosbin").c_str());
+ auto probability=read<sensor_msgs::Image>((d+"/probability.rosbin").c_str());
+ auto coverage=read<sensor_msgs::Image>((d+"/coverage.rosbin").c_str());
+ auto projection=read<asmc_msgs::CameraGroundProjection>((d+"/context.rosbin").c_str());
+ auto local=read<asmc_msgs::LidarTrackingObservation>((d+"/local.rosbin").c_str());
+ const auto stamp=family->header.stamp;
+ ros::Time::init();ros::Time::setNow(stamp+ros::Duration(.05));
+ params.bev_mode="semantic_trial";params.semantic_near_ego_lidar_assist=assist;
+ params.expected_config_sha256=projection->config_id;
+ params.contact_clearance_enabled=true;params.path_horizon=15.;
+ params.consumer_x_max=adapter_config.consumer_x_max_m=20.;
+ bev_spec={250,160,20,8,.1};
+ auto context=lane_boundary_adapter::BuildBoundaryFamilyStripContext(*family,adapter_config);
+ if(!context.usable()){std::cout<<context.reason;return 40;}
+ auto lanes=buildContinuousLanes(context);auto candidates=findOwnLaneCandidates(lanes);
+ if(candidates.size()!=1){std::cout<<"own_lane_candidates="<<candidates.size();return 41;}
+ follower_state.selected_lane=candidates[0].lane;follower_state.locked_lane=candidates[0].lane.lane_index;
+ contact_lane_history.push_back({stamp,lanes});
+ auto status=boost::make_shared<asmc_msgs::InferenceStatus>();status->model="twinlite";
+ status->producer_session_id=projection->producer_session_id;status->generation=projection->generation;
+ status->mode=status->ACTIVE;status->header.stamp=stamp;status->source_cutoff=stamp-ros::Duration(1.);
+ bevEpoch(status);semantic_contexts.push_back(projection);
+ bevInput(probability,true);bevInput(coverage,false);
+ semantic_local.accept(local,ros::Time::now(),ros::SteadyTime::now());
+ const auto decision=updateSemanticPathPlan();
+ std::cout<<"decision="<<decision<<" candidates="<<contact_candidates<<" road="<<contact_road_rejected
+   <<" grid="<<bev_rejected<<" local="<<contact_collision_rejected<<" target="<<semantic_target<<'\n';
+ auto grid=selectBev(stamp,stamp);if(!grid)return 42;
+ const lane_boundary_adapter::clearance::Vehicle vehicle{params.vehicle_front,params.vehicle_rear,params.vehicle_width/2,
+  params.obstacle_lateral_margin,params.obstacle_longitudinal_margin};
+ for(const auto& original:lanes)for(double offset:{0.,-.3,.3})for(double length:{6.,10.,15.}){
+  auto lane=original;for(auto& p:lane.centerline)p.y+=offset;
+  std::vector<FamilyPoint2d> path;if(!buildPath(lane,true,path,1.,length,true,8.)||!pathInsideRoad(path,&lanes))continue;
+  std::vector<lane_boundary_adapter::clearance::Point> pts;for(const auto& p:path)pts.push_back({p.x,p.y});
+  const auto result=grid->check(pts,vehicle,params.path_sample_step);
+  std::cout<<"lane="<<lane.lane_index<<" offset="<<offset<<" length="<<length<<" clear="<<result.clear
+   <<" reason="<<result.reason<<" blocked="<<result.blocked_x<<','<<result.blocked_y<<" assisted="<<result.assisted<<'\n';
+ }
+ return 0;
+}
 int main(int argc,char**argv){
+ if(argc==4 && std::string(argv[1])=="--semantic-frame")return semanticFrame(argv[2],std::string(argv[3])=="assist");
  if(argc==2 && std::string(argv[1])=="--semantic-regression")return semanticRegression();
  if(argc==2 && std::string(argv[1])=="--bev-regression")return bevRegression();
  if(argc==2 && std::string(argv[1])=="--interpolation-regression")return interpolationRegression();

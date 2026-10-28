@@ -5,7 +5,7 @@
 #include <cstdint>
 namespace lane_boundary_adapter::clearance {
 struct GridSpec { int rows=0,cols=0;double x_max=0,y_max=0,resolution=0; };
-struct GridResult { bool clear=false; unsigned cells=0,blocked=0,assisted=0;const char* reason="invalid_grid"; };
+struct GridResult { bool clear=false; unsigned cells=0,blocked=0,assisted=0;double blocked_x=0.,blocked_y=0.;const char* reason="invalid_grid"; };
 class DrivableClearance {
  public:
   bool prepare(GridSpec spec,const std::vector<uint8_t>& probability,const std::vector<uint8_t>& coverage,
@@ -73,7 +73,14 @@ class DrivableClearance {
         const size_t base=size_t(r)*(spec_.cols+1);result.cells+=c1-c0+1;
         result.blocked+=prefix_[base+c1+1]-prefix_[base+c0];
         result.assisted+=assisted_[base+c1+1]-assisted_[base+c0];
-        if(result.blocked)return result;
+        if(result.blocked){
+          // First blocked cell, for bounded diagnostics/replay; no extra grid scan.
+          auto begin=prefix_.begin()+base;
+          auto first=std::upper_bound(begin+c0,begin+c1+2,prefix_[base+c0]);
+          const int column=int(first-begin)-1;
+          result.blocked_x=x;result.blocked_y=spec_.y_max-column*spec_.resolution;
+          return result;
+        }
       }
     }
     result.clear=true;result.reason="semantic_swept_space_clear";return result;
