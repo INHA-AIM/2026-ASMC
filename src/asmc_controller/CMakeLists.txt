@@ -3,10 +3,10 @@ project(asmc_controller)
 
 add_compile_options(-std=c++17 -O2 -Wall -Wextra)
 
-find_package(catkin REQUIRED COMPONENTS asmc_msgs morai_msgs roscpp std_msgs)
+find_package(catkin REQUIRED COMPONENTS asmc_msgs morai_msgs roscpp std_msgs nav_msgs diagnostic_msgs)
 find_package(yaml-cpp REQUIRED)
 
-catkin_package(CATKIN_DEPENDS asmc_msgs morai_msgs roscpp std_msgs)
+catkin_package(CATKIN_DEPENDS asmc_msgs morai_msgs roscpp std_msgs nav_msgs diagnostic_msgs)
 
 include_directories(src ${catkin_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIRS})
 
@@ -154,3 +154,8 @@ if(CATKIN_ENABLE_TESTING)
   endif()
 endif()
 
+
+add_executable(asmc_local_controller_node src/local/node.cpp)
+add_dependencies(asmc_local_controller_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(asmc_local_controller_node mpc_core mpc_ros_converter ${catkin_LIBRARIES})
+install(TARGETS asmc_local_controller_node RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

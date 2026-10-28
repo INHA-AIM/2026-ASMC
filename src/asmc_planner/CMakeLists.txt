@@ -5,14 +5,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
-  planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs geometry_msgs
+  planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs nav_msgs diagnostic_msgs geometry_msgs
   sensor_msgs visualization_msgs)
 find_package(yaml-cpp REQUIRED)
 find_package(Boost REQUIRED)
 catkin_package(INCLUDE_DIRS src
   LIBRARIES asmc_signal_policy_core asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_core
     asmc_planner_execution_core asmc_planner_behavior_module asmc_planner_ros_adapters
-  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs
+  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs nav_msgs diagnostic_msgs
     geometry_msgs sensor_msgs visualization_msgs)
 
 # Shared reference preparation/execution. Production uses the existing highway
@@ -993,3 +993,29 @@ endif()
 configure_file(scripts/dashboard_startup.py
   ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_startup.py COPYONLY)
 install(FILES scripts/dashboard_startup.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+# LOCAL-1 is opt-in; reuse the existing pure geometry/speed implementation.
+add_library(asmc_local_planner_core src/local/planner.cpp)
+target_include_directories(asmc_local_planner_core PUBLIC src)
+target_compile_options(asmc_local_planner_core PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(asmc_local_planner_core asmc_planner_frenet_core)
+add_executable(asmc_local_planner_node src/local/node.cpp)
+add_dependencies(asmc_local_planner_node ${catkin_EXPORTED_TARGETS})
+target_include_directories(asmc_local_planner_node PRIVATE src ${catkin_INCLUDE_DIRS})
+target_compile_options(asmc_local_planner_node PRIVATE -O2)
+target_link_libraries(asmc_local_planner_node asmc_local_planner_core ${catkin_LIBRARIES} pthread)
+install(TARGETS asmc_local_planner_core asmc_local_planner_node
+ ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+ LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+ RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+if(CATKIN_ENABLE_TESTING)
+ add_executable(local_planner_test tests/local_planner_test.cpp)
+ target_include_directories(local_planner_test PRIVATE src)
+ target_link_libraries(local_planner_test asmc_local_planner_core pthread)
+ add_test(NAME local_planner_regression COMMAND local_planner_test)
+endif()
+
+# Observer-only exact-stamp raster cache shared by dashboard source/install runs.
+configure_file(scripts/local_debug_cache.py
+  ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/local_debug_cache.py COPYONLY)
+install(FILES scripts/local_debug_cache.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

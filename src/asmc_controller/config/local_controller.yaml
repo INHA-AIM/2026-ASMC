@@ -1,0 +1,7 @@
+# LOCAL-1 experiment only. The shared NORMAL controller.yaml remains the base.
+# At 3km/h its 1.4s horizon sees just 1.2m of a 3-6m connection curve.
+# Give local tracking 2.4s and reduce the NORMAL steering-change penalty;
+# physical steering slew and actuator delay are still enforced by mpc_core.
+prediction_horizon: 49
+steering_change_cost: 25.0
+heading_cost: 6.0
