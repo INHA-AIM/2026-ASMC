@@ -125,10 +125,6 @@ public:
 
     struct MergePrepareResult {
         bool candidate_valid = false, ready = false, maneuver_completed = false;
-        // Separate the nominal candidate (legacy feedback) from a complete
-        // departure checked against every currently supported occupancy.
-        bool departure_certified = false;
-        RoundaboutEntryStatus entry_status = RoundaboutEntryStatus::NOT_EVALUATED;
         // A checked PREPARE approach is usable even before a complete
         // departure fits the horizon. This never grants gap/COMMIT authority.
         bool waiting_path_valid = false;
