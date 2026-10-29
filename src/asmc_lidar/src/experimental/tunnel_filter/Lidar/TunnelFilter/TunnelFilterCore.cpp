@@ -659,6 +659,78 @@ const FrameResult& TunnelPipeline::Process(
     return r;
 }
 
+const FrameResult& TunnelPipeline::ProcessWallsOnly(
+    const pcl::PointCloud<pcl::PointXYZI>& leveled,const std::vector<int>& kept,
+    bool ground_valid,const Plane& ground,const EgoMotion* motion) {
+    const auto start=Clock::now();
+    const auto previous_walls=result_.walls;
+    result_=FrameResult();auto& r=result_;
+    r.leveled=leveled.makeShared();r.input_points=leveled.size();
+    r.labels.assign(leveled.size(),kInvalid);
+    for(int i:kept)if(i>=0&&static_cast<std::size_t>(i)<leveled.size()&&FinitePoint(leveled[i]))r.labels[i]=kKept;
+    r.ground_fallback_used=!ground_valid||!ground.Finite()||ground.c<=.5f;
+    if(!r.ground_fallback_used) {
+        r.ground.source=PlaneSource::kCurrent;r.ground.plane=ground;
+        r.ground_reference_height=ground.HeightAt(0,0);
+        // Tall wall support above the common height ROI is evidence only.
+        // It must never be reintroduced into the common output cloud.
+        for(std::size_t i=0;i<leveled.size();++i)if(FinitePoint(leveled[i])&&
+            leveled[i].z-ground.HeightAt(leveled[i].x,leveled[i].y)>=params_.wall_candidate_min_height_m)
+            r.labels[i]=kKept;
+    }
+    if(motion&&motion->valid&&std::isfinite(motion->dyaw_rad)&&std::isfinite(motion->dx_m)&&
+       std::isfinite(motion->dy_m)&&motion->dt_s>0&&motion->dt_s<=params_.wall_track_motion_max_dt_s)r.motion=*motion;
+    ProcessWalls(nullptr,nullptr,true);
+    // A lower step plane can disappear from RANSAC for one scan while its
+    // CURRENT measured surface remains. Revalidate it, never keep a blind
+    // historical deletion mask or extend unobserved intervals.
+    if(r.motion.valid&&r.motion.reliable&&!r.ground_fallback_used)
+    for(std::size_t side=0;side<2;++side) {
+        auto& wall=r.walls[side];
+        if(!wall.removal_allowed||!previous_walls[side].removal_allowed||wall.segments.empty())continue;
+        const auto primary=wall.segments.front().plane;
+        for(const auto& old:previous_walls[side].segments) {
+            if(!old.valid)continue;
+            WallSegment seg=old;seg.plane=TransformPlaneToCurrent(old.plane,r.motion);
+            if(HorizontalAngleBetweenNormalsDeg(seg.plane,primary)>params_.wall_step_max_angle_deg||
+               std::fabs(seg.plane.d-primary.d)>params_.wall_step_max_offset_m)continue;
+            bool present=false;
+            for(const auto& current:wall.segments)
+                if(HorizontalAngleBetweenNormalsDeg(seg.plane,current.plane)<2.f&&
+                   std::fabs(seg.plane.d-current.plane.d)<.12f)present=true;
+            if(present)continue;
+            const float normal=std::hypot(seg.plane.a,seg.plane.b);if(normal<.5f)continue;
+            seg.tangent_x=-seg.plane.b/normal;seg.tangent_y=seg.plane.a/normal;
+            std::vector<float> along;std::vector<int> support;float zlo=INFINITY,zhi=-INFINITY;
+            for(std::size_t i=0;i<leveled.size();++i) {
+                const auto& q=leveled[i];const float h=q.z-ground.HeightAt(q.x,q.y);
+                if(r.labels[i]!=kKept||h<params_.wall_candidate_min_height_m||
+                   h>params_.wall_candidate_max_height_m||
+                   std::fabs(seg.plane.SignedDistance(q.x,q.y,q.z))>params_.wall_remove_distance_m)continue;
+                support.push_back(i);along.push_back(seg.AlongWall(q.x,q.y));zlo=std::min(zlo,q.z);zhi=std::max(zhi,q.z);
+            }
+            if(support.size()<static_cast<std::size_t>(params_.wall_min_inliers)||
+               zhi-zlo<params_.wall_step_min_vertical_span_m)continue;
+            seg.intervals.clear();seg.span=0;
+            for(const auto& run:ComputeWallRuns(along,params_.wall_bin_size_m,params_.wall_bin_min_points,params_.wall_bin_max_gap))
+                if(run.s_end-run.s_start>=params_.wall_min_span_m){seg.intervals.emplace_back(run.s_start,run.s_end);seg.span=std::max(seg.span,run.s_end-run.s_start);}
+            if(seg.intervals.empty())continue;
+            seg.reject_reason="current_revalidated_step";wall.segments.push_back(seg);
+            for(int i:support)if(seg.InIntervals(seg.AlongWall(leveled[i].x,leveled[i].y),0))r.labels[i]=kWall;
+        }
+    }
+    std::vector<std::uint8_t> output_mask(leveled.size(),0);
+    r.wall_removed=0;
+    for(int i:kept)if(i>=0&&static_cast<std::size_t>(i)<leveled.size()) {
+        output_mask[i]=1;
+        if(r.labels[i]==kKept)r.kept_indices.push_back(i);
+        else if(r.labels[i]==kWall)++r.wall_removed;
+    }
+    for(std::size_t i=0;i<r.labels.size();++i)if(!output_mask[i])r.labels[i]=kInvalid;
+    r.kept_points=r.kept_indices.size();r.timings.total_ms=ElapsedMs(start);
+    return r;
+}
+
 void TunnelPipeline::FitGround() {
     FrameResult& r = result_;
     GroundFit fit;
@@ -1363,7 +1435,7 @@ void TunnelPipeline::ProcessWalls(
             for (std::size_t side = 0; side < 2; ++side) {
                 WallSideResult& result = r.walls[side];
                 if (!result.removal_allowed) continue;
-                bool matched = false;
+                bool matched = false, confirmed_surface = false;
                 for (const WallSegment& segment : result.segments) {
                     const float distance =
                         segment.plane.SignedDistance(p.x, p.y, p.z);
@@ -1377,10 +1449,18 @@ void TunnelPipeline::ProcessWalls(
                     const float z_road = p.z - GroundHeightAt(p.x, p.y);
                     if (z_road < params_.wall_remove_min_height_m) continue;
                     matched = true;
-                    break;
+                    // A 2D box is not evidence that an independently fitted
+                    // wall surface is a vehicle. The configured removal band
+                    // is independent of the RANSAC fitting tolerance.
+                    confirmed_surface |= std::fabs(distance) <=
+                        params_.wall_remove_distance_m;
                 }
                 if (!matched) continue;
-                if (protect_class != nullptr &&
+                if (params_.wall_geometry_precedence && confirmed_surface) {
+                    r.labels[i] = kWall;
+                    ++result.removed;
+                    ++r.wall_removed;
+                } else if (protect_class != nullptr &&
                     (*protect_class)[i] != kProtectNone) {
                     ++result.protected_skipped;
                 } else if (!protection_available && ambiguous != nullptr &&

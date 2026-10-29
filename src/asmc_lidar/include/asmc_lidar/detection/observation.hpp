@@ -15,6 +15,7 @@ struct LowObstacleCue {
 };
 // One scan observation in the leveled LiDAR frame. The cluster is owned here once.
 struct DetectionObservation {
+  int measured_vehicle_track_id=-1;
   CameraPointSupport camera_point_support;
   LowObstacleCue low_obstacle_cue;
   Cloud pcl_ClusterPoints;

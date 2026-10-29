@@ -194,6 +194,9 @@ struct Params {
     // 점이 적은 원거리 차량을 놓침) 1.5는 15 m 이상 구조물 OBB가 다시 생긴다.
     // Opt-in current-frame tall residual surface suppression.
     bool residual_wall_surface_enable = false;
+    // A confirmed, temporally accepted wall's narrow fitting band takes
+    // precedence over image-box protection. The wider removal band does not.
+    bool wall_geometry_precedence = false;
     float cluster_tolerance_m = 1.0f;
     int cluster_min_points = 10;
     int cluster_max_points = 30000;
@@ -549,7 +552,12 @@ public:
                                const EgoMotion* motion = nullptr);
 
     void Reset();
+    // No leveling, ground/ceiling/Z filtering or residual-cluster deletion.
+    const FrameResult& ProcessWallsOnly(const pcl::PointCloud<pcl::PointXYZI>& leveled,
+        const std::vector<int>& kept, bool ground_valid, const Plane& ground,
+        const EgoMotion* motion=nullptr);
     const Params& GetParams() const { return params_; }
+    void CopyWallHistoryFrom(const TunnelPipeline& other) { wall_tracks_=other.wall_tracks_; }
     const FrameResult& LastResult() const { return result_; }
 
 private:

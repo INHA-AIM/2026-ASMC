@@ -548,8 +548,8 @@ TEST(RuntimeConfig, FrontRearReleaseProfileAndLegacyYamlFallback) {
   EXPECT_FLOAT_EQ(legacy.pipeline.clustering.f32_AdaptiveRearFarEps,c.f32_AdaptiveFarEps);
 }
 
-TEST(RuntimeConfig, LoadsShippedConfigWithLocalGroundFitAndMainValues) {
-  const auto c = sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
+TEST(RuntimeConfig, LoadsShippedConfigWithCurrentOperatingValues) {
+  const auto c = ShippedRuntimeConfig();
   const auto& p = c.pipeline;
   EXPECT_EQ(p.vehicle.f32_Length, 4.635f);
   EXPECT_EQ(p.vehicle.f32_Width, 1.892f);
@@ -569,7 +569,7 @@ TEST(RuntimeConfig, LoadsShippedConfigWithLocalGroundFitAndMainValues) {
   EXPECT_EQ(p.roi.f32_MinZ, -2.f);
   EXPECT_EQ(p.roi.f32_MaxZ, 2.f);  // Integrated live ROI requested by the user.
   EXPECT_EQ(p.clustering.f32_Eps, 0.5f);
-  EXPECT_EQ(p.clustering.s32_MinPoints, 5);
+  EXPECT_EQ(p.clustering.s32_MinPoints, 3);
   EXPECT_TRUE(p.clustering.b_Adaptive);
   EXPECT_EQ(p.clustering.f32_AdaptiveNearEps, 1.30f);
   EXPECT_EQ(p.clustering.f32_AdaptiveFarEps, 1.32f);
@@ -580,8 +580,8 @@ TEST(RuntimeConfig, LoadsShippedConfigWithLocalGroundFitAndMainValues) {
   EXPECT_EQ(p.tracking.f32_MergedTrackRetireDistance, 0.45f);
   EXPECT_TRUE(p.use_roll);
   EXPECT_EQ(p.voxel_leaf_m, 0.1f);
-  // Main tuning stays canonical; the historical low-obstacle profile is opt-in.
-  EXPECT_EQ(p.ground.near_threshold_m, 0.30);
+  // Integrated operating profile preserves low-object tuning and refinement.
+  EXPECT_EQ(p.ground.near_threshold_m, 0.23);
   EXPECT_TRUE(p.camera_point_refinement.enabled);
   EXPECT_EQ(p.ground.far_threshold_m, 0.40);
   EXPECT_DOUBLE_EQ(p.ground.fit_threshold_m, 0.);  // Main far-band fit; explicit override stays opt-in.
@@ -634,6 +634,25 @@ void ExpectConfigError(const std::function<void(YAML::Node&)>& edit, const std::
   } catch (const std::runtime_error& error) {
     EXPECT_NE(std::string(error.what()).find(needle), std::string::npos) << error.what();
   }
+}
+
+TEST(RuntimeConfig, DedicatedWallProfileLoadsGateAndSeparationSettings) {
+  const auto c=sh::LoadRuntimeConfig(PackageDir()+"/config/lidar_wall_vehicle.yaml",PackageDir());
+  const auto& p=c.pipeline;
+  EXPECT_TRUE(p.camera_point_refinement.enabled);
+  EXPECT_TRUE(p.camera_point_refinement.vehicle_history_enabled);
+  EXPECT_EQ(c.fusion.views,"all");
+  EXPECT_TRUE(p.tunnel.enabled);
+  EXPECT_TRUE(p.tunnel_route.cluster_z.enabled);
+  EXPECT_FLOAT_EQ(p.tunnel_route.cluster_z.min_sensor_z_m,-1.55f);
+  EXPECT_FLOAT_EQ(p.tunnel_route.params.wall_fit_distance_m,.15f);
+  EXPECT_FLOAT_EQ(p.tunnel_route.params.wall_remove_distance_m,.25f);
+  EXPECT_TRUE(p.tunnel_route.params.wall_geometry_precedence);
+  EXPECT_TRUE(p.shadow_wall.enabled);
+  EXPECT_DOUBLE_EQ(p.shadow_wall.lead_m,30.);
+  EXPECT_DOUBLE_EQ(p.shadow_wall.exit_buffer_m,10.);
+  EXPECT_GE(p.shadow_wall.route.size(),2u);
+  EXPECT_FALSE(p.shadow_wall.profile_sha256.empty());
 }
 
 TEST(RuntimeConfig, RejectsGpsAgeOutsideMainBound) {
@@ -1231,10 +1250,83 @@ TEST(LidarRuntime, ThreeViewLocalClassificationSurvivesGpsLossAndMapRecovery) {
   }
 }
 
+TEST(LidarRuntime, PointRefinementSelectsIndependentCausalImagesForAllThreeCameras) {
+  auto cfg=ShippedRuntimeConfig();cfg.pipeline.camera_point_refinement.enabled=true;cfg.fusion.views="all";
+  asmc::lidar::camera::Calibrations cameras;
+  for(const auto& name:{"camera_front","camera_left","camera_right"}) {
+    auto k=FrontCalibration();k.frame_id=name;k.id=name;
+    const double yaw=k.frame_id=="camera_left"?M_PI/2:k.frame_id=="camera_right"?-M_PI/2:0;
+    k.base_from_camera.linear()=asmc::lidar::rpy(0,0,yaw);cameras[name]=k;
+  }
+  struct ThreeViewSource:pl::fusion::CameraSource {
+    pl::fusion::CameraSnapshot Read(std::int64_t stamp,std::int64_t,std::int64_t,std::int64_t) override {
+      pl::fusion::CameraSnapshot s;s.active=s.gate_active=true;s.epoch=s.gate_epoch=1;int index=0;
+      for(const auto& name:{"camera_front","camera_left","camera_right"}) {
+        pl::fusion::CameraFrame f;f.frame_id=name;f.width=1280;f.height=720;f.epoch=1;
+        f.stamp_ns=stamp-(++index)*10*kMs;f.identity=std::string(name)+std::to_string(f.stamp_ns);
+        asmc::lidar::camera::Box b;b.xmin=300;b.xmax=900;b.ymin=200;b.ymax=600;
+        b.source_class_name="car";b.confidence_valid=true;b.confidence=.95;f.boxes.push_back(b);
+        s.by_view[name].push_back(f);if(index==1)s.frames.push_back(f);
+        f.stamp_ns=stamp+kMs;f.identity+="future";s.by_view[name].push_back(f);
+      }
+      return s;
+    }
+  };
+  auto camera=std::make_shared<ThreeViewSource>();
+  sh::LidarRuntime rt(cfg,camera,&cameras.at("camera_front"),cameras);Sim sim(rt);
+  const auto front_scene=*sim.scene;
+  for(int sign:{-1,1})for(auto p:front_scene)if(p.z> -1.5f) {
+    const float x=p.x;p.x=-sign*p.y;p.y=sign*x;sim.scene->push_back(p);
+  }
+  sim.RunTo(800);
+  const auto& out=sim.scans.at(800);ASSERT_TRUE(out.processed);
+  const auto& views=out.result.camera_point_refinement.views;ASSERT_EQ(3u,views.size());
+  for(const auto& v:views) {
+    const int index=v.camera_id=="camera_front"?1:v.camera_id=="camera_left"?2:3;
+    EXPECT_EQ(Ros(800)-index*10*kMs,v.image_stamp_ns)<<v.camera_id;
+    EXPECT_GT(v.projected_points,0)<<v.camera_id;
+    EXPECT_NE("no_current_synchronized_camera",v.reason)<<v.camera_id;
+  }
+}
+
 TEST(RuntimeConfig, LegacyGroundConfigKeepsExplicitCompatibilityPolicy) {
   TempDir dir;
   auto yaml=YAML::LoadFile(ShippedConfig());
   yaml["ground"].remove("ground_remove_below_plane");
   auto cfg=sh::LoadRuntimeConfig(dir.Write("legacy-ground.yaml",yaml),PackageDir());
   EXPECT_FALSE(cfg.pipeline.ground.remove_below_plane);
+}
+
+TEST(LidarRuntime, MeasuredVehicleHistoryMaintainsGeometryAndClassAfterCameraMisses) {
+  auto cfg=ShippedRuntimeConfig();cfg.pipeline.camera_point_refinement.enabled=true;
+  cfg.pipeline.camera_point_refinement.vehicle_history_enabled=true;cfg.fusion.views="all";
+  auto k=FrontCalibration();asmc::lidar::camera::Calibrations cameras{{"camera_front",k}};
+  struct Source:pl::fusion::CameraSource {
+    asmc::lidar::camera::Calibration calibration;pl::ScanResult previous;bool empty=false;
+    pl::fusion::CameraSnapshot Read(std::int64_t stamp,std::int64_t,std::int64_t,std::int64_t) override {
+      pl::fusion::CameraSnapshot s;s.active=s.gate_active=true;s.epoch=s.gate_epoch=1;
+      pl::fusion::CameraFrame f;f.stamp_ns=stamp;f.epoch=1;f.frame_id="camera_front";f.width=1280;f.height=720;
+      f.identity="front-"+std::to_string(stamp);
+      if(previous.processed&&!empty) {
+        std::vector<pl::fusion::LidarImageBox> boxes;
+        pl::fusion::LidarToImage(previous.objects,previous.context,calibration,pl::fusion::FusionConfig{},&boxes);
+        for(const auto& b:boxes) {
+          asmc::lidar::camera::Box box;box.xmin=b.min_x;box.ymin=b.min_y;box.xmax=b.max_x;box.ymax=b.max_y;
+          box.source_class_name="car";box.class_name="vehicle";box.confidence=.95;box.confidence_valid=true;f.boxes.push_back(box);
+        }
+      }
+      s.frames={f};s.by_view["camera_front"]={f};return s;
+    }
+  };
+  auto source=std::make_shared<Source>();source->calibration=k;
+  sh::LidarRuntime rt(cfg,source,&k,cameras);Sim sim(rt);bool saw=false;
+  for(int t=300;t<=4400;t+=100) {
+    source->empty=t>=3300;sim.RunTo(t);const auto& out=sim.scans.at(t);source->previous=out.result;
+    if(t<3800)continue;
+    for(const auto& o:out.result.objects)if(o.tracking.s32_MissCount==0&&o.detection.measured_vehicle_track_id==o.tracking.s32_Id) {
+      saw=true;EXPECT_EQ("vehicle",o.camera.str_ObjectClass);EXPECT_EQ(-1,o.detection.camera_point_support.box_index);
+      EXPECT_GT(o.camera.class_miss_counter,3);EXPECT_GE(o.detection.pcl_ClusterPoints.size(),10u);
+    }
+  }
+  EXPECT_TRUE(saw);
 }

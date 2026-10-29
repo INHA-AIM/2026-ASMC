@@ -9,6 +9,8 @@ namespace asmc::lidar::pipeline {
 struct TunnelCameraInput;
 struct CameraPointRefinementConfig {
   bool enabled=false;
+  bool vehicle_history_enabled=false;
+  float vehicle_history_max_camera_age_s=10.f,vehicle_history_match_m=.25f;
   // Independent opt-in: join complete sparse steel parents, never all points
   // in a detector rectangle. Defaults preserve existing configurations.
   bool steel_fragment_merge=false;
@@ -32,7 +34,14 @@ struct CameraPointDecision {
   int box=-1, input_points=0, object_points=0, wall_points=0, components=0;
   int scanline_groups=0;
   float depth_m=0;
-  std::string source_class,reason;
+  std::string camera_id,source_class,reason;
+};
+struct CameraPointViewReport {
+  std::string camera_id,reason;
+  std::int64_t image_stamp_ns=0;
+  std::array<double,12> projection{};
+  int projected_points=0,extracted_objects=0,removed_wall_points=0;
+  bool applied=false;
 };
 struct CameraPointRefinementReport {
   std::int64_t image_stamp_ns=0;
@@ -42,6 +51,7 @@ struct CameraPointRefinementReport {
   int projected_points=0, extracted_objects=0, removed_wall_points=0;
   double ms=0;
   std::vector<CameraPointDecision> decisions;
+  std::vector<CameraPointViewReport> views;
 };
 struct CameraPointRefinementResult {
   std::vector<pcl::PointIndices> clusters;
@@ -50,8 +60,23 @@ struct CameraPointRefinementResult {
   std::vector<int> parent_clusters;
   std::vector<CameraPointSupport> support;
   std::vector<int> removed_wall_indices;
+  // Qualified unresolved image regions veto deletion across every view.
+  std::vector<int> wall_veto_indices;
   CameraPointRefinementReport report;
 };
+struct MeasuredVehicleHistory {
+  int track_id=-1,confirmations=0;
+  std::int64_t stamp_ns=0,camera_stamp_ns=0;
+  std::string camera_identity;
+  CloudPtr points;
+};
+// History points must already be transformed to this scan's input frame.
+// Returns current measured indices only; never returns old/predicted points.
+CameraPointRefinementResult ContinueMeasuredVehicles(
+    const CloudPtr&,const std::vector<pcl::PointIndices>&,
+    const std::vector<MeasuredVehicleHistory>&,const std::vector<TunnelWallEvidence>&,
+    const CameraPointRefinementConfig&,const std::vector<CameraPointSupport>*,
+    const std::vector<int>* wall_veto,std::vector<int>* track_ids);
 // Produces a plan, never edits source points or past tracking state. Residual
 // non-wall support remains as independent LiDAR obstacles. All point indices
 // refer to the supplied CURRENT scan in context.frame.

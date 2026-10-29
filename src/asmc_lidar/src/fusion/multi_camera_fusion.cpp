@@ -126,6 +126,9 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
     Scan s;s.stamp=stamp;s.queued=decision;s.sequence=context.scan_sequence;
     for(const auto& o:live) {
       s.ids.push_back(o.tracking.s32_Id);
+      const auto& geometry=o.detection;
+      s.dimensions.push_back({std::hypot(geometry.obb_length_m,geometry.obb_width_m),
+                             geometry.f32_OBB_ZMax-geometry.f32_OBB_ZMin});
       const auto& support=o.detection.camera_point_support;
       if(!o.tracking.s32_MissCount&&support.box_index>=0&&support.epoch&&support.stamp_ns>0&&
          support.stamp_ns<=stamp&&!support.identity.empty()&&!support.source_class.empty())
@@ -164,6 +167,14 @@ FusionReport MultiCameraFusion::Process(std::int64_t decision,std::int64_t stamp
       auto boxes=fusion_adapter::ConvertBoxes(f.boxes,allowed_,config_.confidence_threshold);
       std::vector<Pair> pairs;
       for(std::size_t b=0;b<boxes.size();++b)for(std::size_t j=0;j<v.projection.size();++j) {
+          // Image overlap cannot turn an extended wall/car mixture into a car.
+          // Use immutable geometry from the projected scan, not the live track
+          // which may have changed while waiting for this camera observation.
+          const auto raw=fusion_class::RawLabel(boxes[b].str_raw_class);
+          const auto& size=s.dimensions.at(v.projection[j].c_idx);
+          const bool car=raw=="car", large_vehicle=raw=="bus"||raw=="truck";
+          if((car&&(size[0]>9.f||size[1]>3.5f))||
+             (large_vehicle&&(size[0]>22.f||size[1]>5.f)))continue;
         const double iou=ProjectionIoU(boxes[b],v.projection[j]);
         const auto support=s.point_support.find(s.ids.at(v.projection[j].c_idx));
         const bool measured=support!=s.point_support.end()&&
