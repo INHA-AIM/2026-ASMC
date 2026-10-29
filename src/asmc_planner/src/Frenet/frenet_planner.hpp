@@ -116,6 +116,10 @@ public:
         double entry_time = -1, exit_time = -1, progress = 0;
         std::size_t generated = 0, valid = 0;
         int blocking_object_id = -1;
+        std::size_t retained_missing_objects=0, unverified_missing_objects=0;
+        double blocking_history_age=-1, blocking_path_time=-1, blocking_gap_shift=0;
+        std::string missing_status="none", missing_reason="none";
+        std::size_t missing_models_checked=0, missing_non_interference=0;
         CartesianPath candidate_path;
     };
     bool roundabout_merge_enabled() const { return roundabout_merge_cfg_.enabled && roundabout_zone_.valid; }

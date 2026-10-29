@@ -2,6 +2,7 @@
 #include "Frenet/Common/ObjectTypes.hpp"
 #include "Frenet/Geometry/ObservationContinuity.hpp"
 #include "Frenet/Geometry/PredictionInput.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Frenet/Reference/Reference.hpp"
 #include <algorithm>
 #include <cmath>
@@ -372,6 +373,99 @@ public:
             }
             result.push_back(std::move(bound));
         }
+        return result;
+    }
+    struct MissingDepartureObservation {
+        int id=-1;
+        double source_stamp=-1, age=0;
+        std::size_t observations=0;
+        bool motion_supported=false, body_supported=false;
+        TrackedObject observation{};
+        const char* reason="motion_insufficient";
+        std::vector<TrackedObject> models;
+        // Relevance only: never upgrades body confidence or a sensor sample.
+        std::vector<TrackedObject> relevance_models;
+    };
+    // Read-only use of the existing one-second history. Construct at the real
+    // observation time, then align once to the ego time. Never renew authority.
+    std::vector<MissingDepartureObservation> MissingDepartureOccupancies(
+        double evaluation_time,const std::function<bool(double,double)>& on_lane,
+        double partial_length,double partial_width,double clamp,
+        double conflict_x=NAN,double conflict_y=NAN) const {
+        std::vector<MissingDepartureObservation> result;
+        if(!std::isfinite(evaluation_time))return result;
+        for(const auto& item:tracks_) {
+            const auto& track=item.second;
+            const double age=std::max(0.0,evaluation_time-track.stamp);
+            if(stamp_-track.stamp<=1e-6||age>1||!track.moving)continue;
+            MissingDepartureObservation missing;
+            missing.id=item.first;missing.source_stamp=track.stamp;missing.age=age;
+            missing.observations=track.samples.size();
+            missing.observation=track.last;
+            double vx=0,vy=0,error=0;
+            missing.motion_supported=BoundedDisagreement(track,vx,vy,error);
+            missing.body_supported=track.body_stamp>=0&&evaluation_time-track.body_stamp<=1;
+            RoundaboutPrediction original;
+            original.stamp_=track.stamp;original.tracks_.emplace(item.first,track);
+            if(missing.motion_supported&&(track.body_stamp<0||missing.body_supported)) {
+                auto bodies=original.DepartureOccupancies({track.last},on_lane,
+                    partial_length,partial_width);
+                if(!bodies.empty()) {
+                    auto models=original.ApproachOccupancies({track.last});
+                    bodies=original.ApproachOccupancies(bodies);
+                    models.insert(models.end(),bodies.begin(),bodies.end());
+                    models=ExpandTurnModels(original.WithObservedSpeedRanges(models),clamp);
+                    for(const auto& model:models)
+                        missing.models.push_back(AdvanceObjectObservation(model,age));
+                }
+            }
+            if(!missing.models.empty())missing.reason="none";
+            else if(InspectPredictionVelocity(track.last)!=PredictionInputStatus::MEASURED)
+                missing.reason="velocity_missing";
+            else if(!missing.motion_supported)missing.reason="motion_insufficient";
+            else {
+                missing.reason=track.body_stamp>=0&&!missing.body_supported?
+                    "body_expired":"body_missing";
+                // Source-time motion evidence is immutable. Missing time is
+                // accounted for only by AdvanceObjectObservation below.
+                if(!std::isfinite(conflict_x)||!std::isfinite(conflict_y)||
+                   !original.MovingAwayReliable(item.first,conflict_x,conflict_y))
+                    missing.reason="moving_away_unproven";
+                else if(!GeometryUsable(track.last)||!std::isfinite(partial_length)||
+                        partial_length<=0||!std::isfinite(partial_width)||partial_width<=0)
+                    missing.reason="prediction_uncovered";
+                else {
+                    auto bound=track.last;
+                    bound.heading=std::atan2(track.vy,track.vx);bound.yaw_rate=track.rate;
+                    // A fragment centre can be anywhere on the body: use full
+                    // dimensions as radii, including larger observed bodies.
+                    double hl=std::max({partial_length,track.last.length,2*track.half_length})+.25;
+                    double hw=std::max({partial_width,track.last.width,2*track.half_width})+.25;
+                    const double c=std::cos(bound.heading),s=std::sin(bound.heading);
+                    for(const auto& p:track.last.corners) {
+                        const double dx=p.x-bound.x,dy=p.y-bound.y;
+                        hl=std::max(hl,std::fabs(dx*c+dy*s)+.25);
+                        hw=std::max(hw,std::fabs(-dx*s+dy*c)+.25);
+                    }
+                    bound.length=2*hl;bound.width=2*hw;bound.z_valid=false;
+                    const auto speeds=original.ObservedSpeedRange(item.first,track.speed);
+                    const double position_speed=std::hypot(vx,vy);
+                    bound.prediction_min_speed=std::min(speeds.first,std::max(0.0,position_speed-error));
+                    bound.prediction_max_speed=std::max(speeds.second,position_speed+error);
+                    for(int k=0;k<8;++k) {
+                        const double dx=(k%4==0||k%4==3)?-hl:hl,dy=k%4<2?-hw:hw;
+                        bound.corners[k]={bound.x+dx*c-dy*s,bound.y+dx*s+dy*c,bound.z};
+                    }
+                    auto raw=track.last;raw.yaw_rate=track.rate;
+                    auto models=ExpandTurnModels(original.WithObservedSpeedRanges(
+                        original.ApproachOccupancies({raw,bound})),clamp);
+                    for(const auto& model:models)
+                        missing.relevance_models.push_back(AdvanceObjectObservation(model,age));
+                }
+            }
+            result.push_back(std::move(missing));
+        }
+        std::sort(result.begin(),result.end(),[](const auto& a,const auto& b){return a.id<b.id;});
         return result;
     }
     // PREPARE checks both position-supported translation and a short sensor
