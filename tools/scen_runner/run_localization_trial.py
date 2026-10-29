@@ -39,6 +39,8 @@ def main():
     parser.add_argument('--fixture', choices=NAMES, default='none')
     parser.add_argument('--park-prop', action='append', default=[])
     parser.add_argument('--park-corridor', action='store_true')
+    parser.add_argument('--preserve-scene-label',default='',
+                        help='observe an already loaded static scene without spawning, parking or deleting its actors')
     parser.add_argument('--cap', type=float, default=5.)
     parser.add_argument('--normal-cap',type=float,default=None,
                         help='NORMAL trial cap, default same as shadow; 0 preserves production speed policy')
@@ -53,6 +55,9 @@ def main():
     parser.add_argument('--main-view-size',nargs=2,type=int,metavar=('WIDTH','HEIGHT'))
     parser.add_argument('--restore-view-size',nargs=2,type=int,metavar=('WIDTH','HEIGHT'))
     args = parser.parse_args()
+    if args.preserve_scene_label and (len(args.preserve_scene_label)>80 or args.fixture!='none' or
+                                     args.park_corridor or args.park_prop):
+        raise ValueError('preserved scenes cannot be combined with actor placement/parking')
     from localization_run import active_registration,storage_minimum_free_bytes
     storage_floor=storage_minimum_free_bytes()
     registration=active_registration(args.root)
@@ -91,6 +96,7 @@ def main():
     import rospy
     import rosgraph
     from std_msgs.msg import Bool, String, UInt8
+    from diagnostic_msgs.msg import DiagnosticArray
     from morai_msgs.msg import CtrlCmd,CollisionData
     from asmc_msgs.msg import LocalTrajectory, VehicleState, InferenceStatus
     from google.protobuf.json_format import MessageToDict
@@ -110,7 +116,8 @@ def main():
     monitoring=ensure_dashboard(args.root,args.dashboard_port,os.environ['ROS_MASTER_URI'])
     reporter=ExperimentReporter(output,registration['run_id'],args.trial,
         'physical_observer_diagnostic_not_driving_acceptance' if args.observer_contact_baseline else 'physical_trial',monitoring,
-        conditions=dict(weather='Foggy',hour=13,planner=args.jamming_planner,policy='user_pinned_foggy_20261029'))
+        conditions=dict(weather='Foggy',hour=13,planner=args.jamming_planner,
+                        scene_label=args.preserve_scene_label,policy='user_pinned_foggy_20261029'))
     # Check ownership by ROS API PID and the current container's /proc. The
     # private master must not silently supply perception from another worktree.
     import xmlrpc.client
@@ -191,6 +198,12 @@ def main():
                 if any(groups.values()):udp_contacts.append(value)
             elif kind is CtrlCmd:
                 value = dict(steering=message.steering, accel=message.accel, brake=message.brake)
+            elif kind is DiagnosticArray:
+                status=next((s for s in message.status if s.name=='camera_bbox_lane_change'),None)
+                if status is None:return
+                value=dict(valid=status.level==0,reason=status.message,
+                           values={entry.key:entry.value for entry in status.values},
+                           source_stamp=message.header.stamp.to_sec())
             elif kind is LocalTrajectory:
                 value = dict(valid=message.valid, reason=message.reason, sequence=message.plan_sequence)
             else:
@@ -205,6 +218,7 @@ def main():
         ('/planning/jamming/approach',Bool),
         ('/planning/local/trace',String),('/planning/local/control_trace',String),
         ('/planning/local/trajectory',LocalTrajectory),
+        ('/planning/camera_bbox_lane_change/diagnostics',DiagnosticArray),
         ('/planning/localization/anchor_ready', Bool),
         ('/planning/localization/trace', String),
         ('/planning/localization/debug', String),
@@ -262,6 +276,7 @@ def main():
             parked=StaticFixture(link,lambda row:emit(row.pop('event'),**row))
             existing={s.actor_info.id.value:s for s in initial_states}
             park_ids=list(args.park_prop)
+            scene_ids=set()
             for aid in park_ids:
                 if aid not in existing:raise RuntimeError('park fixture actor missing: '+aid)
                 link.actor_scopes[aid]=existing[aid].actor_info.client_key
@@ -269,10 +284,19 @@ def main():
                 if s.actor_info.id.value==link.ego_id:continue
                 position=s.transform.location;station,error=route.curve.project(position.x,position.y)
                 if args.start-5<=station<=args.end+10 and error<10 and s.actor_info.id.value not in park_ids:
-                    if args.park_corridor and s.actor_info.object_type==3:
+                    if args.preserve_scene_label:
+                        from localization_trial_policy import validate_preserved_static
+                        validate_preserved_static(actor_state(s))
+                        scene_ids.add(s.actor_info.id.value)
+                    elif args.park_corridor and s.actor_info.object_type==3:
                         park_ids.append(s.actor_info.id.value)
                         link.actor_scopes[s.actor_info.id.value]=s.actor_info.client_key
                     else:raise RuntimeError('unowned actor in trial corridor: '+s.actor_info.id.value)
+            if args.preserve_scene_label:
+                scene=[actor_state(s) for s in initial_states if s.actor_info.id.value in scene_ids]
+                emit('preserved_scene',label=args.preserve_scene_label,actors=scene,
+                     scene_sha256=hashlib.sha256(json.dumps(scene,sort_keys=True).encode()).hexdigest(),
+                     scope='user-loaded scene; observed only; native truth never enters planning')
             world_mutated=True
             link.reset(pose)
             if args.main_view_size:
@@ -377,6 +401,8 @@ def main():
                 ('/planning/jamming/prepare', None),
                 ('/planning/jamming/approach',None),('/planning/jamming/handoff_request',None),('/planning/jamming/handoff_candidate',None),
                 ('/planning/local/trace',None),('/planning/local/control_trace',None),('/planning/local/trajectory',None),('/planning/local/odometry',None),
+                ('/planning/camera_bbox_lane_change/diagnostics',None),('/planning/camera_bbox_lane_change/markers',None),
+                ('/perception/camera/lane_boundary_family',None),('/perception/lidar/observations_local',None),('/planning/objects',None),
                 ('/experimental/shadow/semantic_space_trial/context',None),('/experimental/shadow/semantic_space_trial/coverage',None),('/experimental/shadow/semantic_space_trial/drivable_probability',None),
                 ('/planning/jamming/handoff_request', None),
                 ('/planning/jamming/handoff_candidate', None),
@@ -397,6 +423,7 @@ def main():
                     '/image_jpeg/compressed','/cam_left/image_jpeg/compressed',
                     '/cam_right/image_jpeg/compressed','/cam_extra/image_jpeg/compressed']
             import roslib.packages
+            bag_topics=list(dict.fromkeys(bag_topics))
             record_binary=roslib.packages.find_node('rosbag','record')[0]
             # Full raw LiDAR + four JPEG streams can exceed 64MiB during D
             # write stalls. Keep every original topic; lossless LZ4 and a
@@ -466,6 +493,12 @@ def main():
                     owned=set(section.owned())
                     emit('fixture_motion',actors=[actor_state(s) for s in fixture_live if s.actor_info.id.value in owned],
                          scope='scene orchestration/evaluation only')
+                elif args.preserve_scene_label and now-last_fixture_tick>=.1:
+                    last_fixture_tick=now
+                    scene_live=[actor_state(s) for s in link.states() if s.actor_info.id.value in scene_ids]
+                    emit('fixture_motion',actors=scene_live,scope='preserved scene observation only')
+                    if {s['id'] for s in scene_live}!=scene_ids:
+                        reason='preserved_scene_actor_missing';break
                 if now-last_owner_check>=.5:
                     last_owner_check=now
                     if foreign_ros_owners(): reason='foreign_physical_owner'; break
@@ -498,7 +531,7 @@ def main():
                         reason='udp_collision_event_requires_review';break
                 if contacts and (not args.observer_contact_baseline or set(contacts)-set(startup_contacts)):
                     reason='contact'; break
-                if error > (5. if args.fixture!='none' else 1.5): reason='route_departure'; break
+                if error > (5. if args.fixture!='none' or args.preserve_scene_label else 1.5): reason='route_departure'; break
                 if limit is None:reason='unknown_control_mode';break
                 if state['speed_kmh'] > limit: reason='overspeed'; break
                 if state['speed_kmh'] > .36: stationary=now
@@ -583,6 +616,7 @@ def main():
     result['collision_evidence_policy']='raw UDP retained; only time/position-matched type=-1/id=0 ego status is neutral; unresolved active evidence stops for joint review'
     result['motion_turn_gain_m2ps']=args.motion_turn_gain
     result['planner']=args.jamming_planner
+    result['preserved_scene_label']=args.preserve_scene_label
     result['main_view_size']=args.main_view_size
     result['restore_view_size']=args.restore_view_size
     result['monitoring']=monitoring

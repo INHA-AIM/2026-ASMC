@@ -134,11 +134,10 @@ def assess(root):
         # ShadowZone stations use the 2D input polyline. Avoid mixing those
         # stations with the scenario runner's 3D arc or native spline station.
         import numpy as np
-        import xml.etree.ElementTree as ET
+        import yaml
         from scen_runner.config import load_config,repo_path
-        launch=Path(__file__).resolve().parents[2]/'src/asmc_planner/launch/autonomy_no_bridges_v2.launch'
-        end_s=float(next(p.get('value') for p in ET.parse(launch).iter('param')
-                         if p.get('name')=='shadow_zone/station_end_m'))
+        transition=Path(__file__).resolve().parents[2]/'src/asmc_planner/config/jamming_transition.yaml'
+        end_s=float(yaml.safe_load(transition.read_text())['shadow_zone']['station_end_m'])
         points=np.loadtxt(repo_path(load_config()['map']['global_path']))[:,:2]
         delta=points[1:]-points[:-1];length=np.linalg.norm(delta,axis=1)
         stations=np.r_[0.,np.cumsum(length)]

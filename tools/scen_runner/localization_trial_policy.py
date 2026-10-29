@@ -2,6 +2,14 @@
 import math
 
 
+def validate_preserved_static(actor):
+    """An explicit loaded scene permits observation, never actor mutation."""
+    if actor.get('kind')!=3 or not math.isfinite(actor.get('speed_kmh',float('nan'))) or actor['speed_kmh']>.2:
+        raise ValueError('preserved scene requires stationary static assets; use owned crossing fixtures for motion')
+    if not all(math.isfinite(actor['pose'][k]) for k in ('x','y','z','roll','pitch','yaw')):
+        raise ValueError('invalid preserved actor pose')
+
+
 def native_speed_limit(mode,shadow_cap,normal_ceiling):
     """Independent native guard; unknown mode never borrows a faster ceiling."""
     if mode not in (0,1):return None
