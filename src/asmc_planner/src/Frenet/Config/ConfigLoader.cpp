@@ -1,6 +1,7 @@
 #include "Frenet/Config/ConfigLoader.hpp"
 
 #include <yaml-cpp/yaml.h>
+#include <cmath>
 
 namespace {
 
@@ -150,6 +151,18 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/vehicle_shape/length", vehicle_shape.length);
     REQUIRE("planner/vehicle_shape/rear_overhang", vehicle_shape.rear_overhang);
     REQUIRE("planner/vehicle_shape/road_outer_width", vehicle_shape.road_outer_width);
+    // Older profiles contain only the calibrated total. New profiles expose
+    // the separate per-side reserve without changing any existing caller.
+    const auto vehicle_node = root["planner"]["vehicle_shape"];
+    if (ok && vehicle_node["boundary_reserve_each_side_m"]) {
+        double reserve = 0.;
+        if (!loadInto(root, "planner/vehicle_shape/boundary_reserve_each_side_m", reserve) ||
+            !std::isfinite(reserve) || reserve < 0. ||
+            std::abs(vehicle_shape.width + 2.*reserve - vehicle_shape.road_outer_width) > 1e-8) {
+            error_message = "planner/vehicle_shape boundary reserve conflicts with physical/outer width";
+            return false;
+        }
+    }
 
     REQUIRE("planner/collision_check/safety_margin",      collision_cfg.safety_margin);
     REQUIRE("planner/collision_check/margin_growth_rate", collision_cfg.margin_growth_rate);

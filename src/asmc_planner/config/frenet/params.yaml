@@ -472,8 +472,11 @@ planner:
   vehicle_shape:
     width: 1.892
     length: 4.635
-    # MORAI SDK measured exterior width 2.160835m. Road-only calibration;
-    # the user-selected1.892m body model keeps its separate0.45m margin.
+    # SDK exterior proxy: preserve the historical2.161m total boundary model.
+    # This per-side reserve applies ONLY where road_outer_width was used.
+    # It is not physical vehicle width or the object collision margin.
+    boundary_reserve_each_side_m: 0.1345
+    # Compatibility total, validated against width + 2 * boundary reserve.
     road_outer_width: 2.161
     # /vehicle/state x/y는 IONIQ 5 후륜축 기준이다.
     rear_overhang: 0.79

@@ -204,6 +204,15 @@ int main() {
         FrenetPlanner planner;
         Expect(!planner.Init(config),"road exterior: invalid or undersized width rejected");
     }
+    for (const std::string value : {"0.20", "-0.1", ".nan", "bad"}) {
+        const auto config=MakeMutatedConfig(source,waypoint_file,
+            "boundary_reserve_each_side_m: 0.1345",
+            "boundary_reserve_each_side_m: "+value,
+            "config_loader_bad_boundary_reserve.yaml");
+        Expect(!config.empty(),"boundary reserve: mutation created");
+        FrenetPlanner planner;
+        Expect(!planner.Init(config),"boundary reserve: conflict or invalid value rejected");
+    }
     {
         const auto config=MakeMutatedConfig(source,waypoint_file,
             "    road_outer_width: 2.161\n", "", "config_loader_missing_road_exterior.yaml");

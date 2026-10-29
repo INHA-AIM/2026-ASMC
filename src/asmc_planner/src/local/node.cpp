@@ -1214,7 +1214,9 @@ public:
         config.preferred_clearance<config.margin || config.preferred_clearance>1. ||
         config.low_speed_rate_floor<.1 || config.low_speed_rate_floor>1. ||
         config.controlled_decel<config.decel || config.controlled_decel>3. ||
-        config.width < 1.892 || config.length < 4.5 || config.rear <= 0 ||
+        std::abs(config.width - Config{}.width) > 1e-9 ||
+        std::abs(config.length - Config{}.length) > 1e-9 ||
+        std::abs(config.rear - Config{}.rear) > 1e-9 || config.rear <= 0 ||
         config.rear >= config.length || config.margin < 0 ||
         config.budget_ms <= 0 || config.budget_ms > 100 ||
         config.speed_cap <= 0 || config.speed_cap > 20. / 3.6 || config.cruise_speed <= 0 || config.cruise_speed > 20./3.6 ||
