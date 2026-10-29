@@ -198,3 +198,44 @@ same test2 entry→recovery→exit. Verify both loss-of-anchor LOCAL selection a
 GPS-return handoff in live traces. To roll back only recovery behavior relaunch
 with `localization_local_recovery:=false`; full prior source reference is
 `f7d58921` (use a separate checkout or revert, do not discard other work).
+
+## 05:49 test2 retest — no reset or teleport
+
+User requested a five-minute verification of the retained checkpoint `08502fc1`.
+The existing test2 scene was preserved, ego held at its current A448 position,
+then a fresh autonomy process was started on master11373. No simulator reset,
+teleport, object change or scenario save was used. Body-heading precheck passed.
+Only this comparison container owned control; existing bridge/perception/web
+were retained. Source behavior was not changed during the trial.
+
+Results (one pass, native state sampled approximately 1Hz):
+- 54.25s / approximately254.45m including NORMAL departure after tunnel exit.
+- Initial LOCAL recovery supplied a fresh path at roughly5km/h. At elapsed3s
+  native localization became usable and reclaimed the same jamming MPC.
+- GPS-zero began around8s; normal tunnel travel was roughly14–15km/h.
+- At11s `shadow_dynamic_yield` requested brake1. Native speed was below0.5km/h
+  during samples at12–13s and moving again at14s (sampled stopped interval≈2s).
+  This was a dynamic-risk stop, not the former anchor-loss deadlock. Whether
+  the object's motion estimate was correct has NOT been verified; preceding
+  dynamic stopping-prefix trace identified track1741. The stop must not be
+  presented as proof of a real crossing actor or a fully smooth ride.
+- GPS was valid again at41s; at42s JAMMING recovery waited for NORMAL readiness;
+  at43s NORMAL was active while speed remained14.14km/h. No sampled stop at
+  exit. Detailed handoff trace: command_age0.000822s, transport_wait0.029209ms.
+- No stop lasting10s or more occurred. No non-Ego collision ID appeared in the
+  native samples; this is sampled evidence, not a continuous collision audit.
+- The original motion-epoch loss was not injected in this trial. Its recovery
+  policy is regression-tested; this drive establishes LOCAL→localization and
+  GPS-zero→NORMAL operation, not exhaustive acceptance of all failure states.
+
+Evidence: active comparison campaign's unique child
+`D:/morai dataset/shahn03/artifacts/jamming-three-way-20261029-r02/test2-retest-20261030-0549/`:
+`before.json` (source/actors), `live.jsonl`, `events.jsonl`, `autonomy.log`,
+`after.json`, `summary.json`. Raw sensor replay bag was not collected.
+The initial LOCAL recovery was the existing near-field-assisted path, so this
+is not a new normal-speed obstacle avoidance acceptance.
+
+End state: trial autonomy and additional recorder stopped, ego held in P;
+bridge, camera, LiDAR and dashboard8089 remain. No push/merge or operating
+default promotion. Immediate follow-up is to verify track1741's dynamic-risk
+stop with matched perception evidence, rather than bypassing dynamic yield.
