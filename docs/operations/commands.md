@@ -74,13 +74,14 @@ GPU가 다른 PC에서 만든 객체 엔진을 사용하던 경우, 추론 노�
 `bash tools/scen_runner/prepare_camera_engines.sh`로 현재 모델·GPU·TensorRT에 맞는
 엔진을 생성합니다. 검증을 마친 로컬 객체 엔진은 직접 실행하는 `camera.launch`와
 시나리오 실행기 모두에서 선택됩니다. [로컬 엔진 안내](local-lane-engine.md)를 참고하세요.
-이 연구 checkout에서 위치측위 기반 음영 M2를 선택할 때는 D에
-`jamming_planner:=localization`을 지정합니다. 기본 `camera`는 기존 BBox 방식이며,
+현재 통합 브랜치의 D는 `jamming_planner:=localization`과
+`localization_local_recovery:=true`가 기본입니다. localization MPC 하나가 native 경로와 검증된 LOCAL 대체 경로를 추종합니다.
+기존 방식 복귀는 `jamming_planner:=camera localization_local_recovery:=false`입니다.
 [공유 master·중복 방지·연구 범위](planning-control.md#localization-음영-위치-추종-연구-옵션)를 먼저 확인합니다.
 판제 대시보드는 D에 포함되어 별도 실행하지 않습니다. 실행·보존·검증 범위는
 [통합 안내](../../src/asmc_planner/docs/main-integration-20261026.md)를 참고하세요.
 
-현재 재밍 개발 브랜치의 D는 차선 카메라로 도로를 잡고, 장애물 형상·위치·운동은
+`jamming_planner:=camera`를 명시한 기존 방식은 차선 카메라로 도로를 잡고, 장애물 형상·위치·운동은
 LiDAR OBB로 판단합니다. 객체 카메라는 LiDAR SensorFusion의 클래스 보완에 사용합니다.
 카메라 BBOX로 6m 장애물을 만드는 경로는 제거했으며 실행 명령은 같습니다.
 [재밍 입력·기억 정책](../../src/jamming_lane_boundary_adapter/docs/bbox-lane-change.md)을 참고하세요.
@@ -523,7 +524,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 
 이 명령은 **차량 제어를 포함**한다. bridge·camera·LiDAR는 공용 master에 각각 한 세트만
 별도로 실행한다. 다른 컨테이너의 autonomy나 `local.launch`, 구 BBox follower와 동시에
-실행하지 않는다. `jamming_planner`의 기본값은 기존 `camera`이며, `local`을 선택하면:
+실행하지 않는다. `jamming_planner`의 현재 기본값은 `localization`+LOCAL 복구이며, 독립 `local`을 선택하면:
 
 - 기존 GPS/구간 mode 판단과 selector를 재사용한다. 일반 구간은 기존 NORMAL MPC,
   음영구간은 LOCAL planner/MPC가 담당하고, `/ctrl_cmd` 생산자는 selector 하나다.
@@ -680,7 +681,19 @@ LiDAR 단계별 상세 점군이 필요할 때만 전체 실행에 `lidar_debug:
 전체 실행의 branch·revision·session/master를 판제 웹 상단에 표시한다. 관측 연결이 끊기면
 과거 경로를 비우며, 상세 유효성·노면 age·MPC 실패 사유는 기존 패널에서 확인한다.
 
-`jamming_planner`는 현재 camera/local만 허용한다. localization 구현은 이번에 추가하지 않았다.
+`jamming_planner`는 camera/local/localization을 지원한다. 현재 기본은 localization+LOCAL 복구이며 상세 검증 범위는 [06:50 체크포인트](../records/planning/2026-10-30-jamming-0650.md)를 따른다.
 향후 같은 상호 배타 include와 selector 슬롯에 연결해 명령 소유권·watchdog·모드 인계를 재사용한다.
 [비교·남은 실패](../records/planning/2026-10-29-local-first-comparison.md)와
 [배포 검증](../records/planning/2026-10-29-local-deployment.md)을 함께 확인한다.
+
+### 2026-10-30 비교 컨테이너 실행
+
+`asmc-jamming-compare`의 기존 master11373·브릿지·인지·콘솔을 쓰는 경우:
+
+```bash
+roslaunch asmc_planner autonomy_no_bridges_v2.launch dashboard:=false
+```
+
+판제: http://localhost:8089/web/index_v2.html · LiDAR: http://localhost:8097/ .
+새 단독 실행의 일반 웹 기본값8088/8091과 구분한다. 이미 실행 중인 autonomy와 중복 실행하지 않는다.
+기본 localization 목표15km/h, A451부터 준비·A448에서 인계. 무정지 전체 수락은 검증 기록을 확인한다.
