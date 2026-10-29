@@ -182,6 +182,10 @@ bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
     }
   }
   if (best.empty()) {++out.rejected["recovery_no_braking_candidate"];return false;}
+  // An already rechecked recovery is current geometry, not stale control.
+  // A shorter newly sampled arc must not overwrite a longer feasible one.
+  if(out.path_source=="rechecked_recovery" && !out.path.empty() &&
+      out.path.back().s>=best.back().s)return false;
   out.path = std::move(best);
   out.goals = std::move(goals);
   out.assisted = true;

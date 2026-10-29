@@ -344,6 +344,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       }
     }
   }
+  const bool observed_opening = !out.goals.empty();
   if (out.goals.empty())
     out.goals.push_back(
         {std::max(1., horizon), ReferenceAt(s, std::max(1., horizon))});
@@ -543,7 +544,10 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   // Recheck previous feasible prefix as a complete candidate; never replay
   // stale control or an unchecked geometry merely because search exhausted its
   // budget.
-  if (s.previous.size() > 1) {
+  if(s.previous_recovery && c.recovery && !observed_opening)++out.rejected["recovery_recheck_no_current_opening"];
+  const int previous_passes=s.previous_recovery && c.recovery && observed_opening?2:1;
+  for(int policy=0;policy<previous_passes;++policy) if (s.previous.size() > 1) {
+    if(policy==1 && out.path_source=="rechecked_previous")continue;
     // Reuse only a geometrically continuous suffix. A stale arc-length or a
     // shortcut from today's axle to yesterday's path must never extend free
     // range.
@@ -558,17 +562,29 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         std::abs(nearest->yaw) < .08) {
       for (auto it = nearest; it != s.previous.end(); ++it) {
         auto p = *it;
-        if (p.x <= .1)
+        // Keep the generated10cm recovery waypoint. Dropping it compared
+        // a two-step steering change against its shorter chord and falsely
+        // rejected a path generated exactly at the same steering-rate bound.
+        if (p.x <= .001)
           continue;
         const auto &a = prefix.back();
         double ds = std::hypot(p.x - a.x, p.y - a.y), turn = p.yaw - a.yaw;
         const auto soft_before = check.soft_margin_cells;
         const double steering_change = std::abs(std::atan(c.wheelbase*p.k/c.gain)-
                                                 std::atan(c.wheelbase*a.k/c.gain));
+        p.s = a.s + ds;
+        Config current_policy=c;
+        // A previously labelled recovery is re-evaluated with current OBBs,
+        // current exterior and current road-opening evidence. Do not silently
+        // switch it to a strict bonnet-visibility gate on the next frame.
+        current_policy.recovery_geometry=policy==1 && p.s<=4.;
         if (ds > .80 || p.x > horizon || std::abs(p.k)>c.max_k ||
-            steering_change > c.max_steer_rate*ds/std::max(1.,s.speed) ||
-            std::abs(turn) > c.max_k * ds + .015 || !CheckSweep(s, c, a, p, check))
+            steering_change > c.max_steer_rate*ds/std::max(1.,s.speed)+1e-8 ||
+            std::abs(turn) > c.max_k * ds + .015 || !CheckSweep(s, current_policy, a, p, check))
+        {
+          if(policy==1) ++out.rejected[check.rejected.empty()?"recovery_recheck_kinematic":"recovery_recheck_"+check.rejected.begin()->first];
           break;
+        }
         p.s = a.s + ds;
         old_cost += SegmentQualityCost(s,c,a,p,check.soft_margin_cells-soft_before);
         prefix.push_back(p);
@@ -578,9 +594,10 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
                            old_cost <= best.quality * 1.1 + .005;
       if (prefix.size() > 1 &&
           (prefix.back().x > out.path.back().x + .5 || similar)) {
-        out.path_source = "rechecked_previous";
+        out.path_source = policy==1?"rechecked_recovery":"rechecked_previous";
+        out.recovery = policy==1;
         out.path = std::move(prefix);
-        out.assisted = check.assisted;
+        out.assisted = policy==1 || check.assisted;
         out.soft_margin_cells = check.soft_margin_cells;
       }
     }

@@ -57,6 +57,7 @@ struct Scene {
   double speed = 0, yaw_rate = 0, age = 0, acceleration = 0;
   bool aligned_to_plan = false;
   std::vector<Pose> previous;
+  bool previous_recovery = false;
 };
 struct Result {
   bool valid = false, assisted = false, recovery = false;

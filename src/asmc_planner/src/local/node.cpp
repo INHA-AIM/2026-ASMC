@@ -108,6 +108,7 @@ class Node {
   bool cached_valid = false;
   std::deque<std::array<double, 10>> timing_recent;
   std::vector<Pose> previous;
+  bool previous_recovery=false;
   Motion previous_origin;
   std::string input_ids = "{}";
   std::string scene_debug = "{}", join_debug = "{}";
@@ -463,7 +464,7 @@ class Node {
     phase = selected_mode ? "active" : preparation ? "prepare" :
         active_in_jamming_only ? "idle" : "preview";
     if (calculated_generation != expected_scene_generation || !compute) {
-      previous.clear(); road_memory.clear(); reference_prior.clear(); obstacle_memory.clear(); last_scene = 0; home_role = 0;
+      previous.clear(); previous_recovery=false; road_memory.clear(); reference_prior.clear(); obstacle_memory.clear(); last_scene = 0; home_role = 0;
       calculated_generation = expected_scene_generation;
     }
     if (!compute) {
@@ -821,6 +822,7 @@ class Node {
     if(retain_static_observations)
       obstacle_memory.apply(scene.obstacles,Pose{origin->x,origin->y,origin->yaw},
                             array.header.stamp.toSec(),plan_stamp.toSec());
+    scene.previous_recovery=previous_recovery;
     for (auto q : previous) {
       double wx = previous_origin.x + std::cos(previous_origin.yaw) * q.x -
                   std::sin(previous_origin.yaw) * q.y - origin->x,
@@ -853,7 +855,8 @@ class Node {
         debug << ',';
       debug << g.rotation[k];
     }
-    debug << "],\"speed_mps\":" << scene.speed
+    debug << "],\"previous_recovery\":" << (scene.previous_recovery?"true":"false")
+          << ",\"speed_mps\":" << scene.speed
           << ",\"yaw_rate_rad_s\":" << scene.yaw_rate
           << ",\"acceleration_mps2\":" << scene.acceleration
           << ",\"source_in_plan\":[" << g.source_in_plan[0] << ','
@@ -1012,9 +1015,11 @@ class Node {
     report(result, age, selected);
     if (result.valid) {
       previous = result.path;
+      previous_recovery = result.recovery;
       previous_origin = *origin;
-    } else
-      previous.clear();
+    } else {
+      previous.clear();previous_recovery=false;
+    }
   }
   void diagnose(const ros::SteadyTimerEvent &) {
     std::lock_guard<std::mutex> lock(diagnostic_mutex);

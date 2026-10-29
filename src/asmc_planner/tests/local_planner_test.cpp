@@ -113,6 +113,27 @@ int main() {
   }
   try {
     {
+      auto s=RecordedStoppedBarrier();Config c;c.recovery=true;c.budget_ms=100.;
+      auto seed=Plan(s,c);expect(seed.valid && seed.recovery,"recorded recovery seed");
+      s.previous=seed.path;
+      // Current narrow visibility rows hide the centroid probes, but actual
+      // OBB/exterior and a farther observed opening remain available.
+      for(int row:{155,140,120})for(int col=0;col<160;++col)s.grid.coverage[row*160+col]=0;
+      expect(!Plan(s,c).valid,"normal previous path never gains recovery privileges implicitly");
+      s.previous_recovery=true;
+      auto kept=Plan(s,c);
+      std::cerr<<"recovery recheck: "<<kept.reason<<" source="<<kept.path_source<<" length="<<(kept.path.empty()?0:kept.path.back().s)<<"\n";
+      for(const auto &v:kept.rejected)std::cerr<<v.first<<"="<<v.second<<" ";std::cerr<<"\n";
+      expect(kept.valid && kept.recovery && kept.path_source=="rechecked_recovery",
+             "current revalidation preserves the explicitly declared recovery policy");
+      s.obstacles.push_back({99,{{4.,-4.},{4.1,-4.},{4.1,4.},{4.,4.}}});
+      auto blocked=Plan(s,c);
+      expect(!blocked.valid || blocked.path_source!="rechecked_recovery",
+             "fresh OBB vetoes an old recovery path immediately");
+      s.grid.coverage.assign(40000,0);
+      expect(!Plan(s,c).valid,"past recovery cannot grant road with no current opening evidence");
+    }
+    {
       auto s=empty();Config c;s.speed=2.8744620747;s.acceleration=-.2951031;s.aligned_to_plan=true;
       Result r;r.path={{0,0,0,0,0},{3.8123133434,0,0,0,3.8123133434}};
       expect(!BuildSpeedProfile(s,c,r),"recorded comfort brake cannot fit the shortened current path");
