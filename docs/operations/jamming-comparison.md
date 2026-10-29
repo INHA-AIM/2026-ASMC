@@ -1,5 +1,7 @@
 # 세 재밍 플래너 비교 실행
 
+최신 비교 체크포인트: [10월30일 06:20 팀 통합·음영 복구](../records/planning/2026-10-30-team-shadow-0620.md). 진입 무정지 수락은 아직 미완료다.
+
 이 안내는 `integrate/jamming-three-way-20261029` 비교 브랜치용이다. 현재 PR은
 미병합이므로 운영 main에 세 옵션이 이미 배포된 것은 아니다. 기존 main·LOCAL·
 localization의 보존 기록과 원격 브랜치는 유지한다. #125·126·138·139는 superseded 종료됐으며 병합된 것은 아니다.

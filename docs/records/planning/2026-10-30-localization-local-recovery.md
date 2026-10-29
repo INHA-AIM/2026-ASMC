@@ -1,5 +1,7 @@
 # Localization → LOCAL recovery comparison (2026-10-30)
 
+현재 정책·팀 통합·06:20 결과는 [후속 체크포인트](2026-10-30-team-shadow-0620.md)를 따른다. 아래는 당시 실행 이력이다.
+
 Status: opt-in implementation restored after baseline rollback; recovery driving remains unaccepted. Start: `b001c2c1`,
 backup ref `archive/pre-localization-local-recovery-20261030`.
 Remote compare branch was fetched; six existing local commits are preserved.
