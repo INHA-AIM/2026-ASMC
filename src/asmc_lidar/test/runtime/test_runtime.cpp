@@ -2,7 +2,7 @@
 // input converters, with synthetic inputs and a deterministic logical clock.
 #include <asmc_lidar/ros/ros_inputs.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
-#include <asmc_lidar/preprocessing/roi_voxel.hpp>
+#include <asmc_lidar/preprocessing/preprocessing.hpp>
 #include <asmc_lidar/ros/delivery_display_history.hpp>
 
 #include <GeographicLib/UTMUPS.hpp>
