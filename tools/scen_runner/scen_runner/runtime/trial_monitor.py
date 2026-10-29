@@ -141,6 +141,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     self.reply(dict(error='trial changed'),409); return
                 meta['data_available'] = True
                 meta['connection'] = 'live'
+                meta['local_receive_age_s']=payload.get('local_receive_age_s')
             else: meta['connection'] = 'no_active_backend'
         except (OSError, ValueError, urllib.error.URLError) as exc:
             error = str(exc); meta.update(connection='waiting', observer_error=error)

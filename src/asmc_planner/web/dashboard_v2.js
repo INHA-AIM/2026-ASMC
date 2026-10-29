@@ -38,7 +38,7 @@
   let monitorInstance=null;
   function clearTrialObservations() {
     for(const key of ['command','feedback','feature','trajectory','ego','lidarObjects','lidarMotionDebug',
-      'planningMarkers','recentPlanningIssue','localExperiment','localControl','localDetail','localLastGood','localLastDetail'])data[key]=null;
+      'planningMarkers','debugConfig','recentPlanningIssue','localExperiment','localControl','localDetail','localLastGood','localLastDetail'])data[key]=null;
     data.receivedAt={};data.shadow={};data.localReceiveAge=Infinity;data.localLastTime=0;
     tracks.clear();previousObjects=new Map();motionDebugById=new Map();
     lidarFrameKey=null;lidarFrameIndex=0;lidarChanges={appeared:[],disappeared:[],typeChanged:[]};
@@ -54,7 +54,7 @@
       node.hidden=false;
       node.textContent=[phases[meta.phase]||meta.phase,meta.run_id||'대기',
         (meta.branch||'')+' @ '+(meta.revision||'').slice(0,8)+(meta.dirty?' +미커밋':''),
-        meta.master_uri||'',meta.data_available?'현재 관측 연결':'현재 관측 없음 · 과거 경로 숨김',meta.reason||''].filter(Boolean).join(' | ');
+        meta.master_uri||'',meta.data_available?'관측 서버 연결 · LOCAL 수신 '+(Number.isFinite(meta.local_receive_age_s)?Math.round(meta.local_receive_age_s*1000)+'ms':'대기'):'현재 관측 없음 · 과거 경로 숨김',meta.reason||''].filter(Boolean).join(' | ');
       node.className='trial-monitor '+(meta.data_available?'live':'waiting');
     }
   }
