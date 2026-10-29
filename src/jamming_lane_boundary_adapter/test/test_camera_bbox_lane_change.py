@@ -63,6 +63,7 @@ class LaneChangeTest(unittest.TestCase):
         self.log=open('/tmp/'+self._testMethodName+'-bbox-change.log','w')
         self.process=subprocess.Popen(['roslaunch','lane_boundary_adapter','camera_bbox_lane_change.launch',
             'use_rviz:=false','enable_control:=true','control_topic:=/bbox_change_test/command',
+            'smooth_handoff:='+str(getattr(self,'handoff_enabled',False)).lower(),
             'ego_mask_enabled:=false',
             'projection_context_required:=false',
             'calibration_file:='+rospkg.RosPack().get_path('asmc_camera')+'/config/bev/cameras_v2.yaml',
@@ -104,7 +105,7 @@ class LaneChangeTest(unittest.TestCase):
         while time.monotonic()<end:
             source=rospy.Time.now() if stamp is None else stamp
             if speed is not None:
-                ego=EgoVehicleStatus();ego.velocity.x=speed;ego.velocity.y=ego_y
+                ego=EgoVehicleStatus();ego.header.stamp=source;ego.velocity.x=speed;ego.velocity.y=ego_y
                 self.ego_pub.publish(ego)
             if imu is not None:
                 message=Imu();message.angular_velocity.z=imu

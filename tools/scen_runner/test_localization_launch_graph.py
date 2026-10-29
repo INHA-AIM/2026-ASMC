@@ -28,7 +28,7 @@ for choice in ('camera','local','localization'):
     assert ('semantic_space_trial' in names)==(choice=='local')
     owner={'camera':'camera_bbox_lane_change','local':'local_planner','localization':'localization'}[choice]
     cap_key={'camera':'target_speed_kph','local':'speed_cap_kph','localization':'speed_cap_kph'}[choice]
-    assert c.params['/'+owner+'/'+cap_key].value=={'camera':10.,'local':20.,'localization':20.}[choice]
+    assert c.params['/'+owner+'/'+cap_key].value=={'camera':20.,'local':20.,'localization':20.}[choice]
     if choice in ('local','localization'):
         for key,value in [('vehicle_width',1.892),('vehicle_length',4.635),('rear_axle_to_bumper',.790),('cruise_speed_kph',15.),('escape_speed_cap_kph',5.)]:
             assert c.params['/'+owner+'/'+key].value==value,(choice,key)

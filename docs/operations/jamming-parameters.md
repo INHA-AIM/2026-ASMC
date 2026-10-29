@@ -83,7 +83,7 @@ Frenet/LOCAL 시간 매개화도 검증 이력이 달라 공통 모듈 안에서
 | `jamming_avoid_line_overrun` | camera 회피 corridor의 외곽 기준선 바깥 허용 |통합0m. LOCAL 작업트리의1.5m는 camera 외곽 영역 확장 허용이며 충돌 여유가 아님 |
 | `jamming_line_edge_expand` | camera의5개 기준선 중 바깥1·5번 가이드 이동 |30cm. 벽/노면 확인이나 차체 통과 보장이 아님 |
 | `jamming_avoid_line_extra` | camera가 통과 가능한 회피선에서 더 바깥으로 미는 선 단위 값 |통합0.0. LOCAL 작업트리의1.0은1m라는 뜻이 아님 |
-| `avoid_max_shoulder`, `avoid_wall_margin` | camera가 LiDAR 벽을 확인한 쪽의 확장 한계/벽 여유 |통합 shoulder0m. overrun 및 localization 지도 확장과 별개 |
+| `avoid_max_shoulder`, `avoid_wall_margin` | camera가 LiDAR 벽을 확인한 쪽의 확장 한계/벽 여유 |통합 shoulder2m. overrun 및 localization 지도 확장과 별개 |
 | `uncertainty`, `source_age`, `extra_clearance` | 물체 나이/운동 불확실성과 취약 대상 여유 |실제 footprint 위의 별도 보수성, 무효 속도를0으로 바꾸지 않음 |
 
 ### 실제 검사·계산 경로
@@ -101,7 +101,7 @@ Frenet/LOCAL 시간 매개화도 검증 이력이 달라 공통 모듈 안에서
 | native 물체 검사 | `collision_check.safety_margin=.45`, `margin_growth_rate=.10` → `EffectiveSafetyMargin` | 예측 시각 t에서 미확정/동적 등은 `.45+.10t`m, LOW_THREAT 확정 등은 조건에 따라 기본값. 각각 독립 판단 |
 | localization 최종 물체 검사 | `Config.margin=.10` → `StaticPlanner::footprint` | native 후보 검사와 다른 단계. 일반 후보의 두 검사를 `.45+.10`으로 합산하지 않음. 탈출은 `max(.10,.45)` |
 | 벽 확장 | `tunnel_wall_corridor_molitcomp03.json` → `load_wall_corridor` | map SHA·frame·station·선언된 reserve 검증 후 원본 map에 국한해 추가. 실제 바닥·벽 원자료 확인 전 reserve 재설정 금지 |
-| camera 후보 | `avoid_clearance=.20`, `avoid_plan_margin=.05` → candidate offset 검사 | 반폭+.20+.05=1.196m. `obstacle_lateral_margin=.20`은 도로/차체·다른 물체 검사의 별도 조건 |
+| camera 후보 | `avoid_clearance=.05`, `avoid_plan_margin=.05` → candidate offset 검사 | 반폭+.05+.05=1.046m. `obstacle_lateral_margin=.05`은 도로/차체·다른 물체 검사의 별도 조건 |
 | 속도·정지 공간 | `BuildSpeedProfile` | 경로 남은 거리에서0.10m를 뺀 뒤 제동·지연 계산; LOCAL의0.35m/s 추종 overshoot 보정은 길이 아님. native 시간 프로필은 별도 |
 | 위치·운동 보정 | `vehicle_state.yaml`, `shadow_localization.yaml`, controller 설정 | GPS 장착점(.35,0,1.25)m, wheelbase3m, steering gain .844. localization의 orientation yaw·경험 보정을 LOCAL rate yaw에 대입하지 않음 |
 
@@ -162,3 +162,10 @@ LOCAL의 기존 관측 근거리 복구도 대안으로 사용한다. 속도는 
 실제 벽/막힌 차체 통로가 모두 거절되면 `stall_escape_no_observed_opening`을 표시한다.
 `escape_requested`, `stationary_windows`, 선택 경로 source/정지 이유는 연구 trace에 남긴다.
 실제 주행 수락은 LOCAL 작업 완료 후 비교 단계에서 확인한다.
+
+
+### PR142·144 통합 변경
+
+camera의 운영 목표는20km/h, 회피10, creep3이다. 통합 launch의 `avoid_clearance=.05`, `obstacle_lateral_margin=.05`, `avoid_line_extra=1`, `avoid_line_overrun=1.5m`, `avoid_max_shoulder=2m`를 사용한다. standalone camera launch의 값과 통합 override를 구분한다. 이 여유·정지 정책은 LOCAL/localization에 전파하지 않는다.
+
+LiDAR 표준 profile은 `lidar_wall_vehicle.yaml`; sensor Z 하한-1.55m, 근거리 지면 제거 .23m, 일반/터널 최소 점수3, 진입30m 전·출구10m 후 window를 사용한다. `RearOverhang`은 물리 정본 .790m로 맞춰 기존 .700m 자기차 마스크의 뒤쪽만9cm 늘어난다. sensor mount나 지면 좌표는 바꾸지 않는다. 현재 프로필·window SHA는 최종 통합 manifest에 기록한다.
