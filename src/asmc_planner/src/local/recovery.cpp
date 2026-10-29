@@ -76,7 +76,7 @@ bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
   // A fixed4m arc could not contain an accelerating12km/h state. Extend
   // only as far as today's full-body road/OBB sweep verifies. The original
   // near-field soft policy is never extended beyond its existing4m range.
-  const double target = std::max(std::min(c.recovery_target,std::max(4.,s.home.empty()?4.:s.home.back()[0])), required + .25);
+  const double target = std::max(4., required + .25);
   if (target > 8.) {++out.rejected["recovery_stopping_range"];return false;}
   std::vector<std::pair<std::array<double,2>,double>> requests;
   for(const auto &goal:goals)

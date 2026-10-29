@@ -35,24 +35,19 @@ struct Config {
   double preferred_clearance = .40;
   double low_speed_rate_floor = 1.;
   double maneuver_reserve = 0.; // Keep turn room if a verified prefix ends at an obstacle.
+  double recovery_speed = 3./3.6; // Physical checks may lower the requested recovery speed.
   double maneuver_speed_cap = 0.; // Optional close, tight swept-path maneuver cap;0 disables.
-  double recovery_speed = 3./3.6; // User-selected crawl target; physical bounds can lower it.
-  double recovery_target = 4.; // Extra range requires the unchanged strict sweep after4m.
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;
-  bool semantic_speckle_guard = false; // Experimental, bounded, past-evidence-only transient holes.
   bool recovery_geometry = false; // Internal near-field policy; never a launch switch.
   int beam = 40;
-  double guide_offset = 1e9; // Current semantic component centre cue; not a collision raster.
-  int selection_trial = 0; //0 current;1 revalidated long-path commitment;2 five-guide primary.
 };
 struct Grid {
   int rows = 0, cols = 0;
   double resolution = .1, xmax = 20., ymax = 8.;
   std::vector<uint8_t> probability, coverage;
   std::vector<std::vector<int>> blocked_columns;
-  std::vector<uint8_t> transient_nonroad; // Optional evidence mask, not edited raw semantic data.
   std::vector<uint8_t> exterior_nonroad; // Current row exterior, not interior occlusion holes.
   std::vector<float>
       recent_road_age; // Original observation age;0 means no evidence.
@@ -86,7 +81,7 @@ struct Result {
   std::vector<Pose> path;
   std::vector<std::array<double, 7>> trajectory; // x y yaw k v a t
   std::map<std::string, unsigned> rejected;
-  unsigned expanded = 0, semantic_noise_cells = 0;
+  unsigned expanded = 0;
   int blocking_id = -1;
   double blocked_x = 0, blocked_y = 0, minimum_clearance = 1e9, elapsed_ms = 0;
   double raw_cap = 0, curve_cap = 0, steering_cap = 0, space_cap = 0, chosen_cap = 0;
@@ -128,15 +123,6 @@ inline double InitialCurvature(const Scene &s,const Config &c) {
      std::abs(s.measured_steering_rad)<=.698131701)
     return std::clamp(c.gain*std::tan(s.measured_steering_rad)/c.wheelbase,-c.max_k,c.max_k);
   return s.speed>.1?std::clamp(s.yaw_rate/s.speed,-c.max_k,c.max_k):0.;
-}
-// One guide toward home only after reaching the current guide; paint remains
-// a preference, never a collision boundary. Signed offset is relative to home.
-inline double StagedGuideOffset(double current_offset,double half_lane) {
-  const int index=std::clamp(int(std::lround(current_offset/half_lane)),-2,2);
-  int next=index;
-  if(index && std::abs(current_offset-index*half_lane)<=.3)
-    next-=index>0?1:-1;
-  return next*half_lane;
 }
 double ReferenceAt(const Scene &, double x); // Soft home cue, never a collision boundary.
 // Distance-normalized final score; does not certify collision validity.

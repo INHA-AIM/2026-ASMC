@@ -55,7 +55,7 @@ class Node {
   bool retain_static_observations = false;
   ReferencePrior reference_prior;
   bool use_road_memory = true;
-  bool semantic_reference_fallback = false, front_navigation_reference=false;
+  bool semantic_reference_fallback = false;
   bool active_in_jamming_only = false, jamming_selected = false;
   uint64_t mode_generation = 0, scene_generation = 0, calculated_generation = ~uint64_t(0);
   bool preparing = false;
@@ -73,10 +73,10 @@ class Node {
   uint64_t discarded_plans = 0;
   std::string session, run, frame, camera_epoch, speed_caller, config_id;
   ros::Subscriber speed_sub, imu_sub, prob_sub, cover_sub, context_sub,
-      family_sub, objects_sub, mode_sub, prepare_sub, front_prob_sub, front_cover_sub;
+      family_sub, objects_sub, mode_sub, prepare_sub;
   ros::Publisher odom_pub, path_pub, trajectory_pub, trace_pub, diagnostics_pub;
   ros::SteadyTimer planner_timer, diagnostic_timer;
-  std::map<uint64_t, sensor_msgs::Image::ConstPtr> probs, covers, front_probs, front_covers;
+  std::map<uint64_t, sensor_msgs::Image::ConstPtr> probs, covers;
   std::map<uint64_t, asmc_msgs::CameraGroundProjection::ConstPtr> contexts;
   std::map<uint64_t, asmc_msgs::LaneBoundaryFamily::ConstPtr> families;
   std::deque<asmc_msgs::LidarTrackingObservation::ConstPtr> objects;
@@ -123,7 +123,7 @@ class Node {
   uint64_t lidar_sequence = 0;
   void clear_scene() {
     probs.clear();
-    covers.clear();front_probs.clear();front_covers.clear();
+    covers.clear();
     contexts.clear();
     families.clear();
     objects.clear();
@@ -284,7 +284,6 @@ class Node {
       << ",\"selected_length_m\":" << (r.path.empty() ? 0 : r.path.back().s)
       << ",\"path_source\":" << std::quoted(r.path_source)
       << ",\"soft_semantic_margin_visits\":" << r.soft_margin_cells
-        << ",\"semantic_noise_cells\":" << r.semantic_noise_cells
       << ",\"search_ms\":" << r.search_ms << ",\"speed_ms\":" << r.speed_ms
       << ",\"alignment_ms\":" << r.alignment_ms
       << ",\"critical_path_ms\":" << r.alignment_ms + r.elapsed_ms + snapshot_ms
@@ -452,7 +451,6 @@ class Node {
     const auto speeds = this->speeds;
     const auto contexts = this->contexts;
     const auto probs = this->probs, covers = this->covers;
-    const auto front_probs=this->front_probs, front_covers=this->front_covers;
     const auto families = this->families;
     const auto objects = this->objects;
     const auto family_arrivals = this->family_arrivals;
@@ -493,8 +491,7 @@ class Node {
     }
     uint64_t selected = 0, newest_semantic = 0;
     for (auto it = contexts.rbegin(); it != contexts.rend(); ++it) {
-      if (!probs.count(it->first) || !covers.count(it->first) ||
-          (front_navigation_reference && (!front_probs.count(it->first) || !front_covers.count(it->first))))
+      if (!probs.count(it->first) || !covers.count(it->first))
         continue;
       if (!newest_semantic) newest_semantic=it->first;
       if (!families.count(it->first)) continue;
@@ -907,7 +904,7 @@ class Node {
     const auto memory_start = ros::SteadyTime::now();
     if (use_road_memory) {
       road_memory.apply(g, Pose{origin->x, origin->y, origin->yaw},
-                        plan_stamp.toSec(),config.semantic_speckle_guard);
+                        plan_stamp.toSec());
       road_memory.observe(
           g, Pose{camera_origin->x, camera_origin->y, camera_origin->yaw}, t);
     } else {
@@ -1022,30 +1019,7 @@ class Node {
     next_plan_due = next_plan_due == 0
                         ? scheduled + .1
                         : std::max(next_plan_due + .1, scheduled);
-    // Direction preference only. The collision raster stays all-view and
-    // untouched even when the user selects front-only centroid guidance.
-    Grid navigation;
-    const Grid *navigation_grid=&g;
-    if(front_navigation_reference) {
-      auto fp=front_probs.at(selected),fc=front_covers.at(selected);
-      if(fp->encoding!="mono8" || fc->encoding!="mono8" || fp->width!=160 || fp->height!=250 ||
-         fc->width!=160 || fc->height!=250 || fp->step!=160 || fc->step!=160 ||
-         fp->data.size()!=40000 || fc->data.size()!=40000) {invalid("front_navigation_shape");return;}
-      navigation.rows=g.rows;navigation.cols=g.cols;navigation.rotation=g.rotation;
-      navigation.ground_z=g.ground_z;navigation.source_in_plan=g.source_in_plan;
-      navigation.probability=fp->data;navigation.coverage=fc->data;navigation_grid=&navigation;
-    }
     Config frame_config = config;
-    if(config.selection_trial==2) {
-      const auto cue=SemanticReference(*navigation_grid,config,{},true);
-      if(!cue.empty()) {
-        auto chosen=std::find_if(cue.begin(),cue.end(),[](const auto &p){return p[0]>=8.;});
-        if(chosen!=cue.end())frame_config.guide_offset=(*chosen)[1]-ReferenceAt(scene,(*chosen)[0]);
-      }
-    }
-    if(detail) join_debug.insert(join_debug.size()-1,
-      std::string(",\"navigation_reference_views\":\"")+(front_navigation_reference?"front":"all")+"\""+
-      ",\"guide_offset_m\":"+std::to_string(frame_config.guide_offset));
     if (semantic_reference) frame_config.speed_cap=std::min(frame_config.speed_cap,5./3.6);
     frame_budget_ms = std::min(config.budget_ms,
         (.30 - (ros::Time::now().toSec()-t))*1000.);
@@ -1174,7 +1148,6 @@ public:
     p.param("near_blind_assist", config.blind_assist, false);
     p.param("causal_road_memory", use_road_memory, true);
     p.param("semantic_reference_fallback", semantic_reference_fallback, false);
-    p.param("front_navigation_reference", front_navigation_reference, false);
     p.param("retain_static_observations", retain_static_observations, false);
     p.param("local_motion_prediction", local_motion_prediction, false);
     p.param("quiescent_geometry_padding", quiescent_geometry_padding, false);
@@ -1192,11 +1165,9 @@ public:
     p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
     p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
     double recovery_kph=5.;p.param("recovery_target_kph",recovery_kph,5.);
-    if(!std::isfinite(recovery_kph) || recovery_kph<3. || recovery_kph>5.)throw std::runtime_error("invalid recovery target");
+    if(!std::isfinite(recovery_kph) || recovery_kph<3. || recovery_kph>5.)
+      throw std::runtime_error("invalid recovery target");
     config.recovery_speed=recovery_kph/3.6;
-    p.param("recovery_verified_target_m", config.recovery_target, 4.);
-    p.param("path_selection_trial", config.selection_trial, 0);
-    p.param("semantic_speckle_guard", config.semantic_speckle_guard, false);
     double maneuver_cap_kph=0.;p.param("maneuver_speed_cap_kph", maneuver_cap_kph, 0.);
     config.maneuver_speed_cap=maneuver_cap_kph/3.6;
     p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
@@ -1206,9 +1177,7 @@ public:
         !std::isfinite(config.width + config.length + config.rear +
                        config.margin + config.budget_ms + config.speed_cap +
                        config.accel + config.controlled_decel + config.decel +
-                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve + config.maneuver_speed_cap + config.recovery_target) ||
-        config.recovery_target<4. || config.recovery_target>8. ||
-        config.selection_trial<0 || config.selection_trial>2 ||
+                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve + config.maneuver_speed_cap) ||
         config.maneuver_speed_cap<0. || config.maneuver_speed_cap>10./3.6 ||
         config.maneuver_reserve<0. || config.maneuver_reserve>2. ||
         config.decel<1.5 || config.decel>3. ||
@@ -1250,14 +1219,6 @@ public:
           std::lock_guard<std::mutex> lock(input_mutex);
           store(covers, m);
         });
-    if(front_navigation_reference) {
-      front_prob_sub=nh.subscribe<sensor_msgs::Image>(
-        "/experimental/shadow/semantic_space_trial/navigation_front_probability",1,
-        [this](auto m){std::lock_guard<std::mutex> lock(input_mutex);store(front_probs,m);});
-      front_cover_sub=nh.subscribe<sensor_msgs::Image>(
-        "/experimental/shadow/semantic_space_trial/navigation_front_coverage",1,
-        [this](auto m){std::lock_guard<std::mutex> lock(input_mutex);store(front_covers,m);});
-    }
     context_sub =
         nh.subscribe("/experimental/shadow/semantic_space_trial/context", 1,
                      &Node::context, this);

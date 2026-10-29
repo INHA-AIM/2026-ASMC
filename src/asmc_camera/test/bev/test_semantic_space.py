@@ -42,19 +42,6 @@ class SemanticSpaceTest(unittest.TestCase):
         self.assertTrue(np.any((narrow['coverage']==255)&(wide['coverage']!=255)))
         with self.assertRaises(ValueError):self.renderer.drivable(self.planes,p,m,100)
 
-    def test_front_navigation_reuses_warp_without_weakening_collision_layer(self):
-        p,m=self.data();p['left'][:]=0;p['right'][:]=0
-        base=self.renderer.drivable(self.planes,p,m)
-        layers=self.renderer.drivable(self.planes,p,m,include_front=True)
-        np.testing.assert_array_equal(base['drivable'],layers['drivable'])
-        np.testing.assert_array_equal(base['coverage'],layers['coverage'])
-        seen=layers['front_coverage']==255
-        self.assertTrue(np.any(seen))
-        self.assertTrue(np.all(layers['front_drivable'][seen]==255))
-        p['front'][:]=0
-        blocked=self.renderer.drivable(self.planes,p,m,include_front=True)
-        self.assertFalse(np.any(blocked['front_drivable']))
-
     def test_masks_and_camera_shape_rejected(self):
         p,m=self.data();m['front']=m['front'][:-1]
         with self.assertRaises(ValueError):self.renderer.drivable(self.planes,p,m)

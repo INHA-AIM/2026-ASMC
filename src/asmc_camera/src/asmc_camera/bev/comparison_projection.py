@@ -66,7 +66,7 @@ class ComparisonProjection:
             confidence=fused.road_marking_confidence, coverage=fused.coverage,
             source_count=fused.source_count)
 
-    def drivable(self, planes, probabilities, masks, visibility_margin_px=1, include_front=False):
+    def drivable(self, planes, probabilities, masks, visibility_margin_px=1):
         """Semantic-only experiment using the exact family planes.
 
         No RGB, IMU lookup, JPEG, or repeated fitting. Ego pixels remove camera
@@ -109,13 +109,5 @@ class ComparisonProjection:
         # usable camera support. A semantic obstacle/shadow remains coverage255
         # with low probability and cannot use an ego-occlusion exception.
         coverage=np.where(observed,255,np.where(np.any(original_support,axis=0),128,0)).astype(np.uint8)
-        result=dict(drivable=fused, coverage=coverage,
+        return dict(drivable=fused, coverage=coverage,
                     source_count=np.sum(usable, axis=0).astype(np.uint8))
-        if include_front:
-            # Reuse the SAME warp/plane/mask; no extra inference/projection.
-            i=list(projectors).index('front')
-            seen=weights[i]>1e-6
-            result['front_drivable']=np.where(seen,values[i],0).astype(np.uint8)
-            result['front_coverage']=np.where(seen,255,
-                np.where(original_support[i],128,0)).astype(np.uint8)
-        return result

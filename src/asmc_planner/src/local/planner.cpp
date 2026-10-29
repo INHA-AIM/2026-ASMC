@@ -1,7 +1,6 @@
 #include "local/planner.hpp"
 #include "local/speed_profile.hpp"
 #include "local/recovery.hpp"
-#include "local/semantic_noise.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Frenet/Math/Polynomial.hpp"
 #include <algorithm>
@@ -189,8 +188,6 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
         return fail(r, cover == 128 ? "ego_occlusion" : "unobserved", x, y);
       }
       if (g.probability[index] < 153) {
-        if(c.semantic_speckle_guard && g.transient_nonroad.size()==g.coverage.size() &&
-           g.transient_nonroad[index]) {++r.soft_margin_cells;continue;}
         if(c.recovery_geometry) {
           if(g.exterior_nonroad.size()!=g.coverage.size())
             return fail(r,"recovery_boundary_unavailable",x,y);
@@ -295,7 +292,6 @@ Result Plan(Scene indexed, const Config &c) {
     return out;
   }
   BuildGridIndex(grid);
-  const auto noise_cells=BuildSemanticNoiseMask(grid,c,indexed.obstacles);
   const double index_ms = elapsed(started);
   auto out_prepared = PlanPrepared(indexed, c);
   if(out_prepared.valid) {
@@ -309,7 +305,6 @@ Result Plan(Scene indexed, const Config &c) {
     }
     out_prepared.minimum_clearance=measured.minimum_clearance;
   }
-  out_prepared.semantic_noise_cells=noise_cells;
   out_prepared.index_ms = index_ms;
   out_prepared.elapsed_ms = elapsed(started);
   return out_prepared;
@@ -414,24 +409,6 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
               return std::abs(y - (goal[1] - ReferenceAt(s, goal[0]))) < .05;
             }))
       lateral_targets.push_back(goal[1] - ReferenceAt(s, goal[0]));
-  // Offline/controlled comparison only: the five familiar lateral guides are
-  // navigation seeds, never unvalidated paint-following commands. A successful
-  // primary still uses this same quintic, body sweep, steering and speed core.
-  double staged_guide=0.;
-  if(c.selection_trial==2) {
-    double width=3.5;
-    if(!s.corridor.empty()) {
-      const auto &q=s.corridor[s.corridor.size()/2];
-      width=std::clamp(.5*std::abs(q[1]-q[2]),2.4,4.6);
-    }
-    staged_guide=StagedGuideOffset(-ReferenceAt(s,3.),.5*width);
-    if(std::abs(c.guide_offset)<20.)
-      staged_guide=std::clamp(std::round(c.guide_offset/(.5*width)),-2.,2.)*(.5*width);
-    lateral_targets={staged_guide,0.,.5*width,width,-.5*width,-width};
-    std::vector<double> unique;for(double y:lateral_targets)
-      if(std::find(unique.begin(),unique.end(),y)==unique.end())unique.push_back(y);
-    lateral_targets=std::move(unique);
-  }
   // Round-robin lateral alternatives at each transition distance. Previously
   // all12 straight-reference seeds could consume the analytic time slice
   // before either bypass side was tried. Geometry/collision/ranking stay the
@@ -497,26 +474,11 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         ++out.candidates_omitted;
       for (auto &entry : check.rejected)
         out.rejected[entry.first] += entry.second;
-      if(c.selection_trial==2) {
-        candidate.cost+=10.*std::pow(lateral-staged_guide,2);
-        candidate.quality=candidate.cost;
-      }
       if (candidate.path.back().x > analytic_best.path.back().x + .1 ||
           (candidate.path.back().x >= analytic_best.path.back().x - .1 &&
            candidate.cost < analytic_best.cost))
         analytic_best = std::move(candidate);
     }
-  if(c.selection_trial==2 && analytic_best.path.back().x>=horizon-.21 && horizon>=8.) {
-    Result guided;guided.path=analytic_best.path;guided.assisted=analytic_best.assisted;
-    if(BuildSpeedProfile(s,c,guided)) {
-      guided.valid=true;guided.reason="five_guide_staged";
-      guided.path_source="five_guide_staged";guided.reference_end=out.reference_end;
-      guided.search_horizon=horizon;guided.candidates=std::move(out.candidates);
-      guided.candidates_omitted=out.candidates_omitted;guided.goals=std::move(out.goals);
-      guided.rejected=std::move(out.rejected);guided.elapsed_ms=elapsed(start);
-      return guided;
-    }
-  }
   const double ds = .5;
   for (int depth = 0;
        analytic_best.path.back().x < horizon - .21 && depth < int(horizon / ds);
@@ -670,26 +632,12 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         old_cost += SegmentQualityCost(s,c,a,p,check.soft_margin_cells-soft_before);
         prefix.push_back(p);
       }
-      bool similar = prefix.size() > 1 &&
+      const bool similar = prefix.size() > 1 &&
                            prefix.back().x >= out.path.back().x - .2 &&
                            old_cost <= best.quality * 1.1 + .005;
-      // Hold only a LONG, currently revalidated normal path, with executable
-      // stopping reserve. Unlike the rejected .8m slack experiment this never
-      // locks a short/recovery prefix and never carries old road validity.
-      bool committed=false;
-      if(c.selection_trial==1 && policy==0 && !s.previous_recovery &&
-         prefix.size()>1 && prefix.back().s>=8. &&
-         prefix.back().x>=out.path.back().x-.5) {
-        Result execute;execute.path=prefix;
-        committed=BuildSpeedProfile(s,c,execute) &&
-          execute.available_stopping_m>=execute.required_stopping_m+.5 &&
-          old_cost/std::max(.1,prefix.back().s)<=
-            1.3*best.quality/std::max(.1,out.path.back().s)+.01;
-        similar=similar||committed;
-      }
       if (prefix.size() > 1 &&
           (prefix.back().x > out.path.back().x + .5 || similar)) {
-        out.path_source = policy==1?"rechecked_recovery":committed?"committed_revalidated":"rechecked_previous";
+        out.path_source = policy==1?"rechecked_recovery":"rechecked_previous";
         out.recovery = policy==1;
         out.path = std::move(prefix);
         out.assisted = policy==1 || check.assisted;

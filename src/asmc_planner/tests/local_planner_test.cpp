@@ -9,7 +9,6 @@
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
 #include "local/semantic_reference.hpp"
-#include "local/semantic_noise.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include <cmath>
 #include <cstdio>
@@ -35,49 +34,11 @@ Scene empty() {
 }
 int main() {
   {
-    auto s=empty();Config c;c.semantic_speckle_guard=true;RoadMemory memory;
-    memory.observe(s.grid,Pose{},1.);s.grid.probability[100*160+80]=0;
-    memory.apply(s.grid,Pose{},1.1,true);
-    expect(BuildSemanticNoiseMask(s.grid,c,{})==1,"one far isolated speckle has preceding current-road evidence");
-    expect(s.grid.probability[100*160+80]==0,"speckle evidence never edits raw probability");
-    memory.observe(s.grid,Pose{},1.1);memory.apply(s.grid,Pose{},1.2,true);
-    expect(BuildSemanticNoiseMask(s.grid,c,{})==0,"persistent nonroad immediately vetoes old free evidence");
-    s.grid.recent_road_age.assign(40000,.2);Obstacle o;o.id=1;o.polygon={{9.8,-.2},{10.2,-.2},{10.2,.2},{9.8,.2}};
-    expect(BuildSemanticNoiseMask(s.grid,c,{o})==0,"LiDAR always vetoes semantic speckle suppression");
-    s.grid.recent_road_age[100*160+80]=.351;
-    expect(BuildSemanticNoiseMask(s.grid,c,{})==0,"expired road cannot justify speckle guard");
-    s.grid.recent_road_age.assign(40000,.2);
-    s.grid.coverage[100*160+79]=0;
-    expect(BuildSemanticNoiseMask(s.grid,c,{})==0,"unknown-edge holes cannot be declared speckles");
+    auto s=empty();Config c;c.recovery=true;c.recovery_speed=5./3.6;c.speed_cap=10./3.6;
+    Result r;expect(BuildRecoveryPath(s,c,r) && BuildSpeedProfile(s,c,r) && r.chosen_cap<=5./3.6,
+      "5kmh recovery target still passes actual-state speed and collision validation");
   }
 
-  {
-    expect(StagedGuideOffset(3.5,1.75)==1.75 &&
-           StagedGuideOffset(2.5,1.75)==1.75 && StagedGuideOffset(1.8,1.75)==0.,
-           "return advances one guide only after physically reaching the intermediate guide");
-    auto s=empty();Config c;c.budget_ms=1000;c.selection_trial=2;
-    auto guide=Plan(s,c);expect(guide.valid && guide.path_source=="five_guide_staged",
-      "five guides still use the actual native sweep and speed profile");
-    Obstacle o;o.id=999;o.polygon={{2.,-8.},{3.,-8.},{3.,8.},{2.,8.}};s.obstacles.push_back(o);
-    auto blocked=Plan(s,c);expect(!blocked.valid,"guide priority cannot bypass a measured full-width OBB");
-    s=empty();c.selection_trial=1;auto first=Plan(s,c);s.previous=first.path;
-    auto held=Plan(s,c);expect(held.valid && held.path_source=="committed_revalidated",
-      "long currently executable path can be retained across a small ranking change");
-    s.obstacles.push_back(o);auto released=Plan(s,c);
-    expect(!released.valid && released.path_source!="committed_revalidated",
-      "a new obstacle immediately invalidates commitment");
-  }
-
-  {
-    auto s=empty();Config c;c.recovery=true;c.recovery_target=6.;
-    Result r;
-    expect(BuildRecoveryPath(s,c,r) && r.path.back().s>5.9,
-           "current verified road can extend a crawl target beyond its old4m search limit");
-    for(int col=0;col<s.grid.cols;++col)s.grid.coverage[110*s.grid.cols+col]=0; // x=9, nose reaches it near s=5.
-    Result blocked;
-    expect(BuildRecoveryPath(s,c,blocked) && blocked.path.back().s<5.3,
-           "the extension stops at unobserved road; near-field soft handling stays within4m");
-  }
   {
     auto s=empty();for(auto &p:s.home)p[1]=-3.5;
     Obstacle o;o.id=125;o.uncertainty=.18;
