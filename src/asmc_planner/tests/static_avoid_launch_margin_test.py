@@ -7,6 +7,26 @@ import yaml
 
 
 class StaticAvoidLaunchMarginTest(unittest.TestCase):
+    def test_contact_policy_is_explicit_and_forwarded_to_both_consumers(self):
+        package = Path(__file__).resolve().parents[1]
+        root = ET.parse(package / "launch/autonomy_no_bridges_v2.launch").getroot()
+        planner = ET.parse(package / "launch/planner_v2.launch").getroot()
+        controller = ET.parse(package.parent / "asmc_controller/launch/controller.launch").getroot()
+        self.assertEqual(root.find("arg[@name='static_avoid_contact_progress']").attrib["default"], "true")
+        self.assertEqual(planner.find("arg[@name='static_avoid_contact_progress']").attrib["default"], "false")
+        self.assertEqual(controller.find("arg[@name='allow_static_contact_progress']").attrib["default"], "false")
+        with (package / "config/frenet/params.yaml").open() as stream:
+            planner_caps = yaml.safe_load(stream)["planner"]["avoid"]
+        with (package.parent / "asmc_controller/config/runtime.yaml").open() as stream:
+            controller_caps = yaml.safe_load(stream)["static_recovery"]
+        self.assertEqual(planner_caps["static_recovery_speed_cap"], controller_caps["speed_cap"])
+        self.assertEqual(planner_caps["static_contact_speed_cap"], controller_caps["contact_speed_cap"])
+        for target, argument in (("asmc_planner)/launch/planner_v2.launch", "static_avoid_contact_progress"),
+                                 ("asmc_controller)/launch/controller.launch", "allow_static_contact_progress")):
+            included = root.find("include[@file='$(find " + target + "']")
+            self.assertIsNotNone(included)
+            self.assertEqual(included.find("arg[@name='" + argument + "']").attrib["value"], "$(arg static_avoid_contact_progress)")
+
     def test_effective_default_margin_matches_collision_checks(self):
         package = Path(__file__).resolve().parents[1]
         with (package / "config/frenet/params.yaml").open() as stream:

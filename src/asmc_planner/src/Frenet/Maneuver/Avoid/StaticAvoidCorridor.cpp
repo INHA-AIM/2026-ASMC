@@ -28,7 +28,7 @@ struct Gate {
 bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,double d,
     double speed,double initial_a,const std::vector<TrackedObject>& objects,
     const PlannerCommand& command,bool committed,AvoidPrepareResult& result,
-    std::chrono::steady_clock::time_point deadline) {
+    std::chrono::steady_clock::time_point deadline,const StaticAvoidPolicy* policy) {
     if(v2_avoidance_.dynamic_target||ref_.points.empty()||speed<=.05)return false;
     const double length=ref_.points.back().s,dt=path_cfg_.dt;
     const double cap=std::min(speed,avoid_cfg_.bypass_speed_cap);
@@ -79,14 +79,29 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
     std::vector<TrackedObject> fixed_objects;
     for(const auto& o:objects)if(o.motion_state==ObjectMotionState::LOW_THREAT&&
         o.geometry_valid&&!o.velocity_unavailable)fixed_objects.push_back(o);
-    auto validate=[&](const CartesianPath& geometry,bool retained) {
+    auto validate=[&](const CartesianPath& full_geometry,bool retained) {
+        CartesianPath prefix;
+        const bool contact=policy&&policy->mode==StaticAvoidPolicy::CONTACT_PROGRESS;
+        if(contact) {
+            // A rolling, stop-capable prefix is retimed from the measured
+            // state. Keep the full nominal geometry separately for continuity.
+            const double stop_reserve=4.0+ego.v*ego.v/(limits_.max_longitudinal_accel*1.6)+ego.v;
+            double traveled=0;
+            for(std::size_t i=0;i<full_geometry.x.size();++i) {
+                if(i)traveled+=std::hypot(full_geometry.x[i]-full_geometry.x[i-1],full_geometry.y[i]-full_geometry.y[i-1]);
+                CartesianState p{};p.x=full_geometry.x[i];p.y=full_geometry.y[i];
+                p.yaw=full_geometry.yaw[i];p.kappa=full_geometry.kappa[i];Append(prefix,p);
+                if(traveled>=stop_reserve)break;
+            }
+        }
+        const auto& geometry=contact?prefix:full_geometry;
         ++result.generated_candidate_count;
         int fixed_blocker=-1;
         // Spatial samples remain dense even when a time sample travels past a
         // thin bollard. This zero-time check applies only to confirmed fixed
         // occupancy; uncertain/moving objects retain the timed hypotheses below.
-        if(!CartesianAvoidTrajectoryClear(geometry,fixed_objects,vehicle_shape_,collision_cfg_,
-                0,&fixed_blocker,-1,nullptr,&context.margin_recovery_ids)) {
+        if(!StaticAvoidTrajectoryClear(geometry,fixed_objects,vehicle_shape_,collision_cfg_,
+                0,policy,&fixed_blocker,nullptr,&context.margin_recovery_ids)) {
             result.blocking_object_id=fixed_blocker;result.rejection_stage="spatial_collision";return false;
         }
         CartesianPath candidate;
@@ -100,8 +115,8 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
             recovery_budget,context.map_recovery_overlap_limit_m,context.map_recovery_active,
             context.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_);
         int blocker=-1;bool recovery=false;
-        const bool clear=road.drivable&&CartesianAvoidTrajectoryClear(candidate,objects,
-            vehicle_shape_,collision_cfg_,dt,&blocker,-1,&recovery,&context.margin_recovery_ids);
+        const bool clear=road.drivable&&StaticAvoidTrajectoryClear(candidate,objects,
+            vehicle_shape_,collision_cfg_,dt,policy,&blocker,&recovery,&context.margin_recovery_ids);
         last_candidate_paths_.push_back(candidate);last_candidate_validity_.push_back(clear);
         if(!clear) {
             result.rejection_stage=road.drivable?"collision":"road";
@@ -117,7 +132,12 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
         result.candidate_valid=result.spatial_candidate_selected=true;
         result.selected_cost=AvoidRoadMap::PaintCost(road);
         result.escape_recovery_required=recovery;result.retained_geometry=retained;
-        result.spatial_geometry=geometry;result.candidate_path=std::move(candidate);
+        result.spatial_geometry=full_geometry;result.candidate_path=std::move(candidate);
+        if(policy&&policy->mode!=StaticAvoidPolicy::NORMAL) {
+            const auto contact=MeasureStaticAvoidContact(geometry,objects,vehicle_shape_,*policy);
+            result.static_contact_cost=contact.cost;
+            result.static_minimum_clearance=contact.minimum_clearance;
+        }
         result.rejection_stage.clear();result.search_pending=false;
         context.map_corridor_cursor=0;
         return true;
@@ -192,14 +212,17 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
         const auto rp=Interpolate(ref_,os);
         const auto bounds=ProjectAvoidFootprint(o.corners,o.x,o.y,rp.theta);
         if(!bounds.valid)continue;
-        const double margin=.5*vehicle_shape_.width+collision_cfg_.safety_margin;
+        const bool reduced=policy&&policy->mode!=StaticAvoidPolicy::NORMAL&&
+            std::find(policy->object_ids.begin(),policy->object_ids.end(),o.id)!=policy->object_ids.end();
+        const double safety=reduced?std::min(collision_cfg_.safety_margin,policy->margin):collision_cfg_.safety_margin;
+        const double margin=.5*vehicle_shape_.width+safety;
         const double left=od+bounds.max_d+margin,right=od+bounds.min_d-margin;
         const double exit=gap+bounds.far_s+vehicle_shape_.rear_overhang+avoid_cfg_.pass_clearance;
         if(exit<=0||gap>std::min(80.0,EffectiveAvoidDetectionDistance()))continue;
         if(o.id!=execution_->avoid.obstacle_id &&
            (od+bounds.min_d>.5*vehicle_shape_.width+collision_cfg_.safety_margin ||
             od+bounds.max_d<-.5*vehicle_shape_.width-collision_cfg_.safety_margin))continue;
-        gates.push_back({o.id,gap+bounds.near_s-front-collision_cfg_.safety_margin,exit,left,right});
+        gates.push_back({o.id,gap+bounds.near_s-front-safety,exit,left,right});
     }
     std::sort(gates.begin(),gates.end(),[](const Gate& a,const Gate& b){return std::tie(a.entry,a.id)<std::tie(b.entry,b.id);});
     if(gates.empty())return false;

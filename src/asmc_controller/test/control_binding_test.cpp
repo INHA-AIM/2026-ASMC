@@ -2,6 +2,7 @@
 #include <asmc_msgs/control_binding.hpp>
 #include "Util/BrakeResponseWatchdog.hpp"
 #include "Util/RecoverySpeed.hpp"
+#include "Util/StaticAvoidProgress.hpp"
 namespace b=asmc_msgs::binding;
 namespace {
 const std::string controller(32,'c'),behavior(32,'b'),planner(32,'p');
@@ -34,6 +35,41 @@ TEST(RecoverySpeed,ApproachOnlyRestrictsTheOptInActiveEpisode) {
  EXPECT_DOUBLE_EQ(CombinedSpeedCap(0,15./3.6,true),15./3.6);
  EXPECT_DOUBLE_EQ(CombinedSpeedCap(5./3.6,15./3.6,true),5./3.6);
  EXPECT_DOUBLE_EQ(CombinedSpeedCap(30./3.6,15./3.6,true),15./3.6);
+}
+TEST(StaticAvoidProgress,ContactOptInAndSpeedProfileAreIndependentConsumerChecks) {
+ auto p=Plan(Request()).trajectory;p.dt=.1;p.execution_policy=asmc_msgs::Trajectory::POLICY_STATIC_CONTACT_PROGRESS;
+ p.points[0].velocity=0;p.points[1].velocity=.4;p.points[2].velocity=0;
+ EXPECT_FALSE(StaticAvoidProgressProfileAllowed(p,false,1,.5));
+ EXPECT_TRUE(StaticAvoidProgressProfileAllowed(p,true,1,.5));
+ p.points[1].velocity=2;EXPECT_FALSE(StaticAvoidProgressProfileAllowed(p,true,1,.5));
+ p.points[0].velocity=3;p.points[1].velocity=2;
+ EXPECT_TRUE(StaticAvoidProgressProfileAllowed(p,true,1,.5));
+ p.failure_reason=asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED;
+ EXPECT_FALSE(StaticAvoidProgressProfileAllowed(p,true,1,.5));
+ p.failure_reason=0;p.execution_policy=99;EXPECT_FALSE(StaticAvoidProgressProfileAllowed(p,true,1,.5));
+}
+TEST(StaticAvoidProgress,ObservedPositiveAccelerationCanFinishItsJerkRampBeforeCrawl) {
+ auto p=Plan(Request()).trajectory;p.dt=.1;p.points.resize(30);
+ p.execution_policy=asmc_msgs::Trajectory::POLICY_STATIC_CONTACT_PROGRESS;
+ p.points[0].velocity=.4;p.points[0].acceleration=2;
+ p.points[1].velocity=.57;p.points[2].velocity=.68;p.points[3].velocity=.73;
+ for(std::size_t i=4;i<p.points.size();++i)p.points[i].velocity=std::max(0.0,.73-.04*(i-3));
+ p.points.back().velocity=0;
+ EXPECT_TRUE(StaticAvoidProgressProfileAllowed(p,true,1,.5));
+ p.points[15].velocity=1;EXPECT_FALSE(StaticAvoidProgressProfileAllowed(p,true,1,.5));
+}
+TEST(ControlBinding,StaticProgressPolicyRequiresTheBoundAvoidExecutionOwner) {
+ for(int mode:{asmc_msgs::BehaviorCommand::KEEP,asmc_msgs::BehaviorCommand::STOP,asmc_msgs::BehaviorCommand::AVOID}) {
+  auto r=Request();r.command.maneuver_type=mode;auto p=Plan(r);
+  p.feedback.execution_state=asmc_msgs::FrenetFeedback::EXECUTING;
+  p.trajectory.execution_policy=asmc_msgs::Trajectory::POLICY_STATIC_CONTACT_PROGRESS;
+  b::Plan decoded;ASSERT_TRUE(b::Decode(b::Encode(p),decoded));
+  EXPECT_EQ(decoded.trajectory.execution_policy,p.trajectory.execution_policy);
+  b::Gate gate(controller);ASSERT_TRUE(gate.RequestReceived(r));
+  EXPECT_EQ(gate.PlanReceived(decoded),mode==asmc_msgs::BehaviorCommand::AVOID);
+  decoded.sequence=2;decoded.trajectory.execution_policy=99;
+  EXPECT_FALSE(gate.PlanReceived(decoded));
+ }
 }
 TEST(RecoverySpeed,MeasuredAccelerationAndOverspeedCannotReinforceLaunchAcceleration) {
  EXPECT_GT(RecoveryAccelerationLimit(2,0,0,.5,-6,2),0);
@@ -93,9 +129,11 @@ TEST(ControlBinding,WaitingCertificateCannotBypassSignalOrCommitOrStopTail) {
   b::Gate gate(controller);ASSERT_TRUE(gate.RequestReceived(p.request));EXPECT_FALSE(gate.PlanReceived(p))<<variant;
  }
 }
-TEST(ControlBinding,LegacyWireVersionCannotReleaseAnActiveVersionTwoConsumer) {
- auto packet=b::Encode(Plan(Request()));packet.data[4]=1;
- b::Plan decoded;EXPECT_FALSE(b::Decode(packet,decoded));
+TEST(ControlBinding,LegacyWireVersionsCannotReleaseThePolicyAwareConsumer) {
+ for(int old:{1,2}) {
+  auto packet=b::Encode(Plan(Request()));packet.data[4]=old;
+  b::Plan decoded;EXPECT_FALSE(b::Decode(packet,decoded));
+ }
 }
 TEST(ControlBinding,AvoidWaitingUsesOnlyTheCurrentCommandsCheckedStopPath) {
  auto r=Request();r.command.maneuver_type=asmc_msgs::BehaviorCommand::AVOID;

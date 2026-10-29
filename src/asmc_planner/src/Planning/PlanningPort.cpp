@@ -47,6 +47,11 @@ PlanningPort::PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh,
         }
 
         planner_initialized_ = planner_.Init(planner_config_path);
+        bool margin_recovery=planner_.static_margin_recovery_enabled();
+        bool contact_progress=planner_.static_contact_progress_enabled();
+        pnh_.param("planner/static_margin_recovery",margin_recovery,margin_recovery);
+        pnh_.param("planner/static_contact_progress",contact_progress,contact_progress);
+        planner_.ConfigureStaticAvoidRecovery(margin_recovery,contact_progress);
         if (!planner_initialized_) {
             ROS_ERROR_STREAM("Frenet planner initialization failed: "
                              << planner_config_path);

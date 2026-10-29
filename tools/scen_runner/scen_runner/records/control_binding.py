@@ -21,9 +21,18 @@ class Reader:
         if width>len(self.data)-self.at:raise ValueError('truncated control string')
         result=self.data[self.at:self.at+width].decode('utf-8');self.at+=width;return result
 
-    def message(self,cls):
-        result=cls();result.deserialize(self.data[self.at:])
-        encoded=io.BytesIO();result.serialize(encoded);self.at+=len(encoded.getvalue())
+    def message(self,cls,legacy_trajectory=False):
+        raw=self.data[self.at:]
+        if legacy_trajectory:
+            # v1/v2 lacked execution_policy after Header, valid, failure_reason.
+            # Upgrade this read-only view without consuming an extra wire byte.
+            if len(raw)<16:raise ValueError('truncated trajectory header')
+            frame_width=struct.unpack_from('<I',raw,12)[0]
+            offset=16+frame_width+2
+            if offset>len(raw):raise ValueError('truncated trajectory header')
+            raw=raw[:offset]+b'\0'+raw[offset:]
+        result=cls();result.deserialize(raw)
+        encoded=io.BytesIO();result.serialize(encoded);self.at+=len(encoded.getvalue())-int(legacy_trajectory)
         return result
 
     def fields(self,names,fmt):return {name:self.value(fmt) for name in names.split()}
@@ -49,14 +58,16 @@ def decode(message):
     r=Reader(message.data)
     if r.value('I')!=0x41534d43:raise ValueError('unsupported control schema')
     version=r.value('B')
-    if version not in (1,2):raise ValueError('unsupported control schema')
+    if version not in (1,2,3):raise ValueError('unsupported control schema')
+    policy_aware='execution_policy' in Trajectory.__slots__
+    if version==3 and not policy_aware:raise ValueError('control schema v3 requires rebuilt asmc_msgs')
     kind=r.value('B');out={'kind':kind,'schema_version':version}
     if kind in (1,2):out.update(request(r))
     elif kind==3:out['token']=r.token()
     else:raise ValueError('unsupported control packet kind')
     if kind==2:
         out['planner_epoch']=r.string();out['sequence']=r.value('Q')
-        out['feedback']=r.message(FrenetFeedback);out['trajectory']=r.message(Trajectory)
+        out['feedback']=r.message(FrenetFeedback);out['trajectory']=r.message(Trajectory,legacy_trajectory=version<3 and policy_aware)
         out.update(r.fields('goal_satisfied exit_path_valid stationary_hold execution_recovery_safe','?'))
         out['merge_waiting_path_valid']=r.value('?') if version>=2 else False
     elif kind==3:

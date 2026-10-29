@@ -13,7 +13,7 @@
 bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,double d,
     double speed,double initial_a,const std::vector<TrackedObject>& obstacles,
     bool committed,CartesianPath& output,AvoidPrepareResult& result,
-    std::chrono::steady_clock::time_point deadline) {
+    std::chrono::steady_clock::time_point deadline,const StaticAvoidPolicy* policy) {
     const double length=ref_.points.back().s;
     const double gap=ReferenceArcDistance(ref_, s, v2_avoidance_.obstacle_s);
     const double pass=gap+v2_avoidance_.obstacle_longitudinal_half_extent+
@@ -45,7 +45,10 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
         if(ahead<0||ahead>40)continue;
         const auto bounds=ProjectAvoidFootprint(object.corners,object.x,object.y,Interpolate(ref_,os).theta);
         if(!bounds.valid)continue;
-        const double margin=.5*vehicle_shape_.width+collision_cfg_.safety_margin+.05;
+        const bool reduced=policy&&policy->mode!=StaticAvoidPolicy::NORMAL&&
+            std::find(policy->object_ids.begin(),policy->object_ids.end(),object.id)!=policy->object_ids.end();
+        const double safety=reduced?std::min(collision_cfg_.safety_margin,policy->margin):collision_cfg_.safety_margin;
+        const double margin=.5*vehicle_shape_.width+safety+.05;
         offsets.push_back(od+bounds.max_d+margin);offsets.push_back(od+bounds.min_d-margin);
         if(od+bounds.min_d<=d+margin&&od+bounds.max_d>=d-margin)
             first_lengths.push_back(ahead+bounds.far_s+vehicle_shape_.rear_overhang+avoid_cfg_.pass_clearance);
@@ -58,6 +61,13 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
     if(crawl<=.05)return false;
     std::size_t ordinal=0;
     const std::size_t resume=v2_avoidance_.map_reconnection_cursor;
+    bool has_best=false;AvoidPrepareResult best_result;
+    const auto accept_best=[&]() {
+        if(!has_best)return false;
+        const auto generated=result.generated_candidate_count,valid=result.valid_candidate_count;
+        result=best_result;result.generated_candidate_count=generated;result.valid_candidate_count=valid;
+        output=result.candidate_path;v2_avoidance_.map_reconnection_cursor=0;return true;
+    };
     const double budget=std::max(0.0,6.0-v2_avoidance_.map_recovery_travel_m);
     VehicleShape map_shape=vehicle_shape_;
     map_shape.width=std::max(map_shape.width,map_shape.road_outer_width);
@@ -71,7 +81,10 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
             for(double last_length:{8.0,12.0,16.0}){
                 const auto index=ordinal++;
                 if(index<resume)continue;
-                if(std::chrono::steady_clock::now()>=deadline){v2_avoidance_.map_reconnection_cursor=index;return false;}
+                if(std::chrono::steady_clock::now()>=deadline){
+                    if(accept_best())return true;
+                    v2_avoidance_.map_reconnection_cursor=index;return false;
+                }
                 ++result.generated_candidate_count;
                 const auto first=MakeQuintic(d,slope,second_for_curvature(curvature),via,via_slope,0,first_length);
                 const auto back=MakeQuintic(via,via_slope,0,0,0,0,last_length);
@@ -119,8 +132,8 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
                         geometry.yaw.push_back(rp.theta);geometry.kappa.push_back(rp.kappa);
                     }
                     int blocker=-1;
-                    if(!CartesianAvoidTrajectoryClear(geometry,fixed_objects,vehicle_shape_,collision_cfg_,
-                            0,&blocker,-1,nullptr,&v2_avoidance_.margin_recovery_ids)) {
+                    if(!StaticAvoidTrajectoryClear(geometry,fixed_objects,vehicle_shape_,collision_cfg_,
+                            0,policy,&blocker,nullptr,&v2_avoidance_.margin_recovery_ids)) {
                         result.blocking_object_id=blocker;
                         result.rejection_stage="reconnection.spatial_collision";continue;
                     }
@@ -151,9 +164,11 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
                     v2_avoidance_.map_recovery_settled_travel_m,true,
                     solid_paint_contact_elapsed_s_);
                 int blocking=-1;bool recovery=false;
-                const bool clear=road.drivable&&CartesianAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,
-                    path_cfg_.dt,&blocking,v2_avoidance_.dynamic_target?execution_->avoid.obstacle_id:-1,&recovery,
-                    v2_avoidance_.dynamic_target?nullptr:&v2_avoidance_.margin_recovery_ids);
+                const bool clear=road.drivable&&(v2_avoidance_.dynamic_target?
+                    CartesianAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt,
+                        &blocking,execution_->avoid.obstacle_id,&recovery):
+                    StaticAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt,
+                        policy,&blocking,&recovery,&v2_avoidance_.margin_recovery_ids));
                 last_candidate_paths_.push_back(candidate);last_candidate_validity_.push_back(clear);
                 if(!clear){result.rejection_stage=road.drivable?"reconnection.collision":"reconnection.road";if(blocking>=0)result.blocking_object_id=blocking;continue;}
                 ++result.valid_candidate_count;result.blocking_object_id=-1;
@@ -166,9 +181,20 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
                 result.spatial_geometry=geometry;
                 result.candidate_path=candidate;output=candidate;
                 result.rejection_stage.clear();result.search_pending=false;
+                if(policy&&policy->mode!=StaticAvoidPolicy::NORMAL) {
+                    const auto contact=MeasureStaticAvoidContact(geometry,obstacles,vehicle_shape_,*policy);
+                    result.static_contact_cost=contact.cost;result.static_minimum_clearance=contact.minimum_clearance;
+                    if(policy->mode==StaticAvoidPolicy::CONTACT_PROGRESS&&contact.physical_overlap) {
+                        if(!has_best||contact.cost<best_result.static_contact_cost) {
+                            best_result=result;has_best=true;
+                        }
+                        result.candidate_valid=false;continue;
+                    }
+                }
                 v2_avoidance_.map_reconnection_cursor=0;return true;
             }
         }
     }
+    if(accept_best())return true;
     v2_avoidance_.map_reconnection_cursor=0;return false;
 }

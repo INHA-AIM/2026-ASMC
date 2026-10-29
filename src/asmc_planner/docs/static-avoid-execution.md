@@ -97,7 +97,71 @@ Feedback detail adds `retained spatial corridor` for successful retention,
 rejection stage (`road`, `collision`, or a specific retiming/actuation stage).
 Candidate counts and one blocker ID do not describe every rejected candidate.
 
-## Offline validation and MORAI acceptance
+## MORAI progress recovery
+
+The MORAI `autonomy_no_bridges_v2.launch` now enables static recovery and
+explicit contact progress. Existing launch commands work unchanged. Set
+`static_avoid_contact_progress:=false` to keep physical contact blocked, or
+`static_avoid_recovery:=false` for the original strict policy. The standalone
+planner/controller launches default to contact progress disabled. Core YAML
+callers retain strict defaults unless they explicitly enable recovery.
+
+After nominal planning fails, confirmed fixed objects can use clearance levels
+0.30, 0.20, 0.10 and 0 m; the vehicle body is never shrunk. Other objects keep
+the nominal 0.45 m margin and their timed/stationary hypotheses. The selected
+recovery speed cap is 1 m/s. Search cursors survive each bounded search slice;
+finding no candidate is not a proof of global physical infeasibility.
+
+When body-clear alternatives are not found, the explicitly enabled contact
+policy follows a previously nominally validated spatial reference at 0.5 m/s.
+It executes a rolling prefix with a full stopping tail, retimed from actual
+pose, speed and acceleration. Road containment and actuator checks remain.
+Only current LOW_THREAT fixed occupancy with valid corners can be a contact
+cost. Vehicles, pedestrians, mobile semantics, UNKNOWN/PENDING/DYNAMIC motion,
+unavailable velocity and invalid geometry retain strict collision checks.
+No time spent waiting, by itself, authorizes throttle or relabels an actor.
+
+Contact cost integrates overlap length and penetration severity; a searched
+replacement with less contact can replace the retained prefix. A newly found
+body-clear path takes precedence over contact progress. Reduced margins latch
+through the maneuver; a normal retained corridor must pass three consecutive
+checks before ordinary execution resumes. Contact execution never overwrites
+the last nominally checked reference.
+
+`Trajectory.execution_policy` distinguishes normal, reduced-margin and
+contact-progress execution. Failure codes still mean failure. Controller
+checks require a fresh AVOID owner, a stop-capable bounded speed profile, and
+an independent opt-in for contact; braking release still requires a new valid
+plan. Feedback detail records policy, chosen margin, minimum perceived fixed
+object clearance and contact cost. These diagnostics do not certify absence
+of simulator ground-truth contact.
+
+The frozen fixture `static_obb_growth_stall.json` records moving-entry and
+stopped observations from bag SHA256
+`8089232c8ec9a7ceeed98b568fd7fb5e59ec875438319d99ab258523d6fd9003`.
+The new regression retains the original COMMIT, recovers after OBB growth and
+checks ideal-tracking completion. A separate synthetic test requires progress
+through fixed occupancy while preserving actuator and mobile-actor guards.
+Both regressions also feed every recovery speed profile through Controller's
+independent policy gate. Margin-only execution stays blocked by the synthetic
+physical wall; contact-enabled execution eventually returns to normal policy.
+These are frozen-observation tests, not a replay of MORAI actuator physics.
+
+For MORAI, compare strict, margin-only and contact-enabled runs on the same
+placement and approach speed. Record actual contacts and forward progress
+separately from planner validity. The scenario runner's default collision-end
+policy must not be confused with the planner's contact-progress result. Add
+`--continue-on-static-contact` to record registered fixed static-mission
+contacts while continuing the run; other actors retain collision termination.
+
+Verification includes a full 126-registration CTest run and successful reruns
+of the five affected registrations after the final acceleration/profile fixes.
+The cross-component profile regression also passes. Catkin XML results report
+881 tests, zero errors/failures/skips. Runner mock integration (46), headless UI
+(35), and old/current trajectory decoding (2) tests pass separately. These
+checks do not start MORAI or the workspace's driving stack.
+
+## Baseline offline validation and MORAI acceptance
 
 Verified on 2026-10-29 in the isolated build: the six selected packages and
 their test targets build successfully; all 124 CTest registrations pass,
@@ -153,15 +217,18 @@ normal/selected controls and binding request/plan/status where enabled. Record
 the actual binaries, parameters, map and seed. A stationary replay does not
 restore the original moving approach or Controller history.
 
-Pass requires physical clearance/road containment, feasible tracking, finite
-handoff, no unexplained stop/go loop in a known feasible static scene, and
-restart when the certified route and all other release conditions are present.
-Actual blockage, uncertain input, signals and pedestrians remain valid stop
-reasons.
+For strict and margin-only runs, pass requires physical clearance/road
+containment, feasible tracking, finite handoff, no unexplained stop/go loop in
+a known feasible static scene, and restart when the certified route and all
+other release conditions are present. Contact-enabled runs report actual
+contacts separately and require continued progress through opted-in fixed
+occupancy. Uncertain input, signals, pedestrians, road and actuator limits
+remain valid stop reasons under every policy.
 
 ## Build and restart
 
-Frenet and Behavior internal layouts changed. Rebuild all dependent libraries
+Trajectory's ROS message layout and control-binding wire version (now 3)
+changed. Rebuild messages, planning, control and all dependent libraries
 and nodes together, then restart the planning/controller stack. Do not hot-swap
 only one shared library into already running nodes.
 

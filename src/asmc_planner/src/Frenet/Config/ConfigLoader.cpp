@@ -186,6 +186,14 @@ bool LoadParams(const std::string& yaml_path,
     }
     if(root["planner"]["avoid"]["bypass_accel_cap"])
         REQUIRE("planner/avoid/bypass_accel_cap",avoid_cfg.bypass_accel_cap);
+    if(root["planner"]["avoid"]["static_margin_recovery_enabled"])
+        REQUIRE("planner/avoid/static_margin_recovery_enabled",avoid_cfg.static_margin_recovery_enabled);
+    if(root["planner"]["avoid"]["static_contact_progress_enabled"])
+        REQUIRE("planner/avoid/static_contact_progress_enabled",avoid_cfg.static_contact_progress_enabled);
+    if(root["planner"]["avoid"]["static_recovery_speed_cap"])
+        REQUIRE("planner/avoid/static_recovery_speed_cap",avoid_cfg.static_recovery_speed_cap);
+    if(root["planner"]["avoid"]["static_contact_speed_cap"])
+        REQUIRE("planner/avoid/static_contact_speed_cap",avoid_cfg.static_contact_speed_cap);
     REQUIRE("planner/avoid/detection_distance",         avoid_cfg.detection_distance);
     if (root["planner"]["avoid"]["bypass_speed_cap"]) {
         REQUIRE("planner/avoid/bypass_speed_cap", avoid_cfg.bypass_speed_cap);

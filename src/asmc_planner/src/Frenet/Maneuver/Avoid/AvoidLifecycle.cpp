@@ -62,6 +62,12 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.map_return_end_s = result.map_return_end_s;
     v2_avoidance_.map_group_valid=result.map_group_valid;
     v2_avoidance_.map_group_end_s=result.map_group_end_s;
+    v2_avoidance_.static_progress_level=result.static_progress_level;
+    if(result.static_progress_mode==StaticAvoidPolicy::NORMAL) {
+        v2_avoidance_.last_nominal=result;
+        if(v2_avoidance_.last_nominal.spatial_geometry.x.empty())
+            v2_avoidance_.last_nominal.spatial_geometry=result.candidate_path;
+    }
     v2_avoidance_.map_spatial_geometry=result.spatial_geometry;
     v2_avoidance_.map_recovery_path=result.candidate_path;
     v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;

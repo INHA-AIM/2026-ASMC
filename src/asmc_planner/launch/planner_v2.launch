@@ -8,6 +8,9 @@
   <arg name="planning_objects_topic" default="/planning/objects"/>
   <arg name="avoid_path_margin_m" default="0.45"/>
   <arg name="static_obstacle_unknown" default="true"/>
+
+  <arg name="static_avoid_recovery" default="true"/>
+  <arg name="static_avoid_contact_progress" default="false"/>
   <rosparam ns="behavior_planner" command="load"
             file="$(find asmc_planner)/config/behavior/behavior_params.yaml"
             subst_value="true"/>
@@ -17,6 +20,8 @@
   <param name="/behavior_planner/topics/ego" value="$(arg state_topic)"/>
   <param name="/behavior_planner/topics/objects" value="$(arg behavior_objects_topic)"/>
   <param name="/frenet_planner/planner/config_path" value="$(find asmc_planner)/config/frenet/params.yaml"/>
+  <param name="/frenet_planner/planner/static_margin_recovery" value="$(arg static_avoid_recovery)"/>
+  <param name="/frenet_planner/planner/static_contact_progress" value="$(arg static_avoid_contact_progress)"/>
   <param name="/frenet_planner/highway_merge_enabled" value="$(arg highway_merge)"/>
   <node pkg="asmc_planner" type="asmc_planner_node" name="asmc_planner" output="screen">
     <!-- Shared internal policy only; perception topics keep original labels.

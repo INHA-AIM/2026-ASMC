@@ -12,6 +12,13 @@ uint8 FAILURE_NOT_INITIALIZED=8
 
 bool valid
 uint8 failure_reason
+
+# Explicit static AVOID execution policy. Failure codes retain their ordinary
+# braking meaning. Contact progress requires an independent MORAI opt-in.
+uint8 POLICY_NORMAL=0
+uint8 POLICY_STATIC_MARGIN_RECOVERY=1
+uint8 POLICY_STATIC_CONTACT_PROGRESS=2
+uint8 execution_policy
 float64 dt
 
 asmc_msgs/VehicleState ego_at_plan

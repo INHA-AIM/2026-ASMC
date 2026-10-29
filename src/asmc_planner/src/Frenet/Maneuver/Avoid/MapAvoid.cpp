@@ -32,6 +32,10 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         std::min(avoid_cfg_.map_search_budget_s,replanning_period_s_*.7);
     auto search_deadline=search_started+std::chrono::duration_cast<std::chrono::steady_clock::duration>(
         std::chrono::duration<double>(slice));
+    const auto recovery_deadline=search_deadline;
+    if(avoid_cfg_.static_margin_recovery_enabled&&!v2_avoidance_.dynamic_target)
+        search_deadline=search_started+std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(slice*.55));
     bool search_expired=false;
     std::size_t candidate_index=0;
     const std::size_t resume_at=v2_avoidance_.map_search_cursor;
@@ -249,7 +253,9 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         return false;
     };
 
-    if(!v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
+    if(v2_avoidance_.static_progress_level>0)
+        PlanStaticAvoidRecovery(ego,s,d,speed,initial_a,obstacles,command,committed,result,recovery_deadline);
+    if(!result.candidate_valid&&!v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
        !result.direction_conflict&&!result.target_behind_ego) {
         const bool reconnect_turn=v2_avoidance_.map_search_turn%2==1&&v2_avoidance_.map_corridor_cursor==0;
         const auto corridor_deadline=reconnect_turn?search_started:search_deadline;
@@ -260,7 +266,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     // Keep the already accepted recovery/bypass curve while tracking it closely.
     // Re-fitting the same tiny boundary overlap each cycle can change the curve
     // enough to lose every candidate. This is never an unchecked stale-path fallback.
-    if(!result.candidate_valid&&committed&&!v2_avoidance_.map_recovery_path.x.empty()&&
+    if(!result.candidate_valid&&committed&&v2_avoidance_.static_progress_level==0&&
+       !v2_avoidance_.map_recovery_path.x.empty()&&
        std::fabs(initial_a-clip(ego.a,-decel,limits_.max_longitudinal_accel))<1e-6){
         const auto& cached=v2_avoidance_.map_recovery_path;
         std::size_t nearest=0;double fraction=0,distance=INFINITY;
@@ -320,6 +327,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 v2_avoidance_.map_recovery_path=continuation;
                 v2_avoidance_.map_speed_profile_valid=true;
                 v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
+                v2_avoidance_.last_nominal=result;
+                v2_avoidance_.last_nominal.spatial_geometry=continuation;
                 output=continuation;UpdateCommittedAvoidLifecycle(s,d,ego.v,result,
                     CanHandoffAvoidToKeep(ego,s,d,obstacles));
                 last_failure_reason_=PlanFailureReason::NONE;return true;
@@ -581,6 +590,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         }
     }
     if(result.candidate_valid && !lane_clear(result.candidate_path)) result.candidate_valid=false;
+    if(!result.candidate_valid)
+        PlanStaticAvoidRecovery(ego,s,d,speed,initial_a,obstacles,command,committed,result,recovery_deadline);
     if(result.candidate_valid){
         result.blocking_object_id=-1;
         // Keep the successful search position for PREPARE -> EXECUTE
@@ -644,6 +655,12 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         v2_avoidance_.map_return_end_s=result.map_return_end_s;
         v2_avoidance_.map_group_valid=result.map_group_valid;
         v2_avoidance_.map_group_end_s=result.map_group_end_s;
+        v2_avoidance_.static_progress_level=result.static_progress_level;
+        if(result.static_progress_mode==StaticAvoidPolicy::NORMAL) {
+            v2_avoidance_.last_nominal=result;
+            if(v2_avoidance_.last_nominal.spatial_geometry.x.empty())
+                v2_avoidance_.last_nominal.spatial_geometry=result.candidate_path;
+        }
         v2_avoidance_.map_spatial_geometry=result.spatial_geometry.x.empty()?
             result.candidate_path:result.spatial_geometry;
         v2_avoidance_.map_recovery_path=result.candidate_path;
@@ -670,6 +687,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         v2_avoidance_.map_return_end_s=result.map_return_end_s;
         v2_avoidance_.map_group_valid=result.map_group_valid;
         v2_avoidance_.map_group_end_s=result.map_group_end_s;
+        v2_avoidance_.static_progress_level=result.static_progress_level;
         v2_avoidance_.map_search_turn=0;
     } else if(!pending_corridor)++v2_avoidance_.map_search_turn;
     CartesianPath approach;

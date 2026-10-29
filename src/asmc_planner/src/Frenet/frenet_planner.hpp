@@ -6,10 +6,13 @@
 #include <memory>
 #include <unordered_map>
 #include <chrono>
+#include <array>
+#include <limits>
 
 #include "Frenet/Map/AvoidRoadMap.hpp"
 #include "Frenet/Geometry/ObservedMotion.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutMerge.hpp"
+#include "Frenet/Maneuver/Avoid/StaticAvoidPolicy.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
 #include "Frenet/Maneuver/Merge/HighwayMerge.hpp"
 #include "Frenet/Maneuver/Merge/HighwayTransitionPath.hpp"
@@ -41,6 +44,12 @@ namespace asmc_planner::lane_reference { class LaneReference; }
 // 책임이고, 이 클래스는 그 행동을 어떻게 trajectory로 만들지만 담당한다.
 class FrenetPlanner {
 public:
+    void ConfigureStaticAvoidRecovery(bool margin,bool contact) {
+        avoid_cfg_.static_margin_recovery_enabled=margin;
+        avoid_cfg_.static_contact_progress_enabled=margin&&contact;
+    }
+    bool static_margin_recovery_enabled() const { return avoid_cfg_.static_margin_recovery_enabled; }
+    bool static_contact_progress_enabled() const { return avoid_cfg_.static_contact_progress_enabled; }
     const AvoidRoadMap& road_map() const { return avoid_road_map_; }
     VehicleShape vehicle_shape() const { return vehicle_shape_; }
     double rear_overhang() const { return avoid_cfg_.rear_overhang; }
@@ -493,6 +502,11 @@ public:
         bool retained_geometry = false;
         bool search_pending = false;
         std::string rejection_stage;
+        StaticAvoidPolicy::Mode static_progress_mode=StaticAvoidPolicy::NORMAL;
+        int static_progress_level=0;
+        double static_progress_margin=.45;
+        double static_contact_cost=0;
+        double static_minimum_clearance=std::numeric_limits<double>::infinity();
 
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
@@ -1046,9 +1060,15 @@ private:
     bool PlanAvoidReconnection(const CartesianState& ego, double s, double d,
         double speed, double initial_a, const std::vector<TrackedObject>& obstacles,
         bool committed, CartesianPath& output, AvoidPrepareResult& result,
-        std::chrono::steady_clock::time_point deadline);
+        std::chrono::steady_clock::time_point deadline,
+        const StaticAvoidPolicy* policy=nullptr);
     bool PlanStaticAvoidCorridor(const CartesianState& ego,double s,double d,
         double speed,double initial_a,const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command,bool committed,AvoidPrepareResult& result,
+        std::chrono::steady_clock::time_point deadline,
+        const StaticAvoidPolicy* policy=nullptr);
+    bool PlanStaticAvoidRecovery(const CartesianState& ego,double s,double d,
+        double speed,double initial_a,const std::vector<TrackedObject>& objects,
         const PlannerCommand& command,bool committed,AvoidPrepareResult& result,
         std::chrono::steady_clock::time_point deadline);
     bool AvoidProcess(
@@ -1104,6 +1124,12 @@ private:
         CartesianPath map_spatial_geometry;
         std::size_t map_corridor_cursor = 0;
         unsigned map_search_turn = 0;
+        int static_progress_level=0;
+        int static_search_level=1;
+        int static_normal_clear_cycles=0;
+        struct StaticSearchCursor { std::size_t corridor=0,reconnection=0; };
+        std::array<StaticSearchCursor,6> static_search_cursors{};
+        AvoidPrepareResult last_nominal;
         // Only objects already inside the nominal margin at the beginning of
         // this maneuver may use the static escape rule. Exit is irreversible.
         bool margin_recovery_initialized = false;

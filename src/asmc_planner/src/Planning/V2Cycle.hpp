@@ -1049,6 +1049,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             return true;
         }
 
+        trajectory.execution_policy=committed.maneuver_completed?asmc_msgs::Trajectory::POLICY_NORMAL:
+            static_cast<uint8_t>(committed.static_progress_mode);
         AvoidFeedbackFields avoid_fields;
         avoid_fields.applied_speed_mps = trajectory.points.back().velocity;
         avoid_fields.target_d_valid = true;
@@ -1113,6 +1115,11 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 ? "avoid maneuver completed"
                 : "executing committed avoid trajectory";
             if(committed.retained_geometry)executing.detail+="; retained spatial corridor";
+            if(committed.static_progress_mode!=StaticAvoidPolicy::NORMAL)
+                executing.detail+="; static recovery policy="+std::to_string(int(committed.static_progress_mode))+
+                    " margin="+std::to_string(committed.static_progress_margin)+
+                    " clearance="+std::to_string(committed.static_minimum_clearance)+
+                    " contact_cost="+std::to_string(committed.static_contact_cost);
         }
         port.trajectory_pub_.publish(trajectory);
         port.publishDebugMarkersV2(trajectory, command);
@@ -1438,6 +1445,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 avoid_trajectory);
             if (convert_status == ConversionStatus::OK &&
                 !avoid_trajectory.points.empty()) {
+                avoid_trajectory.execution_policy=static_cast<uint8_t>(prepare.static_progress_mode);
                 // 3~4번: pure core preflight 뒤 manager와 core를 연속 적용한다.
                 // preflight가 실패하면 manager는 READY 그대로이므로
                 // COMMITTED/core-unlocked 분리 상태가 남지 않는다.
@@ -1502,6 +1510,9 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             : (prepare.candidate_valid
                    ? std::string("avoid candidate is ready")
                    : std::string("no safe avoid candidate this cycle"));
+        if(prepare.candidate_valid&&prepare.static_progress_mode!=StaticAvoidPolicy::NORMAL)
+            prepared.detail+="; static recovery policy="+std::to_string(int(prepare.static_progress_mode))+
+                " margin="+std::to_string(prepare.static_progress_margin);
 
         port.trajectory_pub_.publish(published);
         port.publishDebugMarkersV2(published, command);

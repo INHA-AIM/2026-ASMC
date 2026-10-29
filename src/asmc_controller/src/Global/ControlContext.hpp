@@ -33,6 +33,11 @@ struct ControlContext {
     bool collision_stop_active = false;
     ros::SteadyTime collision_stop_at;
     double collision_stop_state_stamp = 0;
+    bool allow_static_contact_progress=false;
+    double static_recovery_speed_cap=1.0;
+    double static_contact_speed_cap=.5;
+    std::uint8_t latest_behavior_type=255;
+    ros::Time latest_behavior_valid_until;
     EmergencySteeringState emergency_steering;
     double braking_geometry_stamp=0;
     // Enabled by explicit wire binding. The legacy-only test gate also uses

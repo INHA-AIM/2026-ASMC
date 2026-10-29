@@ -28,6 +28,11 @@
   <arg name="lidar_input_topic" default="/perception/lidar/planning_observations_map"/>
   <arg name="avoid_path_margin_m" default="0.45"/>
   <arg name="static_obstacle_unknown" default="true"/>
+
+  <!-- MORAI competition policy: first reduce clearance, then permit static
+       contact at crawl speed along a previously checked reference. -->
+  <arg name="static_avoid_recovery" default="true"/>
+  <arg name="static_avoid_contact_progress" default="true"/>
   <!-- 신호등 추론·발행은 카메라 담당의 asmc_camera/camera.launch가 단독 소유한다.
        판제는 /perception/traffic_light/detection을 소비하며 별도 ResNet을 시작하지 않는다.
        실행 중 중단·재개/주기는 카메라의 /perception/camera/traffic_light/set_mode
@@ -98,12 +103,16 @@
     <arg name="planning_objects_topic" value="$(arg canonical_objects_topic)"/>
     <arg name="avoid_path_margin_m" value="$(arg avoid_path_margin_m)"/>
     <arg name="static_obstacle_unknown" value="$(arg static_obstacle_unknown)"/>
+
+    <arg name="static_avoid_recovery" value="$(arg static_avoid_recovery)"/>
+    <arg name="static_avoid_contact_progress" value="$(arg static_avoid_contact_progress)"/>
   </include>
   <include file="$(find asmc_controller)/launch/controller.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>
     <arg name="suspend_in_jamming" value="true"/>
     <arg name="smooth_handoff" value="true"/>
     <arg name="initial_ready_topic" value="$(eval '/planning/localization/anchor_ready' if arg('jamming_planner') == 'localization' else '')"/>
+    <arg name="allow_static_contact_progress" value="$(arg static_avoid_contact_progress)"/>
   </include>
   <node pkg="asmc_planner" type="asmc_control_selector_node"
         name="asmc_control_selector" output="screen" required="true">

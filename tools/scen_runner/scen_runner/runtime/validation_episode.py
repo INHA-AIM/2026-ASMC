@@ -163,6 +163,7 @@ class EpisodeController:
         self.phase='idle';self.adapters=[];self.pending=[];self.owned={};self.pose=None
         self.status='준비 중';self.cancelled=threading.Event();self.contact_lock=threading.Lock()
         self.collision_requested=False;self.contact_epoch=0;self.run_started=0.;self.error=None
+        self.continue_on_static_contact=False
         self.base=load_config();self.names=[];self.last_states=[]
         self.id_owners={}
         self.on_progress=None
@@ -338,6 +339,15 @@ class EpisodeController:
             if self.on_collision:
                 try:self.on_collision(self,self.last_contact_evidence,sample,hits)
                 except Exception as exc:print('[충돌 저장 실패] '+str(exc),flush=True)
+            live_fixed={s.actor_info.id.value for s in sample.get('actor_states',())
+                        if getattr(s.actor_info,'object_type',None)==3}
+            fixed={aid for aid in hits if aid in live_fixed and aid in self.id_owners and
+                   self.id_owners[aid].name=='static' and
+                   any(a.native_id==aid and a.kind==3 for a in getattr(self.id_owners[aid],'actors',()))}
+            if self.continue_on_static_contact and fixed==hits:
+                self.record_lifecycle('static_contact_continued',contact_ids=sorted(hits))
+                print('[정적 접촉 기록 · 주행 계속] '+','.join(sorted(hits)),flush=True)
+                return False
             self.collision_requested=True
         action='다음 반복 요청' if self.run_budget is None or self.run_budget.can_start else '설정 주행 종료 요청'
         print('[검증 충돌] ego ↔ 생성 객체 '+','.join(sorted(hits))+' · '+action,flush=True)

@@ -306,6 +306,11 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
     }
 
     // --- avoid ---
+    if(!CheckPositiveFinite(avoid_cfg.static_recovery_speed_cap,"planner/avoid/static_recovery_speed_cap",error_message)||
+       !CheckPositiveFinite(avoid_cfg.static_contact_speed_cap,"planner/avoid/static_contact_speed_cap",error_message))return false;
+    if(avoid_cfg.static_contact_speed_cap>avoid_cfg.static_recovery_speed_cap) {
+        error_message="static recovery caps must satisfy contact <= recovery";return false;
+    }
     if(!IsFinite(avoid_cfg.bypass_accel_cap)||avoid_cfg.bypass_accel_cap<=0) {
         error_message="planner/avoid/bypass_accel_cap must be finite and positive";
         return false;

@@ -308,6 +308,28 @@ TEST(ControllerFailSafeVerification, FailedMovingStopPathCannotReapplyPositiveAc
     EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0);
 }
 
+TEST(ControllerFailSafeVerification,StaticContactProgressNeedsOptInAndAFreshAvoidOwner) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    auto path=MakeValidTrajectory();path.execution_policy=asmc_msgs::Trajectory::POLICY_STATIC_CONTACT_PROGRESS;
+    double x=0;
+    for(auto& p:path.points){p.x=x;p.velocity=.5;p.acceleration=0;x+=.5*path.dt;}
+    path.points.back().velocity=0;
+    g_control.latest_vehicle_state.speed=0;
+    asmc_msgs::BehaviorCommand avoid;avoid.command_id=7;avoid.maneuver_type=asmc_msgs::BehaviorCommand::AVOID;
+    avoid.valid_until=ros::Time::now()+ros::Duration(1);
+    mpc_controller_ros::BehaviorCommandCallback(boost::make_shared<asmc_msgs::BehaviorCommand>(avoid));
+    mpc_controller_ros::TrajectoryCallback(boost::make_shared<asmc_msgs::Trajectory>(path));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0);EXPECT_FALSE(g_control.has_successful_control);
+    capture.ClearCommands();g_control.allow_static_contact_progress=true;
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_TRUE(g_control.has_successful_control);
+    capture.ClearCommands();avoid.maneuver_type=asmc_msgs::BehaviorCommand::KEEP;
+    mpc_controller_ros::BehaviorCommandCallback(boost::make_shared<asmc_msgs::BehaviorCommand>(avoid));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0);EXPECT_FALSE(g_control.has_successful_control);
+}
+
 TEST(ControllerFailSafeVerification, CTRL007EmergencyStop) {
     ControllerOutputCapture capture;
     ASSERT_TRUE(capture.Initialize());

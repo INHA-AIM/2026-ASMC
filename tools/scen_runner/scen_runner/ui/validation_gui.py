@@ -99,10 +99,12 @@ class ValidationRunner(QtCore.QThread):
 
     def __init__(self,mode,section,seed,sample_json=None,collision_debug=False,speed_debug=False,
                  replay=None,save_dir=None,save_collisions=True,replay_runs=(),run_counts=None,
-                 with_planning=False,stack_config=None,recording_spec=None,tunnel_profile=None):
+                 with_planning=False,stack_config=None,recording_spec=None,tunnel_profile=None,
+                 continue_on_static_contact=False):
         super().__init__();base=load_config();self.route=EpisodeRoute(sample_json)
         self.link=EpisodeLink(base);self.link.client_key='validation_ego_'+uuid.uuid4().hex
         self.engine=EpisodeController(self.link,self.route,mode,section,seed)
+        self.engine.continue_on_static_contact=continue_on_static_contact
         self.tunnel_profile=None
         if tunnel_profile:
             from scen_runner.config import load_yaml
@@ -440,10 +442,12 @@ class ValidationRunner(QtCore.QThread):
 class ValidationWindow(QtWidgets.QMainWindow):
     def __init__(self,mode='scene',section='static',seed=None,sample_json=None,collision_debug=False,speed_debug=False,
                  replay=None,save_dir=None,save_collisions=True,replay_runs=(),run_counts=None,
-                 with_planning=False,stack_config=None,recording_spec=None,tunnel_profile=None):
+                 with_planning=False,stack_config=None,recording_spec=None,tunnel_profile=None,
+                 continue_on_static_contact=False):
         super().__init__();self.runner=ValidationRunner(mode,section,seed,sample_json,collision_debug,speed_debug,
                                                      replay,save_dir,save_collisions,replay_runs,run_counts,
-                                                     with_planning,stack_config,recording_spec,tunnel_profile)
+                                                     with_planning,stack_config,recording_spec,tunnel_profile,
+                                                     continue_on_static_contact=continue_on_static_contact)
         replay=self.runner.replay
         if replay:mode='section';section=replay['section']
         self.pending=None;self.pending_ego=None;self.last=None;self.allow_close=False;self.view='ego'
@@ -750,6 +754,8 @@ def main():
     parser.add_argument('--section',choices=list(LABELS),default='static')
     parser.add_argument('--seed',type=int)
     parser.add_argument('--collision-debug',action='store_true',help='gRPC ego 접촉 목록이 바뀔 때만 출력')
+    parser.add_argument('--continue-on-static-contact',action='store_true',
+                        help='등록된 정적 미션 고정 장애물 접촉은 기록하고 주행 계속; 차량·보행자 접촉은 기존 종료')
     parser.add_argument('--speed-debug',action='store_true',help='NPC 목표/실측·가속·브레이크·링크를 JSONL에 저장')
     parser.add_argument('--sample-json',help='시작 위치를 읽을 JSON 경로; 기본은 사용자 예시의 저장된 시작 좌표')
     replay_mode=parser.add_mutually_exclusive_group()
@@ -793,7 +799,8 @@ def main():
     try:
         win=ValidationWindow(args.mode,args.section,args.seed,args.sample_json,args.collision_debug,args.speed_debug,
                              replay,args.collision_log_dir,not args.no_save_collision,replay_runs,args.run_counts,
-                             args.with_planning,args.stack_config,args.recording_spec,args.tunnel_profile)
+                             args.with_planning,args.stack_config,args.recording_spec,args.tunnel_profile,
+                             continue_on_static_contact=args.continue_on_static_contact)
     except (OSError,ValueError) as error:parser.error(str(error))
     show_on_current_screen(win)
     pending_close=[False]

@@ -42,6 +42,19 @@ class EpisodeTest(unittest.TestCase):
         self.assertEqual(ended[0]['episode'],1)
         self.assertGreater(ended[0]['elapsed_s'],150.)
 
+    def test_static_contact_continuation_records_contacts_and_mobile_contacts_end_run(self):
+        e,l,r=self.engine('section','static');e.begin(1);self.prepare(e)
+        aid=next(iter(e.owned));owner=e.id_owners[aid]
+        owner.actors=[S(native_id=aid,kind=3)]
+        e.continue_on_static_contact=True;e.on_collision=Mock()
+        sample=self.contact_sample(e,aid);sample['actor_states'][1].actor_info.object_type=3
+        self.assertFalse(e.contact(sample))
+        self.assertFalse(e.collision_requested);e.on_collision.assert_called_once()
+        e.contact(dict(self.contact_sample(e,aid),contacts=[]))
+        owner.actors[0].kind=1
+        self.assertTrue(e.contact(self.contact_sample(e,aid)))
+        self.assertTrue(e.collision_requested)
+
     def test_background_signal_failure_holds_ego_during_driving(self):
         e,l,r=self.engine('section','dynamic')
         e.begin(1);self.prepare(e)

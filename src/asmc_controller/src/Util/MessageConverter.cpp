@@ -49,7 +49,8 @@ bool IsMessageFresh(const ros::SteadyTime& received_at,
 
 TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
                                    PlannedPath& path) {
-    if (!message.valid || message.points.empty()) {
+    if (!message.valid || message.points.empty() ||
+        message.execution_policy>asmc_msgs::Trajectory::POLICY_STATIC_CONTACT_PROGRESS) {
         return TrajectoryStatus::INVALID_MESSAGE;
     }
     if (message.header.frame_id != "map") {
