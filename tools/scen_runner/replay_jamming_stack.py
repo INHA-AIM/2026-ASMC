@@ -47,6 +47,8 @@ def main():
     import rosbag,rosgraph,rospy
     from std_msgs.msg import String,UInt8
     from morai_msgs.msg import CtrlCmd
+    from diagnostic_msgs.msg import DiagnosticArray
+    from asmc_msgs.msg import InferenceStatus
     from localization_observer import ExperimentReporter,ensure_dashboard
     with rosbag.Bag(str(args.bag)) as bag:
         first=bag.get_start_time();duration=bag.get_end_time()-first
@@ -106,6 +108,13 @@ def main():
             def observe(topic,message):
                 counts[topic]+=1
                 if isinstance(message,CtrlCmd):value=dict(accel=message.accel,brake=message.brake,steering=message.steering)
+                elif isinstance(message,DiagnosticArray):
+                    status=next((s for s in message.status if s.name=='camera_bbox_lane_change'),None)
+                    value=dict(reason=status.message,valid=status.level==0,
+                               values={e.key:e.value for e in status.values}) if status else {}
+                elif isinstance(message,InferenceStatus):
+                    value=dict(model=message.model,loaded=message.loaded,warmed=message.warmed_up,
+                               successful_batches=message.successful_batches)
                 elif isinstance(message,UInt8):
                     value=message.data
                     if not modes or modes[-1]!=value:modes.append(value)
@@ -118,12 +127,24 @@ def main():
                 (('/ctrl_cmd',CtrlCmd),('/planning/mode',UInt8),('/planning/mode/status',String),
                  ('/planning/jamming/handoff_trace',String),('/planning/local/trace',String),
                  ('/planning/local/control_trace',String),('/planning/localization/trace',String),
-                 ('/planning/localization/control_trace',String))]
+                 ('/planning/localization/control_trace',String),
+                 ('/planning/camera_bbox_lane_change/diagnostics',DiagnosticArray),
+                 ('/perception/camera/objects/status',InferenceStatus),('/perception/camera/lane/status',InferenceStatus))]
             camera=start(['roslaunch','asmc_camera','camera.launch'],trial/'camera.log')
             lidar=start(['roslaunch','asmc_lidar','lidar.launch','debug:=true'],trial/'lidar.log')
-            autonomy=start(['roslaunch','asmc_planner','autonomy_no_bridges_v2.launch',
-                            'jamming_planner:='+strategy,'dashboard:=false',
-                            'shadow_run_id:='+record['run_id']],trial/'autonomy.log')
+            # Recorded transport is deliberately a named replay producer.
+            # Authorize it only in this private wrapper; production retains
+            # /morai_udp_bridge and all source validity/epoch checks.
+            wrapper=trial/'replay.launch'
+            wrapper.write_text('''<launch>
+<include file="$(find asmc_planner)/launch/autonomy_no_bridges_v2.launch">
+<arg name="jamming_planner" value="%s"/><arg name="dashboard" value="false"/>
+<arg name="shadow_run_id" value="%s"/></include>
+<param name="/planning_competition_speed_state/speed_callerid" value="/jamming_raw_input"/>
+<param name="/local_planner/speed_callerid" value="/jamming_raw_input"/>
+<param name="/localization_motion/speed_callerid" value="/jamming_raw_input"/>
+</launch>'''%(strategy,record['run_id']))
+            autonomy=start(['roslaunch',str(wrapper)],trial/'autonomy.log')
             player=None
             try:
                 # The CPU-limited offline runtime must finish loading its map
@@ -145,15 +166,28 @@ def main():
                 unwanted={'/camera_bbox_lane_change','/local_controller','/localization_controller'}-{expected}
                 if unwanted.intersection(nodes):raise RuntimeError('unselected jamming controller is running')
                 reporter.phase('running','fixed recorded ego motion; no physical bridge')
-                player=start(['rosbag','play','--clock','--rate',str(args.rate),'--topics',*RAW_TOPICS,
+                player=start(['rosbag','play','__name:=jamming_raw_input','--clock','--rate',str(args.rate),'--topics',*RAW_TOPICS,
                               '--bags',str(args.bag)],trial/'play.log')
                 deadline=time.monotonic()+duration/args.rate+30
+                captures=set()
                 while player.poll() is None:
                     if any(child.poll() is not None for child in (camera,lidar,autonomy)):
                         raise RuntimeError('replay production child exited')
                     if time.monotonic()>deadline:raise RuntimeError('bounded raw replay deadline')
                     if not dict(master.getSystemState()[0]).get('/planning/mode'):
                         raise RuntimeError('normal planner/mode source disappeared during replay')
+                    elapsed=duration/args.rate+30-(deadline-time.monotonic())
+                    for checkpoint in (5,20,40):
+                        if elapsed>=checkpoint and checkpoint not in captures:
+                            from urllib.request import urlopen
+                            for reconnect in range(2):
+                                with urlopen('http://127.0.0.1:%d/api/snapshot'%args.dashboard_port,timeout=2) as response:
+                                    snapshot=json.load(response)
+                                (trial/('web-%ds-%d.json'%(checkpoint,reconnect))).write_text(json.dumps(snapshot))
+                                identity=snapshot.get('experiment') or {}
+                                if identity.get('trial_id')!=args.trial_prefix+'-'+strategy or identity.get('master_uri')!=uri:
+                                    raise RuntimeError('observer reconnect identity mismatch')
+                            captures.add(checkpoint)
                     time.sleep(.2)
                 if player.returncode:raise RuntimeError('raw bag player failed')
                 reporter.phase('completed','replay ended; closed-loop driving remains untested')

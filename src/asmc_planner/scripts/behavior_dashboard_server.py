@@ -160,6 +160,7 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
             snapshot["static_mission_policy"] = policy
             if policy.get("display_wait_ms", 0) > 0:
                 snapshot["received_at"]["lidar_objects"] = time.time()-policy["object_age_ms"]/1000.
+            dashboard_localization.mask_inactive_experiment(snapshot)
             body = json.dumps(snapshot, separators=(",", ":")).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

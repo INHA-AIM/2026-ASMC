@@ -66,3 +66,8 @@ p.applyTrialMonitor({instance_id:'new',data_available:false,phase:'ended'});
 assert.equal(p.data.localExperiment,null);assert.equal(p.data.localDetail,null);
 assert(element('trialMonitor').textContent.includes('실험 종료'));
 console.log('PASS trial monitor identity reset and ended-run geometry removal');
+p.data.localization={valid:true,selected:[[1,2]]};
+p.applyTrialMonitor({instance_id:'raw-bag',data_available:false,phase:'ended',replay:true,trial_id:'camera'});
+assert.equal(p.data.localization,null);
+assert(element('trialMonitor').textContent.includes('BAG 재생'));
+assert(element('trialMonitor').textContent.includes('camera'));

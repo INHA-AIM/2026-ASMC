@@ -39,7 +39,7 @@
   let monitorInstance=null;
   function clearTrialObservations() {
     for(const key of ['command','feedback','feature','trajectory','ego','lidarObjects','lidarMotionDebug',
-      'planningMarkers','debugConfig','recentPlanningIssue','localExperiment','localControl','localDetail','localLastGood','localLastDetail'])data[key]=null;
+      'planningMarkers','debugConfig','recentPlanningIssue','localization','localExperiment','localControl','localDetail','localLastGood','localLastDetail'])data[key]=null;
     data.receivedAt={};data.shadow={};data.localReceiveAge=Infinity;data.localLastTime=0;
     tracks.clear();previousObjects=new Map();motionDebugById=new Map();
     lidarFrameKey=null;lidarFrameIndex=0;lidarChanges={appeared:[],disappeared:[],typeChanged:[]};
@@ -53,7 +53,7 @@
       interrupted:'실험 프로세스 종료',stale:'실험 heartbeat 지연',idle:'실험 대기',running:'전체 스택 실행 중'};
     if(node) {
       node.hidden=false;
-      node.textContent=[phases[meta.phase]||meta.phase,meta.run_id||'대기',
+      node.textContent=[meta.replay?'BAG 재생 · 고정 자차 · 주행 수락 아님':'',phases[meta.phase]||meta.phase,meta.run_id||'대기',meta.trial_id||'',
         (meta.branch||'')+' @ '+(meta.revision||'').slice(0,8)+(meta.dirty?' +미커밋':''),
         meta.master_uri||'',meta.actuation_hold&&meta.phase==='preparing'?'준비 중 · 시뮬 제동 유지':'',meta.data_available?'관측 서버 연결 · LOCAL 수신 '+(Number.isFinite(meta.local_receive_age_s)?Math.round(meta.local_receive_age_s*1000)+'ms':'대기'):'현재 관측 없음 · 과거 경로 숨김',meta.reason||''].filter(Boolean).join(' | ');
       node.className='trial-monitor '+(meta.data_available?'live':'waiting');
@@ -1073,7 +1073,11 @@
         transition.className='trial-monitor '+(fresh?'live':'waiting');
       }
       const runtime=snapshot.runtime_session;
-      applyTrialMonitor(snapshot.trial_monitor || (runtime && {...runtime,
+      const experiment=snapshot.experiment;
+      const experimentMeta=experiment && {...experiment,instance_id:experiment.run_id+'/'+experiment.trial_id,
+        data_available:experiment.heartbeat_fresh && !experiment.terminal && experiment.phase!=='restoring',
+        replay:(experiment.role||'').includes('bag'),local_receive_age_s:snapshot.local_receive_age_s};
+      applyTrialMonitor(snapshot.trial_monitor || experimentMeta || (runtime && {...runtime,
         instance_id:runtime.session_id,data_available:true,
         local_receive_age_s:snapshot.local_receive_age_s}));
       data.localExperiment=snapshot.local_experiment||null;

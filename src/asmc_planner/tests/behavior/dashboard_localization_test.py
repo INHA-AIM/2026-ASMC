@@ -54,4 +54,17 @@ class PayloadTest(unittest.TestCase):
         for now,age in [(11,.1),(9,.1),(10,1),(10,-1)]:self.assertFalse(map_trajectory_fresh(p,now,age))
         p['header']['frame_id']='base_link';self.assertFalse(map_trajectory_fresh(p,10,.1))
 
+    def test_terminal_or_lost_experiment_hides_all_three_current_geometries(self):
+        from dashboard_localization import mask_inactive_experiment
+        for terminal,fresh,phase in ((True,True,'completed'),(False,False,'running'),(False,True,'restoring')):
+            snapshot=dict(experiment=dict(terminal=terminal,heartbeat_fresh=fresh,phase=phase),
+                ego={'x':1},trajectory={'valid':True},local_experiment={'valid':True},
+                localization={'valid':True,'ego':{'x':1}},shadow={'path':{}},normal_path_fresh=True)
+            mask_inactive_experiment(snapshot)
+            self.assertIsNone(snapshot['ego']);self.assertIsNone(snapshot['trajectory'])
+            self.assertIsNone(snapshot['local_experiment']);self.assertFalse(snapshot['localization']['valid'])
+            self.assertEqual(snapshot['shadow'],{});self.assertFalse(snapshot['normal_path_fresh'])
+        active=dict(experiment=dict(terminal=False,heartbeat_fresh=True,phase='running'),ego={'x':1})
+        mask_inactive_experiment(active);self.assertEqual(active['ego'],{'x':1})
+
 if __name__=='__main__':unittest.main()

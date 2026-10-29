@@ -65,6 +65,23 @@ class LocalizationView:
         return p
 
 
+def mask_inactive_experiment(snapshot):
+    """Ended/reconnecting runs cannot leave any current vehicle/path overlay."""
+    experiment=snapshot.get('experiment')
+    if not experiment:return
+    if (experiment.get('heartbeat_fresh') and not experiment.get('terminal') and
+            experiment.get('phase') not in ('restoring','stopped','failed','cancelled','completed')):
+        return
+    for key in ('ego','trajectory','lidar_objects','planning_markers','local_experiment','local_control'):
+        snapshot[key]=None
+    snapshot['shadow']={}
+    snapshot['normal_path_fresh']=False
+    snapshot['jamming_transition_fresh']=False
+    if snapshot.get('localization'):
+        snapshot['localization']=dict(snapshot['localization'],fresh=False,valid=False,
+            ego=None,candidates=[],selected=[],obstacles=[],reason='experiment_inactive')
+
+
 class ExperimentView:
     TERMINAL={'completed','failed','cancelled','stopped'}
     def __init__(self,geometry):self.geometry=geometry;self.payload=None;self.received=None;self.lock=threading.Lock()
