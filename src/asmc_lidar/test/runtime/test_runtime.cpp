@@ -2,6 +2,7 @@
 // input converters, with synthetic inputs and a deterministic logical clock.
 #include <asmc_lidar/ros/ros_inputs.hpp>
 #include <asmc_lidar/ros/runtime.hpp>
+#include <asmc_lidar/preprocessing/roi_voxel.hpp>
 #include <asmc_lidar/ros/delivery_display_history.hpp>
 
 #include <GeographicLib/UTMUPS.hpp>
@@ -1329,4 +1330,25 @@ TEST(LidarRuntime, MeasuredVehicleHistoryMaintainsGeometryAndClassAfterCameraMis
     }
   }
   EXPECT_TRUE(saw);
+}
+
+TEST(RuntimeConfig, CanonicalRearExtentChangesOnlyRearSelfMask) {
+  auto config = ShippedRuntimeConfig();
+  const auto current = config.pipeline.vehicle;
+  auto legacy = current; legacy.f32_RearOverhang = .700f;
+  using namespace asmc::lidar::pipeline;
+  RoiClassifier now(config.pipeline.range, config.pipeline.roi, current);
+  RoiClassifier before(config.pipeline.range, config.pipeline.roi, legacy);
+  auto point = [&](float base_x, float base_y) {
+    pcl::PointXYZI p; p.x=base_x-current.st_LiDARPos.f32_X;
+    p.y=base_y-current.st_LiDARPos.f32_Y; p.z=0; p.intensity=1; return p;
+  };
+  EXPECT_EQ(before(point(-.745f,0)), RoiReason::Keep);
+  EXPECT_EQ(now(point(-.745f,0)), RoiReason::Ego);
+  EXPECT_EQ(now(point(-.791f,0)), RoiReason::Keep);
+  EXPECT_EQ(now(point(-.789f,0)), RoiReason::Ego);
+  EXPECT_EQ(now(point(3.844f,0)), RoiReason::Ego);
+  EXPECT_EQ(now(point(3.846f,0)), RoiReason::Keep);
+  EXPECT_EQ(now(point(1.f,.947f)), RoiReason::Keep);
+  EXPECT_EQ(now(point(1.f,.945f)), RoiReason::Ego);
 }

@@ -188,7 +188,7 @@
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
 | `namespace` | `/perception/lidar` | Output namespace; inputs keep their canonical paths |
-| `pipeline_config` | `$(find asmc_lidar)/config/lidar_pipeline.yaml` | Processing configuration YAML |
+| `pipeline_config` | `$(find asmc_lidar)/config/lidar_wall_vehicle.yaml` | Processing configuration YAML |
 | `lidar_level_roll` | `(빈 문자열)` | — |
 | `fusion` | `true` | Use three camera views for classification; false runs LiDAR alone |
 | `rviz` | `false` | Open RViz and display this pipeline's published objects and ego box |
@@ -248,7 +248,7 @@
 | `open_dashboard` | `false` | — |
 | `jamming_planner` | `camera` | camera: main follower, local: observed local road, localization: map localization |
 | `dashboard_port` | `8088` | — |
-| `jamming_speed_kph` | `$(eval {'camera':10.0,'local':20.0,'localization':20.0}[arg('jamming_planner')])` | — |
+| `jamming_speed_kph` | `$(eval {'camera':20.0,'local':20.0,'localization':20.0}[arg('jamming_planner')])` | — |
 | `local_semantic_input` | `true` | — |
 | `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
 | `local_forward_warning_weight` | `(빈 문자열)` | — |

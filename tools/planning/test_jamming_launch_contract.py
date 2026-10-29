@@ -135,11 +135,15 @@ class JammingLaunchContractTest(unittest.TestCase):
         self.assertIn('std::fabs(message->velocity.x)',controller)
         self.assertNotIn('message->velocity.y',controller)
         self.assertTrue('lidarFresh()' in controller,'metric obstacle geometry must retain its freshness gate')
-        self.assertTrue('object_camera_geometry_used","false"' in controller,
-                        'camera boxes cannot replace metric LiDAR obstacle geometry')
+        self.assertIn('refreshPersonStopObstacles()', controller)
+        self.assertIn('preparingHandoff()', controller)
+        self.assertIn('params.enable_control && mode_active', controller)
         args=default_arguments(JAMMING/'camera_bbox_lane_change.launch')
         self.assertEqual('true',args['straddle_avoidance'])
-        self.assertEqual('true',args['use_lidar_obstacles'])
+        self.assertEqual('false',args['use_lidar_obstacles'])  # PR142 standalone default
+        integrated=default_arguments(LAUNCH/'autonomy_no_bridges_v2.launch')
+        self.assertEqual('true',integrated['jamming_use_lidar_obstacles'])
+        self.assertEqual('0.05',integrated['jamming_avoid_clearance'])
         self.assertEqual('false',args['return_to_entry_lane'])  # standalone still opts in explicitly
 
     def test_highway_dashboard_and_recovery_passthrough_coexist(self):
