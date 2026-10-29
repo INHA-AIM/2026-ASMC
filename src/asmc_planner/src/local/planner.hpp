@@ -33,9 +33,6 @@ struct Config {
   double preferred_clearance = .40;
   double low_speed_rate_floor = 1.;
   double maneuver_reserve = 0.; // Keep turn room if a verified prefix ends at an obstacle.
-  // Trial policy: how much verified forward range may be traded for retaining
-  // a currently swept, speed-feasible previous path. Zero retains old ranking.
-  double path_continuity_slack = 0.;
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;

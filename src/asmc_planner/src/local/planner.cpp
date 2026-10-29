@@ -632,23 +632,9 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         old_cost += SegmentQualityCost(s,c,a,p,check.soft_margin_cells-soft_before);
         prefix.push_back(p);
       }
-      bool similar = prefix.size() > 1 &&
-                     prefix.back().x >= out.path.back().x - .2 &&
-                     old_cost <= best.quality * 1.1 + .005;
-      if(c.path_continuity_slack>0. && prefix.size()>1 &&
-         prefix.back().x>=out.path.back().x-c.path_continuity_slack) {
-        // Receding geometry naturally loses ~28cm per100ms at10km/h. A20cm
-        // length tie threw away valid bypasses and restarted their lateral
-        // transition ahead of the moving car. Compare per-metre costs, but
-        // require THIS scan's complete sweep and actual-state speed profile.
-        // This does not extend range or replay an old trajectory/command.
-        Result executable;executable.path=prefix;executable.recovery=policy==1;
-        const bool enough=BuildSpeedProfile(s,c,executable) &&
-            executable.available_stopping_m>=executable.required_stopping_m+.5;
-        const double old_density=old_cost/std::max(.1,prefix.back().s);
-        const double new_density=best.quality/std::max(.1,out.path.back().s);
-        similar=similar || (enough && old_density<=1.1*new_density+.005);
-      }
+      const bool similar = prefix.size() > 1 &&
+                           prefix.back().x >= out.path.back().x - .2 &&
+                           old_cost <= best.quality * 1.1 + .005;
       if (prefix.size() > 1 &&
           (prefix.back().x > out.path.back().x + .5 || similar)) {
         out.path_source = policy==1?"rechecked_recovery":"rechecked_previous";
