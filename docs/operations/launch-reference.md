@@ -225,11 +225,12 @@
 | `highway_merge` | `true` | — |
 | `dashboard` | `true` | — |
 | `open_dashboard` | `false` | — |
-| `shadow_planner` | `main` | main or localization; exactly one JAMMING controller |
-| `dashboard_port` | `$(eval 8089 if arg('shadow_planner') == 'localization' else 8088)` | — |
-| `shadow_static_avoidance` | `$(eval arg('shadow_planner') == 'localization')` | Localization comparison profile: measured static bypass and return; see documented failures |
-| `shadow_dynamic_obstacles` | `$(eval arg('shadow_planner') == 'localization')` | Localization comparison profile: observed-motion yield; not general dynamic acceptance |
-| `shadow_lane_rules` | `$(eval arg('shadow_planner') == 'localization')` | verified shadow zone paint exemption; physical road stays hard |
+| `shadow_planner` | `main` | Compatibility input: main/localization; used when jamming_planner is omitted |
+| `jamming_planner` | `$(eval {'main': 'camera', 'localization': 'localization'}[arg('shadow_planner')])` | camera: existing main, localization: map localization; LOCAL is pending PR138 |
+| `dashboard_port` | `$(eval 8089 if arg('jamming_planner') == 'localization' else 8088)` | — |
+| `shadow_static_avoidance` | `$(eval arg('jamming_planner') == 'localization')` | Localization comparison profile: measured static bypass and return; see documented failures |
+| `shadow_dynamic_obstacles` | `$(eval arg('jamming_planner') == 'localization')` | Localization comparison profile: observed-motion yield; not general dynamic acceptance |
+| `shadow_lane_rules` | `$(eval arg('jamming_planner') == 'localization')` | verified shadow zone paint exemption; physical road stays hard |
 | `shadow_run_id` | `localization-autonomy` | — |
 | `shadow_speed_cap_kph` | `15` | — |
 | `shadow_journal_path` | `(빈 문자열)` | — |

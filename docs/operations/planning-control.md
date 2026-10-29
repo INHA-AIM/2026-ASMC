@@ -43,11 +43,15 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 
 ## Localization 음영 위치 추종 연구 옵션
 
-`shadow_planner:=main`이 기본값이며 최신 main의 팀원 재밍 처리를 유지합니다.
+`jamming_planner:=camera`가 기본값이며 최신 main의 팀원 재밍 처리를 유지합니다.
 `shadow_planner:=localization`은 측위 기반 기존 Frenet 회피·추종 비교안을 선택합니다.
 이 옵션에서는 정적 회피·관측 운동 대응·음영 차선 예외가 켜지고 속도 상한은 15km/h입니다.
 일반 main의 속도 정책은 바꾸지 않습니다. 20km/h·회전 정차차량·모든 보행자 장면은
 수락하지 않았습니다. [현재 체크포인트와 비교 조건](../records/planning/2026-10-29-localization-comparison.md)을 먼저 읽습니다.
+
+기존 `shadow_planner:=localization` 명령도 같은 그래프를 선택하는 호환 입력으로 유지합니다.
+새 `jamming_planner`를 명시하면 그 값이 우선하며 두 인자를 함께 지정할 필요가 없습니다.
+LOCAL PR #138의 `jamming_planner:=camera/local` 명칭과 맞춰 localization을 추가한 것입니다.
 
 통합 기준 `fad73f82`에는 별도 LOCAL 선택이 아직 없습니다. 별도 작업트리의 개발 중인
 LOCAL 코드를 가져오지 않았으며 `shadow_planner:=local` 같은 실행 별칭도 만들지 않았습니다.
@@ -84,7 +88,7 @@ roslaunch asmc_camera camera.launch
 ```bash
 roslaunch asmc_lidar lidar.launch
 roslaunch asmc_lidar view.launch dashboard_port:=8097
-roslaunch asmc_planner autonomy_no_bridges_v2.launch shadow_planner:=localization
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=localization
 ```
 
 LiDAR 콘솔에서 점군 전처리 단계를 보려면 위 `lidar.launch`에 `debug:=true`를 추가합니다.

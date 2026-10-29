@@ -64,3 +64,14 @@ assert c.params['/planning_mode/localization_approach_speed_kph'].value==15.
 try:graph('localization',['shadow_motion_yaw_source:=bad'])
 except Exception:print('PASS unsupported motion yaw source rejected before launch')
 else:raise AssertionError('unknown yaw source accepted')
+
+# PR138 uses jamming_planner:=camera/local; share that selector vocabulary
+# without importing the still-unmerged LOCAL implementation. Legacy commands work.
+for canonical, legacy in [('camera','main'),('localization','localization')]:
+    c=graph('main',['jamming_planner:='+canonical])
+    expected=graph(legacy)
+    assert [(n.package,n.type,n.name) for n in c.nodes]==[(n.package,n.type,n.name) for n in expected.nodes]
+try:graph('main',['jamming_planner:=local'])
+except Exception:print('PASS unmerged LOCAL cannot silently select a different controller')
+else:raise AssertionError('unavailable LOCAL was accepted')
+print('PASS canonical jamming_planner and existing shadow_planner commands share one graph')

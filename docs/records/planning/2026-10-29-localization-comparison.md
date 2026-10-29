@@ -34,7 +34,7 @@ docker exec -it asmc-localization-compare bash
 roslaunch asmc_camera camera.launch
 roslaunch asmc_lidar lidar.launch
 roslaunch asmc_lidar view.launch dashboard_port:=8097
-roslaunch asmc_planner autonomy_no_bridges_v2.launch shadow_planner:=localization
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=localization
 ```
 
 판제: <http://localhost:8089/web/index_v2.html>의 Auto 또는 Localization map 후보·선택.
@@ -138,3 +138,13 @@ brake0.3 이후 steady-speed gate만 실패했다. 해당 bag과 실패를 보�
 LiDAR의 기본 `lidar.launch`는 debug stage가 꺼져 있어 콘솔의 진단/객체 상태만 보인다.
 점군·전처리 단계를 보려면 `roslaunch asmc_lidar lidar.launch debug:=true`로 시작한다.
 자동 runner의 `--lidar-debug`도 같은 선택을 기록하며 planner 알고리즘은 바꾸지 않는다.
+
+## 선택 체계와 미병합 LOCAL
+
+LOCAL PR [#138](https://github.com/INHAautonav/2026-ASMC/pull/138)의 공개 head는
+`c73f10f6`이며 확인 시점에는 OPEN, main에는 미포함이다. 해당 코드는 가져오지 않았다.
+그 PR의 명칭을 존중해 정본 선택은 `jamming_planner:=camera` / `jamming_planner:=localization`으로 맞췄다.
+기존 `shadow_planner:=main/localization`은 새 인자가 생략됐을 때의 호환 입력이다.
+새 인자를 명시하면 그 값이 우선한다. 아직 `jamming_planner:=local`은 실행 전 오류로 거절한다.
+#138 병합 후에는 최신 main을 다시 통합해 local 분기와 공용 foundation의 양쪽 의도를 검토해야 한다.
+별도 브랜치의 구현을 미리 합쳤거나 세 방식 통합을 이미 수락한 것으로 표현하지 않는다.
