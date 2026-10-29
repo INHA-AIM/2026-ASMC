@@ -508,6 +508,12 @@ public:
         double map_group_end_s = 0.0;
         CartesianPath spatial_geometry;
         bool retained_geometry = false;
+        // Reconnect to the accepted reference each cycle; never recursively
+        // turn the latest ego connector into the next spatial reference.
+        bool retain_spatial_reference = false;
+        double static_geometry_time = -1;
+        double static_connector_distance = 0;
+        double static_return_distance = 0;
         bool search_pending = false;
         int static_search_pending_level=-1;
         std::string static_corridor_kind;

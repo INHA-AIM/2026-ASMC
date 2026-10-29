@@ -948,6 +948,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                        : "could not generate the committed avoid path");
             if(committed.search_pending)detail+="; static corridor search pending";
             detail+="; side_policy="+std::string(port.planner().avoid_side_policy_name());
+            detail+="; avoid_phase="+std::string(port.planner().avoid_phase_name());
             if(committed.static_search_pending_level>=0)
                 detail+="; static search pending level="+std::to_string(committed.static_search_pending_level);
             if(!committed.rejection_stage.empty())detail+="; corridor rejection="+committed.rejection_stage;
@@ -1136,6 +1137,11 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         if(committed.static_speed_retry)executing.detail+=" speed_retry=1";
         if(!committed.static_corridor_kind.empty())executing.detail+="; corridor="+committed.static_corridor_kind;
         executing.detail+="; side_policy="+std::string(port.planner().avoid_side_policy_name());
+        executing.detail+="; avoid_phase="+std::string(port.planner().avoid_phase_name());
+        if(committed.static_geometry_time>=0)
+            executing.detail+="; geometry_time="+std::to_string(committed.static_geometry_time)+
+                " connector_m="+std::to_string(committed.static_connector_distance)+
+                " return_m="+std::to_string(committed.static_return_distance);
         if(committed.static_search_pending_level>=0)
             executing.detail+="; static search pending level="+std::to_string(committed.static_search_pending_level);
         if(committed.escape_recovery_required)executing.detail+="; initial_margin_escape=1";

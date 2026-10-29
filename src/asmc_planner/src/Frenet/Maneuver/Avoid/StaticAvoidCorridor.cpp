@@ -189,7 +189,13 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
         result.static_execution_speed_cap=accepted_cap;
         result.selected_cost=AvoidRoadMap::PaintCost(road);
         result.escape_recovery_required=recovery;result.retained_geometry=retained;
+        result.retain_spatial_reference=retained&&avoid_cfg_.static_margin_recovery_enabled;
         result.static_progress_fresh=retained&&context.static_progress_fresh;
+        if(avoid_cfg_.static_margin_recovery_enabled)
+            result.static_geometry_time=StaticAvoidGeometryTravelTime(geometry,
+                result.static_speed_retry?accepted_cap:
+                    (policy&&policy->mode!=StaticAvoidPolicy::NORMAL?cap:avoid_cfg_.bypass_speed_cap),
+                dt,wheelbase_,executable_limits);
         result.spatial_geometry=full_geometry;result.candidate_path=std::move(candidate);
         if(policy&&policy->mode!=StaticAvoidPolicy::NORMAL) {
             const auto contact=MeasureStaticAvoidContact(geometry,objects,vehicle_shape_,*policy);
@@ -236,7 +242,17 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
         for(std::size_t i=nearest+1;i<old.x.size();++i)
             remaining+=std::hypot(old.x[i]-old.x[i-1],old.y[i]-old.y[i-1]);
         if(context.static_progress_fresh&&remaining<3.0+ego.v)distance=INFINITY;
-        if(distance<1.5)for(double join:{3.0,5.0,8.0}) {
+        const auto seed=result;
+        const auto saved_speed=context.static_speed;
+        std::size_t generated=result.generated_candidate_count,valid=result.valid_candidate_count;
+        bool have_connection=false;
+        AvoidPrepareResult best_connection;
+        double best_connection_cost=INFINITY;
+        const bool contact=policy&&policy->mode==StaticAvoidPolicy::CONTACT_PROGRESS;
+        const bool compare_shape=avoid_cfg_.static_margin_recovery_enabled&&!contact;
+        const std::array<double,3> joins=compare_shape?std::array<double,3>{8,5,3}:
+            std::array<double,3>{3,5,8};
+        if(distance<1.5)for(double join:joins) {
             std::size_t index=nearest;double traveled=0;
             while(index+1<old.x.size()&&traveled<join) {
                 traveled+=std::hypot(old.x[index+1]-old.x[index],old.y[index+1]-old.y[index]);++index;
@@ -252,16 +268,37 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
             for(std::size_t i=index+1;i<old.x.size();++i) {
                 CartesianState p{};p.x=old.x[i];p.y=old.y[i];p.yaw=old.yaw[i];p.kappa=old.kappa[i];Append(connected,p);
             }
-            if(validate(connected,true)) {
+            result=seed;result.generated_candidate_count=generated;result.valid_candidate_count=valid;
+            const bool checked=validate(connected,true);
+            generated=result.generated_candidate_count;valid=result.valid_candidate_count;
+            // An unselected speed retry must not change the active proof/cap.
+            context.static_speed=saved_speed;
+            if(checked) {
                 result.selected_target_d=committed?context.target_d:context.map_recovery_path_target_d;
-                result.selected_cost=0;result.map_entry_s=context.map_entry_s;
+                result.map_entry_s=context.map_entry_s;
                 result.map_transition_distance=context.map_transition_distance;
                 result.map_return_schedule_valid=context.map_return_schedule_valid;
                 result.map_return_start_s=context.map_return_start_s;result.map_return_end_s=context.map_return_end_s;
                 result.map_group_valid=context.map_group_valid;result.map_group_end_s=context.map_group_end_s;
                 result.static_corridor_kind="retained";
-                return true;
+                result.static_connector_distance=traveled;
+                result.static_return_distance=context.map_return_schedule_valid?
+                    std::max(0.0,ReferenceArcDistance(ref_,context.map_return_start_s,context.map_return_end_s)):0;
+                const double cost=result.static_geometry_time+result.selected_cost;
+                if(!have_connection||cost<best_connection_cost-.02) {
+                    best_connection=result;best_connection_cost=cost;have_connection=true;
+                }
             }
+            // Retention always gets a fresh check, including a zero-budget
+            // probe. Additional shape comparisons yield within this slice.
+            if(have_connection&&(!compare_shape||std::chrono::steady_clock::now()>=deadline))break;
+        }
+        if(have_connection) {
+            result=std::move(best_connection);
+            result.generated_candidate_count=generated;result.valid_candidate_count=valid;
+            result.selected_cost=0;
+            if(result.static_speed_retry)context.static_speed.Enter(result.static_execution_speed_cap);
+            return true;
         }
     }
     const bool center_probe_only=progress.corridor_exhausted;
@@ -467,6 +504,7 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
         if(!segment(geometry,s+return_end,0,0,0,s+total_distance,0,0,0))continue;
         if(validate(geometry,false)) {
             const double paint_cost=result.selected_cost;
+            result.static_connector_distance=0;result.static_return_distance=return_distance;
             result.selected_target_d=primary_target;
             result.selected_cost=total_distance+extra+paint_cost;
             result.map_entry_s=entry_s;result.map_transition_distance=first_transition;

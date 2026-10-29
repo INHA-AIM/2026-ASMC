@@ -121,6 +121,21 @@ positions only, preserving the command, recovery limits and measured progress.
 Feedback reports `side_policy=pre_entry`, `entered` or `requested`.
 `heading_guard` distinguishes a current heading constraint from latched motion.
 
+With static progress recovery enabled, reconnection compares its 16, 12 and 8 m
+return lengths. Retention compares 8, 5 and 3 m connectors to the same accepted
+spatial reference. A curvature/slew-limited travel-time estimate ranks these
+bounded alternatives, with road-paint cost retained; it grants no speed or
+collision exception. Every selected alternative still passes the complete
+checks, and a slice can return its already checked best candidate. Contact
+prefixes, dynamic bypasses and the strict legacy pipeline retain their existing
+selection policies.
+The spatial reference is not overwritten by each measured-ego connector, so
+repeated updates cannot recursively bend the reference itself. A rolling prefix
+does not establish PASS, RETURN or completion merely by reaching its scalar
+endpoint. A complete replacement adopts target, entry and return metadata
+together. Feedback includes `avoid_phase`, `geometry_time`, `connector_m` and
+`return_m` for diagnosing the selected shape and its execution state.
+
 The interval proposal includes side objects outside the original reference
 corridor. It does not replace dense spatial, timed collision, road-exterior,
 curvature, slew, acceleration, jerk or stop-tail checks. A certified center

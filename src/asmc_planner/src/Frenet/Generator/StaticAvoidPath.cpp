@@ -2,7 +2,20 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <vector>
+
+double StaticAvoidGeometryTravelTime(const CartesianPath& geometry,
+    double target,double dt,double wheelbase,const KinematicLimits& limits) {
+    // Evaluate each shape from the same rest state at the same ceiling.
+    // The nominal retimer includes braking anticipation, jerk and a full stop;
+    // a pointwise speed integral undervalues repeated sharp turns.
+    CartesianPath nominal;
+    if(!RetimeStaticAvoidGeometry(geometry,0,0,target,dt,wheelbase,limits,nominal))
+        return std::numeric_limits<double>::infinity();
+    return nominal.x.size()>1?(nominal.x.size()-1)*dt:
+        std::numeric_limits<double>::infinity();
+}
 
 bool RetimeStaticAvoidGeometry(const CartesianPath& input,double speed,
     double acceleration,double target,double dt,double wheelbase,

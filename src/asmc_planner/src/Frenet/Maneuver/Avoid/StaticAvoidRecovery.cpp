@@ -61,6 +61,9 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
         if(old_nominal) {
             context.map_spatial_geometry=std::move(active_geometry);
             if(ok&&trial.retained_geometry) {
+                // This restores a different reference, rather than retaining
+                // the currently active corridor's reference.
+                trial.retain_spatial_reference=false;
                 const auto& old=context.last_nominal;
                 trial.selected_target_d=old.selected_target_d;trial.map_entry_s=old.map_entry_s;
                 trial.map_transition_distance=old.map_transition_distance;

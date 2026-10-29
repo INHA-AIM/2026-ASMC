@@ -91,131 +91,163 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
         for(double via:offsets){
             if(std::fabs(via)>lateral_limit)continue;
             if(v2_avoidance_.has_requested_target_d&&std::fabs(via-v2_avoidance_.requested_target_d)>1e-6)continue;
-            for(double via_slope:{0.0,.25,-.25,.5,-.5})for(double curvature:curvatures)
-            for(double last_length:{8.0,12.0,16.0}){
-                const auto index=ordinal++;
-                if(index<resume)continue;
-                if(std::chrono::steady_clock::now()>=deadline){
-                    if(accept_best())return true;
-                    v2_avoidance_.map_reconnection_cursor=index;return false;
-                }
-                ++result.generated_candidate_count;
-                const auto first=MakeQuintic(d,slope,second_for_curvature(curvature),via,via_slope,0,first_length);
-                const auto back=MakeQuintic(via,via_slope,0,0,0,0,last_length);
-                if(target_ahead) {
-                    // Direction belongs to the actual primary passage, not to
-                    // a waypoint reached after its rear edge. This permits a
-                    // checked S return while retaining the committed side.
-                    const double at_primary=EvalPos(first,std::clamp(gap,0.0,first_length));
-                    if(!MapAvoidSideAllowed(at_primary,committed))continue;
-                }
-                const double total=first_length+last_length;
-                auto sample=[&](double station){
-                    const double z=station<first_length?station:station-first_length;
-                    const auto& polynomial=station<first_length?first:back;
-                    const auto rp=Interpolate(ref_,s+station);
-                    return FrenetToCartesian(rp,s+station,1,0,EvalPos(polynomial,z),EvalVel(polynomial,z),EvalAcc(polynomial,z));
+            for(double via_slope:{0.0,.25,-.25,.5,-.5})for(double curvature:curvatures) {
+                // Keep the same passage/side and compare only its return lengths.
+                // A short curve that is executable only at crawl must not preempt
+                // a smoother checked member of this same bounded family.
+                const bool compare_shape=avoid_cfg_.static_margin_recovery_enabled&&!v2_avoidance_.dynamic_target&&
+                    (!policy||policy->mode!=StaticAvoidPolicy::CONTACT_PROGRESS);
+                const std::array<double,3> returns=compare_shape?std::array<double,3>{16,12,8}:
+                    std::array<double,3>{8,12,16};
+                bool have_family=false;AvoidPrepareResult family_best;double family_cost=INFINITY;
+                const auto accept_family=[&]() {
+                    if(!have_family)return false;
+                    const auto generated=result.generated_candidate_count,valid=result.valid_candidate_count;
+                    result=family_best;result.generated_candidate_count=generated;result.valid_candidate_count=valid;
+                    output=result.candidate_path;v2_avoidance_.map_reconnection_cursor=0;return true;
                 };
-                // Reject impossible representatives before constructing and
-                // retiming hundreds of samples. These exact curve points are
-                // still included in the final complete validation.
-                if(!v2_avoidance_.dynamic_target&&(!policy||policy->mode!=StaticAvoidPolicy::CONTACT_PROGRESS)) {
-                    const auto endpoint=sample(first_length);
-                    if(!v2_avoidance_.map_recovery_active&&
-                       !avoid_road_map_.FootprintInside(endpoint.x,endpoint.y,endpoint.yaw,map_shape))continue;
-                    if(target_ahead&&v2_avoidance_.margin_recovery_ids.empty()) {
-                        const auto passage=sample(std::clamp(gap,0.0,total));
-                        CartesianPath probe;probe.x={passage.x};probe.y={passage.y};probe.yaw={passage.yaw};
-                        if(!StaticAvoidTrajectoryClear(probe,fixed_objects,vehicle_shape_,collision_cfg_,0,policy))continue;
+                for(double last_length:returns){
+                    const auto index=ordinal++;
+                    if(index<resume)continue;
+                    if(std::chrono::steady_clock::now()>=deadline){
+                        if(accept_family())return true;
+                        if(accept_best())return true;
+                        v2_avoidance_.map_reconnection_cursor=index;return false;
                     }
-                }
-                bool geometry_valid=true;double peak_curvature=0;
-                CartesianPath geometry;
-                // Spatial precheck prevents time sampling from jumping over a
-                // short curvature peak. Collision/road are rechecked in time.
-                for(double station=0;station<=total+.0001;station+=.1){
-                    const auto point=sample(std::min(station,total));
-                    if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits_.max_curvature+1e-6){geometry_valid=false;break;}
-                    peak_curvature=std::max(peak_curvature,std::fabs(point.kappa));
-                    geometry.x.push_back(point.x);geometry.y.push_back(point.y);
-                    geometry.yaw.push_back(point.yaw);geometry.kappa.push_back(point.kappa);
-                }
-                if(!geometry_valid){result.rejection_stage="reconnection.curvature";continue;}
-                const double cap=std::min(crawl,std::sqrt(limits_.max_lateral_accel/std::max(1e-6,peak_curvature)));
-                CartesianPath candidate;double station=0,v=std::max(0.0,ego.v),a=initial_a;
-                bool complete=false;
-                if(!v2_avoidance_.dynamic_target) {
-                    // Reconnect geometry can require a lower speed for slew
-                    // than for lateral acceleration. Retiming creates that
-                    // candidate instead of merely rejecting the fast version.
-                    const double tail=std::max(8.0,crawl*crawl/(limits_.max_longitudinal_accel*.8)+crawl);
-                    for(double extra=.1;extra<=tail+.1;extra+=.1) {
-                        const auto rp=Interpolate(ref_,s+total+std::min(extra,tail));
-                        geometry.x.push_back(rp.x);geometry.y.push_back(rp.y);
-                        geometry.yaw.push_back(rp.theta);geometry.kappa.push_back(rp.kappa);
+                    ++result.generated_candidate_count;
+                    const auto first=MakeQuintic(d,slope,second_for_curvature(curvature),via,via_slope,0,first_length);
+                    const auto back=MakeQuintic(via,via_slope,0,0,0,0,last_length);
+                    if(target_ahead) {
+                        // Direction belongs to the actual primary passage, not to
+                        // a waypoint reached after its rear edge. This permits a
+                        // checked S return while retaining the committed side.
+                        const double at_primary=EvalPos(first,std::clamp(gap,0.0,first_length));
+                        if(!MapAvoidSideAllowed(at_primary,committed))continue;
                     }
-                    int blocker=-1;
-                    if(!StaticAvoidTrajectoryClear(geometry,fixed_objects,vehicle_shape_,collision_cfg_,
-                            0,policy,&blocker,nullptr,&v2_avoidance_.margin_recovery_ids)) {
-                        result.blocking_object_id=blocker;
-                        result.rejection_stage="reconnection.spatial_collision";continue;
-                    }
-                    auto limits=limits_;
-                    limits.max_forward_accel=std::min(limits.max_forward_accel,avoid_cfg_.bypass_accel_cap);
-                    std::string rejected;
-                    if(!RetimeStaticAvoidGeometry(geometry,ego.v,initial_a,cap,path_cfg_.dt,wheelbase_,limits,candidate,&rejected)) {
-                        result.rejection_stage="reconnection."+rejected;continue;
-                    }
-                    complete=true;
-                }
-                for(int i=0;!complete&&i<1000;++i){
-                    const auto point=sample(station);
-                    if(v*v*std::fabs(point.kappa)>limits_.max_lateral_accel+1e-6)break;
-                    candidate.x.push_back(point.x);candidate.y.push_back(point.y);candidate.yaw.push_back(point.yaw);
-                    candidate.kappa.push_back(point.kappa);candidate.v.push_back(v);candidate.a.push_back(a);
-                    if(station>=total-.05){complete=candidate.x.size()>1;break;}
-                    const double desired=clip((cap-v)/.8,-limits_.max_longitudinal_accel*.8,limits_.max_longitudinal_accel);
-                    const double next_a=clip(desired,a-limits_.max_longitudinal_jerk*path_cfg_.dt,a+limits_.max_longitudinal_jerk*path_cfg_.dt);
-                    const double next_v=std::max(0.0,v+(a+next_a)*.5*path_cfg_.dt);
-                    // sample(..., s_dot=1) reports ds-to-Cartesian arc metric.
-                    station=std::min(total,station+(v+next_v)*.5*path_cfg_.dt/std::max(.1,point.v));
-                    v=next_v;a=next_a;
-                }
-                if(!complete||!PathObeysSteeringRate(candidate,path_cfg_.dt,wheelbase_,limits_.steering))continue;
-                const auto road=avoid_road_map_.EvaluateRecoveryPath(candidate,map_shape,path_cfg_.dt,
-                    budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,
-                    v2_avoidance_.map_recovery_settled_travel_m,true,
-                    solid_paint_contact_elapsed_s_);
-                int blocking=-1;bool recovery=false;
-                const bool clear=road.drivable&&(v2_avoidance_.dynamic_target?
-                    CartesianAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt,
-                        &blocking,execution_->avoid.obstacle_id,&recovery):
-                    StaticAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt,
-                        policy,&blocking,&recovery,&v2_avoidance_.margin_recovery_ids));
-                last_candidate_paths_.push_back(candidate);last_candidate_validity_.push_back(clear);
-                if(!clear){result.rejection_stage=road.drivable?"reconnection.collision":"reconnection.road";if(blocking>=0)result.blocking_object_id=blocking;continue;}
-                ++result.valid_candidate_count;result.blocking_object_id=-1;
-                result.candidate_valid=result.spatial_candidate_selected=true;result.escape_recovery_required=recovery;
-                result.static_progress_fresh=false;
-                result.selected_target_d=via;result.selected_cost=total+AvoidRoadMap::PaintCost(road);
-                result.map_entry_s=s;result.map_transition_distance=first_length;
-                result.map_return_schedule_valid=true;
-                result.map_return_start_s=std::fmod(s+first_length,length);
-                result.map_return_end_s=std::fmod(s+total,length);
-                result.spatial_geometry=geometry;
-                result.candidate_path=candidate;output=candidate;
-                result.rejection_stage.clear();result.search_pending=false;
-                if(policy&&policy->mode!=StaticAvoidPolicy::NORMAL) {
-                    const auto contact=MeasureStaticAvoidContact(geometry,obstacles,vehicle_shape_,*policy);
-                    result.static_contact_cost=contact.cost;result.static_minimum_clearance=contact.minimum_clearance;
-                    if(policy->mode==StaticAvoidPolicy::CONTACT_PROGRESS&&contact.physical_overlap) {
-                        if(!has_best||contact.cost<best_result.static_contact_cost) {
-                            best_result=result;has_best=true;
+                    const double total=first_length+last_length;
+                    auto sample=[&](double station){
+                        const double z=station<first_length?station:station-first_length;
+                        const auto& polynomial=station<first_length?first:back;
+                        const auto rp=Interpolate(ref_,s+station);
+                        return FrenetToCartesian(rp,s+station,1,0,EvalPos(polynomial,z),EvalVel(polynomial,z),EvalAcc(polynomial,z));
+                    };
+                    // Reject impossible representatives before constructing and
+                    // retiming hundreds of samples. These exact curve points are
+                    // still included in the final complete validation.
+                    if(!v2_avoidance_.dynamic_target&&(!policy||policy->mode!=StaticAvoidPolicy::CONTACT_PROGRESS)) {
+                        const auto endpoint=sample(first_length);
+                        if(!v2_avoidance_.map_recovery_active&&
+                           !avoid_road_map_.FootprintInside(endpoint.x,endpoint.y,endpoint.yaw,map_shape))continue;
+                        if(target_ahead&&v2_avoidance_.margin_recovery_ids.empty()) {
+                            const auto passage=sample(std::clamp(gap,0.0,total));
+                            CartesianPath probe;probe.x={passage.x};probe.y={passage.y};probe.yaw={passage.yaw};
+                            if(!StaticAvoidTrajectoryClear(probe,fixed_objects,vehicle_shape_,collision_cfg_,0,policy))continue;
                         }
-                        result.candidate_valid=false;continue;
                     }
+                    bool geometry_valid=true;double peak_curvature=0;
+                    CartesianPath geometry;
+                    // Spatial precheck prevents time sampling from jumping over a
+                    // short curvature peak. Collision/road are rechecked in time.
+                    for(double station=0;station<=total+.0001;station+=.1){
+                        const auto point=sample(std::min(station,total));
+                        if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits_.max_curvature+1e-6){geometry_valid=false;break;}
+                        peak_curvature=std::max(peak_curvature,std::fabs(point.kappa));
+                        geometry.x.push_back(point.x);geometry.y.push_back(point.y);
+                        geometry.yaw.push_back(point.yaw);geometry.kappa.push_back(point.kappa);
+                    }
+                    if(!geometry_valid){result.rejection_stage="reconnection.curvature";continue;}
+                    const double cap=std::min(crawl,std::sqrt(limits_.max_lateral_accel/std::max(1e-6,peak_curvature)));
+                    CartesianPath candidate;double station=0,v=std::max(0.0,ego.v),a=initial_a;
+                    bool complete=false;
+                    if(!v2_avoidance_.dynamic_target) {
+                        // Reconnect geometry can require a lower speed for slew
+                        // than for lateral acceleration. Retiming creates that
+                        // candidate instead of merely rejecting the fast version.
+                        const double tail=std::max(8.0,crawl*crawl/(limits_.max_longitudinal_accel*.8)+crawl);
+                        for(double extra=.1;extra<=tail+.1;extra+=.1) {
+                            const auto rp=Interpolate(ref_,s+total+std::min(extra,tail));
+                            geometry.x.push_back(rp.x);geometry.y.push_back(rp.y);
+                            geometry.yaw.push_back(rp.theta);geometry.kappa.push_back(rp.kappa);
+                        }
+                        int blocker=-1;
+                        if(!StaticAvoidTrajectoryClear(geometry,fixed_objects,vehicle_shape_,collision_cfg_,
+                                0,policy,&blocker,nullptr,&v2_avoidance_.margin_recovery_ids)) {
+                            result.blocking_object_id=blocker;
+                            result.rejection_stage="reconnection.spatial_collision";continue;
+                        }
+                        auto limits=limits_;
+                        limits.max_forward_accel=std::min(limits.max_forward_accel,avoid_cfg_.bypass_accel_cap);
+                        std::string rejected;
+                        if(!RetimeStaticAvoidGeometry(geometry,ego.v,initial_a,cap,path_cfg_.dt,wheelbase_,limits,candidate,&rejected)) {
+                            result.rejection_stage="reconnection."+rejected;continue;
+                        }
+                        complete=true;
+                    }
+                    for(int i=0;!complete&&i<1000;++i){
+                        const auto point=sample(station);
+                        if(v*v*std::fabs(point.kappa)>limits_.max_lateral_accel+1e-6)break;
+                        candidate.x.push_back(point.x);candidate.y.push_back(point.y);candidate.yaw.push_back(point.yaw);
+                        candidate.kappa.push_back(point.kappa);candidate.v.push_back(v);candidate.a.push_back(a);
+                        if(station>=total-.05){complete=candidate.x.size()>1;break;}
+                        const double desired=clip((cap-v)/.8,-limits_.max_longitudinal_accel*.8,limits_.max_longitudinal_accel);
+                        const double next_a=clip(desired,a-limits_.max_longitudinal_jerk*path_cfg_.dt,a+limits_.max_longitudinal_jerk*path_cfg_.dt);
+                        const double next_v=std::max(0.0,v+(a+next_a)*.5*path_cfg_.dt);
+                        // sample(..., s_dot=1) reports ds-to-Cartesian arc metric.
+                        station=std::min(total,station+(v+next_v)*.5*path_cfg_.dt/std::max(.1,point.v));
+                        v=next_v;a=next_a;
+                    }
+                    if(!complete||!PathObeysSteeringRate(candidate,path_cfg_.dt,wheelbase_,limits_.steering))continue;
+                    const auto road=avoid_road_map_.EvaluateRecoveryPath(candidate,map_shape,path_cfg_.dt,
+                        budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,
+                        v2_avoidance_.map_recovery_settled_travel_m,true,
+                        solid_paint_contact_elapsed_s_);
+                    int blocking=-1;bool recovery=false;
+                    const bool clear=road.drivable&&(v2_avoidance_.dynamic_target?
+                        CartesianAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt,
+                            &blocking,execution_->avoid.obstacle_id,&recovery):
+                        StaticAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt,
+                            policy,&blocking,&recovery,&v2_avoidance_.margin_recovery_ids));
+                    last_candidate_paths_.push_back(candidate);last_candidate_validity_.push_back(clear);
+                    if(!clear){result.rejection_stage=road.drivable?"reconnection.collision":"reconnection.road";if(blocking>=0)result.blocking_object_id=blocking;continue;}
+                    ++result.valid_candidate_count;result.blocking_object_id=-1;
+                    result.candidate_valid=result.spatial_candidate_selected=true;result.escape_recovery_required=recovery;
+                    result.retained_geometry=result.retain_spatial_reference=false;
+                    result.static_progress_fresh=false;
+                    result.selected_target_d=via;result.selected_cost=total+AvoidRoadMap::PaintCost(road);
+                    result.map_entry_s=s;result.map_transition_distance=first_length;
+                    result.map_return_schedule_valid=true;
+                    result.map_return_start_s=std::fmod(s+first_length,length);
+                    result.map_return_end_s=std::fmod(s+total,length);
+                    result.spatial_geometry=geometry;
+                    result.candidate_path=candidate;output=candidate;
+                    result.static_connector_distance=0;result.static_return_distance=last_length;
+                    result.rejection_stage.clear();result.search_pending=false;
+                    if(policy&&policy->mode!=StaticAvoidPolicy::NORMAL) {
+                        const auto contact=MeasureStaticAvoidContact(geometry,obstacles,vehicle_shape_,*policy);
+                        result.static_contact_cost=contact.cost;result.static_minimum_clearance=contact.minimum_clearance;
+                        if(policy->mode==StaticAvoidPolicy::CONTACT_PROGRESS&&contact.physical_overlap) {
+                            if(!has_best||contact.cost<best_result.static_contact_cost) {
+                                best_result=result;has_best=true;
+                            }
+                            result.candidate_valid=false;continue;
+                        }
+                    }
+                    if(compare_shape) {
+                        auto quality_limits=limits_;
+                        quality_limits.max_forward_accel=std::min(quality_limits.max_forward_accel,avoid_cfg_.bypass_accel_cap);
+                        result.static_geometry_time=StaticAvoidGeometryTravelTime(geometry,
+                            policy&&policy->mode!=StaticAvoidPolicy::NORMAL?cap:avoid_cfg_.bypass_speed_cap,
+                            path_cfg_.dt,wheelbase_,quality_limits);
+                        const double cost=result.static_geometry_time+AvoidRoadMap::PaintCost(road);
+                        if(!have_family||cost<family_cost-.02) {
+                            family_best=result;family_cost=cost;have_family=true;
+                        }
+                        result.candidate_valid=false;
+                        continue;
+                    }
+                    v2_avoidance_.map_reconnection_cursor=0;return true;
                 }
-                v2_avoidance_.map_reconnection_cursor=0;return true;
+                if(accept_family())return true;
             }
         }
     }

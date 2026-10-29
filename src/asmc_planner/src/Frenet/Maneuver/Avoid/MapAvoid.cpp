@@ -71,7 +71,9 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         if(result.static_progress_level==0&&!result.static_progress_fresh) {
             context.last_nominal=result;
             context.last_nominal.static_progress_mode=StaticAvoidPolicy::NORMAL;
-            if(context.last_nominal.spatial_geometry.x.empty())
+            if(result.retain_spatial_reference&&!context.map_spatial_geometry.x.empty())
+                context.last_nominal.spatial_geometry=context.map_spatial_geometry;
+            else if(context.last_nominal.spatial_geometry.x.empty())
                 context.last_nominal.spatial_geometry=result.candidate_path;
             result.static_progress_margin=collision_cfg_.safety_margin;
         }
@@ -111,7 +113,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     const double length=ref_.points.back().s;
     const double search_lateral_limit=v2_avoidance_.dynamic_target?4.0:avoid_cfg_.static_search_lateral_limit;
     const double gap=ReferenceArcDistance(ref_, s, v2_avoidance_.obstacle_s);
-    if(committed&&v2_avoidance_.map_return_schedule_valid&&
+    if(committed&&!v2_avoidance_.static_progress_fresh&&v2_avoidance_.map_return_schedule_valid&&
        (!v2_avoidance_.map_group_valid||ReferenceArcDistance(ref_, s, v2_avoidance_.map_group_end_s)<=0)&&
        (execution_->avoid.phase==AvoidPhase::SHIFT||execution_->avoid.phase==AvoidPhase::PASS)&&
        ReferenceArcDistance(ref_, s, v2_avoidance_.map_return_start_s)<=0)
@@ -712,10 +714,27 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 limits_.max_longitudinal_accel*.8,0,0,false,braking_clear);
             return false;
         }
+        const bool completed_owned_group=!v2_avoidance_.dynamic_target&&
+            v2_avoidance_.static_group_recovery&&v2_avoidance_.map_group_valid&&
+            ReferenceArcDistance(ref_,s,v2_avoidance_.map_group_end_s)<=0&&
+            std::fabs(d)<=avoid_cfg_.lateral_tolerance&&CanHandoffAvoidToKeep(ego,s,d,obstacles);
+        if(completed_owned_group) {
+            // A separated wire primary must not extend a completed local group.
+            result.map_group_valid=true;result.map_group_end_s=v2_avoidance_.map_group_end_s;
+            selected_direct_return=true;
+        }
         if(!result.map_group_valid&&v2_avoidance_.map_group_valid&&
            ReferenceArcDistance(ref_, s, v2_avoidance_.map_group_end_s)>0) {
             result.map_group_valid=true;result.map_group_end_s=v2_avoidance_.map_group_end_s;
         }
+        // A complete bypass replacing a rolling prefix is a new checked
+        // entry, even when the prefix's old scalar target implied RETURN.
+        // Adopt its target, entry and return schedule in the same transaction.
+        const bool adopt_static_entry=!completed_owned_group&&!v2_avoidance_.dynamic_target&&
+            !result.retained_geometry&&!result.static_progress_fresh&&
+            !v2_avoidance_.map_lateral_started&&
+            (gap>=0||(result.map_group_valid&&ReferenceArcDistance(ref_,s,result.map_group_end_s)>0));
+        if(adopt_static_entry)selected_direct_return=false;
         if(selected_direct_return&&(!result.map_group_valid||ReferenceArcDistance(ref_, s, result.map_group_end_s)<=0)){
             execution_.observeEarlyReturnCandidate(true);
         } else {
@@ -732,8 +751,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             v2_avoidance_.target_d=result.selected_target_d;
             const bool static_entry_open=!v2_avoidance_.dynamic_target&&!returning&&
                 CanReselectMapAvoidSide(committed);
-            if((may_retime||selected_fresh_entry)&&
-               (!v2_avoidance_.static_recovery_engaged||static_entry_open)){
+            if((may_retime||selected_fresh_entry||adopt_static_entry)&&
+               (!v2_avoidance_.static_recovery_engaged||static_entry_open||adopt_static_entry)){
                 const double entry_gap=ReferenceArcDistance(ref_, s, result.map_entry_s);
                 v2_avoidance_.map_entry_s=result.map_entry_s;
                 v2_avoidance_.map_transition_distance=result.map_transition_distance;
@@ -751,15 +770,17 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         v2_avoidance_.map_group_valid=result.map_group_valid;
         v2_avoidance_.map_group_end_s=result.map_group_end_s;
         v2_avoidance_.static_progress_level=result.static_progress_level;
-        v2_avoidance_.map_spatial_geometry=result.spatial_geometry.x.empty()?
-            result.candidate_path:result.spatial_geometry;
+        if(!result.retain_spatial_reference||v2_avoidance_.map_spatial_geometry.x.empty())
+            v2_avoidance_.map_spatial_geometry=result.spatial_geometry.x.empty()?
+                result.candidate_path:result.spatial_geometry;
         v2_avoidance_.map_recovery_path=result.candidate_path;
         v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
         v2_avoidance_.map_speed_profile_valid=true;
         v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
         v2_avoidance_.map_speed_profile_cap=result.static_execution_speed_cap;
         v2_avoidance_.map_search_turn=0;
-        if(v2_avoidance_.static_recovery_engaged&&execution_->avoid.phase==AvoidPhase::TRACKING)
+        if(v2_avoidance_.static_recovery_engaged&&
+           result.static_progress_mode!=StaticAvoidPolicy::NORMAL&&execution_->avoid.phase==AvoidPhase::TRACKING)
             execution_.beginAvoidShiftProbe();
         output=result.candidate_path;UpdateCommittedAvoidLifecycle(s,d,ego.v,result,
                     CanHandoffAvoidToKeep(ego,s,d,obstacles));
@@ -771,7 +792,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         // A PREPARE hint is revalidated, never executed before COMMIT. Retain
         // its geometry so a late search result does not fall back to WAITING
         // on each subsequent slice while approaching the same command.
-        v2_avoidance_.map_spatial_geometry=result.spatial_geometry.x.empty()?result.candidate_path:result.spatial_geometry;
+        if(!result.retain_spatial_reference||v2_avoidance_.map_spatial_geometry.x.empty())
+            v2_avoidance_.map_spatial_geometry=result.spatial_geometry.x.empty()?result.candidate_path:result.spatial_geometry;
         v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
         v2_avoidance_.map_entry_s=result.map_entry_s;
         v2_avoidance_.map_transition_distance=result.map_transition_distance;
