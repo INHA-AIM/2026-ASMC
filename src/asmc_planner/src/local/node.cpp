@@ -51,6 +51,7 @@ class Node {
   ObstacleMemory obstacle_memory;
   ObjectPrediction object_motion;
   bool local_motion_prediction = false, measured_steering_seed = false;
+  bool quiescent_geometry_padding = false;
   bool retain_static_observations = false;
   ReferencePrior reference_prior;
   bool use_road_memory = true;
@@ -297,6 +298,7 @@ class Node {
       << ",\"phase\":" << std::quoted(phase)
       << ",\"detail_enabled\":" << (detail ? "true" : "false")
       << ",\"requested_kph\":" << config.speed_cap * 3.6
+      << ",\"execution_delay_s\":" << config.delay
       << ",\"steering_kph\":" << r.steering_cap * 3.6
       << ",\"curve_kph\":" << r.curve_cap * 3.6
       << ",\"space_kph\":" << r.space_cap * 3.6
@@ -511,6 +513,14 @@ class Node {
       // arriving slightly older fits must be allowed to catch up. Otherwise
       // choosing the next raster perpetually outruns every delayed fit.
       if(!selected || (!fit_arriving && selected<=last_scene && fit_age>.25) || fit_age>.35)
+        selected=newest_semantic;
+    }
+    if(newest_semantic && newest_semantic>selected) {
+      const auto newest=contexts.at(newest_semantic);
+      // Settling an asynchronous fit cannot hide a new explicit projection
+      // failure behind an older good fit.
+      if(!newest->imu_corrected || newest->views.empty() ||
+         newest->plane_coefficients.size()!=3*newest->views.size() || newest->config_id.empty())
         selected=newest_semantic;
     }
     if (detail) {
@@ -877,7 +887,7 @@ class Node {
                             array.header.stamp.toSec(),plan_stamp.toSec());
     if(local_motion_prediction)
       object_motion.apply(scene.obstacles,Pose{origin->x,origin->y,origin->yaw},
-          array.header.stamp.toSec(),std::min(3.,config.delay+scene.speed/config.decel+.4));
+          array.header.stamp.toSec(),std::min(3.,config.delay+scene.speed/config.decel+.4),quiescent_geometry_padding);
     scene.previous_recovery=previous_recovery;
     for (auto q : previous) {
       double wx = previous_origin.x + std::cos(previous_origin.yaw) * q.x -
@@ -934,6 +944,7 @@ class Node {
             << ",\"source_age_s\":" << ob.source_age
             << ",\"motion_uncertainty_m\":" << ob.uncertainty
             << ",\"retained_measurement\":" << (ob.retained?"true":"false")
+            << ",\"quiescent_geometry_padding\":" << (ob.quiescent_geometry_padding?"true":"false")
             << ",\"motion_budget_mps\":" << ob.motion_budget
             << ",\"local_velocity_mps\":[" << ob.local_vx << ',' << ob.local_vy << ']'
             << ",\"prediction_evidence_age_s\":" << ob.prediction_evidence_age
@@ -1137,6 +1148,7 @@ public:
     p.param("semantic_reference_fallback", semantic_reference_fallback, false);
     p.param("retain_static_observations", retain_static_observations, false);
     p.param("local_motion_prediction", local_motion_prediction, false);
+    p.param("quiescent_geometry_padding", quiescent_geometry_padding, false);
     p.param("measured_steering_seed", measured_steering_seed, false);
     p.param("active_in_jamming_only", active_in_jamming_only, false);
     p.param("recovery", config.recovery, true);
@@ -1151,13 +1163,17 @@ public:
     p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
     p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
     p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
+    // Future controller/transport/actuation allowance after causal scene
+    // alignment. Keep the old default until a trial profile is validated.
+    p.param("execution_delay_s", config.delay, .5);
     if (run.empty() || run.size() > 128 ||
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
                               "WXYZ0123456789-_.") != std::string::npos ||
         !std::isfinite(config.width + config.length + config.rear +
                        config.margin + config.budget_ms + config.speed_cap +
                        config.accel + config.controlled_decel + config.decel +
-                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve) ||
+                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve + config.delay) ||
+        config.delay<.25 || config.delay>1. ||
         config.maneuver_reserve<0. || config.maneuver_reserve>2. ||
         config.decel<1.5 || config.decel>3. ||
         config.preferred_clearance<config.margin || config.preferred_clearance>1. ||

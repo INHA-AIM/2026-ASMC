@@ -25,6 +25,7 @@ struct Obstacle {
   geometry::Polygon2D motion_sweep;
   double local_vx = 0, local_vy = 0, prediction_evidence_age = 0;
   double extra_clearance = 0; // Vulnerable-object space, never a motion assertion.
+  bool quiescent_geometry_padding = false; // Planning-only nonzero age envelope, not a static/velocity label.
 };
 struct Config {
   double length = 4.635, width = 2.160835, rear = .79, margin = .10;

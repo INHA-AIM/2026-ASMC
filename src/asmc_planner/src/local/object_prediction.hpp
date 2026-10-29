@@ -25,7 +25,7 @@ public:
   void clear() { history_.clear(); recent_.clear(); }
   size_t size() const { return history_.size(); }
   void apply(std::vector<Obstacle>& objects,const Pose& origin,double stamp,
-             double horizon) {
+             double horizon,bool quiet_padding = false) {
     if(!std::isfinite(stamp+origin.x+origin.y+origin.yaw+horizon) || horizon<0 || horizon>3.) {
       clear();return;
     }
@@ -36,6 +36,7 @@ public:
     }
     for(auto &o:objects) {
       o.motion_sweep.clear();o.local_vx=o.local_vy=o.prediction_evidence_age=0.;
+      o.quiescent_geometry_padding=false;
       if(o.retained || o.polygon.size()<3)continue;
       double x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
       for(auto p:o.polygon) {
@@ -43,10 +44,28 @@ public:
         x0=std::min(x0,x);x1=std::max(x1,x);y0=std::min(y0,y);y1=std::max(y1,y);
       }
       Sample a{stamp,(x0+x1)*.5,(y0+y1)*.5,x1-x0,y1-y0};
-      auto &q=history_[o.id];
-      if(!q.empty() && (stamp-q.back().t>.30 || std::hypot(a.x-q.back().x,a.y-q.back().y)>1.5)) {q.clear();recent_.erase(o.id);}
-      if(q.empty() || stamp>q.back().t)q.push_back(a);
-      while(q.size()>8 || (!q.empty() && stamp-q.front().t>.60))q.pop_front();
+      auto &history=history_[o.id];
+      if(!history.empty() && (stamp-history.back().t>.30 || std::hypot(a.x-history.back().x,a.y-history.back().y)>1.5)) {history.clear();recent_.erase(o.id);}
+      if(history.empty() || stamp>history.back().t)history.push_back(a);
+      while(history.size()>8 || (!history.empty() && stamp-history.front().t>.60))history.pop_front();
+      const bool mobile=o.classification=="vehicle" || o.classification=="dynamic_obstacle" ||
+          o.camera_class=="car" || o.camera_class=="bus" || o.camera_class=="truck" ||
+          o.camera_class=="motorcycle" || o.camera_class=="bicycle" || o.camera_class=="person" ||
+          o.camera_class=="dog" || o.camera_class=="deer" || o.camera_class=="stroller";
+      bool quiet=history.size()>=6 && history.back().t-history.front().t>=.30;
+      for(const auto &p:history)
+        quiet &= std::hypot(p.x-a.x,p.y-a.y)<=.08 && std::abs(p.w-a.w)<=.15 && std::abs(p.h-a.h)<=.15;
+      // Restore feasibility around a stationary-looking measured box without
+      // declaring it static. The old unconditional5m/s * PAST source age can
+      // cover an already clear car (drive10:61cm SDK gap,75cm policy padding).
+      // Six unique, source-aged rigid observations justify only a NONZERO2m/s
+      // planning envelope. Known mobile groups never qualify. Raw KF velocity,
+      // current polygon, physical margin and future-motion sweep stay intact.
+      if(quiet_padding && quiet && !mobile && o.source_age>=0. && o.source_age<=.15 &&
+         o.motion_budget<=5. && !recent_.count(o.id)) {
+        o.motion_budget=2.;o.uncertainty=2.*o.source_age;o.quiescent_geometry_padding=true;
+      }
+      auto q=history; // Keep the bounded longer evidence; fit the short causal window separately.
       // Use the shortest window that still satisfies the original four
       // unique observations/200ms rule. Mixing a long stationary prefix with
       // a new crossing delayed/repeatedly invalidated the constant-speed fit.

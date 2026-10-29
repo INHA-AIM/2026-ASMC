@@ -34,6 +34,34 @@ Scene empty() {
 }
 int main() {
   {
+    ObjectPrediction prediction;std::vector<Obstacle> objects;
+    auto sample=[](int i,const std::string& group,const std::string& name,double y=0.) {
+      Obstacle o;o.id=i;o.classification=group;o.camera_class=name;
+      o.source_age=.1;o.uncertainty=.5;o.motion_budget=5.;
+      o.polygon={{4.5,y-1.5},{4.8,y-1.5},{4.8,y-1.2},{4.5,y-1.2}};return o;
+    };
+    for(int i=0;i<6;++i) {
+      objects={sample(51,"static_obstacle","traffic_drum"),sample(52,"vehicle","car"),
+               sample(53,"dynamic_obstacle","person"),sample(54,"static_obstacle","motorcycle")};
+      prediction.apply(objects,Pose{},10.+.08*i,2.,true);
+    }
+    expect(objects[0].quiescent_geometry_padding && objects[0].motion_budget==2. &&
+           std::abs(objects[0].uncertainty-.2)<1e-8 && objects[0].motion_sweep.empty(),
+           "six rigid observations retain a nonzero age envelope without declaring static velocity");
+    for(int i=1;i<4;++i)expect(!objects[i].quiescent_geometry_padding && objects[i].motion_budget==5.,
+        "vehicle, vulnerable and motorcycle categories never receive quiet padding");
+    objects={sample(51,"static_obstacle","traffic_drum",.2)};
+    prediction.apply(objects,Pose{},10.48,2.,true);
+    expect(!objects[0].quiescent_geometry_padding && objects[0].uncertainty==.5,
+           "current displacement immediately releases the lower nonzero envelope");
+    prediction.clear();
+    for(int i=0;i<8;++i){objects={sample(51,"static_obstacle","traffic_drum")};prediction.apply(objects,Pose{},20.,2.,true);}
+    expect(!objects[0].quiescent_geometry_padding,"duplicate scans never confirm quiescent geometry");
+    prediction.clear();
+    for(int i=0;i<6;++i){auto o=sample(51,"static_obstacle","traffic_drum");o.source_age=.16;objects={o};prediction.apply(objects,Pose{},30.+.08*i,2.,true);}
+    expect(!objects[0].quiescent_geometry_padding,"aged geometry cannot reduce the past-motion envelope");
+  }
+  {
     auto s=empty();s.speed=1.;s.acceleration=1.;
     Config c;c.recovery=true;c.low_speed_rate_floor=.1;c.speed_cap=10./3.6;
     Result old;old.path_source="rechecked_recovery";
