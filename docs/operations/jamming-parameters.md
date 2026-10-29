@@ -69,7 +69,8 @@ Frenet/LOCAL 시간 매개화도 검증 이력이 달라 공통 모듈 안에서
 | 종류/이름 | 적용 위치·의미 | 현재 통합 기본/주의 |
 |---|---|---|
 | `vehicle_width`, `vehicle_length`, `rear_axle_to_bumper` | 실제 차체 footprint와 차량 기준점 |1.892/4.635/0.790m |
-| `clearance_margin` | LOCAL의 차체 밖 추가 물체/노면 여유 |30cm, 셀 양자화·일부 속도 항목 별도 |
+| `clearance_margin` | LOCAL의 차체 밖 추가 물체 여유. 구 설정에서 도로 값 미지정 시 도로 여유의 호환 기본값 |30cm, 물체 불확실성·일부 속도 항목 별도 |
+| `road_clearance_margin` | LOCAL raster 비노면 검사에 사용하는 별도 차체 밖 여유 |30cm, 셀 양자화 보정 별도 |
 | `preferred_clearance`, `maneuver_clearance` | LOCAL의 넓은 통로 선호 비용 / 근접 기동 감속 판정 |각55cm로 기존 동작 보존. 선호값 미만이라고 무조건 거절하지 않음 |
 | `Config.margin` | localization의 추가 최종 OBB 검사 |10cm. native Frenet 검사를 대체하지 않음 |
 | `collision_check.safety_margin` | native Frenet의 물체 충돌 여유 |45cm, 시간 증가율0.1m/s 유지 |
