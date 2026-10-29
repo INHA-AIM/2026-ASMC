@@ -1467,6 +1467,7 @@ int main(int argc, char** argv) {
 }
 
 
+namespace behavior_planner {
 TEST(NormalCruiseTest,A153LowerCeilingPreviewsAndSurvivesBoundaryJitter) {
  BehaviorDecision d;ASSERT_TRUE(d.setNormalCruiseConfig(CruiseConfig()));
  ASSERT_TRUE(d.setAbsoluteSpeedLimit(57.5/3.6));auto f=CruiseFeature();
@@ -1485,3 +1486,5 @@ TEST(NormalCruiseTest,A153LowerCeilingPreviewsAndSurvivesBoundaryJitter) {
  f.highway.speed_cap_mps=70./3.6;tick(95);++f.route.route_generation;
  EXPECT_DOUBLE_EQ(tick(89.9).hard.max_speed,70./3.6);
 }
+
+} // namespace behavior_planner

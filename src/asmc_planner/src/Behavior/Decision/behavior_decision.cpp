@@ -400,6 +400,11 @@ BehaviorContextData BehaviorDecision::decide(
       {"stop", context.score.stop},
       {"emergency_stop", context.score.emergency_stop},
   };
+  if(route.lower_boundary_valid) {
+    context.debug.cost_terms["next_cap_boundary_distance_m"]=route.lower_boundary_s-feature.ego.s;
+    context.debug.cost_terms["next_cap_mps"]=ordinarySpeedCeiling(route.next_speed_link,route.next_speed_limit);
+    context.debug.cost_terms["next_cap_applied_mps"]=boundary_cap_;
+  }
   return context;
 }
 
