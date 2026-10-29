@@ -25,6 +25,8 @@ def main():
     parser.add_argument('--planner',choices=['main','localization'],default='localization')
     parser.add_argument('--gps-outage', action='store_true')
     parser.add_argument('--own-perception', action='store_true')
+    parser.add_argument('--lidar-debug', action='store_true',
+                        help='record sampled LiDAR debug stages for the read-only viewer; adds monitoring work')
     parser.add_argument('--lease-wait-seconds', type=float,default=0)
     parser.add_argument('--dashboard-port',type=int,default=8089,
                         help='persistent observer on this private master; campaign uses 8089')
@@ -326,7 +328,7 @@ def main():
             if args.own_perception:
                 reporter.phase('warming_inputs')
                 start(['roslaunch','asmc_camera','camera.launch'],'camera')
-                start(['roslaunch','asmc_lidar','lidar.launch',
+                start(['roslaunch','asmc_lidar','lidar.launch','debug:='+str(args.lidar_debug).lower(),
                        'camera_calibration_config:=/root/ws/src/asmc_camera/config/cameras_v3.yaml'],'lidar')
                 deadline=time.monotonic()+45
                 while True:
@@ -569,6 +571,7 @@ def main():
     result['main_view_size']=args.main_view_size
     result['restore_view_size']=args.restore_view_size
     result['monitoring']=monitoring
+    result['lidar_debug_enabled']=args.lidar_debug
     result['diagnostic_geometry_recorded']=True
     result['observer_contact_baseline']=args.observer_contact_baseline
     result['driving_acceptance_eligible']=not args.observer_contact_baseline

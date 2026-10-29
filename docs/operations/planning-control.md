@@ -87,6 +87,9 @@ roslaunch asmc_lidar view.launch dashboard_port:=8097
 roslaunch asmc_planner autonomy_no_bridges_v2.launch shadow_planner:=localization
 ```
 
+LiDAR 콘솔에서 점군 전처리 단계를 보려면 위 `lidar.launch`에 `debug:=true`를 추가합니다.
+기본 실행은 debug 점군 발행이 꺼져 있어 진단과 객체 상태를 확인하는 용도입니다.
+
 GPS가 정상인 전역경로상의 현재 위치에서 초기화합니다. 동일한 공용 master에서는
 인지·주행 전체 파이프라인을 한 작업트리씩 실행합니다. 컨테이너만 달라도 같은
 ROS 이름으로 실행하면 다른 작업의 노드를 교체할 수 있습니다.

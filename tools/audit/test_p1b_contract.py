@@ -30,12 +30,20 @@ class P1BContractTest(unittest.TestCase):
 
     def test_repository_contract_is_valid(self):
         result = validate_contract(REPO_ROOT, self.contract, self.baseline)
-        self.assertEqual(result["message_count"], 42)
+        self.assertEqual(result["message_count"], 44)
         self.assertEqual(result["contract_message_count"], 25)
-        self.assertEqual(result["registered_message_count"], 42)
+        self.assertEqual(result["registered_message_count"], 44)
         self.assertEqual(result["legacy_message_count"], 13)
         self.assertEqual(result["new_message_count"], 12)
         self.assertEqual(result["topic_count"], 11)
+
+    def test_localization_additive_contract_matches_generated_noetic_md5(self):
+        contract = yaml.safe_load((REPO_ROOT / 'config/contracts/localization_control_v1.yaml').read_text())
+        for type_name, definition in contract['messages'].items():
+            name = type_name.split('/')[-1]
+            self.assertEqual(ros1_md5(name, self.specs), definition['md5'])
+            fields = {field.name for field in self.specs[name].fields}
+            self.assertTrue(set(definition['required_fields']).issubset(fields))
 
     def test_legacy_ros_md5_compatibility(self):
         md5s = all_message_md5(self.specs)

@@ -19,6 +19,7 @@ done
 # Opt-in Localization reuses the existing build graph and physical core.
 "${ASMC_CI_DEVEL:-devel}/lib/asmc_planner/localization_input_test"
 "${ASMC_CI_DEVEL:-devel}/lib/asmc_planner/shadow_localization_test" 15
+"${ASMC_CI_DEVEL:-devel}/lib/asmc_controller/control_binding_test"
 python3 tools/scen_runner/test_localization_launch_graph.py
 rostest asmc_planner localization_handoff.test
 rostest asmc_planner localization_seed.test

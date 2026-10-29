@@ -76,7 +76,7 @@ MolitComp03, Foggy13시, 15km/h, 자체 카메라·LiDAR, GPS mask1880→1985m �
 | crossing-left r02 | 5c431f60 | v2 수락 | 0.857s |
 | standing-person | a77a8a23 | 완주했으나 정지 기준 실패 | 3.564s |
 | angled-k5 | fb698197 | station1898에서 정지12s로 실패 | 12s |
-| crossing-right | fb698197 | 완주·native contact없음·복구오류없음, 별도 평가 참조 | 평가 중 |
+| crossing-right | fb698197 | v2 수락 | 0.627s |
 
 v2 수락은 해당 회차의 map/clearance/입력/제어/복구/기록 gates다. 모든 장면의 성공을 뜻하지 않는다.
 vehicle/pedestrian v2 gates에는 터널 탈출3초 내 본차로 복귀를 독립 판정하는 gate가 없으므로
@@ -100,3 +100,41 @@ Localization은 IMU/Ego 적분과 HD-map을 사용하고 LOCAL의 입력 차이�
 이 PR은 인지 알고리즘·배포 engine을 바꾸지 않는다.
 
 새 통합 빌드/실행 결과는 아래에 추가하며 과거 수락으로 대신하지 않는다.
+
+## 최신 main 통합 검증
+
+`86c270ca`의 깨끗한 소스/launch와 새 build/devel에서 확인했다.
+전체 runtime 및 evaluator·회귀 타깃 빌드, 입력/epoch·정적 core·제어 바인딩25개,
+GPS mode/recovery/selector/handoff/seed/reorder/approach ROS7개, 최신 main Frenet3개와
+LiDAR 벽·천장·지면5개 회귀가 통과했다. 새 ROS 메시지2개는 정식 additive registry에
+등록하고 실제 Noetic 생성 MD5와 독립 계산을 대조했다. 기존42개 메시지는 유지한다.
+
+통합 후 `integration-localization-k5-15-r01`: 51.36초 완주, 중간 정지0초,
+최소 native OBB 여유0.939m, 유효 이동 판단98.73%, 제어 최대 간격70.5ms,
+planner p95 7.72ms. GPS/DR/복구 및 양방향 인계를 포함해 v2 gates 모두 통과했다.
+진입/복귀 시 brake최대0/0.0039, 해당 인계 근처 속도최저7.94/14.86km/h다.
+이 수치는 ROS 수신 기준이며 actuator 적용 latency 보장이 아니다.
+
+일반 GPS station1700→1740에서 main r01과 localization r02는 같은15km/h 시험 정책으로
+모든 normal gates를 통과했다. 횡오차p95는2.14/2.16cm, 제어 최대 간격62.8/54.8ms다.
+Localization r01은 두 프레임의 공용 Frenet `all candidates blocked by collision`에 따른
+brake0.3 이후 steady-speed gate만 실패했다. 해당 bag과 실패를 보존했고 무해한 노이즈로 확정하지 않았다.
+재시험 성공을 최초 실패의 삭제나 전체 일반 구간 수락으로 해석하지 않는다.
+
+기본 팀원 재밍 방식은 기존 target20km/h를 유지한다. 따라서15km/h 시험은 조건이 맞지 않아
+16.36km/h에서 중단됐다.20km/h 시험도21.17km/h로 목표+1 제한을 넘어 중단됐다.
+두 회차는 접촉/복구오류 없이 정리됐지만 진입 이후 실제 전체 복귀는 수락하지 않았다.
+기본 팀원 제어를 이 PR에서 튜닝하거나 guard를 느슨하게 하지는 않았다.
+양방향 기본 selector/GPS 복귀의 ROS 회귀 통과와 실제 주행 미완료를 구분한다.
+
+독립 native 참조 추가 분석에서 선정 K5·트럭·우측 횡단·통합 K5는 station1996.73 첫
+관측 시점에 이미 횡오차25cm/방향3도 이내다. 이는 첫 표본 결과이며 전체 차체의
+차선 접촉 규칙이나3초간 유지 수락을 대신하지 않는다.
+
+통합 비교 갤러리 [E744](http://localhost:8000/localization-obstacles-20261029-r01/scenario-diversity-review-r2/index.html)는
+기존 E730을 보존한 새 페이지다. 여덟 회차의 성공/실패·후보·선택·native 위치·정지·OBB 여유를 비교한다.
+모든 원본은 등록된 `localization-obstacles-20261029-r01` 아래 append-only로 보존한다.
+
+LiDAR의 기본 `lidar.launch`는 debug stage가 꺼져 있어 콘솔의 진단/객체 상태만 보인다.
+점군·전처리 단계를 보려면 `roslaunch asmc_lidar lidar.launch debug:=true`로 시작한다.
+자동 runner의 `--lidar-debug`도 같은 선택을 기록하며 planner 알고리즘은 바꾸지 않는다.

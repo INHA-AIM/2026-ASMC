@@ -1,5 +1,7 @@
 # GPS anchor와 DR로 연결한 map 정적 회피 실험
 
+> 2026-10-29 통합: 링크만 현재 localization 이관 경로로 연결했다. 아래 실험 날짜·SHA·과거 명칭은 유지한다.
+
 2026-10-28. [측위·재사용 분석](2026-10-28-aimdrive-shadow-map-analysis.md)의 첫 구현이다.
 기준은 `feat/shadow-local-footprint`의 `6f416d46`이고 구현은 별도
 `research/shadow-aimdrive-localization-20261028` worktree에 있다.
@@ -12,7 +14,7 @@ DR 기반 map 경로가 local MPC까지 전달됐다. 실제 시뮬레이터의 
 
 ## 연결한 코드
 
-- [anchor.hpp](../../../src/asmc_planner/src/shadow_map/anchor.hpp): native GPS/IMU rear-axle
+- [anchor.hpp](../../../src/asmc_planner/src/shadow_localization/anchor.hpp): native GPS/IMU rear-axle
   상태와 같은 source 시각의 상대 odometry를 맞춘다. 최근 1초의 map-minus-odometry
   변환을 평균하고 GPS 소실 뒤 고정한다. AIM식 anchor 구조를 현재 C++ 적분에 연결했으며
   AIMDrive Python 패키지나 외부 구현을 복사하지 않았다.
@@ -20,7 +22,7 @@ DR 기반 map 경로가 local MPC까지 전달됐다. 실제 시뮬레이터의 
   기존 adapter의 0.35m GPS lever 제거, true ENU→UTM grid 보정과 정상 GPS 필터를 유지한다.
   `/Ego_topic`에서는 기존 local node와 동일하게 차속만 사용한다. GT 자차 위치·heading은
   측위 입력으로 사용하지 않는다.
-- [static_planner.cpp](../../../src/asmc_planner/src/shadow_map/static_planner.cpp): 공개
+- [static_planner.cpp](../../../src/asmc_planner/src/shadow_localization/static_planner.cpp): 공개
   `PrepareAvoid`/`CommitAvoid`/`PlanCommittedAvoid` 경계를 사용한다. 전체 Behavior FSM을
   시작하는 대신 이 실험이 정적 대상 선택과 기동 수명주기를 소유한다.
 - 대상은 서로 다른 관측 4개 이상, 0.5초 이상, 자차 이동 보상 후 중심 변화 0.15m 이내와
@@ -76,7 +78,7 @@ clock을 복원했다고 주장하지 않는다. 공급 공백과 시작/종료�
 
 ## 실행과 재현
 
-연구용 진입점은 [shadow_map_static.launch](../../../src/asmc_planner/launch/shadow_map_static.launch)다.
+연구용 진입점은 [shadow_map_static.launch](../../../src/asmc_planner/launch/shadow_localization_static.launch)다.
 다음은 제어 없는 preview이며 센서 bridge나 인지 노드를 추가로 시작하지 않는다.
 
 ```bash
@@ -98,7 +100,7 @@ rosrun asmc_planner shadow_map_test 15 left
 python3 tools/scen_runner/test_local_boundary.py
 ```
 
-bag 재생은 [replay_shadow_map.py](../../../tools/perception/replay_shadow_map.py)를 사용했다.
+bag 재생은 [replay_shadow_map.py](../../../tools/perception/replay_localization.py)를 사용했다.
 새 run을 D에 등록하고 입력 bag SHA·설정 SHA·source revision/dirty patch를 보존한 뒤,
 별도 `--network none` 컨테이너에서 실행한다. 아래 경로는 컨테이너 `/storage` 계약이다.
 

@@ -25,4 +25,6 @@ python3 -m unittest tools/perception/test_object_engine_selection.py
 python3 src/asmc_planner/tests/behavior/dashboard_startup_test.py
 node src/asmc_planner/tests/behavior/dashboard_motion_test.js
 node src/asmc_planner/tests/behavior/dashboard_shadow_test.js
+node src/asmc_planner/tests/behavior/dashboard_localization_test.js
+python3 src/asmc_planner/tests/behavior/dashboard_localization_test.py
 python3 -m compileall -q src tools/ci tools/scen_runner/scen_runner
