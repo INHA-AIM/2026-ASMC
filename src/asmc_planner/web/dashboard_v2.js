@@ -29,7 +29,8 @@
     links: [], nodes: [], route: [], lights: {}, command: null, feedback: null,
     feature: null, trajectory: null, ego: null, lidarObjects: null,
     lidarMotionDebug: null, debugConfig: null, planningMarkers: null,
-    recentPlanningIssue: null, receivedAt: {}, shadow: {}, shadowReceived: 0
+    recentPlanningIssue: null, receivedAt: {}, shadow: {}, shadowReceived: 0,
+    staticPolicy: null, staticPolicyReceived: 0, policyExpired: false
   };
   const view = {scale: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0, follow: false};
   const tracks = new Map();
@@ -46,6 +47,20 @@
   const worldToScreen = point => ({x: point[0] * view.scale + view.x, y: -point[1] * view.scale + view.y});
   const screenToWorld = (x, y) => [(x - view.x) / view.scale, -(y - view.y) / view.scale];
   const typeInfo = value => objectTypes[Number(value)] || {name: `TYPE ${value}`, css: 'unknown', color: '#a8b6c0'};
+  const currentPolicy = () => {
+    const p=data.staticPolicy, raw=data.lidarObjects;
+    const elapsed=Math.max(0,performance.now()-data.staticPolicyReceived);
+    if(!p?.available || !raw || !Number.isFinite(p.age_ms) ||
+      p.age_ms+elapsed>1000 || (Number.isFinite(p.hold_remaining_ms)&&elapsed>p.hold_remaining_ms))return null;
+    const keys=['stamp_ns','producer_session_id','generation','scan_sequence','config_id','calibration_id'];
+    return keys.every(k=>p[k]!==undefined && String(p[k])===String(raw[k]))?p:null;
+  };
+  const policyInfo = object => {
+    const p=currentPolicy(), verdict=p?.objects?.find(o=>o.planner_id===Number(object.id));
+    if(!verdict || verdict.original_type!==Number(object.type))return {
+      name:`미확인 (입력 ${typeInfo(object.type).name})`,css:'unconfirmed',color:'#94a3b8',remapped:false,confirmed:false};
+    return {...typeInfo(verdict.effective_type),remapped:verdict.effective_type!==verdict.original_type,confirmed:true};
+  };
   // Camera/fusion semantics are separate from the planner's legacy policy enum.
   // For example box/static_obstacle may intentionally retain type=0 (UNKNOWN).
   // Display the current typed observation; never infer class from motion/debug history.
@@ -252,7 +267,7 @@
   }
 
   function drawLidarObject(object) {
-    const info = typeInfo(object.type);
+    const info = policyInfo(object);
     const debug = motionDebugById.get(Number(object.id));
     const motion = objectMotion(object, debug);
     const selectedAvoidTarget = Boolean(data.feature?.static_obstacle_ahead) &&
@@ -273,8 +288,9 @@
       const roadRatio = Number(debug?.road_ratio);
       const road = Number.isFinite(roadRatio) && roadRatio >= 0
         ? ` road ${Math.round(roadRatio * 100)}%` : '';
-      ctx.fillText(`ID ${object.id} ${semanticLabel(object)}${target}`, point.x + 7, point.y - 21);
-      ctx.fillText(`policy ${info.name} · motion ${motion.name}${road}`, point.x + 7, point.y - 7);
+      const waiting=currentPolicy()?.display_wait_ms>0?' · 관측 동기화 대기':'';
+      ctx.fillText(`ID ${object.id} ${info.confirmed?info.name:'판단 미확인'} · 인식 ${semanticLabel(object)}${target}`, point.x + 7, point.y - 21);
+      ctx.fillText(`policy ${info.name} · motion ${motion.name}${road}${waiting}`, point.x + 7, point.y - 7);
     }
   }
 
@@ -481,11 +497,11 @@
     const debugMessage = data.lidarMotionDebug || {};
     const debugObjects = debugMessage.objects || [];
     const outputById = new Map(objects.map(object => [Number(object.id), object]));
-    const counts = {vehicle: 0, pedestrian: 0, unknown: 0, static: 0};
+    const counts = {vehicle: 0, pedestrian: 0, unknown: 0, static: 0, unconfirmed: 0};
     const stateCounts = {UNKNOWN: 0, LOW_THREAT: 0, PENDING: 0, DYNAMIC: 0};
     const stageCounts = {drivable: 0, known_static: 0, static_zone: 0, planning_relevance: 0, unknown: 0};
     for (const object of objects) {
-      const name = typeInfo(object.type).css;
+      const name = policyInfo(object).css;
       if (Object.prototype.hasOwnProperty.call(counts, name)) ++counts[name];
       else ++counts.unknown;
       const motion = objectMotion(object, motionDebugById.get(Number(object.id)));
@@ -512,6 +528,7 @@
     const boundary = debugMessage.boundary_filter || {};
     const knownStatic = debugMessage.known_static_filter || {};
     const staticZone = debugMessage.static_structure_filter || {};
+    const policy=currentPolicy();
     $('lidarGrid').innerHTML = kv([
       ['Frame', message.header?.frame_id || 'WAIT'],
       ['Source stamp', finite(message.header?.stamp) ? fmt(message.header.stamp, 3) : '–'],
@@ -520,6 +537,12 @@
       ['Road mask', !data.lidarMotionDebug ? '진단 없음' : boundary.available === false ? 'FAIL-OPEN' : `margin ${fmt(boundary.margin_m)}m · ≥${fmt(Number(boundary.road_ratio_threshold) * 100, 0)}%`],
       ['Fixed filters', !data.lidarMotionDebug ? '진단 없음' : `catalog ${knownStatic.available ? 'ON' : 'OFF'} · zones ${staticZone.available ? staticZone.zone_count ?? 0 : 'OFF'}`],
       ['Output objects', objects.length],
+      ['정적구간 정책', policy ? (!policy.enabled?'OFF':policy.ego_in_scope?'구간 안':'구간 밖') :
+        data.staticPolicy?.available?'판단 오래됨/관측 불일치':data.staticPolicy?.reason||'판단 미수신'],
+      ['UNKNOWN 전환', policy ? policy.remapped : '미확인'],
+      ['객체/판단 표시 동기화', policy ? policy.display_wait_ms>0?
+        `다음 관측 대기 · ${fmt(policy.display_wait_ms,0)} ms 이전 관측 표시`:'같은 관측 연결 완료':'연결 대기/미확인'],
+      ['Policy 미확인', counts.unconfirmed],
       ['Policy vehicle / ped', `${counts.vehicle} / ${counts.pedestrian}`],
       ['Policy unknown', counts.unknown],
       ['Motion U/L/P/D', `${stateCounts.UNKNOWN}/${stateCounts.LOW_THREAT}/${stateCounts.PENDING}/${stateCounts.DYNAMIC}`],
@@ -528,7 +551,7 @@
       ['AVOID target', avoidTargetId === null ? 'NONE' : `ID ${avoidTargetId}`],
       ['Appeared IDs', changeText(lidarChanges.appeared)],
       ['Disappeared IDs', changeText(lidarChanges.disappeared)],
-      ['Policy type changes', changeText(lidarChanges.typeChanged)],
+      ['Input type changes', changeText(lidarChanges.typeChanged)],
       ['Yaw rate', '0 assumed / unmeasured']
     ]);
     const filterSummary = !data.lidarMotionDebug
@@ -559,7 +582,7 @@
     $('lidarObjects').innerHTML = rows.length ? rows.slice(0, 50).map(row => {
       const object = row.object || debugAsObject(row.debug);
       const debug = row.debug;
-      const info = row.object ? typeInfo(object.type) : debugTypeInfo(debug);
+      const info = row.object ? policyInfo(object) : debugTypeInfo(debug);
       const motion = objectMotion(row.object, debug);
       const isAvoidTarget = row.id === avoidTargetId;
       const speed = Math.hypot(Number(object.vx || 0), Number(object.vy || 0));
@@ -582,7 +605,7 @@
         : '–';
       return `<div class="object-row ${info.css} ${motion.css} ${row.keep ? 'filter-kept' : 'filter-dropped'} ${isAvoidTarget ? 'avoid-selected' : ''}">
         <span class="object-id">ID ${esc(row.id)}${isAvoidTarget ? '<b>AVOID</b>' : ''}</span>
-        <span class="object-type">${esc(semanticLabel(object))}<br>policy ${esc(info.name)}</span>
+        <span class="object-type">${row.object?(info.confirmed?esc(info.name):'판단 미확인')+' · ':''}인식 ${esc(semanticLabel(object))}<br>policy ${esc(info.name)}</span>
         <span class="motion-state">${esc(motion.name)}</span>
         <span class="filter-state">${row.keep ? 'KEEP' : 'DROP'}</span>
         <span class="object-detail" title="${esc(geometry)}">${esc(geometry)}</span>
@@ -881,6 +904,9 @@
       data.debugConfig = snapshot.debug_config || data.debugConfig;
       data.recentPlanningIssue = snapshot.recent_planning_issue || data.recentPlanningIssue;
       data.receivedAt = snapshot.received_at || {};
+      data.staticPolicy = snapshot.static_mission_policy || null;
+      data.staticPolicyReceived = performance.now();
+      data.policyExpired = false;
       if (snapshot.lidar_objects) {
         data.lidarObjects = snapshot.lidar_objects;
         updateLidarTracks(snapshot.lidar_objects);
@@ -903,7 +929,12 @@
     }
   }
 
-  setInterval(() => { updateHealth(); updateShadowPanel(); if (localView()) draw(); }, 200);
+  setInterval(() => {
+    updateHealth(); updateShadowPanel();
+    if(data.staticPolicy?.available && !currentPolicy() && !data.policyExpired) {
+      data.policyExpired=true;updateLidarPanel();draw();
+    } else if (localView()) draw();
+  }, 200);
   // Schedule after completion: a slow HTTP response must not build an overlapping queue.
   loadMap();
   pollSnapshot();

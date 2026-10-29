@@ -81,6 +81,11 @@ class HighSpeedSection(Section):
         self.links = load_links(repo_path(common['link_map']))
         self.rng = random.Random(self.seed)
         self.period = self.rng.choice(high['periods_s'])
+        self.driving_period = self.period
+        self.ego_wait = False
+        self.ego_wait_period = float(high['ego_wait_period_s'])
+        if not math.isfinite(self.ego_wait_period) or self.ego_wait_period <= 0:
+            raise ValueError('ego 출발 대기 중 NPC 생성 주기는 양수여야 합니다.')
         self.sources = []
         for point in high['points']:
             cfg = copy.deepcopy(self.cfg)
@@ -89,6 +94,7 @@ class HighSpeedSection(Section):
                        start_point_index=point['start_point_index'], end_point_index=point['end_point_index'])
             self.sources.append(SourceSchedule(point['id'], SimpleNamespace(cfg=cfg, period=self.period), self.clock()))
         self.tickets, self.initial_ids, self.samples = [], None, {}
+        self.running = False
 
     @staticmethod
     def at_start(ticket, state):
@@ -132,8 +138,14 @@ class HighSpeedSection(Section):
         enable_ticket(self.link, ticket, False)
         ticket['actor'] = aid
         self.link.actor_scopes[aid] = ticket['info'].client_key
+        birth_period = ticket.get('spawn_period_s', self.period)
+        birth_plan = SimpleNamespace(cfg=ticket['lane'].plan.cfg, period=birth_period)
         self.register(aid, 1, ticket['model'], ticket['target'], source=ticket['lane'].source_id,
-                      replay=vehicle_spec(ticket['model'],ticket['target'],ticket['lane'].plan,'native',ticket['lane'].source_id))
+                      replay=vehicle_spec(ticket['model'],ticket['target'],birth_plan,'native',ticket['lane'].source_id))
+        # Disabling the spawn point does not stop its already-created vehicle.
+        # Claim it first so a failed pause RPC still leaves it cleanable.
+        if not self.running:
+            self.link.pause_actor(aid, 1, True)
         # Native Custom target is separate from the physical dynamics ceiling.
         # A reused body can carry a low ceiling; always overwrite it for this
         # generation. Register first so a failed setter remains cleanable.
@@ -142,7 +154,7 @@ class HighSpeedSection(Section):
         source.count += 1
         source.pending = None
         print(f'[통합 고주로 {source.source_id} 생성 {source.count}] {ticket["model"]} · '
-              f'목표 {ticket["target"]}km/h · 주기 {self.period}초', flush=True)
+              f'목표 {ticket["target"]}km/h · 주기 {birth_period:g}초', flush=True)
 
     def advance(self, states):
         now = self.clock()
@@ -179,9 +191,14 @@ class HighSpeedSection(Section):
                     messages.append(f'{source.source_id}: MORAI 생성/ID 대응 대기 {elapsed:.1f}초')
                     continue
                 self.bind(source.pending, matches[0])
+            # A slow source/planner must not accumulate traffic at the sources
+            # that already supplied their one preparation vehicle.
+            if not self.running and source.count >= 1:
+                continue
             if source.count >= self.cfg['maximum_spawn_vehicle'] or now < source.next_due:
                 continue
-            model, speed = source.retry_choice or (self.rng.choice(list(self.cfg['models'])), self.rng.choice(self.cfg['speeds_kmh']))
+            speeds = self.cfg['ego_wait_speeds_kmh'] if not self.running or self.ego_wait else self.cfg['speeds_kmh']
+            model, speed = source.retry_choice or (self.rng.choice(list(self.cfg['models'])), self.rng.choice(speeds))
             try:
                 ticket = create_ticket(self.link, source, model, speed)
             except SourcePlacementDeferred:
@@ -190,7 +207,7 @@ class HighSpeedSection(Section):
                 messages.append(f'{source.source_id}: 생성점 배치 거부 · 재시도 대기')
                 continue
             source.retry_choice = None
-            ticket.update(baseline=set(live), requested_at=now)
+            ticket.update(baseline=set(live), requested_at=now, spawn_period_s=self.period)
             self.tickets.append(ticket)
             source.pending = ticket
             source.next_due = now+self.period
@@ -204,8 +221,34 @@ class HighSpeedSection(Section):
         return self.prepared
 
     def resume_schedule(self, now):
+        for actor in self.actors:
+            self.link.pause_actor(actor.request_id, 1, False)
+        self.running = True
         for source in self.sources:
             source.next_due = now+self.period
+
+    def set_ego_wait(self, waiting, now):
+        """Select spawn period and new NPC speeds for ego's departure wait."""
+        phase_changed = self.ego_wait != waiting
+        self.ego_wait = waiting
+        self.period = self.ego_wait_period if waiting else self.driving_period
+        for source in self.sources:
+            # Deferred placement has not created a vehicle yet. Choose again
+            # under the new phase; successfully issued tickets retain targets.
+            if phase_changed:
+                source.retry_choice = None
+            source.plan.period = self.period
+            source.next_due = now+self.period
+
+    def pause_prepared(self):
+        """Restore the preparation hold if departure fails or is cancelled."""
+        self.running = False
+        errors = []
+        for actor in self.actors:
+            try:self.link.pause_actor(actor.request_id, 1, True)
+            except Exception as error:errors.append(f'{actor.request_id}: {error}')
+        if errors:
+            raise RuntimeError('고주로 NPC 준비 정지 복구 실패: '+'; '.join(errors))
 
     def tick(self):
         self.advance(self.link.states())

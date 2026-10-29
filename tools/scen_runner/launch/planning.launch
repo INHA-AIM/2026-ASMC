@@ -1,7 +1,9 @@
 <launch>
-  <!-- Use the same state source, shadow-zone handoff and avoidance settings
-       as the ordinary D command. The supervisor still owns/restarts this group. -->
+  <!-- Use the operational state source and mission settings. The supervisor
+       owns/restarts this group; dashboard and RViz stay outside the group. -->
   <include file="$(find asmc_planner)/launch/autonomy_no_bridges_v2.launch">
+    <arg name="highway_merge" value="true"/>
+    <arg name="state_source" value="competition"/>
     <arg name="dashboard" value="false"/>
     <arg name="rviz" value="false"/>
   </include>

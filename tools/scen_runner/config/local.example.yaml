@@ -9,3 +9,8 @@ dll:
   # 자신의 Simulator_Data/Managed 전체 WSL 경로를 입력하세요.
   # 예: /mnt/c/MORAI/Simulator/Simulator_Data/Managed
   managed_path: null
+
+bridge:
+  # PC 전용 브릿지가 있을 때 컨테이너 내부 스크립트 절대경로를 입력하세요.
+  # null이면 저장소의 scripts/udp_bridge.sh를 사용합니다.
+  script: null

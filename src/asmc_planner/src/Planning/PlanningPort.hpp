@@ -24,6 +24,7 @@
 #include "Execution/CommandExecutionCompatibility.hpp"
 #include "Parser/RuntimeConfig.hpp"
 #include "Parser/PlanningInput.hpp"
+#include "Parser/StaticMissionPolicy.hpp"
 
 namespace frenet_planner_ros {
 
@@ -33,6 +34,9 @@ class PlanningPort {
     PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh);
     PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh, FeedbackSink);
     void receiveIntent(const asmc_planner::RequestedIntent&);
+    void setStaticMissionPolicy(std::shared_ptr<const asmc_planner::StaticMissionPolicy> policy) {
+      static_mission_policy_ = std::move(policy);
+    }
     std::shared_ptr<const HighwayMergeRoute> highwayRoute() const { return planner_.highway_route(); }
     asmc_planner::lane_reference::HighwayReferenceStatus highwayReferenceStatus() const {
         return highway_reference_?highway_reference_->status():asmc_planner::lane_reference::HighwayReferenceStatus{};
@@ -326,6 +330,7 @@ class PlanningPort {
     bool planner_initialized_ = false;
 
     mutable std::mutex input_mutex_;
+    std::shared_ptr<const asmc_planner::StaticMissionPolicy> static_mission_policy_;
     asmc_msgs::VehicleState latest_vehicle_;
     planning_inputs::DetectedObjectArray latest_objects_;
     asmc_msgs::BehaviorContext latest_behavior_;

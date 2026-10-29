@@ -4,6 +4,7 @@ ROS source stamps and monotonic reception ages are kept separate. Coordinates
 remain in the source frame; a local drawing is never placed at the last GPS pose.
 """
 import math
+from collections import OrderedDict
 import threading
 import time
 
@@ -15,6 +16,106 @@ def stamp_ns(header):
 def xy(point):
     values = [float(point.x), float(point.y)]
     return values if all(math.isfinite(v) for v in values) else None
+
+
+class StaticPolicyObservations:
+    """Join actual behavior policy to the exact private planning observation."""
+    def __init__(self, clock=time.monotonic):
+        self.clock = clock
+        self.lock = threading.Lock()
+        self.reports = OrderedDict()
+        self.observations = OrderedDict()
+        self.latest = None
+
+    @staticmethod
+    def key(value):
+        return tuple(str(value[k]) for k in ('stamp_ns', 'producer_session_id',
+                     'generation', 'scan_sequence', 'config_id', 'calibration_id'))
+
+    def remember_objects(self, objects):
+        key = self.key(objects)
+        with self.lock:
+            # A repeated source frame must not refresh its display lifetime.
+            if key not in self.observations:
+                self.observations[key] = (objects, self.clock())
+                while len(self.observations) > 32:
+                    self.observations.popitem(last=False)
+
+    def paired_snapshot(self, objects):
+        """Wait at most 300 ms using a complete older pair, never old type/new box."""
+        report = self.snapshot(objects)
+        if report['available']:
+            return objects, dict(report, display_wait_ms=0.)
+        if report['reason'] != '이 관측의 플래너 판단 미확인':
+            return objects, report
+        try:
+            newest = self.key(objects)
+            with self.lock:
+                candidates = list(self.observations.items())
+            now = self.clock()
+            for key, (candidate, received) in reversed(candidates):
+                # Do not retain geometry across a producer/config reset.
+                if any(key[i] != newest[i] for i in (1, 2, 4, 5)):
+                    continue
+                lag_ms = (int(newest[0])-int(key[0]))/1e6
+                age_ms = max(0., (now-received)*1000.)
+                if not 0 < lag_ms <= 300 or age_ms >= 300 or int(key[3]) >= int(newest[3]):
+                    continue
+                matched = self.snapshot(candidate)
+                if matched['available']:
+                    return candidate, dict(matched, display_wait_ms=lag_ms,
+                        object_age_ms=age_ms, hold_remaining_ms=300.-age_ms)
+        except (KeyError, TypeError, ValueError):
+            pass
+        return objects, report
+
+    def put(self, report):
+        try:
+            if report['schema'] != 'static_mission_policy/v1' or any(
+                    type(report[k]) is not bool for k in ('enabled', 'input_fresh', 'ego_in_scope')):
+                return False
+            if not isinstance(report['objects'], list) or any(
+                    type(obj[k]) is not int for obj in report['objects']
+                    for k in ('planner_id', 'original_type', 'effective_type')):
+                return False
+            key = self.key(report) if report['input_fresh'] else None
+        except (KeyError, TypeError):
+            return False
+        with self.lock:
+            self.latest = (report, self.clock())
+            if key is not None:
+                self.reports[key] = self.latest
+                self.reports.move_to_end(key)
+                while len(self.reports) > 32:
+                    self.reports.popitem(last=False)
+        return True
+
+    def snapshot(self, objects):
+        missing = lambda reason: dict(available=False, reason=reason)
+        with self.lock:
+            if self.latest is None:
+                return missing('플래너 판단 미수신')
+            latest, received = self.latest
+            now = self.clock()
+            if now-received > 1.:
+                return missing('플래너 판단 오래됨')
+            if not latest['input_fresh']:
+                return missing('플래너 객체 입력 무효/오래됨')
+            try:
+                entry = self.reports.get(self.key(objects))
+            except (KeyError, TypeError):
+                entry = None
+            if entry is None:
+                return missing('이 관측의 플래너 판단 미확인')
+            report, received = entry
+            if now-received > 1.:
+                return missing('이 관측의 플래너 판단 오래됨')
+            raw = objects.get('objects', [])
+            effective = report['objects']
+            if len(raw) != len(effective) or any(a['id'] != b['planner_id'] or
+                    a['type'] != b['original_type'] for a, b in zip(raw, effective)):
+                return missing('플래너 객체 연결 불일치')
+            return dict(report, available=True, age_ms=max(0., (now-received)*1000.))
 
 
 class LocalScene:

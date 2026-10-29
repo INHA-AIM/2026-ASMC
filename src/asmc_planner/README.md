@@ -47,6 +47,46 @@ Observer-only dashboard (does not start another planner):
 roslaunch asmc_planner dashboard.launch state_topic:=/planning/vehicle/state
 ```
 
+## 정적 미션의 객체 분류
+
+`autonomy_no_bridges_v2.launch`는 `static_obstacle_unknown:=true`가 기본입니다.
+`highway_merge:=true`와 함께 사용할 수 있으며, 일반 Behavior/Frenet에 동일한 정책을 적용합니다.
+HD map의 `kcity2025_competition_metadata.yaml`에서 `static_obstacle_candidate`를 읽고,
+메타데이터에 지정된 공식 경로에 자차와 객체를 투영합니다. 자차와 객체가 모두 해당
+구간 안에 있을 때만 `person`·`vehicle`의 내부 `type`을 `UNKNOWN`으로 처리합니다.
+자차는 경로 진행 방향도 확인하며, 횡 허용거리는 기본 10m입니다.
+
+행동 판단이 사용한 변환 결과는 읽기 전용 `/planning/static_mission_policy`
+(`std_msgs/String`, JSON) 진단으로 제공합니다. 진단은 제어 입력이 아니며,
+입력 순서와 관측 identity를 보존합니다.
+
+주행 대시보드(`dashboard.launch`, 기본 8088 포트)는 이 진단을 관측 identity와
+내부 객체 ID로 연결합니다. 변환되면 지도에 `UNKNOWN · 인식 person` / `policy UNKNOWN`을
+표시하며, 원본 `/planning/objects.type`을 실제 적용 정책으로 표시하지 않습니다.
+관측이 일치하지 않거나 진단이 오래되면 `policy 미확인 (입력 PEDESTRIAN)`처럼 구분합니다.
+새 관측의 진단이 늦으면 최대 300ms 이내의 직전 객체/진단 쌍을 함께 표시하고
+`관측 동기화 대기`를 명시합니다. 이전 타입을 새 객체 좌표에 덮어쓰지 않습니다.
+진단 도착 즉시 새 쌍으로 갱신하며, 실제 타입 변경은 그대로 표시합니다. 대기 기한 초과,
+입력 무효 또는 생산자/설정 변경 시 이전 쌍을 재사용하지 않고 `판단 미확인`을 표시합니다.
+화면 변경 반영에는 대시보드 서버 재시작과 브라우저 새로고침이 필요합니다.
+LiDAR 뷰어(`roslaunch asmc_lidar view.launch`)는 원본 인식 분류를 표시합니다.
+
+원본 `/planning/objects`, `classification`, `camera_class`, 운동 상태, 속도, ID,
+OBB는 보존합니다. `DYNAMIC_PENDING`·`DYNAMIC`은 분류를 바꿔도 정적 회피 후보가
+되지 않으며, 모든 객체는 기존 충돌 검사에 남습니다. 경로가 없으면 정지합니다.
+자차 구간은 매 주기 확인하므로 새 객체 메시지가 없어도 구간 이탈 시 원래 분류가 복구됩니다.
+공식 경로 전체의 선분에 공간 인덱스를 만들어 최근접 탐색 비용을 줄이며,
+동일 거리에서는 기존처럼 경로 순서상 앞선 선분을 선택합니다. Behavior의 객체 복사와
+자료형 변환은 새 관측 또는 자차 구간 상태 변경 시에만 수행합니다. 원본 관측이 같은지
+확인할 때는 불변 메시지의 소유권을 유지하며, 지도 인덱스는 Behavior/Frenet에서 읽기만 합니다.
+
+공식 경로는 메타데이터의 `$ASMC_DATA`를 환경변수 `ASMC_DATA`(기본 `/data`)로
+치환하여 읽습니다. 경로 SHA256·점 개수·길이와 미션의 `planning_enforcement_allowed`를
+검증하며 잘못된 자료로는 시작하지 않습니다. 시작 로그의 `Static mission UNKNOWN policy`와
+적용 중 `Static mission: ... person/vehicle objects use UNKNOWN policy`로 확인할 수 있습니다.
+기존 정책으로 실행하려면 `static_obstacle_unknown:=false`를 지정합니다.
+단독 `planner_v2.launch`의 MORAI 객체 입력에는 이 변환을 적용하지 않습니다.
+
 ## 제어 명령 중단 시 정지
 
 `asmc_control_selector`는 선택된 NORMAL/JAMMING 입력의 마지막 수신 시각을 steady clock으로 감시합니다. `~command_timeout_s`(기본 0.25초)가 지나거나 모드가 없거나 유효하지 않으면 20Hz로 가속 0·제동 1 명령을 보냅니다. 모드 전환 시에도 새로 선택된 입력이 도착할 때까지 정지합니다. 선택되지 않은 입력이 계속 들어와도 타이머를 갱신하지 않습니다. 따라서 MPC 프로세스 종료 뒤 시뮬레이터가 마지막 가속 명령을 계속 유지하는 일을 막습니다. `/ctrl_cmd`의 유일한 발행자는 계속 이 선택기입니다.

@@ -13,7 +13,7 @@ import threading
 import time
 import xmlrpc.client
 
-from scen_runner.config import REPO_ROOT, TOOL_ROOT
+from scen_runner.config import REPO_ROOT, TOOL_ROOT, load_local_config
 from .control import RoleLease, alive, atomic_json, process_identity, read_json, runtime_dir, settings
 from .process import OwnedProcess
 from .readiness import Readiness
@@ -142,14 +142,30 @@ def guarded_command(command, owner, stopping):
         group.stop()
 
 
+def bridge_command():
+    script = load_local_config().get('bridge', {}).get('script')
+    if script is None:
+        path = REPO_ROOT/'scripts/udp_bridge.sh'
+    else:
+        if not isinstance(script, str) or not script.strip() or not Path(script).is_absolute():
+            raise ValueError('local.yaml의 bridge.script에는 컨테이너 내부 절대경로를 입력하세요.')
+        path = Path(script)
+    if not path.is_file():
+        raise ValueError('브릿지 실행 파일 없음: '+str(path))
+    return ['bash', str(path), '--transport', 'local']
+
+
 def worker(role, config, check=False, owner=None):
     stopping = [False]
     def stop(*_):
         stopping[0] = True
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, stop)
-    if role == 'bridge' and not check:
-        return guarded_command(['bash', str(REPO_ROOT/'scripts/udp_bridge.sh'), '--transport', 'local'], owner, stopping)
+    if role == 'bridge':
+        command = bridge_command()
+        print('[브릿지 실행 명령] '+shlex.join(command), flush=True)
+        if not check:
+            return guarded_command(command, owner, stopping)
     import roslaunch
     import roslaunch.parent
     launch_config = launch_configuration(role, config)

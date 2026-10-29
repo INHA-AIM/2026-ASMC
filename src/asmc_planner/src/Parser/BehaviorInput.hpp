@@ -20,6 +20,7 @@
 
 #include "Behavior/Decision/behavior_decision.hpp"
 #include "Behavior/Feature/DynamicObjectPolicy.hpp"
+#include "Parser/StaticMissionPolicy.hpp"
 #include "Execution/IntentEncoder.hpp"
 #include "Behavior/Feature/feature_builder.hpp"
 #include "Output/Behavior/data_logger.hpp"
@@ -39,6 +40,9 @@ class BehaviorInput {
   BehaviorInput(ros::NodeHandle, ros::NodeHandle, IntentSink, DynamicEnvironment);
   void receiveFeedback(const asmc_msgs::FrenetFeedback&);
   void spin();
+  void setStaticMissionPolicy(std::shared_ptr<const asmc_planner::StaticMissionPolicy> policy) {
+    static_mission_policy_ = std::move(policy);
+  }
   void setHighwayReferenceSource(std::function<asmc_planner::lane_reference::HighwayReferenceStatus()> source) {
     highway_reference_source_=std::move(source);
   }
@@ -101,9 +105,13 @@ class BehaviorInput {
   FeatureBuilder builder_;
   DynamicObjectPolicy dynamic_policy_;
   std::vector<::TrackedObject> canonical_objects_;
+  std::shared_ptr<const asmc_planner::StaticMissionPolicy> static_mission_policy_;
+  asmc_planner::StaticMissionPolicy::Observation static_mission_observation_;
+  planning_inputs::DetectedObjectArray::ConstPtr raw_detected_objects_;
   double objects_source_time_ = 0;
   bool dynamic_enabled_ = true;
   ros::Publisher dynamic_diagnostics_pub_;
+  ros::Publisher static_mission_diagnostics_pub_;
   BehaviorDecision decision_;
   std::shared_ptr<TrafficLightProvider> lights_;
   BehaviorVisualization visualization_;

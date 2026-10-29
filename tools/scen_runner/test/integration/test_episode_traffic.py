@@ -39,7 +39,7 @@ class EpisodeTrafficTest(unittest.TestCase):
     def test_configs_routes_and_catalogue_match_verified_section_settings(self):
         section,link=self.section()
         self.assertEqual([s.source_id for s in section.sources],[6,8,10])
-        self.assertIn(section.period,[8,9]);self.assertEqual(len(section.cfg['models']),16)
+        self.assertIn(section.period,[6,7]);self.assertEqual(len(section.cfg['models']),16)
         self.assertEqual(section.cfg['speeds_kmh'],list(range(50,81)))
         self.assertEqual(section.cfg['maximum_spawn_vehicle'],50)
         for source in section.sources:
@@ -58,7 +58,7 @@ class EpisodeTrafficTest(unittest.TestCase):
         for call in link.set_speed_limit.call_args_list:
             aid,target=call.args
             self.assertEqual(section.owned()[aid][1],target)
-            self.assertGreaterEqual(target,50);self.assertLessEqual(target,80)
+            self.assertGreaterEqual(target,40);self.assertLessEqual(target,60)
         self.assertTrue(section.ready_live(states))
         link.spawn.assert_not_called()
 

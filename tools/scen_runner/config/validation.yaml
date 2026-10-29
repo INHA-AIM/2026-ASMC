@@ -36,6 +36,6 @@ section_traffic_lights:
 sections:
   static: {start_link: A2256W000213, lead_in_m: 15.0, end_link: A2256W000222}
   dynamic: {start_link: A2256W000728, lead_in_m: 30.0, end_link: A2256W000205}
-  roundabout: {start_link: A2256W000148, lead_in_m: 15.0, end_link: A2256W000151}
-  high_speed: {start_link: A2256W000846, lead_in_m: 0.0, end_link: A2256W000446}
+  roundabout: {start_link: A2256W000304, lead_in_m: 0.0, end_link: A2256W000151}
+  high_speed: {start_link: A2256W000866, start_anchor: end, lead_in_m: 0.0, end_link: A2256W000446, ego_start_delay_s: 8.0}
   tunnel: {start_link: A2256W000448, lead_in_m: 0.0, end_link: A2256W000126}

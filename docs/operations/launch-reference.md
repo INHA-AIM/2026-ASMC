@@ -231,6 +231,7 @@
 | `canonical_objects_topic` | `/planning/objects` | — |
 | `lidar_input_topic` | `/perception/lidar/planning_observations_map` | — |
 | `avoid_path_margin_m` | `0.4` | — |
+| `static_obstacle_unknown` | `true` | — |
 | `expected_config_sha256` | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | — |
 | `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
 | `rviz` | `false` | 재밍 카메라 차선변경 RViz(BBOX·차선·경로) 표시 |
@@ -256,6 +257,7 @@
 | `objects_input_type` | `morai` | — |
 | `planning_objects_topic` | `/planning/objects` | — |
 | `avoid_path_margin_m` | `0.4` | — |
+| `static_obstacle_unknown` | `true` | — |
 
 ## MPC component
 

@@ -53,6 +53,9 @@ cp -n tools/scen_runner/config/local.example.yaml tools/scen_runner/config/local
 | `morai.host` | 컨테이너에서 접속할 MORAI Windows 호스트의 IP 또는 호스트명. PC마다 다를 수 있으므로 직접 입력한다. |
 | `morai.port` | MORAI gRPC 서버 포트. 기본값은 `7789`이며 UDP 포트와 다르다. |
 | `dll.managed_path` | 자신의 `Simulator_Data/Managed` 전체 **WSL 경로**. 예: `/mnt/c/MORAI/Simulator/Simulator_Data/Managed`. DLL 도구를 사용하지 않으면 `null`로 둬도 된다. |
+| `bridge.script` | PC 전용 브릿지 스크립트의 **컨테이너 내부 절대경로**. `null` 또는 생략 시 저장소의 `scripts/udp_bridge.sh`를 사용한다. |
+
+카메라 TCP→UDP 릴레이를 사용하는 PC는 개인 설정에 `bridge: {script: /usr/local/bin/udp_bridge.sh}`를 지정한다. 이후 `run_bridge.sh`가 해당 PC용 스크립트를 실행한다. `run_bridge.sh --check`는 선택된 명령과 ROS 구성을 확인하며 릴레이나 브릿지를 시작하지 않는다. 지정된 파일이 없으면 기본 브릿지로 우회하지 않고 오류로 종료한다. Windows 릴레이가 준비되지 않았다면 WSL의 `udp_bridge.sh`로 먼저 준비하고, 그 명령이 실행한 브릿지를 종료한 뒤 `run_bridge.sh`를 사용한다. 두 브릿지를 동시에 실행하지 않는다.
 
 시나리오는 `static_obstacle.yaml`을 읽은 뒤 개인 설정의 `morai.host`와 `morai.port`를 적용한다. 주소가 비어 있으면 GUI·판제 연동·MORAI 연결을 시작하기 전에 설정 파일과 입력 항목을 안내한다. 맵·객체·속도·날씨·반복 횟수는 기존 공유 YAML에서 관리하며 개인 설정으로 덮어쓰지 않는다. 개인 설정 없이도 `--help`와 오프라인 배치/재현 자료 검사는 사용할 수 있다.
 
@@ -87,9 +90,13 @@ GUI의 `선택 모드로 시작`과 `다음 반복 · 다시 준비`도 같은 �
 
 리스폰마다 **ego 정지 → 판제 노드 종료 확인 → 시작점 복귀/객체 배치 → 차량 상태 추정·판제·MPC·제어 선택기 재시작 → 새 입력 준비 확인 → 주행 허용** 순서로 처리한다. 종료 요청은 최대 `stop_timeout_s` 동안 확인하며, 실패하면 위치 이동/출발을 진행하지 않는다. 마지막 회차에는 판제를 종료하고 시작점으로 복귀한 뒤 ego 정지를 유지한다. 수동 종료도 소유한 판제를 정리한다. 시나리오가 비정상 종료되거나 응답을 멈추면 판제 실행기가 자신이 띄운 노드를 정리한다.
 
+시나리오의 `launch/planning.launch`는 현재 운영 진입점인 `asmc_planner/autonomy_no_bridges_v2.launch`를 포함하고 `highway_merge:=true`, `state_source:=competition`을 적용한다. GPS/IMU 위치와 `/Ego_topic`의 Competition 종방향 속도를 결합하는 노드 및 재밍 설정도 이 통합 launch를 따른다. 대시보드는 회차별 재시작 대상에서 제외하도록 `dashboard:=false`로 둔다. 기존 `autonomy_no_bridges_v2.launch`를 함께 실행하지 않는다.
+
 판제 초기화 중 구간을 바꾸면 강제 종료된 노드의 등록이 ROS master에 남을 수 있다. 새 판제 worker는 실행할 노드 이름 중 로컬 프로세스가 없고, 동일한 로컬 API 주소에서 두 번 연결 거부가 확인된 등록만 해제한다. 정리 시 `[판제 잔류 등록 정리]`를 출력한다. 응답하는 노드·초기화 중인 프로세스·통신 시간 초과·원격 주소·다른 노드 이름은 자동 정리하지 않고 기존 중복 실행 검사를 유지한다.
 
 회전교차로 준비 단계에서는 NPC 1대를 생성한다. 판제 입력 준비와 ego 주행 허용이 완료된 뒤 설정된 주기로 추가 생성한다. `판제 연동 실패` 상태에서 1대만 보인다면 생성 대수 제한이 아니라 판제 시작 오류부터 확인해야 한다.
+
+고주로 준비 단계에서는 생성점 6/8/10마다 목표속도 40~60km/h로 첫 NPC 1대를 생성하고, ID를 확인하는 즉시 해당 차량을 일시 정지한다. 다른 생성점과 판제 입력 준비를 기다리는 동안 추가 차량을 생성하지 않는다. 고주로 구간별 실행에서는 출발 조건 확인 후 NPC를 먼저 출발시키고 ego만 8초 더 정지한다. 이 대기 동안 새 NPC의 목표속도는 40~60km/h, 추가 생성 주기는 3초이며, ego 출발 시 이번 회차에 선택된 6초 또는 7초 주기로 전환하고 다음 생성은 출발 시점에서 해당 주기 뒤로 예약한다. ego 출발 후 생성하는 NPC의 목표속도는 50~80km/h이며, 이미 생성한 차량의 목표속도는 유지한다. 속도 범위는 `high_speed.yaml`의 `ego_wait_speeds_kmh`와 `speeds_kmh`로 설정한다. 기본 주기는 회차마다 하나를 뽑아 모든 고주로 생성점에 공통으로 적용하며, 8초·9초 주기는 사용하지 않는다. GUI에 남은 대기 시간과 현재 생성 주기를 표시하며, 주행 횟수·정체 타이머는 ego 출발부터 계산한다. 대기 시간은 `validation.yaml`의 `sections.high_speed.ego_start_delay_s`, 생성 주기는 `high_speed.yaml`의 `ego_wait_period_s`와 `periods_s`로 설정한다. 전체 씬과 저장 기록 재현에는 이 추가 대기를 적용하지 않는다. 출발 처리 실패·취소 시 준비된 고주로 NPC를 다시 정지시키며, 주행 중 새로 생성되는 NPC는 정상 출발한다.
 
 판제 실행기는 평소 D 명령의 `autonomy_no_bridges_v2.launch`를 직접 포함한다. 실측 속도 입력, 터널 사전 재밍 전환, 장애물 간격·회피·진입 차로 복귀 설정을 함께 사용하며 dashboard와 RViz는 끈다. 실행마다 해석된 ROS 파라미터·노드 목록·SHA256을 `.runtime/stack/<instance>/planning_resolved.json`에 저장하고, 해당 worker의 설정을 `events.jsonl`의 `driving_ready.planning_configuration`에도 남긴다.
 
@@ -205,7 +212,7 @@ Python 신호 처리기는 종료 플래그만 남기며 Qt 타이머가 Ctrl+C/
 | 정적 | 접근도로 1개·교차로 1~2개, 진로 방해와 회피 가능성 검사 | `one_scene.yaml`, `obstacle_catalog.yaml`, `static_obstacle.yaml` |
 | 동적 | Man1/Woman1/Boy1/Girl1/Deer1/Dog1/Ped_Pet1, 가로·대각선 횡단 | `dynamic_crossing.yaml`, `dynamic_validation.yaml` |
 | 회전교차로 | 모델 랜덤·4/5초 씬 고정 주기, 목적지 도착 삭제 | `roundabout.yaml` |
-| 고주로 | 생성점 6/8/10, 차마다 목표 50~80km/h, 8/9초 공통 씬 고정 주기 | `high_speed.yaml`, `roundabout.yaml` |
+| 고주로 | 생성점 6/8/10, 기본 목표 50~80km/h·6/7초 주기, 준비 차량·ego 출발 대기 중 신규 차량 40~60km/h, 대기 중 3초 주기 | `high_speed.yaml`, `roundabout.yaml` |
 | 터널 | 정적 1개·동적 1개·각각 1개 동시 중 씬마다 선택 | `tunnel.yaml` |
 
 설정 파일은 모두 `config/`에 있다. 기존 모델·난수 선택·횡단 시작/끝·Activation Distance·생성 주기와 안전거리/TTC 조건을 유지한다. 동적 속도는 15/16/17/18km/h에서 선택하고 ego 25km/h 기준의 횡단 타이밍을 계산한다. 회전교차로 속도 상한은 15/17/19/20/21km/h이며 15 다음 차량은 21로 선택한다. 고주로는 MORAI 원생성점의 Custom 목표속도와 차량 물리 상한을 함께 설정한다. 목표와 실측 속도는 GUI 표에서 구분한다.
@@ -215,6 +222,10 @@ Python 신호 처리기는 종료 플래그만 남기며 Qt 타이머가 Ctrl+C/
 링크 맵은 최신 main의 `src/asmc_planner/config/behavior/link_set.json`을 사용한다. 예전 충돌 기록의 `src/behavior_planner/src/config/` 경로는 공통 로더에서 새 위치로 변환하며 같은 지도 SHA256 검사를 적용한다. 지도 내용이 달라지면 재현을 계속 거부한다. 외부 절대경로로 지정한 지도는 별도로 유지한다.
 
 맵·차선·링크·전역 경로 위치는 기존 YAML이 지정하는 저장소 파일을 사용한다. GUI는 도로 JSON, 배치 계산은 기존 도로/차선 JSON과 경로로 거리 격자를 만든다. 파일 또는 조건이 바뀌면 캐시를 갱신한다. 별도 H5로 실행 경로를 바꾸지 않는다. `validation.yaml`은 구간 시작/끝과 구간 종료선을 설정한다. 기본 구간 종료선은 끝점에서 진로에 직각이며 좌우 10m, 끝점 접근 범위는 25m다.
+
+회전교차로 구간별 실행(`--mode section --section roundabout`)의 ego는 `A2256W000304` 시작 station의 전역 경로 위에서 진행 방향을 향해 출발한다(`lead_in_m: 0.0`). 구간 종료는 `A2256W000151` 끝점이다. 시작 설정을 바꾸면 러너를 재실행한다.
+
+고주로 구간별 실행(`--mode section --section high_speed`)의 ego는 `A2256W000866` 끝 station의 전역 경로 위에서 진행 방향을 향해 출발한다(`start_anchor: end`, `lead_in_m: 0.0`). 구간 종료는 `A2256W000446` 끝점이다.
 
 전체 씬은 확인된 ego 접촉 또는 **CP14 반경 3m 통과 후 START/END 반경 3m 복귀**로 끝난다. CP1~13의 순서 통과는 완주 조건이 아니다. 단일 구간은 확인된 접촉 또는 끝점 도착/종료선의 전방 통과로 끝난다. 큰 위치 점프나 후진은 통과로 세지 않는다. 충돌은 gRPC 접촉 ID의 실제 상대·위치/BoundingBox·새 진입을 확인해 판정하며, 거리만으로 충돌을 만들지 않는다. 준비 중부터 남은 접촉 ID와 오래된 응답은 새 접촉으로 승격하지 않는다.
 
@@ -234,11 +245,11 @@ section_runs:
 
 남은 횟수가 있으면 객체 정리·시작점 복귀·새 시드/환경 배치 후 다시 주행한다. 마지막 횟수면 기록 복사 → 객체 정리 → 해당 시작점 복귀/정지 확인 → 저장 마무리 → GUI와 코드 종료로 끝낸다. 마지막에는 외부 MPC가 계속 실행돼도 ego가 움직이지 않도록 속도 0·P 기어·일시 정지를 유지한다. 사용자가 중간에 창 닫기/Ctrl+C로 종료하면 객체 정리 후 D 기어·일시 정지 해제로 기존 조종 입력을 복귀한다. 정리/복귀 실패 시에는 오류와 정지 상태를 유지한다.
 
-`stagnation.yaml`은 주행 허용 후 **150초 동안 기준 위치에서 XY 거리 1m 이내**에 머무르면 해당 구간 설정을 저장하고 주행을 끝내도록 한다. 1m를 넘게 이동하면 새 위치에서 시간을 다시 센다. 준비 대기·기록 재현에는 적용하지 않는다. 관측 공백 5초 초과는 시간에 포함하지 않는다.
+`stagnation.yaml`은 주행 허용 후 **30초 동안 기준 위치에서 XY 거리 1m 이내**에 머무르면 해당 구간 설정을 저장하고 주행을 끝내도록 한다. 1m를 넘게 이동하면 새 위치에서 시간을 다시 센다. 준비 대기·기록 재현에는 적용하지 않는다. 관측 공백 5초 초과는 시간에 포함하지 않는다.
 
 ```yaml
 enabled: true
-duration_s: 150.0
+duration_s: 30.0
 position_radius_m: 1.0
 max_sample_gap_s: 5.0
 ```
@@ -268,6 +279,8 @@ max_sample_gap_s: 5.0
 `events.jsonl`에는 회차 시작·생성 요청 ID/충돌 ID와 소유 범위·접촉 판정 변경·객체 정리 확인/실패를 기록한다. `--collision-debug`나 `--speed-debug` 없이도 저장하며, 시작할 때 `[검증 진단 파일]`로 경로를 표시한다. 이전 실행 등 이번 회차 관리 대상 밖의 객체와 접촉하면 GUI에 해당 ID와 제외 이유를 표시한다.
 
 정적 객체는 초입에 1개, 교차로에 1~2개로 총 2~3개다. 정리할 때 정적 객체의 생성 별칭을 확인하고, 삭제 응답 후 상태 목록에서도 삭제를 확인한다. 삭제를 확인하지 못한 객체는 관리 목록에 남기고 다음 회차 생성을 중단한다. 종료 시 판제 실행기가 먼저 꺼졌어도 MORAI가 연결돼 있으면 객체 정리는 계속하며, 판제 종료를 확인하지 못한 경우 ego는 정지를 유지한다.
+
+새 정적구간·터널 배치는 저장된 실측 카탈로그와 현재 MORAI의 사용 가능 장애물 목록을 대조한다. 설치본에 없는 모델은 `[모델 호환]` 로그와 함께 새 배치 후보에서 제외한다. 원본 카탈로그와 저장된 재현 기록은 바꾸지 않는다. 모델 목록 조회 실패나 실제 생성 실패는 준비 오류로 정지하며, 주행 후 정체 타이머로 건너뛰지 않는다.
 
 ```text
 tools/scen_runner/save_collision_log/
