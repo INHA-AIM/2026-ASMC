@@ -1164,6 +1164,7 @@ public:
     p.param("preferred_clearance", config.preferred_clearance, .40);
     p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
     p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
+    p.param("recovery_verified_target_m", config.recovery_target, 4.);
     double maneuver_cap_kph=0.;p.param("maneuver_speed_cap_kph", maneuver_cap_kph, 0.);
     config.maneuver_speed_cap=maneuver_cap_kph/3.6;
     p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
@@ -1173,7 +1174,8 @@ public:
         !std::isfinite(config.width + config.length + config.rear +
                        config.margin + config.budget_ms + config.speed_cap +
                        config.accel + config.controlled_decel + config.decel +
-                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve + config.maneuver_speed_cap) ||
+                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve + config.maneuver_speed_cap + config.recovery_target) ||
+        config.recovery_target<4. || config.recovery_target>8. ||
         config.maneuver_speed_cap<0. || config.maneuver_speed_cap>10./3.6 ||
         config.maneuver_reserve<0. || config.maneuver_reserve>2. ||
         config.decel<1.5 || config.decel>3. ||

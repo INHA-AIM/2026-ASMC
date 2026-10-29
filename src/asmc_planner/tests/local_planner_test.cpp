@@ -34,6 +34,16 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty();Config c;c.recovery=true;c.recovery_target=6.;
+    Result r;
+    expect(BuildRecoveryPath(s,c,r) && r.path.back().s>5.9,
+           "current verified road can extend a crawl target beyond its old4m search limit");
+    for(int col=0;col<s.grid.cols;++col)s.grid.coverage[110*s.grid.cols+col]=0; // x=9, nose reaches it near s=5.
+    Result blocked;
+    expect(BuildRecoveryPath(s,c,blocked) && blocked.path.back().s<5.3,
+           "the extension stops at unobserved road; near-field soft handling stays within4m");
+  }
+  {
     auto s=empty();for(auto &p:s.home)p[1]=-3.5;
     Obstacle o;o.id=125;o.uncertainty=.18;
     o.polygon={{5.,-1.5},{5.3,-1.5},{5.3,-1.2},{5.,-1.2}};s.obstacles={o};
