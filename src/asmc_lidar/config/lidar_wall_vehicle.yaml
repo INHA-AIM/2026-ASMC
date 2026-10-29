@@ -202,7 +202,7 @@ vehicle:
     y: 0.0
     yaw: 0.0
     z: 1.45
-  RearOverhang: 0.7
+  RearOverhang: 0.790
   WheelBase: 3
   Width: 1.892
 pre_entry_wall:

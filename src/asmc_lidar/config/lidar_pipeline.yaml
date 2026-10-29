@@ -38,7 +38,7 @@ vehicle:
   Width: 1.892
   WheelBase: 3
   FrontOverhang: 0.845
-  RearOverhang: 0.700
+  RearOverhang: 0.790
   LiDAR:
     x: 0.80
     y: 0.00

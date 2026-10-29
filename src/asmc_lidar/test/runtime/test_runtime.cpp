@@ -555,7 +555,7 @@ TEST(RuntimeConfig, LoadsShippedConfigWithCurrentOperatingValues) {
   EXPECT_EQ(p.vehicle.f32_Width, 1.892f);
   EXPECT_EQ(p.vehicle.f32_WheelBase, 3.f);
   EXPECT_EQ(p.vehicle.f32_FrontOverhang, 0.845f);
-  EXPECT_EQ(p.vehicle.f32_RearOverhang, 0.700f);
+  EXPECT_EQ(p.vehicle.f32_RearOverhang, 0.790f);
   EXPECT_EQ(p.vehicle.st_LiDARPos.f32_X, 0.80f);
   EXPECT_EQ(p.vehicle.st_LiDARPos.f32_Z, 1.45f);
   EXPECT_EQ(p.vehicle.st_GPSPos.f32_X, 0.35f);
