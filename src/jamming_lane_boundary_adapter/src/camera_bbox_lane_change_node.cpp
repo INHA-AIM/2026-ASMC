@@ -2231,7 +2231,7 @@ std::string updatePersonPhase(const std::string& stop_reason) {
     auto& person = person_state;
     const auto now = ros::SteadyTime::now();
     if (person.phase == PersonStopState::kReselect) {
-        if (hardStopReason(stop_reason) || (stop_reason.empty() && !follower_state.target_ready)) return stop_reason;
+        if (stop_reason.empty() ? !follower_state.target_ready : hardStopReason(stop_reason)) return stop_reason;
         person.phase = PersonStopState::kIgnore;
         person.ignore_until = now + ros::WallDuration(params.person_ignore_sec);
         ROS_INFO("Person reselection done (line %.2f, lane %d%s%s); no person stop for %.1fs",
