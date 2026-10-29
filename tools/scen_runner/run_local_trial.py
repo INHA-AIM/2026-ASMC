@@ -34,6 +34,21 @@ def selected_command_ready(latest,now):
             message.brake<.9)
 
 
+def validate_trial_definition(raw,seconds):
+    definition=raw['replay']['tunnel']
+    records=[e['record'] for e in definition.get('baseline',[])]
+    records += [e['record'] for e in definition.get('events',[]) if e['action']=='spawn']
+    if any(r['definition']['type'] not in ('static','crossing') for r in records):
+        raise ValueError('LOCAL campaign supports owned static/crossing replay only')
+    keys={r['key'] for r in records}
+    actions=list(raw.get('trial_actions',[]))
+    for a in actions:
+        if (a.get('action') not in ('pause','resume') or a.get('key') not in keys or
+                not 0<=a.get('time_s',-1)<=seconds or not 0<=a.get('ego_travel_m',0)<=300):
+            raise ValueError('bounded action must name an owned scenario actor')
+    return actions
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("root", type=Path)
@@ -84,6 +99,7 @@ def main():
         raise ValueError("a trial config requires owned perception startup")
     raw = json.loads(args.scene.read_text())
     definition = raw["replay"]["tunnel"]
+    actions=validate_trial_definition(raw,args.seconds)
     import rospy
     import rosgraph
     from std_msgs.msg import Bool, UInt8, String
@@ -125,6 +141,7 @@ def main():
             "src/asmc_planner/src/local/recovery.cpp",
             "src/asmc_planner/src/local/recovery.hpp",
             "src/asmc_planner/src/local/obstacle_memory.hpp",
+            "src/asmc_planner/src/local/object_motion.hpp",
             "src/asmc_planner/src/local/road_memory.hpp",
             "src/asmc_planner/src/local/motion.hpp",
             "src/asmc_planner/src/Frenet/Speed/SpeedProfiler.cpp",
@@ -224,9 +241,6 @@ def main():
     # tunnel section, not the failure snapshot as an accidental start position.
     if args.empty:
         definition = dict(definition, baseline=[], events=[], allow_empty_scene=True)
-    for entry in definition.get("baseline", []):
-        if entry["record"]["definition"]["type"] != "static":
-            raise RuntimeError("LOCAL-1 first unit accepts static fixtures only")
     section = None
     children = []
     child_names = {}
@@ -530,11 +544,6 @@ def main():
         # resuming/ticking ReplaySection, pedestrians/events stayed frozen and
         # a nominal dynamic test was actually a static-placement test.
         section.resume_schedule(started)
-        actions=list(raw.get('trial_actions',[]))
-        for action in actions:
-            if (action.get('action') not in ('pause','resume') or
-                    not 0<=action.get('time_s',-1)<=args.seconds):
-                raise ValueError('bounded owned-actor action required')
         emit(dict(event='driving_started'))
         reason = "time_limit"
         stationary = started
