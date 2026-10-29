@@ -414,7 +414,10 @@ class LocalController {
     execution_snapshot = execution_history.At(start.toSec(), GetMPCParams().dt,
                                               GetMPCParams().steering_response_delay_s);
     asmc_local::PrepareExecution(execution_snapshot);
-    if(!selected&&handoff.preparing())handoff.seed(candidate->points.front().acceleration);
+    // Preparation is not execution: seed only the actual selector-issued
+    // history, never a not-yet-published candidate acceleration.
+    if(!selected&&handoff.preparing()&&!execution_snapshot.steering.empty())
+      handoff.seed(execution_snapshot.previous.accel);
     double ceiling=local_acceleration_limit;
     const double measured_acceleration=candidate->points.front().acceleration;
     // Approaching the15km/h cap from NORMAL25 is not a command to apply
