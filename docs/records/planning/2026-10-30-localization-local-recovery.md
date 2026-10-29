@@ -130,3 +130,71 @@ Recovery policy/conversion 23 assertions, localization input regression, dashboa
 9 tests and all baseline/optional recovery launch graphs passed. Runtime source
 under src/ matches checkpoint 08a43ca7; subsequent changes are the runner guard
 and investigation/re-enable documentation only.
+
+## 05:40–05:50 anchor-loss recovery correction
+
+Branch/container: `integrate/jamming-three-way-20261029` /
+`asmc-jamming-compare`; master11373, planning web8089, LiDAR web8097.
+Start `f7d58921` is preserved by
+`archive/pre-transition-recovery-20261030`. Implementation `446fa1b5`,
+conservative handoff correction `7b1086b1`; no push or merge.
+
+Observed at investigation start: localization rejected `motion_epoch_changed`
+with an unavailable map anchor; LOCAL reported a valid 4m
+`verified_stall_observed_recovery` path. The recovery gate nevertheless required
+`transform.valid`. Thus independent local geometry could not recover from the
+lost map anchor. The inspected localization object count was zero: this sample
+is not evidence that localization deliberately crossed an object rejected by
+LOCAL. The cause of the original motion-epoch reset itself remains unconfirmed.
+The runtime subsequently moved before the saved `before.json` snapshot; that
+snapshot must not be described as the original stationary failure frame.
+
+Changes retained:
+- A specific anchor-loss whitelist permits fresh, source-aligned LOCAL recovery
+  without a valid map transform. IMU, object validity, source age, matching local
+  state, and dynamic-risk gates remain enforced. Unavailable inputs are not
+  converted to free space.
+- A missing LOCAL candidate withholds output but retains recovery ownership;
+  a fresh replacement need not wait to become stationary again. Frame/epoch,
+  input invalidity and dynamic hazard still revoke ownership.
+- Separate `control_ready` allows a validated LOCAL path to establish command
+  readiness without claiming `anchor_ready`. One jamming MPC remains responsible.
+- After GPS returns, LOCAL-owned recovery may discard a lost anchor and warm up
+  a new anchor while moving; original GPS consistency checks remain in force.
+- NORMAL exit readiness uses the validated returned GPS anchor. NORMAL still
+  independently requires two fresh valid trajectories and a fresh handoff
+  command; it no longer waits for the retiring localization maneuver to finish.
+- Localization target/cap is 15km/h; existing approach25 and recovery5 remain.
+  Camera remains the default and optional recovery remains OFF by default.
+
+Rejected/deferred candidate: retaining NORMAL from A448 until GPS becomes invalid.
+A short physical trial after teleport reported invalid native map candidates and
+NORMAL low-speed fallback. The first attempt also retained the pre-teleport route
+projection (s≈41 rather than≈1859); restarting the planner corrected the projection
+but did not establish a valid pass. The user reported simulator reset/body-state
+inconsistency. The final native body-heading guard was true, so this trial does
+NOT independently prove a chassis/IMU mismatch. We retain the original zone
+handoff and exclude these runs from physical acceptance. Do not tune vehicle yaw
+or weaken collision checks based on these contaminated trials.
+
+Validation: recovery policy/conversion 28 checks and default/optional launch
+graphs passed; isolated ROS handoff test passed. Planner and mode-source test
+binaries were rebuilt after restoring zone handoff. No accepted continuous
+entry/exit or obstacle recovery pass was obtained in this timebox. The fresh
+LOCAL candidate must actually exist; this change is not an unconditional-motion
+policy and cannot guarantee that every stopped scene will clear.
+
+Evidence (unique append-only trial in the active registered comparison campaign):
+`D:/morai dataset/shahn03/artifacts/jamming-three-way-20261029-r02/transition-recovery-20261030-0540/`.
+Includes native actor snapshot, decision JSONL, reset state, original failure
+rosout excerpts, two autonomy logs and test results. No test2 actor was deleted
+or moved; only ego was moved to the runner's tunnel entry. No scenario file was
+saved over test2. Trial autonomy was stopped and ego held in P; bridge, cameras,
+LiDAR and the existing dashboard were retained. No raw sensor bag was collected.
+
+Next acceptance: clean simulator reset and fresh planner initialization, compare
+reported chassis yaw/IMU/actual forward displacement before driving, then rerun
+same test2 entry→recovery→exit. Verify both loss-of-anchor LOCAL selection and
+GPS-return handoff in live traces. To roll back only recovery behavior relaunch
+with `localization_local_recovery:=false`; full prior source reference is
+`f7d58921` (use a separate checkout or revert, do not discard other work).
