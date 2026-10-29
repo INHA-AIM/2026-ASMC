@@ -2,6 +2,7 @@
 #include "fixtures/local2f_stopped_barrier.hpp"
 #include "local/motion.hpp"
 #include "local/obstacle_memory.hpp"
+#include "local/object_motion.hpp"
 #include "local/planner.hpp"
 #include "local/speed_profile.hpp"
 #include "local/road_memory.hpp"
@@ -31,6 +32,42 @@ Scene empty() {
   return s;
 }
 int main() {
+  {
+    ObjectMotion history;
+    auto polygon=[](double x,double y) {return geometry::Polygon2D{{x-.3,y-.3},{x+.3,y-.3},{x+.3,y+.3},{x-.3,y+.3}};};
+    std::vector<Obstacle> objects;
+    // Ego moves; a physically stationary person does not inherit ego motion.
+    for(int i=0;i<6;++i) {
+      Obstacle o;o.id=21;o.camera_class="person";o.classification="dynamic_obstacle";o.polygon=polygon(8.-.1*i,0);
+      objects={o};history.apply(objects,Pose{.1*i,0,0},10.+.08*i,2.);
+    }
+    expect(objects[0].motion_sweep.empty(),"dynamic semantic group can be physically stationary");
+    history.clear();
+    for(int i=0;i<6;++i) {
+      Obstacle o;o.id=22;o.camera_class="box";o.classification="static_obstacle";o.polygon=polygon(8.,2.-.08*i);
+      objects={o};history.apply(objects,Pose{},10.+.08*i,2.);
+    }
+    expect(!objects[0].motion_sweep.empty() && objects[0].local_vy<-.9,
+           "rigid displacement predicts motion even for a semantic static class");
+    expect(std::abs(objects[0].polygon[0].y-1.3)<1e-8,"prediction preserves original measured polygon");
+    auto scene=empty();scene.obstacles=objects;Config c;Result check;
+    expect(!CheckFootprint(scene,c,Pose{5.,0,0},check) && check.rejected.count("predicted_object_sweep"),
+           "future crossing sweep vetoes a presently clear footprint");
+    for(int i=0;i<5;++i) {
+      objects[0].polygon=polygon(8.,1.6);history.apply(objects,Pose{},10.48+.08*i,2.);
+    }
+    expect(objects[0].motion_sweep.empty(),"observed stopped object releases motion prediction for bypass");
+    history.clear();
+    for(int i=0;i<8;++i)history.apply(objects,Pose{},20.,2.);
+    expect(objects[0].motion_sweep.empty(),"duplicate scans never confirm motion");
+    history.clear();expect(history.size()==0,"epoch reset clears relative object motion");
+    auto near=empty();Obstacle ob;ob.id=3;ob.polygon=polygon(2.,c.width*.5+.36);near.obstacles={ob};
+    c.recovery_geometry=true;Result margin;
+    expect(!CheckFootprint(near,c,Pose{},margin),"crawl retains ten centimetre minimum physical OBB margin");
+    Config responsive=c;responsive.decel=2.;
+    expect(BrakingDistance(3.,0.,responsive)<BrakingDistance(3.,0.,c),"responsive comfort brake shortens distance with the same jerk model");
+    expect(std::atan(c.wheelbase*c.max_k/c.gain)<.6981317008,"planner maximum curvature remains below calibrated40degree steering");
+  }
   {
     ObstacleMemory memory;
     Obstacle box{41,{{5.,-.4},{6.,-.4},{6.,.4},{5.,.4}},"box","static_obstacle"};

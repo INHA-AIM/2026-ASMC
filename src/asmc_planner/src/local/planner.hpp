@@ -18,11 +18,17 @@ struct Obstacle {
   double source_age = 0, uncertainty = 0;
   double motion_budget = 5.;
   bool retained = false, moving = false;
+  // LOCAL short relative-pose evidence, independent of semantic group/map GPS.
+  // Original measured polygon and public LiDAR motion/velocity remain intact.
+  geometry::Polygon2D motion_sweep;
+  double local_vx = 0, local_vy = 0;
 };
 struct Config {
   double length = 4.635, width = 2.160835, rear = .79, margin = .10;
   double speed_cap = 25. / 3.6, decel = 1.5, accel = 1., jerk = 4.8;
   double controlled_decel = 1.5; // Candidate actual-state brake; cruise stays at decel.
+  double preferred_clearance = .40;
+  double low_speed_rate_floor = 1.;
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;

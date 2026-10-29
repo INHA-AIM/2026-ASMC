@@ -1,6 +1,7 @@
 #include "local/journal.hpp"
 #include "local/motion.hpp"
 #include "local/obstacle_memory.hpp"
+#include "local/object_motion.hpp"
 #include "local/planner.hpp"
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
@@ -48,6 +49,8 @@ class Node {
   MotionHistory motion;
   RoadMemory road_memory;
   ObstacleMemory obstacle_memory;
+  ObjectMotion object_motion;
+  bool local_motion_prediction = false;
   bool retain_static_observations = false;
   ReferencePrior reference_prior;
   bool use_road_memory = true;
@@ -299,6 +302,8 @@ class Node {
       << ",\"braking_limit_mps2\":" << r.braking_limit
       << ",\"available_stopping_m\":" << r.available_stopping_m
       << ",\"recovery_extension_m\":" << r.recovery_extension_m
+      << ",\"minimum_object_clearance_m\":" << r.minimum_clearance
+      << ",\"comfort_decel_mps2\":" << config.decel
       << ",\"selected_kph\":" << r.chosen_cap * 3.6 << ",\"speed_reason\":\""
       << r.speed_reason << "\",\"assisted\":" << (r.assisted ? "true" : "false")
       << ",\"recovery\":" << (r.recovery ? "true" : "false")
@@ -464,7 +469,7 @@ class Node {
     phase = selected_mode ? "active" : preparation ? "prepare" :
         active_in_jamming_only ? "idle" : "preview";
     if (calculated_generation != expected_scene_generation || !compute) {
-      previous.clear(); previous_recovery=false; road_memory.clear(); reference_prior.clear(); obstacle_memory.clear(); last_scene = 0; home_role = 0;
+      previous.clear(); previous_recovery=false; road_memory.clear(); reference_prior.clear(); obstacle_memory.clear(); object_motion.clear(); last_scene = 0; home_role = 0;
       calculated_generation = expected_scene_generation;
     }
     if (!compute) {
@@ -822,6 +827,9 @@ class Node {
     if(retain_static_observations)
       obstacle_memory.apply(scene.obstacles,Pose{origin->x,origin->y,origin->yaw},
                             array.header.stamp.toSec(),plan_stamp.toSec());
+    if(local_motion_prediction)
+      object_motion.apply(scene.obstacles,Pose{origin->x,origin->y,origin->yaw},
+          array.header.stamp.toSec(),std::min(3.,config.delay+scene.speed/config.decel+.4));
     scene.previous_recovery=previous_recovery;
     for (auto q : previous) {
       double wx = previous_origin.x + std::cos(previous_origin.yaw) * q.x -
@@ -875,11 +883,18 @@ class Node {
             << ",\"motion_uncertainty_m\":" << ob.uncertainty
             << ",\"retained_measurement\":" << (ob.retained?"true":"false")
             << ",\"motion_budget_mps\":" << ob.motion_budget
+            << ",\"local_velocity_mps\":[" << ob.local_vx << ',' << ob.local_vy << ']'
+            << ",\"local_motion_prediction\":" << (!ob.motion_sweep.empty()?"true":"false")
             << ",\"polygon\":[";
       for (size_t j = 0; j < ob.polygon.size(); ++j) {
         if (j)
           debug << ',';
         debug << '[' << ob.polygon[j].x << ',' << ob.polygon[j].y << ']';
+      }
+      debug << "],\"motion_sweep\":[";
+      for(size_t j=0;j<ob.motion_sweep.size();++j) {
+        if(j)debug << ',';
+        debug << '[' << ob.motion_sweep[j].x << ',' << ob.motion_sweep[j].y << ']';
       }
       debug << "]}";
     }
@@ -1068,6 +1083,7 @@ public:
     p.param("causal_road_memory", use_road_memory, true);
     p.param("semantic_reference_fallback", semantic_reference_fallback, false);
     p.param("retain_static_observations", retain_static_observations, false);
+    p.param("local_motion_prediction", local_motion_prediction, false);
     p.param("active_in_jamming_only", active_in_jamming_only, false);
     p.param("recovery", config.recovery, true);
     p.param("vehicle_width", config.width, 2.160835);
@@ -1076,13 +1092,20 @@ public:
     p.param("clearance_margin", config.margin, .10);
     p.param("planning_budget_ms", config.budget_ms, 40.);
     p.param("acceleration_limit_mps2", config.accel, 1.);
+    p.param("comfort_deceleration_mps2", config.decel, 1.5);
+    p.param("preferred_clearance", config.preferred_clearance, .40);
+    p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
     p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
     if (run.empty() || run.size() > 128 ||
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
                               "WXYZ0123456789-_.") != std::string::npos ||
         !std::isfinite(config.width + config.length + config.rear +
                        config.margin + config.budget_ms + config.speed_cap +
-                       config.accel + config.controlled_decel) ||
+                       config.accel + config.controlled_decel + config.decel +
+                       config.preferred_clearance + config.low_speed_rate_floor) ||
+        config.decel<1.5 || config.decel>3. ||
+        config.preferred_clearance<config.margin || config.preferred_clearance>1. ||
+        config.low_speed_rate_floor<.5 || config.low_speed_rate_floor>1. ||
         config.controlled_decel<config.decel || config.controlled_decel>3. ||
         config.width < 1.892 || config.length < 4.5 || config.rear <= 0 ||
         config.rear >= config.length || config.margin < 0 ||

@@ -101,8 +101,12 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   for (const auto &o : s.obstacles) {
     double distance = geometry::ConvexPolygonDistance(physical, o.polygon);
     r.minimum_clearance = std::min(r.minimum_clearance, distance);
-    if (c.recovery_geometry ? distance<=1e-9 : distance <= clearance_margin + o.uncertainty)
+    // Recovery also retains the configured physical clearance and source-age
+    // uncertainty. A crawl label cannot mean zero centimetres of clearance.
+    if (distance <= (c.recovery_geometry?c.margin:clearance_margin) + o.uncertainty)
       return fail(r, "local_obb", p.x, p.y, o.id);
+    if(!o.motion_sweep.empty() && geometry::ConvexPolygonDistance(physical,o.motion_sweep)<=clearance_margin+o.uncertainty)
+      return fail(r,"predicted_object_sweep",p.x,p.y,o.id);
   }
   const auto &g = s.grid;
   const GridTransform transform(g);
@@ -244,7 +248,14 @@ double SegmentQualityCost(const Scene &s, const Config &c, const Pose &a,
       (distance+std::abs(b.yaw-a.yaw)*c.length)/(.5*s.grid.resolution))));
   // Soft margin is a mean sample density, not a raw count dependent on
   // segment length. Curvature change is squared derivative per metre.
-  return distance*(density(0)+4*density(.5)+density(1))/6. +
+  // Prefer a wider measured gap when one exists, without inflating the hard
+  // collision envelope a second time or forcing a large-margin deadlock.
+  const auto body=MakeEgoFootprint(CartesianState{(a.x+b.x)*.5,(a.y+b.y)*.5,
+      (a.yaw+b.yaw)*.5,0,0,0},VehicleShape{c.width,c.length,c.rear},0.);
+  double gap=1e9;
+  for(const auto &o:s.obstacles)gap=std::min(gap,geometry::ConvexPolygonDistance(body,o.polygon));
+  const double near=std::max(0.,c.preferred_clearance-gap);
+  return distance*(density(0)+4*density(.5)+density(1))/6. + .4*distance*near*near +
          std::pow(b.k-a.k,2)/distance + .002*distance*soft_cells/samples;
 }
 void BuildGridIndex(Grid &grid) {
@@ -283,6 +294,17 @@ Result Plan(Scene indexed, const Config &c) {
   BuildGridIndex(grid);
   const double index_ms = elapsed(started);
   auto out_prepared = PlanPrepared(indexed, c);
+  if(out_prepared.valid) {
+    // Measure the selected geometry, not the minimum across rejected probes.
+    Result measured;
+    for(size_t i=1;i<out_prepared.path.size();++i) {
+      const auto &p=out_prepared.path[i];
+      const auto body=MakeEgoFootprint(CartesianState{p.x,p.y,p.yaw,0,0,0},VehicleShape{c.width,c.length,c.rear},0.);
+      for(const auto &o:indexed.obstacles)
+        measured.minimum_clearance=std::min(measured.minimum_clearance,geometry::ConvexPolygonDistance(body,o.polygon));
+    }
+    out_prepared.minimum_clearance=measured.minimum_clearance;
+  }
   out_prepared.index_ms = index_ms;
   out_prepared.elapsed_ms = elapsed(started);
   return out_prepared;
@@ -401,7 +423,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
                      std::atan(c.wheelbase * a.k / c.gain));
         if (std::abs(b.k) > c.max_k || std::abs(b.yaw) > .65 ||
             steering_change >
-                c.max_steer_rate * distance / std::max(1., s.speed))
+                c.max_steer_rate * distance / std::max(c.low_speed_rate_floor, s.speed))
           break;
         ++out.expanded;
         const auto soft_before = check.soft_margin_cells;
@@ -453,7 +475,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         double steering_change =
             std::abs(std::atan(c.wheelbase * k / c.gain) -
                      std::atan(c.wheelbase * a.k / c.gain));
-        if (steering_change > c.max_steer_rate * ds / std::max(1., s.speed)) {
+        if (steering_change > c.max_steer_rate * ds / std::max(c.low_speed_rate_floor, s.speed)) {
           ++out.rejected["steering_rate"];
           continue;
         }
@@ -579,7 +601,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         // switch it to a strict bonnet-visibility gate on the next frame.
         current_policy.recovery_geometry=policy==1 && p.s<=4.;
         if (ds > .80 || p.x > horizon || std::abs(p.k)>c.max_k ||
-            steering_change > c.max_steer_rate*ds/std::max(1.,s.speed)+1e-8 ||
+            steering_change > c.max_steer_rate*ds/std::max(c.low_speed_rate_floor,s.speed)+1e-8 ||
             std::abs(turn) > c.max_k * ds + .015 || !CheckSweep(s, current_policy, a, p, check))
         {
           if(policy==1) ++out.rejected[check.rejected.empty()?"recovery_recheck_kinematic":"recovery_recheck_"+check.rejected.begin()->first];

@@ -9,7 +9,8 @@ namespace local_planning {
 // Simulation recovery requested for LOCAL-1: fresh semantic evidence continues
 // to guide a short 3km/h path even if a conservative swept-footprint gate
 // fails. Internal occlusion evidence remains explicitly uncertain. Actual OBB
-// and exterior-road sweeps veto; motion-envelope overlap is a recorded cost.
+// and exterior-road sweeps veto; configured clearance/age uncertainty and
+// short confirmed object-motion sweeps also remain hard checks.
 // Any physical contact fails the experiment.
 bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
   if (!c.recovery)
@@ -97,7 +98,7 @@ bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
       const Pose before = p;
       const double delta=std::atan(c.wheelbase*p.k/c.gain),
                    desired=std::atan(c.wheelbase*requested/c.gain),
-                   span=c.max_steer_rate*.1/std::max(1.,s.speed);
+                   span=c.max_steer_rate*.1/std::max(c.low_speed_rate_floor,s.speed);
       double k = c.gain*std::tan(std::clamp(desired,delta-span,delta+span))/c.wheelbase,
              turn = .05 * (p.k + k);
       p.x += .1 * std::cos(p.yaw + turn * .5);
