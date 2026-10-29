@@ -691,7 +691,7 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << ',' << cr.vehicle_scanline_grouping << ',' << cr.independent_wall_cleanup
     << ',' << cr.scanline_gap_slope << ',' << cr.scanline_max_gap_m
     << ',' << cr.detached_wall_cleanup << ',' << config.pipeline.tunnel_route.protection.motion_compensated_fallback;
-  effective << ",tunnel-only-updates-v1," << config.pipeline.tunnel_only_updates;
+  effective << ",tunnel-only-updates-v2-camera-geometry-scope," << config.pipeline.tunnel_only_updates;
   const auto& entry_wall=config.pipeline.shadow_wall;
   effective<<",hdmap-pre-entry-wall-v1,"<<entry_wall.enabled<<','<<entry_wall.profile_sha256
            <<','<<entry_wall.lead_m<<','<<entry_wall.exit_buffer_m<<','<<entry_wall.lateral_m;

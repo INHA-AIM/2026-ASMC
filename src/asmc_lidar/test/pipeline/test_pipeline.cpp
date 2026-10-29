@@ -2,6 +2,7 @@
 // Pipeline::Process orchestration and CloudDigest (Main LidarProcess common path).
 #include <asmc_lidar/pipeline/pipeline.hpp>
 #include <asmc_lidar/geometry/projection.hpp>
+#include <asmc_lidar/experimental/tunnel_motion.hpp>
 
 #include <gtest/gtest.h>
 #include <ros/time.h>
@@ -748,5 +749,54 @@ TEST(Pipeline, TunnelScopeRequiresMapWindowBeforeGpsLossAndClearsOnExit) {
     pose.valid=(k==1||k>=4);
     const auto r=p.Process(Scan(stamp,Scene({}),k+1),WithGps(Local(k),pose.valid),pose);
     EXPECT_EQ(k>=1&&k<4,r.tunnel.updates_active);
+  }
+}
+
+// A camera box may label an ordinary-road object, but must not carve its
+// measured cloud until the reviewed tunnel/approach window has been reached.
+TEST(Pipeline, CameraGeometryRefinementUsesExistingTunnelApproachWindow) {
+  auto c=Config(true,true);
+  c.tunnel_only_updates=true;c.shadow_wall.enabled=true;
+  c.shadow_wall.entry_m=100;c.shadow_wall.exit_m=200;
+  c.shadow_wall.lead_m=30;c.shadow_wall.exit_buffer_m=10;
+  c.shadow_wall.route={{{0,0,0}},{{300,300,0}}};
+  c.camera_point_refinement.enabled=true;
+  c.camera_point_refinement.vehicle_history_enabled=true;
+  c.camera_point_refinement.steel_fragment_merge=true;
+  Pipeline pipeline(c);
+  // Startup without GPS cannot arm refinement. Entry at exactly 30m ahead
+  // can; GPS loss retains that verified window. Exit clears it, including
+  // after the existing 3m hysteresis, and a later GPS loss cannot rearm it.
+  const double positions[]={0,69,70,100,100,214,214};
+  const bool valid[]={false,true,true,true,false,true,false};
+  const bool active[]={false,false,true,true,true,false,false};
+  for(int k=0;k<7;++k) {
+    const auto stamp=kT0+k*kPeriod;
+    auto pose=MapPose(valid[k],stamp);
+    pose.map_from_base=al::Pose::Identity();
+    pose.map_from_base.translation().x()=positions[k];
+    auto scan=Scan(stamp,Scene({{10,0,4.2,1.8}}),k+1);
+    auto camera=std::make_shared<TunnelCameraInput>();
+    camera->available=camera->calibrated=true;
+    camera->identity="scope-test";camera->camera_epoch=1;
+    camera->stamp_ns=stamp;camera->image_width=camera->image_height=200;
+    camera->calibration.width=camera->calibration.height=200;
+    camera->calibration.intrinsic<<100,0,100,0,100,100,0,0,1;
+    camera->still_current=[](){return true;};
+    asmc::lidar::camera::Box box;
+    box.xmin=85;box.xmax=115;box.ymin=85;box.ymax=115;
+    box.source_class_name="car";box.confidence_valid=true;box.confidence=.95f;
+    camera->boxes.push_back(box);scan.tunnel_camera=camera;
+    const auto result=pipeline.Process(scan,WithGps(Local(0,0,0),valid[k]),pose);
+    ASSERT_TRUE(result.processed);
+    EXPECT_EQ(active[k],result.tunnel.updates_active)<<"step "<<k;
+    EXPECT_EQ(active[k],result.camera_point_refinement.enabled)<<"step "<<k;
+    if(active[k]) {
+      EXPECT_GT(result.camera_point_refinement.projected_points,0)<<"step "<<k;
+    } else {
+      EXPECT_FALSE(result.camera_point_refinement.applied);
+      EXPECT_EQ(0,result.camera_point_refinement.projected_points);
+      EXPECT_TRUE(result.camera_point_refinement.decisions.empty());
+    }
   }
 }

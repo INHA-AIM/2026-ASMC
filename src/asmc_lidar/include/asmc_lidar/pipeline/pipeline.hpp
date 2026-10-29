@@ -29,6 +29,8 @@ namespace lidar {
 namespace pipeline {
 
 struct PipelineConfig {
+  // Scope camera point extraction and tunnel tuning to the reviewed route
+  // window; ordinary camera class fusion remains independent of this switch.
   bool tunnel_only_updates=false;
   ShadowWallConfig shadow_wall;
   CameraPointRefinementConfig camera_point_refinement;
