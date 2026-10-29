@@ -1,5 +1,5 @@
-# M2 experiment only; not included by production or independent LOCAL launch.
-# Candidate ramp for the new 5/10/15 km/h sequence, not a validated actuator tune.
+# Opt-in localization component; integrated jamming_planner selects its owner.
+# Vehicle/cruise/escape policy is loaded separately from jamming_motion.yaml.
 # Braking bounds and the shared pedal calibration remain unchanged.
 # Canonical v3 sensor GPS mount. The full roll/pitch/yaw lever arm is removed
 # only by Localization; the main GPS/IMU estimator configuration is unchanged.
@@ -12,7 +12,7 @@ gps_sensor_offset:
 validate_recovery_window: true
 # Only the opt-in Localization owner applies this while JAMMING is selected;
 # physical road containment remains hard. Known-zone exit has a bounded 3s tail.
-# These research policies remain off until separate closed-loop qualification.
+# Component defaults are off; the integrated localization profile explicitly enables them.
 shadow_lane_rules: false
 dynamic_obstacles: false
 # Retry a recent committed spatial path only after full current map/OBB/time

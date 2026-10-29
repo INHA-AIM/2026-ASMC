@@ -470,10 +470,10 @@ planner:
 
   # --- VehicleShape (collision_checker.hpp) -------------------
   vehicle_shape:
-    width: 1.9
+    width: 1.892
     length: 4.635
     # MORAI SDK measured exterior width 2.160835m. Road-only calibration;
-    # preserve the existing 1.9m object collision model and its 0.45m margin.
+    # the user-selected1.892m body model keeps its separate0.45m margin.
     road_outer_width: 2.161
     # /vehicle/state x/y는 IONIQ 5 후륜축 기준이다.
     rear_overhang: 0.79

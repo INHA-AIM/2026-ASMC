@@ -4,13 +4,14 @@
   <arg name="open_dashboard" default="false"/>
   <arg name="jamming_planner" default="camera" doc="camera: main follower, local: observed local road, localization: map localization"/>
   <arg name="dashboard_port" default="8089"/>
-  <arg name="jamming_speed_kph" default="$(eval {'camera':10.0,'local':10.0,'localization':15.0}[arg('jamming_planner')])"/>
+  <arg name="jamming_speed_kph" default="$(eval {'camera':10.0,'local':20.0,'localization':20.0}[arg('jamming_planner')])"/>
   <arg name="local_semantic_input" default="true"/>
   <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
   <arg name="shadow_static_avoidance" default="$(eval arg('jamming_planner') == 'localization')" doc="Localization comparison profile: measured static bypass and return; see documented failures"/>
   <arg name="shadow_dynamic_obstacles" default="$(eval arg('jamming_planner') == 'localization')" doc="Localization comparison profile: observed-motion yield; not general dynamic acceptance"/>
   <arg name="shadow_lane_rules" default="$(eval arg('jamming_planner') == 'localization')" doc="verified shadow zone paint exemption; physical road stays hard"/>
-  <arg name="shadow_run_id" default="localization-autonomy"/>
+  <arg name="jamming_run_id" default="$(eval arg('jamming_planner') + '-autonomy')"/>
+  <arg name="shadow_run_id" default="$(arg jamming_run_id)" doc="Legacy run-id override; current code may use jamming_run_id"/>
   <arg name="shadow_speed_cap_kph" default="$(arg jamming_speed_kph)"/>
   <arg name="shadow_journal_path" default=""/>
   <arg name="shadow_start_motion" default="true"/>

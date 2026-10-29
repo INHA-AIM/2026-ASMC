@@ -10,7 +10,7 @@ using namespace local_planning;
 StaticPlanner::StaticPlanner(const std::string& parameters,bool sequential_targets)
     :parameters_(parameters),sequential_targets_(sequential_targets){reset();}
 void StaticPlanner::reset(){
-  previous_path_.clear();motion_evidence_.clear();
+  previous_path_.clear();motion_evidence_.clear();stall_escape_.reset();
   core_=std::make_unique<FrenetPlanner>();tracks_.clear();phase_="unavailable";retargets_=0;
   if(!core_->Init(parameters_))throw std::runtime_error("localization core init failed");
   if(!core_->LimitAvoidSearchBudget(.025))
@@ -127,9 +127,34 @@ bool StaticPlanner::sweep(const Scene& scene,const Config& cfg,const Pose& from,
   }
   return true;
 }
+Result StaticPlanner::escape(const Scene& scene,const Config& cfg,const Motion& origin,const Transform& map){
+  struct CurrentGeometry {
+    bool& flag;bool previous;
+    explicit CurrentGeometry(bool& value):flag(value),previous(value){flag=false;}
+    ~CurrentGeometry(){flag=previous;}
+  } current_geometry(in_plan_); // Escape never skips a moving object's present hull.
+  Config retained=cfg;
+  retained.margin=std::max(cfg.margin,core_->collision_config().safety_margin);
+  const double cs=std::cos(origin.yaw),sn=std::sin(origin.yaw);
+  return FindStallEscape(scene,retained,[&](const Pose& a,const Pose& b,Result& out){
+    const int n=std::max(1,int(std::ceil((std::hypot(b.x-a.x,b.y-a.y)+cfg.length*std::abs(b.yaw-a.yaw))/.1)));
+    for(int i=0;i<=n;++i){const double q=double(i)/n;
+      Pose p{a.x+q*(b.x-a.x),a.y+q*(b.y-a.y),a.yaw+q*(b.yaw-a.yaw),b.k,0};
+      if(!footprint(scene,retained,p,out,origin,map))return false;
+      const auto body=MakeEgoFootprint(CartesianState{p.x,p.y,p.yaw,p.k,0,0},VehicleShape{cfg.width,cfg.length,cfg.rear},0.);
+      for(const auto& ob:scene.obstacles)if(!ob.motion_sweep.empty()&&
+          geometry::ConvexPolygonDistance(body,ob.motion_sweep)<=retained.margin+ob.uncertainty+ob.extra_clearance){
+        out.reason="stall_escape_predicted_object";return false;
+      }
+      const auto xy=map.apply(origin.x+cs*p.x-sn*p.y,origin.y+sn*p.x+cs*p.y);
+      if(!core_->road_map().FootprintInside(xy[0],xy[1],p.yaw+origin.yaw+map.yaw,core_->vehicle_shape()))return false;
+    }
+    return true;
+  });
+}
 Result StaticPlanner::verify(const CartesianPath& path,const Scene& scene,
-                            const Config& cfg,const Motion& origin,const Transform& map){
-  Result out;
+                            const Config& cfg,const Motion& origin,const Transform& map,bool recovery){
+  Result out;out.recovery=recovery;
   std::vector<double> limits;
   bool reached_end=true;
   if(path.x.size()<2||path.y.size()!=path.x.size()||path.yaw.size()!=path.x.size()||
@@ -325,6 +350,27 @@ Result StaticPlanner::plan(const Scene& scene,const Config& cfg,const Motion& or
     if(!check.clear||!road){result.valid=false;result.reason=!road?"shadow_dynamic_road_conflict":"shadow_dynamic_temporal_conflict";result.blocking_id=check.blocking_object_id;result.trajectory.clear();}
     return result;
   };
+  // Escalate only from current source-aligned geometry. Moving objects in the
+  // forward corridor keep yielding; semantic mobile labels alone do not latch.
+  Scene escape_scene=scene;
+  for(auto& ob:escape_scene.obstacles){
+    double vx=0,vy=0;
+    if(!ob.observed_rest && observed_velocity(ob.id,vx,vy) && std::hypot(vx,vy)>.20){
+      auto points=ob.polygon;
+      const double dx=cs*vx+sn*vy,dy=-sn*vx+cs*vy;
+      for(auto q:ob.polygon)points.push_back({q.x+dx*1.5,q.y+dy*1.5});
+      ob.motion_sweep=geometry::ComputeConvexHull(points);
+    }
+  }
+  const bool escape_requested=stall_escape_.update("localization",origin.t,
+      std::chrono::duration<double>(start.time_since_epoch()).count(),
+      Pose{origin.x,origin.y,origin.yaw},scene.speed,MovingForwardConflict(escape_scene,cfg));
+  if(escape_requested){
+    phase_="STALL_ESCAPE";
+    auto out=escape(escape_scene,cfg,origin,map);
+    out.stationary_windows=stall_escape_.windows();
+    return out;
+  }
   if(sequential_targets_&&target>=0&&target!=active_target&&active_target_behind_body&&
       core_->avoid_committed()&&!core_->avoid_completed()&&
       (active_phase=="PASS"||active_phase=="RETURN")){
@@ -335,7 +381,7 @@ Result StaticPlanner::plan(const Scene& scene,const Config& cfg,const Motion& or
     core_->ResetExternalAvoidance();
     ++retargets_;
   }
-  PlannerCommand command{};command.has_target_speed=true;command.target_speed=cfg.speed_cap;
+  PlannerCommand command{};command.has_target_speed=true;command.target_speed=std::min(cfg.speed_cap,cfg.cruise_speed);
   CartesianPath path;FrenetPlanner::AvoidPrepareResult prepared;
   bool ok=false;
   if(core_->avoid_committed()&&!core_->avoid_completed()){
@@ -431,9 +477,9 @@ Result StaticPlanner::plan(const Scene& scene,const Config& cfg,const Motion& or
   // Native PREPARE may expose only a short hold while its cooperatively
   // sliced search continues. A collision-checked stopping prefix of the fixed
   // reference can retain a speed justified by its verified stopping distance.
-  // A fixed 3km/h cap can invalidate a feasible paint-time-bounded bypass by
-  // braking before COMMIT. The same body/map/OBBs, ages and stopping bounds
-  // apply. Never substitute this for a failed committed maneuver or dynamics.
+  // A recovery fallback uses the shared3km/h target with actual-state braking.
+  // The same body/map/OBBs, ages and stopping bounds apply; a failed
+  // committed maneuver or dynamic conflict cannot gain free-space permission.
   if(phase_=="PREPARE"&&(!result.valid||result.chosen_cap<.1||result.path.empty()||
       result.path.back().s<std::min(10.,cfg.max_range*.5))){
     const auto native=native_calls_,timing=speed_profiles_;

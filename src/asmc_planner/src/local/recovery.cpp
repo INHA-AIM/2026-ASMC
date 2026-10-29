@@ -7,7 +7,7 @@
 
 namespace local_planning {
 // Simulation recovery requested for LOCAL-1: fresh semantic evidence continues
-// to guide a short 3km/h path even if a conservative swept-footprint gate
+// to guide a short speed-limited path even if a conservative swept-footprint gate
 // fails. Internal occlusion evidence remains explicitly uncertain. Actual OBB
 // and exterior-road sweeps veto; configured clearance/age uncertainty and
 // short confirmed object-motion sweeps also remain hard checks.

@@ -1,0 +1,9 @@
+# Shared LOCAL/localization vehicle and speed policy (m, km/h).
+# Algorithm-specific margins, road evidence, yaw and braking profiles stay separate.
+vehicle_width: 1.892
+vehicle_length: 4.635
+rear_axle_to_bumper: 0.790
+cruise_speed_kph: 15.0
+escape_speed_cap_kph: 5.0
+# Two5s stationary windows request a fresh fan search. Moving hazards still yield.
+# Hard ceiling is supplied once by the public jamming_speed_kph launch argument.

@@ -10,7 +10,7 @@
   <arg name="run_id" default="local-preview"/>
   <arg name="journal_path" default=""/>
   <arg name="planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
-  <arg name="speed_cap_kph" default="25"/>
+  <arg name="speed_cap_kph" default="20"/>
   <arg name="recovery" default="true"/>
   <arg name="near_blind_assist" default="false"/>
   <arg name="semantic_input" default="false"/>
@@ -22,6 +22,7 @@
   <include if="$(arg semantic_input)" file="$(find asmc_camera)/launch/semantic_space.launch"/>
   <node pkg="asmc_planner" type="asmc_local_planner_node" name="local_planner" output="screen" required="true">
     <rosparam command="load" file="$(arg planner_config)"/>
+    <rosparam command="load" file="$(find asmc_planner)/config/jamming_motion.yaml"/>
     <param name="run_id" value="$(arg run_id)"/>
     <param name="journal_path" value="$(arg journal_path)"/>
     <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
@@ -31,6 +32,7 @@
   </node>
   <node pkg="asmc_controller" type="asmc_local_controller_node" name="local_controller" output="screen" required="true">
     <rosparam command="load" file="$(find asmc_controller)/config/local_controller.yaml"/>
+    <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
     <param name="smooth_handoff" value="$(arg smooth_handoff)"/>
     <param name="enable_control" value="$(arg enable_control)"/>
     <param name="normal_controller_node" value="$(arg normal_controller_node)"/>

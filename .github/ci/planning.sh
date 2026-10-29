@@ -33,7 +33,7 @@ python3 tools/scen_runner/test_local_ownership.py
 python3 src/asmc_planner/tests/behavior/local_debug_cache_test.py
 (
   cd "$ASMC_CI_BUILD/asmc_planner"
-  ctest --output-on-failure -R '^local_planner_regression$'
+  ctest --output-on-failure -R '^(local_planner|jamming_policy)_regression$'
 )
 
 PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_private_master.py'

@@ -57,7 +57,8 @@ int main() {
     Result open;open.path={{0,0,0,0,0},{15,0,0,0,15}};
     expect(BuildSpeedProfile(s,c,open) && open.chosen_cap==c.speed_cap,
            "empty-road cruise is not slowed by a maneuver policy");
-    Obstacle o;o.polygon={{7.,1.6},{8.,1.6},{8.,2.0},{7.,2.0}};s.obstacles={o};
+    const double side=c.width*.5+.52; // Keep the measured gap independent of the chosen body model.
+    Obstacle o;o.polygon={{7.,side},{8.,side},{8.,side+.4},{7.,side+.4}};s.obstacles={o};
     Result close;close.path=open.path;
     expect(BuildSpeedProfile(s,c,close) && close.chosen_cap<=5./3.6 &&
            close.speed_reason=="close_swept_path_maneuver",
@@ -414,7 +415,7 @@ int main() {
                "recovery must retain lag and jerk stopping feasibility");
         r.path.back()={needed+.3,0,0,0,needed+.3};
         expect(BuildSpeedProfile(s,c,r),"verified longer geometry accommodates actual braking state");
-        if(recovery) expect(r.chosen_cap<=3./3.6,"longer recovery does not raise crawl cap");
+        if(recovery) expect(r.chosen_cap<=c.recovery_speed,"longer recovery does not raise configured escape ceiling");
       }
     }
     {
@@ -608,9 +609,11 @@ int main() {
               << " ms=" << result.elapsed_ms << " caps=" << result.chosen_cap
               << "\n";
     expect(result.valid, "empty scene yields kinematic path");
-    expect(result.chosen_cap <= 25. / 3.6, "25 is ceiling");
-    expect(result.speed_reason == "verified_stopping_space",
-           "limited range limits speed");
+    expect(result.chosen_cap <= c.speed_cap, "configured maximum is a ceiling");
+    auto range_config=c;range_config.cruise_speed=range_config.speed_cap;
+    auto range_limited=Plan(s,range_config);
+    expect(range_limited.valid && range_limited.speed_reason == "verified_stopping_space",
+           "limited range governs when the nominal cruise preference is raised to its ceiling");
     expect(result.path.front().x == 0 && result.path.front().y == 0,
            "start is rear axle not free-space centroid");
     for (const auto &q : result.path)
@@ -722,7 +725,7 @@ int main() {
            "positive acceleration cannot invent emergency stopping space");
     s = empty();
     s.speed = 5.;
-    const int soft_edge = 160 * 160 + 94; // x4, y-1.4: outside hard envelope
+    const int soft_edge = 160 * 160 + 93; // x4, y-1.3: between the new body hard and speed-comfort envelopes
     s.grid.probability[soft_edge] = 0;
     check = {};
     expect(CheckFootprint(s, c, p, check) && check.soft_margin_cells > 0,
@@ -764,8 +767,8 @@ int main() {
       for (int col = 65; col < 95; ++col)
         s.grid.coverage[row * 160 + col] = 128;
     auto creep = Plan(s, c);
-    expect(creep.valid && creep.recovery && creep.chosen_cap <= 3. / 3.6,
-           "visible near-field recovery is explicitly capped at 3km/h");
+    expect(creep.valid && creep.recovery && creep.chosen_cap <= c.recovery_speed,
+           "visible near-field recovery respects the configured escape ceiling");
     expect(std::abs(creep.path.back().y) < .01,
            "broad free road retains home lane instead of off-centre mean");
     // With only the bounded camera hood blind spot, distant barriers must

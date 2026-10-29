@@ -1,4 +1,4 @@
-#include "local/speed_profile.hpp"
+#include "jamming_common/speed_profile.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include <algorithm>
 #include <cmath>
@@ -86,7 +86,7 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   }
   out.steering_cap = !c.native_frenet_timing && steering_gradient > 1e-8 ?
       .9*c.max_steer_rate/steering_gradient : c.speed_cap;
-  out.raw_cap = c.speed_cap;
+  out.raw_cap = std::min(c.speed_cap, c.cruise_speed);
   out.maneuver_cap=c.speed_cap;
   if(c.maneuver_speed_cap>0. && c.maneuver_speed_cap<c.speed_cap && !out.recovery &&
      !(out.assisted && c.maneuver_speed_cap>=5./3.6)) {
@@ -147,6 +147,7 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   out.speed_reason = out.chosen_cap == out.space_cap ? "verified_stopping_space"
                      : out.chosen_cap == out.steering_cap ? "steering_slew"
                      : out.chosen_cap == out.curve_cap ? "curvature"
+                     : out.raw_cap < c.speed_cap ? "cruise_target"
                                                        : "requested_cap";
   if(out.chosen_cap==out.maneuver_cap && out.maneuver_cap<out.raw_cap)
     out.speed_reason="close_swept_path_maneuver";

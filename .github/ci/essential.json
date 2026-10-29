@@ -33,6 +33,7 @@
         "shadow_localization_test",
         "control_binding_test",
         "local_planner_test",
+        "jamming_policy_test",
         "local_execution_history_test",
         "local_ownership_probe",
         "jamming_wall_scope_test"

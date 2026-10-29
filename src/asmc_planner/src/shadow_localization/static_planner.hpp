@@ -1,9 +1,11 @@
 #pragma once
 #include "Frenet/frenet_planner.hpp"
-#include "local/planner.hpp"
+#include "jamming_common/geometry.hpp"
+#include "jamming_common/speed_profile.hpp"
 #include "shadow_localization/anchor.hpp"
 #include "shadow_localization/path_memory.hpp"
 #include <memory>
+#include "jamming_common/stall_escape.hpp"
 #include <asmc_geometry/motion_evidence.hpp>
 #include <set>
 
@@ -49,8 +51,8 @@ class StaticPlanner {
   // Empty-scene position-following baseline: one reference sampling and one
   // speed profile. No parallel lattice/KEEP search or semantic raster scan.
   local_planning::Result reference(const local_planning::Scene&,
-      const local_planning::Config&,const local_planning::Motion&,const Transform&);
-  void reset_reference() { reference_s_=NAN; tracks_.clear(); previous_path_.clear(); retargets_=0; core_->ResetExternalAvoidance(); }
+      const local_planning::Config&,const local_planning::Motion&,const Transform&,bool recovery=false);
+  void reset_reference() { stall_escape_.reset(); reference_s_=NAN; tracks_.clear(); previous_path_.clear(); retargets_=0; core_->ResetExternalAvoidance(); }
  private:
   std::string parameters_,phase_="unavailable";
   std::unique_ptr<FrenetPlanner> core_;
@@ -66,6 +68,8 @@ class StaticPlanner {
   bool continuity_enabled_=false,reused_path_=false;
   std::string continuity_reason_="disabled";
   PathMemory previous_path_;
+  local_planning::StallEscapeWatch stall_escape_;
+  local_planning::Result escape(const local_planning::Scene&,const local_planning::Config&,const local_planning::Motion&,const Transform&);
   double following_bumper_gap_=3.,following_gap_=-1.;int following_target_=-1;
   void remember_path(const local_planning::Result&,const local_planning::Motion&,const Transform&);
   std::set<int> moving_ids_;
@@ -86,6 +90,6 @@ class StaticPlanner {
   bool stationary(const local_planning::Obstacle&,const local_planning::Motion&);
   bool observed_velocity(int id,double& vx,double& vy) const;
   local_planning::Result verify(const CartesianPath&,const local_planning::Scene&,
-      const local_planning::Config&,const local_planning::Motion&,const Transform&);
+      const local_planning::Config&,const local_planning::Motion&,const Transform&,bool recovery=false);
 };
 } // namespace shadow_localization

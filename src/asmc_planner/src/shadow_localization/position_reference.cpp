@@ -4,9 +4,9 @@
 namespace shadow_localization {
 using namespace local_planning;
 Result StaticPlanner::reference(const Scene& scene,const Config& cfg,
-                               const Motion& origin,const Transform& map) {
+                               const Motion& origin,const Transform& map,bool recovery) {
   const auto start=std::chrono::steady_clock::now();
-  Result out;phase_="REFERENCE";native_calls_=speed_profiles_=0;
+  Result out;out.recovery=recovery;phase_="REFERENCE";native_calls_=speed_profiles_=0;
   if(!map.valid){out.reason="shadow_anchor_unavailable";return out;}
   const auto xy=map.apply(origin.x,origin.y);
   CartesianState ego{xy[0],xy[1],origin.yaw+map.yaw,0,scene.speed,scene.acceleration};

@@ -2,12 +2,15 @@
 """Load three complete launch graphs without starting any ROS node."""
 from pathlib import Path
 import roslaunch.config,roslaunch.xmlloader
+import yaml
 
 path=Path(__file__).resolve().parents[2]/'src/asmc_planner/launch/autonomy_no_bridges_v2.launch'
 def graph(choice, extra=None):
     config=roslaunch.config.ROSLaunchConfig()
     roslaunch.xmlloader.XmlLoader().load(str(path),config,argv=([] if choice is None else ['jamming_planner:='+choice])+['dashboard:=false']+(extra or []),verbose=False)
     return config
+params_file=path.parents[1]/'config/frenet/params.yaml'
+assert yaml.safe_load(params_file.read_text())['planner']['vehicle_shape']['width']==1.892
 for choice in ('camera','local','localization'):
     c=graph(choice);names=[n.name for n in c.nodes]
     assert len(names)==len(set(names)),names
@@ -25,7 +28,11 @@ for choice in ('camera','local','localization'):
     assert ('semantic_space_trial' in names)==(choice=='local')
     owner={'camera':'camera_bbox_lane_change','local':'local_planner','localization':'localization'}[choice]
     cap_key={'camera':'target_speed_kph','local':'speed_cap_kph','localization':'speed_cap_kph'}[choice]
-    assert c.params['/'+owner+'/'+cap_key].value=={'camera':10.,'local':10.,'localization':15.}[choice]
+    assert c.params['/'+owner+'/'+cap_key].value=={'camera':10.,'local':20.,'localization':20.}[choice]
+    if choice in ('local','localization'):
+        for key,value in [('vehicle_width',1.892),('vehicle_length',4.635),('rear_axle_to_bumper',.790),('cruise_speed_kph',15.),('escape_speed_cap_kph',5.)]:
+            assert c.params['/'+owner+'/'+key].value==value,(choice,key)
+        assert c.params['/'+{'local':'local_controller','localization':'localization_controller'}[choice]+'/speed_cap_kph'].value==20.
     assert c.params['/behavior_planner/maximum_speed_kph'].value==57.5
     assert bool(c.params['/planning_mode/recovery_ready_topic'].value)==(choice=='localization')
     if choice=='localization':

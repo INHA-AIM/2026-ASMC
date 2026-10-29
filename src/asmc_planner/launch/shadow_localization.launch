@@ -3,7 +3,7 @@
        existing pose source), shared GPS/IMU/LiDAR/bridge, one MPC. -->
   <arg name="run_id"/>
   <arg name="journal_path" default=""/>
-  <arg name="speed_cap_kph" default="5"/>
+  <arg name="speed_cap_kph" default="20"/>
   <arg name="enable_control" default="false"/>
   <arg name="static_avoidance" default="false"/>
   <arg name="dynamic_obstacles" default="false"/>
@@ -29,6 +29,7 @@
   <node pkg="asmc_planner" type="asmc_shadow_localization_node" name="localization" output="screen" required="true">
     <rosparam command="load" file="$(find planning_inputs)/config/vehicle_state.yaml"/>
     <rosparam command="load" file="$(find asmc_planner)/config/shadow_localization.yaml"/>
+    <rosparam command="load" file="$(find asmc_planner)/config/jamming_motion.yaml"/>
     <param name="wall_corridor_file" value="$(find asmc_planner)/config/shadow_localization/tunnel_wall_corridor_molitcomp03.json"/>
     <param name="parameters" value="$(find asmc_planner)/config/frenet/params.yaml"/>
     <param name="run_id" value="$(arg run_id)"/>

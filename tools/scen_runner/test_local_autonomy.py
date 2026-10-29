@@ -37,7 +37,10 @@ def check_launches():
                        '/local_controller/normal_controller_node': '/mpc_controller',
                        '/local_controller/selector_node': '/asmc_control_selector',
                        '/local_planner/active_in_jamming_only': True,
-                       '/local_planner/speed_cap_kph': 10,
+                       '/local_planner/speed_cap_kph': 20,
+                       '/local_planner/cruise_speed_kph': 15,
+                       '/local_planner/escape_speed_cap_kph': 5,
+                       '/local_planner/vehicle_width': 1.892,
                        '/asmc_control_selector/smooth_handoff': True,
                        '/planning_mode/approach_enabled': True}.items():
         assert local.params[key].value == value, (key, local.params[key].value)

@@ -250,6 +250,7 @@ class PositionNode {
        <<",\"trial_id\":"<<std::quoted(trial_id)
        <<",\"plan_sequence\":"<<sequence<<",\"valid\":"<<(r.valid?"true":"false")
        <<",\"mode_selected\":"<<(selected?"true":"false")<<",\"reason\":"<<std::quoted(r.reason)
+       <<",\"escape_requested\":"<<(r.escape_requested?"true":"false")<<",\"stationary_windows\":"<<r.stationary_windows
        <<",\"phase\":"<<std::quoted(computed?planner->phase():"not_computed")<<",\"source\":"<<std::quoted(transform.source)
        <<",\"anchor_ready\":"<<(transform.valid?"true":"false")<<",\"anchor_samples\":"<<anchor.samples()
        <<",\"recovery_state\":"<<std::quoted(anchor.state)<<",\"recovery_reason\":"<<std::quoted(anchor.reason)
@@ -403,7 +404,17 @@ class PositionNode {
       throw std::runtime_error("invalid localization GPS mounting coordinates");
     p.param<std::string>("objects_topic",objects_topic,"/perception/lidar/tracks_local");
     p.param<std::string>("journal_path",log,"");journal=std::make_unique<Journal>(log);
-    p.param("speed_cap_kph",config.speed_cap,5.);config.speed_cap/=3.6;
+    p.param("speed_cap_kph",config.speed_cap,20.);config.speed_cap/=3.6;
+    p.param("vehicle_width",config.width,1.892);
+    p.param("vehicle_length",config.length,4.635);
+    p.param("rear_axle_to_bumper",config.rear,.790);
+    p.param("cruise_speed_kph",config.cruise_speed,15.);config.cruise_speed/=3.6;
+    p.param("escape_speed_cap_kph",config.recovery_speed,5.);config.recovery_speed/=3.6;
+    if(!std::isfinite(config.width+config.length+config.rear+config.cruise_speed+config.recovery_speed)||
+       config.width!=Config{}.width || config.length!=Config{}.length || config.rear!=Config{}.rear ||
+       config.cruise_speed<=0 || config.cruise_speed>20./3.6 ||
+       config.recovery_speed<3./3.6 || config.recovery_speed>5./3.6)
+      throw std::runtime_error("invalid shared localization vehicle/speed policy");
     p.param("longitudinal/acceleration_limit_mps2",config.accel,2.);
     p.param("longitudinal/jerk_limit_mps3",config.jerk,4.8);
     if(!std::isfinite(config.accel+config.jerk)||config.accel<=0||config.accel>2.||config.jerk<=0||config.jerk>4.8)

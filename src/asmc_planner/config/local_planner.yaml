@@ -1,14 +1,10 @@
 # GPS-independent LOCAL runtime. NORMAL and the camera jamming selector remain separate.
 # LOCAL-2G: geometric motion forecasts, turn-room reserve and measured-gap checks.
-# VehicleSpec width=1.892m; SDK bounding box width=2.1608348m. Until a contact
-# envelope test resolves the difference, use the larger physical test envelope.
-# No separate expansion of the LiDAR OBB: clearance is applied once here.
-vehicle_width: 2.160835
-vehicle_length: 4.635
-rear_axle_to_bumper: 0.790
+# Vehicle dimensions and cruise/ceiling/recovery policy: jamming_motion.yaml + launch.
+# The user-selected1.892m body model does not remove the margins below.
 clearance_margin: 0.30
 planning_budget_ms: 40.0
-# Fresh near-field recovery is target5km/h; physical constraints may lower it. Internal semantic occlusion can
+# Fresh near-field recovery uses a5km/h ceiling; physical constraints may lower it. Internal semantic occlusion can
 # be a soft cost, but body clearance, current OBB and exterior checks stay hard.
 recovery: true
 near_blind_assist: false
@@ -32,7 +28,8 @@ low_speed_rate_floor_mps: 0.1
 local_motion_prediction: true
 maneuver_reserve_m: 1.2
 
-# LOCAL-2H first-comparison profile, validated at10km/h in FOGGY13.
+# LOCAL-2H geometry baseline was qualified at10km/h in FOGGY13.
+# New shared15/20 speed policy awaits the deferred closed-loop comparison.
 # Current OBB/30cm body clearance and350ms source freshness are unchanged.
 # A close tight selected sweep gets maneuver time, not every YOLO detection.
 maneuver_speed_cap_kph: 5.0
@@ -40,5 +37,4 @@ maneuver_speed_cap_kph: 5.0
 # Known mobile groups are vetoed; raw velocity and valid absolute-speed floors remain.
 quiescent_geometry_padding: true
 
-# User-requested low-speed recovery target; not a forced minimum through hazards.
-recovery_target_kph: 5.0
+# Escape ceiling is owned by jamming_motion.yaml, never a forced minimum.

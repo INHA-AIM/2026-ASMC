@@ -10,7 +10,7 @@
   <arg name="lidar_dashboard_port" default="8097"/>
   <arg name="lidar_view" default="true"/>
   <arg name="lidar_debug" default="false"/>
-  <arg name="jamming_speed_kph" default="$(eval {'camera':10.,'local':10.,'localization':15.}[arg('jamming_planner')])"/>
+  <arg name="jamming_speed_kph" default="$(eval {'camera':10.,'local':20.,'localization':20.}[arg('jamming_planner')])"/>
   <arg name="local_run_id" default="$(optenv ASMC_RUNTIME_SESSION_ID standalone)"/>
   <arg name="local_journal_path" default=""/>
   <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>

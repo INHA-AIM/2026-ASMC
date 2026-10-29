@@ -3,6 +3,8 @@
 #include "local/obstacle_memory.hpp"
 #include "local/object_prediction.hpp"
 #include "local/planner.hpp"
+#include "jamming_common/stall_escape.hpp"
+#include "local/recovery.hpp"
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
 #include "local/semantic_reference.hpp"
@@ -46,6 +48,7 @@ template <class T> void store(std::map<uint64_t, T> &m, const T &v) {
 class Node {
   ros::NodeHandle nh, p{"~"};
   Config config;
+  StallEscapeWatch stall_escape;
   bool odometry_only=false;
   std::string yaw_source="rate";
   MotionHistory motion;
@@ -142,6 +145,7 @@ class Node {
     const bool next = m->data == 1;
     if (next != jamming_selected) {
       ++mode_generation;
+      // Worker-owned watch clears on the new evaluation frame/mode below.
       // Keep fresh preparation across entry; only in-flight mode results expire.
     }
     jamming_selected = next;
@@ -283,6 +287,8 @@ class Node {
       << ",\"scene_valid\":" << (scene_assembled ? "true" : "false")
       << ",\"valid\":" << (r.valid ? "true" : "false") << ",\"reason\":\""
       << r.reason << "\",\"age_s\":" << age
+      << ",\"escape_requested\":" << (r.escape_requested?"true":"false")
+      << ",\"stationary_windows\":" << r.stationary_windows
       << ",\"processing_ms\":" << r.elapsed_ms
       << ",\"reference_end_m\":" << r.reference_end
       << ",\"search_horizon_m\":" << r.search_horizon
@@ -1041,8 +1047,24 @@ class Node {
     Result result;
     if (scene.speed < -.05)
       result.reason = "reverse_control_not_supported";
-    else
-      result = Plan(std::move(scene), frame_config);
+    else {
+      if(active_in_jamming_only&&!selected_mode)stall_escape.reset();
+      const bool escape=(!active_in_jamming_only||selected_mode)&&stall_escape.update(evaluation_frame+"/"+std::to_string(expected_mode),plan_stamp.toSec(),scheduled,
+          Pose{origin->x,origin->y,origin->yaw},scene.speed,MovingForwardConflict(scene,frame_config));
+      if(escape){
+        BuildGridIndex(scene.grid);
+        result=FindStallEscape(scene,frame_config,[&](const Pose& a,const Pose& b,Result& r){return CheckSweep(scene,frame_config,a,b,r);});
+        if(!result.valid){
+          Result observed;
+          if(BuildRecoveryPath(scene,frame_config,observed)&&BuildSpeedProfile(scene,frame_config,observed)){
+            observed.valid=true;observed.escape_requested=true;
+            observed.reason="verified_stall_observed_recovery";observed.path_source="stall_observed_opening";
+            result=std::move(observed);
+          }
+        }
+      } else result=Plan(std::move(scene),frame_config);
+      result.stationary_windows=stall_escape.windows();
+    }
       if (semantic_reference && result.speed_reason=="requested_cap")
         result.speed_reason="semantic_reference_trial_5kph";
     lock.lock();
@@ -1149,8 +1171,10 @@ public:
     if (session.empty())
       throw std::runtime_error("session UUID missing");
     p.param<std::string>("run_id", run, "local-preview");
-    p.param("speed_cap_kph", config.speed_cap, 25.);
+    p.param("speed_cap_kph", config.speed_cap, 20.);
     config.speed_cap /= 3.6;
+    p.param("cruise_speed_kph", config.cruise_speed, 15.);
+    config.cruise_speed /= 3.6;
     p.param("near_blind_assist", config.blind_assist, false);
     p.param("causal_road_memory", use_road_memory, true);
     p.param("semantic_reference_fallback", semantic_reference_fallback, false);
@@ -1160,7 +1184,7 @@ public:
     p.param("measured_steering_seed", measured_steering_seed, false);
     p.param("active_in_jamming_only", active_in_jamming_only, false);
     p.param("recovery", config.recovery, true);
-    p.param("vehicle_width", config.width, 2.160835);
+    p.param("vehicle_width", config.width, 1.892);
     p.param("vehicle_length", config.length, 4.635);
     p.param("rear_axle_to_bumper", config.rear, .790);
     p.param("clearance_margin", config.margin, .10);
@@ -1170,7 +1194,7 @@ public:
     p.param("preferred_clearance", config.preferred_clearance, .40);
     p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
     p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
-    double recovery_kph=5.;p.param("recovery_target_kph",recovery_kph,5.);
+    double recovery_kph=5.;p.param("escape_speed_cap_kph",recovery_kph,5.);
     if(!std::isfinite(recovery_kph) || recovery_kph<3. || recovery_kph>5.)
       throw std::runtime_error("invalid recovery target");
     config.recovery_speed=recovery_kph/3.6;
@@ -1181,7 +1205,7 @@ public:
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
                               "WXYZ0123456789-_.") != std::string::npos ||
         !std::isfinite(config.width + config.length + config.rear +
-                       config.margin + config.budget_ms + config.speed_cap +
+                       config.margin + config.budget_ms + config.speed_cap + config.cruise_speed +
                        config.accel + config.controlled_decel + config.decel +
                        config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve + config.maneuver_speed_cap) ||
         config.maneuver_speed_cap<0. || config.maneuver_speed_cap>10./3.6 ||
@@ -1193,7 +1217,7 @@ public:
         config.width < 1.892 || config.length < 4.5 || config.rear <= 0 ||
         config.rear >= config.length || config.margin < 0 ||
         config.budget_ms <= 0 || config.budget_ms > 100 ||
-        config.speed_cap <= 0 || config.speed_cap > 25. / 3.6 ||
+        config.speed_cap <= 0 || config.speed_cap > 20. / 3.6 || config.cruise_speed <= 0 || config.cruise_speed > 20./3.6 ||
         config.accel <= 0 || config.accel > 2.)
       throw std::runtime_error("invalid LOCAL-1 run/configuration");
     std::string log;
