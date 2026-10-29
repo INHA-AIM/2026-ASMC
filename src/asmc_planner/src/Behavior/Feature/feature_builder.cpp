@@ -1028,9 +1028,11 @@ UrbanFeature FeatureBuilder::build(
   }
   feature.extra_values["predicted_front_ttc"] = predicted_front_ttc;
   feature.extra_values["required_deceleration"] = required_deceleration;
-  feature.risk.emergency_risk =
+  const bool temporal_emergency =
       feature.risk.min_ttc < safety_.emergency_ttc_enter ||
-      predicted_front_ttc < safety_.emergency_predicted_ttc ||
+      predicted_front_ttc < safety_.emergency_predicted_ttc;
+  feature.extra_flags["emergency_temporal_evidence"] = temporal_emergency;
+  feature.risk.emergency_risk = temporal_emergency ||
       required_deceleration > safety_.emergency_required_decel;
   buildHighwayLaneChange(feature,objects,evaluation_time);
   return feature;

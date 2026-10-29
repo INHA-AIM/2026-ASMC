@@ -1,4 +1,5 @@
 #include "Parser/BehaviorInput.hpp"
+#include "Parser/RoundaboutEmergencyAuthority.hpp"
 
 #include "Planning/BehaviorContext.hpp"
 #include <algorithm>
@@ -733,6 +734,31 @@ void BehaviorInput::runOnce() {
             validated_native_avoid,current.dynamic.evaluated_provisional_ids,
             current.dynamic.action==DynamicAction::AVOID?current.dynamic.object_id:-1);
       });
+  // Native MERGE has already checked the actual timed swept body. Do not
+  // cancel it solely because general FOLLOW's desired 8m gap hit its 0.5m
+  // denominator floor. No exemption for TTC, stale/failed plans or other modes.
+  const auto temporal = feature.extra_flags.find("emergency_temporal_evidence");
+  const double execution_age = (steady_now-control_status_received_at_).toSec();
+  const bool native_gap_owner = asmc_planner::NativeOwnsRoundaboutGapEmergency(
+      last_control_request_.command.maneuver_type==asmc_msgs::BehaviorCommand::MERGE &&
+      last_control_request_.command.merge_type==asmc_msgs::BehaviorCommand::MERGE_ROUNDABOUT,
+      feedback_snapshot.execution_state==asmc_msgs::FrenetFeedback::COMMITTED ||
+      feedback_snapshot.execution_state==asmc_msgs::FrenetFeedback::EXECUTING,
+      feedback_received && feedback_snapshot.command_accepted &&
+      feedback_snapshot.command_id==v2_command_manager_.activeCommandId() &&
+      feedback_snapshot.command_id==last_control_request_.command.command_id,
+      feedback_snapshot.plan_valid,
+      feedback_snapshot.trajectory_source==asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
+      objects_fresh && ego_.valid && feedback_snapshot.header.stamp.toSec()>=objects_source_time_,
+      temporal==feature.extra_flags.end() || temporal->second, feedback_age,
+      control_status_sequence_ && control_status_.linked && control_status_.planning_checked &&
+      control_status_.token==last_control_request_.token &&
+      execution_age>=0 && execution_age<=.15);
+  if(native_gap_owner && feature.risk.emergency_risk) {
+    feature.risk.emergency_risk=false;
+    ROS_INFO_THROTTLE(1.0,"Roundabout native swept path owns desired-gap deceleration; TTC protection retained");
+  }
+  feature.extra_flags["roundabout_native_gap_authority"]=native_gap_owner;
   if(dynamic_enabled_ && dynamic_policy_.enabled()) {
     if(feature.dynamic.action==DynamicAction::FOLLOW &&
        (!feature.surrounding.has_front_vehicle ||
