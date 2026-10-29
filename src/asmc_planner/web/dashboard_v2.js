@@ -970,7 +970,7 @@
       data.localReceived=performance.now();
       data.localReceiveAge=snapshot.local_receive_age_s??Infinity;
       if(data.localExperiment && data.localDetail?.plan_sequence!==data.localExperiment.plan_sequence){
-        const response=await fetch('../api/local-scene?sequence='+data.localExperiment.plan_sequence+(monitorInstance?'&monitor_instance='+encodeURIComponent(monitorInstance):''),{cache:'no-store'});
+        const response=await fetch('../api/local-scene?sequence='+data.localExperiment.plan_sequence+'&frame='+encodeURIComponent(data.localExperiment.frame||'')+'&run_id='+encodeURIComponent(data.localExperiment.run_id||'')+(monitorInstance?'&monitor_instance='+encodeURIComponent(monitorInstance):''),{cache:'no-store'});
         data.localDetail=response.ok?{...await response.json(),plan_sequence:data.localExperiment.plan_sequence}:null;
       }
       if((data.localExperiment?.scene_valid||data.localExperiment?.valid) && data.localDetail?.raster_available){

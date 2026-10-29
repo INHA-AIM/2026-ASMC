@@ -63,7 +63,7 @@ class FrontDoor(http.server.ThreadingHTTPServer):
         self.state, self.workspace = Path(state), Path(workspace)
         self.workers = threading.BoundedSemaphore(4)
         self.metrics_lock = threading.Lock()
-        self.metrics = dict(requests=0, errors=0, bytes=0, elapsed_ms=0.)
+        self.metrics = dict(requests=0, errors=0, scene_conflicts=0, bytes=0, elapsed_ms=0.)
         self.metrics_instance = None
         super().__init__(address, Handler)
     def process_request(self, request, client_address):
@@ -113,7 +113,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             with self.server.metrics_lock:
                 if self.server.metrics_instance!=instance:
                     self.server.metrics_instance=instance
-                    self.server.metrics=dict(requests=0,errors=0,bytes=0,elapsed_ms=0.)
+                    self.server.metrics=dict(requests=0,errors=0,scene_conflicts=0,bytes=0,elapsed_ms=0.)
                 metrics = dict(self.server.metrics)
             self.reply(dict(protocol=PROTOCOL, workspace=str(self.server.workspace),instance_id=instance,metrics=metrics)); return
         if path.path not in ('/api/snapshot','/api/local-scene'):
@@ -123,7 +123,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         meta = active_state(raw)
         enabled = meta.get('phase') in ('preparing','driving')
         snapshot = dict(interface_version='v2', received_at={}, shadow={})
-        error = None; payload = None; start = time.monotonic()
+        error = None; scene_conflict=False; payload = None; start = time.monotonic()
         try:
             expected = urllib.parse.parse_qs(path.query).get('monitor_instance',[None])[0]
             if expected is not None and expected != meta.get('instance_id'):
@@ -144,13 +144,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             else: meta['connection'] = 'no_active_backend'
         except (OSError, ValueError, urllib.error.URLError) as exc:
             error = str(exc); meta.update(connection='waiting', observer_error=error)
-            if isinstance(exc,urllib.error.HTTPError):exc.close()
+            if isinstance(exc,urllib.error.HTTPError):
+                scene_conflict=exc.code==409 and path.path=='/api/local-scene'
+                exc.close()
         with self.server.metrics_lock:
             if self.server.metrics_instance != raw.get('instance_id'):
                 self.server.metrics_instance=raw.get('instance_id')
-                self.server.metrics=dict(requests=0,errors=0,bytes=0,elapsed_ms=0.)
+                self.server.metrics=dict(requests=0,errors=0,scene_conflicts=0,bytes=0,elapsed_ms=0.)
             self.server.metrics['requests']+=1
-            self.server.metrics['errors']+=bool(error)
+            self.server.metrics['errors']+=bool(error) and not scene_conflict
+            self.server.metrics['scene_conflicts']+=scene_conflict
             self.server.metrics['bytes']+=len(body) if payload is not None else 0
             self.server.metrics['elapsed_ms']+=(time.monotonic()-start)*1000.
         if path.path == '/api/local-scene':

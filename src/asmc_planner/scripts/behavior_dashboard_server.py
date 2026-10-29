@@ -101,10 +101,18 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
             with self.snapshot_lock:
                 plan = self.snapshot.get("local_experiment") or {}
             wanted = args.get("sequence", [""])[0]
-            if wanted != str(plan.get("plan_sequence")):
-                self.send_error(409, "plan changed; fetch snapshot again")
+            requested_frame=args.get('frame',[None])[0]
+            requested_run=args.get('run_id',[None])[0]
+            try:
+                selected_stamp=local_debug.plan_stamp(int(wanted),requested_run,requested_frame)
+            except ValueError:selected_stamp=None
+            # Older clients without an epoch may request the current plan only.
+            if requested_frame is None and wanted==str(plan.get('plan_sequence')):
+                selected_stamp=plan.get('scene_stamp_ns',0)
+            if selected_stamp is None:
+                self.send_error(409, "plan epoch changed or no longer cached")
                 return
-            body = json.dumps(local_debug.snapshot(plan.get("scene_stamp_ns", 0)), separators=(",", ":")).encode()
+            body = json.dumps(local_debug.snapshot(selected_stamp), separators=(",", ":")).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -147,6 +155,7 @@ def set_local_experiment(key, message):
         return
     if not isinstance(value, dict):
         return
+    if key=='local_experiment':local_debug.plan(value)
     with DashboardHandler.snapshot_lock:
         DashboardHandler.snapshot[key] = value
         DashboardHandler.snapshot["received_at"][key] = time.time()

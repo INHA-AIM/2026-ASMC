@@ -11,6 +11,20 @@ class LocalDebugCache:
         self.lock = threading.Lock()
         self.grids = {"probability": OrderedDict(), "coverage": OrderedDict()}
         self.cameras = {}
+        self.plan_epoch = None
+        self.plans = OrderedDict()
+
+    def plan(self, value):
+        epoch=(value.get('run_id'),value.get('frame'))
+        with self.lock:
+            if epoch!=self.plan_epoch:self.plans.clear();self.plan_epoch=epoch
+            self.plans[int(value.get('plan_sequence',0))]=int(value.get('scene_stamp_ns',0))
+            while len(self.plans)>self.capacity:self.plans.popitem(last=False)
+
+    def plan_stamp(self, sequence, run_id, frame):
+        with self.lock:
+            if (run_id,frame)!=self.plan_epoch:return None
+            return self.plans.get(sequence)
 
     def grid(self, key, stamp, width, height, step, encoding, data):
         if (
