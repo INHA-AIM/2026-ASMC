@@ -144,13 +144,34 @@ class EpisodeLink(SceneLink):
             self.check(self._require()._actor_stub.SetTransform(r,timeout=3),'ego 차체 방향 보정 실패')
             self.hold()
 
+    @staticmethod
+    def body_heading_consistent(state):
+        """IONIQ5 reset check: rear-axle -> box center must point forward.
+
+        A 2026-10-30 native reset returned a plausible yaw while the body
+        center and subsequent travel were approximately 180 degrees opposite.
+        Do not repair IMU yaw from this diagnostic or alter planner inputs.
+        This check is specific to this runner's rear-axle ego reference.
+        """
+        try:
+            p=state.transform.location;b=state.bounding_box.location
+            dx,dy=b.x-p.x,b.y-p.y
+            yaw=math.radians(state.transform.rotation.z)
+            length=math.hypot(dx,dy)
+            return (all(math.isfinite(v) for v in (dx,dy,yaw)) and length>.25 and
+                    (dx*math.cos(yaw)+dy*math.sin(yaw))/length>.7)
+        except AttributeError:
+            return False
+
     def held_at(self,pose):
         s=self.ego();p=s.transform.location;v=s.velocity
         yaw_error=abs((s.transform.rotation.z-pose['yaw']+180)%360-180)
-        return (math.dist((p.x,p.y),(pose['x'],pose['y']))<=.25 and abs(p.z-pose['z'])<=.75 and
+        return (self.body_heading_consistent(s) and math.dist((p.x,p.y),(pose['x'],pose['y']))<=.25 and abs(p.z-pose['z'])<=.75 and
                 yaw_error<=1. and math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z)<=.1)
 
     def release(self):
+        if not self.body_heading_consistent(self.ego()):
+            raise RuntimeError('ego reset 차체/보고 방향 불일치: 출발 차단, 시뮬 자세 재설정 필요')
         self.zero_ego();self.gear_ego(True);self.pause_ego(False)
 
 

@@ -51,3 +51,43 @@ GPS state valid, localization anchor_ready=true, selector NORMAL, command_fresh=
 
 복원은 두 revert 커밋으로 이력을 보존했다. 이전 실험을 재검토하려면 archive 참조에서
 별도 비교하고, 이번 문서를 주행 수락으로 사용하지 않는다.
+
+
+## 05:11–05:15 추가 원인 분리와 주행 회복
+
+사용자가 재실험을 요청해 기존 autonomy를 종료하고 전용 lease를 다시 획득했다.
+차량을 재배치하지 않고 3km/h 직진 명령으로 검사한 결과 실제 이동 방향 46.68도,
+IMU 약48.1도였다. 약1.4도는 true ENU / UTM grid의 알려진 방향 차이에 해당하는
+크기이며, 앞선 180도 불일치는 현재 정상 상태에서 재현되지 않았다.
+
+- SetVelocity(0), release만 따로 적용한 검사에서는 차체 중심/방향 반전이 없었다.
+- SetTransform과 기존 reset을 다시 적용한 뒤에는 rear-axle→box-center가
+  보고 yaw의 전방에 위치했다. 앞선 실패에서는 이 벡터가 후방이었다.
+- 따라서 현재 증거는 reset 전후 시뮬레이터 자세/차체 상태의 불일치로 좁혀진다.
+  MORAI 내부에서 그 상태를 만든 정확한 원인은 아직 확정하지 않았다.
+  IMU decode, 전역경로, GPS 변환 또는 조향 부호 오류라고 단정하지 않는다.
+
+동일 시작 코드로 localization 옵션을 선택한 NORMAL 주행을 25초 재검사했다:
+
+| 항목 | 결과 |
+|---|---|
+| 출발점 대비 이동 | 60.625m |
+| 이동 방향(지도) | 60.922도 |
+| 출발 5초 뒤 속도 | 9.758–9.996km/h |
+| localization anchor | 모든 기록에서 true |
+| 외부 collision ID | 없음 (native self Ego는 별도) |
+| 상태 좌표와 전역경로 거리, 1Hz 표본 | p95 0.0403m / 최대0.0429m |
+
+이는 시작 직선 구간의 제한 시험이며 A448, 터널, 전 구간 수락은 아니다.
+경로 거리 통계는 판제 상태와 지도 사이 내부 일관성이며 독립 GT 정확도가 아니다.
+
+`EpisodeLink.held_at/release`에 현재 IONIQ5 후륜축 기준의 차체 방향 검사만 추가했다.
+보고 위치/방향이 맞더라도 box center가 뒤쪽인 불일치 상태에서는 자동 출발하지 않는다.
+이 검사는 시험 도구에만 있고 ROS 운행 노드, 센서 yaw, 경로/제어 정책은 변경하지 않는다.
+기존 scene reset의 모든 수학을 재설계하거나 IMU yaw를 강제로 반전하지 않았다.
+회귀 48개 통과(반대 차체/누락 정보에서 release 차단 포함).
+
+추가 근거는 같은 활성 결과 폴더의 `no_reset_probe.jsonl`, `global-recheck.jsonl`,
+`heading-guard-tests.log`, `heading-audit-autonomy.log`에 보존한다.
+마지막에는 시작 위치/P 기어로 두고 pause를 해제했다. 시험 autonomy만 종료했고
+bridge/camera/LiDAR/master/web은 유지했다. 시험 속도 상한 파라미터는 삭제했다.
