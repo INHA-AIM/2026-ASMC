@@ -22,7 +22,6 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
     const double pass=gap+v2_avoidance_.obstacle_longitudinal_half_extent+
         vehicle_shape_.rear_overhang+avoid_cfg_.pass_clearance;
     const bool target_ahead=pass>0.0;
-    const bool left=v2_avoidance_.target_d>=v2_avoidance_.obstacle_d;
     const auto initial_ref=Interpolate(ref_,s);
     const double delta=std::remainder(ego.yaw-initial_ref.theta,2*M_PI);
     const double slope=std::tan(delta)*(1-initial_ref.kappa*d);
@@ -108,11 +107,7 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
                     // a waypoint reached after its rear edge. This permits a
                     // checked S return while retaining the committed side.
                     const double at_primary=EvalPos(first,std::clamp(gap,0.0,first_length));
-                    const auto direction=execution_->avoid.requested_direction;
-                    if((direction==LateralDirection::LEFT&&at_primary<=v2_avoidance_.obstacle_d)||
-                       (direction==LateralDirection::RIGHT&&at_primary>=v2_avoidance_.obstacle_d))continue;
-                    if(committed&&(v2_avoidance_.map_lateral_started||v2_avoidance_.map_side_reselected||std::fabs(slope)>.1)&&
-                       ((at_primary>=v2_avoidance_.obstacle_d)!=left))continue;
+                    if(!MapAvoidSideAllowed(at_primary,committed))continue;
                 }
                 const double total=first_length+last_length;
                 auto sample=[&](double station){

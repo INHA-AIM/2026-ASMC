@@ -1,4 +1,5 @@
 #include "Frenet/frenet_planner.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
 #include <yaml-cpp/yaml.h>
 #include <filesystem>
@@ -80,6 +81,53 @@ void Recorded(YAML::Node cfg,const std::filesystem::path& root){
     for(int i=0;i<5;++i){tiny.PrepareAvoid(ego,objects,Command(),path,r);waiting&=!r.candidate_valid&&r.search_pending&&r.static_search_pending_level==0;}
     Expect(waiting,"budget exhaustion remains nominal search pending and never authorizes a lower clearance tier");
 }
+void RecordedMovingApproach(YAML::Node cfg,const std::filesystem::path& root){
+    cfg["waypoint_file"]=std::string(FRENET_PACKAGE_SRC_DIR)+"/../../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt";
+    cfg["avoid_hd_map"]["directory"]=std::string(FRENET_PACKAGE_SRC_DIR)+"/../config/frenet/hd_map";
+    cfg["planner"]["avoid"]["map_search_budget_s"]=.035;
+    const auto config=Config(cfg,root,"recorded-moving.yaml");
+    const auto fixture=YAML::LoadFile(std::string(FRENET_PACKAGE_SRC_DIR)+"/../tests/fixtures/static_side_reselection_bag.json");
+    for(const auto& sample:fixture["snapshots"]){
+        const auto e=sample["ego"];
+        CartesianState ego{e["x"].as<double>(),e["y"].as<double>(),e["yaw"].as<double>(),
+            e["kappa"].as<double>(),e["v"].as<double>(),e["a"].as<double>()};
+        std::vector<TrackedObject> objects;
+        for(const auto& n:sample["objects"]){
+            auto o=Box(n["id"].as<int>(),n["x"].as<double>(),n["y"].as<double>(),n["width"].as<double>(),n["length"].as<double>());
+            o.z=n["z"].as<double>();o.heading=n["heading"].as<double>();o.height=n["height"].as<double>();
+            o.vx=n["vx"].as<double>();o.vy=n["vy"].as<double>();o.type=n["type"].as<int>();
+            o.motion_state=static_cast<ObjectMotionState>(n["motion_state"].as<int>());
+            o.classification=n["classification"].as<std::string>();o.camera_class=n["camera_class"].as<std::string>();
+            o.velocity_unavailable=n["velocity_unavailable"].as<bool>();
+            for(int i=0;i<8;++i)o.corners[i]={n["corners"][i][0].as<double>(),n["corners"][i][1].as<double>(),n["corners"][i][2].as<double>()};
+            objects.push_back(o);
+        }
+        FrenetPlanner p;Expect(p.Init(config),"recorded moving approach initializes");p.ConfigureStaticAvoidRecovery(true,true);
+        auto command=Command();command.target_object_id=sample["primary_object_id"].as<int>();command.target_speed=sample["target_speed"].as<double>();
+        CartesianPath path;FrenetPlanner::AvoidPrepareResult result;
+        for(int cycle=0;cycle<80;++cycle){
+            p.SetObjectObservationTime(sample["observation_time"].as<double>(),sample["evaluation_time"].as<double>());
+            p.PrepareAvoid(ego,objects,command,path,result);if(result.candidate_valid)break;
+        }
+        Expect(ego.v>1&&result.candidate_valid&&result.selected_target_d< -1&&
+               result.static_progress_mode==StaticAvoidPolicy::NORMAL,
+               "recorded moving pose has a complete normal right route without waiting for standstill");
+        // Match the trajectory's ego time. Raw sensor corners precede it by
+        // 14 ms in the first sample; keep all motion hypotheses after aligning.
+        auto aligned=objects;
+        const double age=std::max(0.0,sample["evaluation_time"].as<double>()-sample["observation_time"].as<double>());
+        for(auto& object:aligned)object=AdvanceObjectObservation(object,age);
+        Expect(result.candidate_valid&&CartesianAvoidTrajectoryClear(result.candidate_path,aligned,p.vehicle_shape(),p.collision_config(),.1),
+               "recorded right route retains 0.45 m clearance and every uncertain-object hypothesis");
+        const double target=result.selected_target_d;
+        bool retained=result.candidate_valid&&p.CommitAvoid(result);
+        for(int cycle=0;cycle<3&&retained;++cycle){
+            retained=p.PlanCommittedAvoid(ego,objects,command,path,result)&&result.candidate_valid&&
+                std::fabs(result.selected_target_d-target)<1e-6;
+        }
+        Expect(retained,"a checked recorded right route remains selected under repeated moving-pose updates");
+    }
+}
 void RetainedRecovery(const std::string& config){
     FrenetPlanner p;Expect(p.Init(config),"narrow-road priority map initializes");p.ConfigureStaticAvoidRecovery(true,true);
     CartesianState ego{};ego.x=50;auto objects=Scene(false);CartesianPath path;FrenetPlanner::AvoidPrepareResult r;bool pending=false;
@@ -129,7 +177,7 @@ void CenterOpensDuringSearch(YAML::Node cfg,const std::filesystem::path& root){
 }
 int main(){
     const auto root=std::filesystem::absolute("static_avoid_priority_fixture");std::filesystem::create_directories(root);
-    auto cfg=YAML::LoadFile(std::string(FRENET_PACKAGE_SRC_DIR)+"/../config/frenet/params.yaml");Recorded(YAML::Clone(cfg),root);
+    auto cfg=YAML::LoadFile(std::string(FRENET_PACKAGE_SRC_DIR)+"/../config/frenet/params.yaml");Recorded(YAML::Clone(cfg),root);RecordedMovingApproach(YAML::Clone(cfg),root);
     {std::ofstream f(root/"waypoints.txt");for(int x=0;x<=260;++x)f<<x<<" 0\n";}
     {std::ofstream f(root/"drivable.json");f<<R"({"frame_id":"map","map_id":"waize_katri_2025-10-23","grid":{"origin_x":0,"origin_y":-8},"drivable_areas":[{"validity":"validated","polygon":[[0,-6],[260,-6],[260,6],[0,6]]}]})";}
     {std::ofstream f(root/"lines.json");f<<R"({"map_id":"kcity2025_competition_route_curation_candidate_v14","frame":{"local_origin_in_global":[302595,4124145]},"features":[{"feature_type":"lane_marking","attributes":{"pattern":"solid","functional_role":"lane_boundary_paint"},"geometry":{"coordinates":[[0,7],[260,7]]}}]})";}

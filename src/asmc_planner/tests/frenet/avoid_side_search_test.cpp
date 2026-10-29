@@ -52,7 +52,7 @@ int main(){
  const auto transient_blocker=objects.back();objects.pop_back();
  planner.PlanCommittedAvoid(ego,objects,cmd,p,r);
  Expect(!r.candidate_valid||r.selected_target_d<0,
-        "a reselected side stays locked when the blocking observation disappears");
+        "a still-clear incumbent stays selected when the blocking observation disappears");
  objects.push_back(transient_blocker);
  bool completed=false,no_reversal=true;
  for(int i=0;i<600;++i){
@@ -62,6 +62,31 @@ int main(){
   ego={p.x[1],p.y[1],p.yaw[1],p.kappa[1],p.v[1],p.a[1]};
  }
  Expect(completed&&no_reversal,"the reselected bypass completes its return under ideal tracking");
+ // Selecting an opposite route does not mean the car has physically entered
+ // it. A second blocked side must not exhaust only that old side forever.
+ for(bool recovery:{false,true}){
+  FrenetPlanner repeated;setup(repeated,ego,objects,cmd);
+  repeated.ConfigureStaticAvoidRecovery(recovery,recovery);
+  for(int turn=0;turn<4;++turn){
+   const bool block_left=turn%2==0;
+   objects={box(1,80,0,1),box(2,80,block_left?2.5:-2.5,5)};
+   bool ready=false;
+   for(int cycle=0;cycle<100&&!ready;++cycle){
+    repeated.PlanCommittedAvoid(ego,objects,cmd,p,r);
+    ready=r.candidate_valid&&(block_left?r.selected_target_d<0:r.selected_target_d>0);
+   }
+   Expect(ready,"a moving straight approach may reselect again when its current side becomes blocked");
+   Expect(std::string(repeated.avoid_side_policy_name())=="pre_entry",
+          "selecting another side does not report physical lateral entry");
+   Expect(ready&&CartesianAvoidTrajectoryClear(p,objects,VehicleShape{1.9,4.635,.79},CollisionCheckConfig{.45,0,8},.1),
+          "every reselected side retains nominal clearance against all current objects");
+   const double chosen=r.selected_target_d;
+   objects={box(1,80,0,1)};
+   repeated.PlanCommittedAvoid(ego,objects,cmd,p,r);
+   Expect(r.candidate_valid&&std::fabs(r.selected_target_d-chosen)<1e-6,
+          "reopening a cheaper opposite route does not replace a valid incumbent");
+  }
+ }
  cfg["planner"]["avoid"]["prefer_right_when_equal"]=true;
  {std::ofstream f(dir/"params.yaml");f<<cfg;}
  FrenetPlanner mirror;mirror.Init((dir/"params.yaml").string());ego={};ego.x=50;ego.v=4;objects={box(1,80,0,1)};
@@ -83,6 +108,29 @@ int main(){
  restricted(pose,false,false,"explicit target pose remains authoritative");
  restricted(cmd,true,false,"measured lateral motion prevents opposite-side reselection");
  restricted(cmd,false,true,"an ongoing heading change prevents opposite-side reselection");
+ // Heading changes are physical entry even before d reaches 0.20 m. Settling
+ // the heading later must not reopen the other side during the same bypass.
+ FrenetPlanner turned;setup(turned,ego,objects,cmd);
+ ego.yaw=.15;turned.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ ego.yaw=0;ego.y=.05;objects.push_back(box(2,80,2.5,5));
+ turned.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ Expect(!r.candidate_valid||r.selected_target_d>=0,
+        "measured turning entry stays latched after the heading settles");
+ Expect(std::string(turned.avoid_side_policy_name())=="entered",
+        "physical turning remains visible in diagnostics after heading settles");
+ // A stationary heading offset is a current constraint, not evidence that
+ // the car already moved. Reopening that authority must discard exhaustion
+ // and enumeration positions collected under the restricted side.
+ FrenetPlanner reopened;setup(reopened,ego,objects,cmd);
+ reopened.ConfigureStaticAvoidRecovery(false,false);
+ ego.v=0;ego.yaw=.15;objects.push_back(box(2,80,2.5,5));
+ for(int cycle=0;cycle<10;++cycle)reopened.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ ego.yaw=0;bool reopened_ready=false;
+ for(int cycle=0;cycle<100&&!reopened_ready;++cycle){
+  reopened.PlanCommittedAvoid(ego,objects,cmd,p,r);
+  reopened_ready=r.candidate_valid&&r.selected_target_d<0;
+ }
+ Expect(reopened_ready,"a reopened pre-entry side is searched again after restricted enumeration");
  write_config(.001);
  FrenetPlanner sliced;setup(sliced,ego,objects,cmd);
  objects.push_back(box(3,80,0,20));

@@ -654,6 +654,7 @@ public:
     // v2 AVOID의 내부 실행 단계 이름. 진단·검증용 문자열이다. 내부 enum을
     // 공개하지 않기 위해 이름으로 돌려준다.
     const char* avoid_phase_name() const;
+    const char* avoid_side_policy_name() const;
 
     // 외부 AVOID 상태를 전부 비운다 (D6-3a).
     //
@@ -1070,6 +1071,10 @@ private:
     std::uint64_t roundabout_epoch_ = 0;
     MergePrepareResult last_roundabout_result_;
 
+    void UpdateMapAvoidEntry(const CartesianState& ego, double s, double d, bool committed);
+    bool MapAvoidSideLocked(bool committed) const;
+    bool MapAvoidSideAllowed(double passage_d, bool committed) const;
+    bool CanReselectMapAvoidSide(bool committed) const;
     bool MapAvoidProcess(const CartesianState& ego, const FrenetState& start,
         double s, double d, double speed, const std::vector<TrackedObject>& obstacles,
         const PlannerCommand& command, bool prepare, bool committed,
@@ -1183,10 +1188,15 @@ private:
         // blocked side; explicit FSM direction/pose remains authoritative.
         double map_lateral_origin_d = 0.0;
         bool map_lateral_started = false;
-        // A blocked, still-straight committed bypass may choose the other
-        // checked side once.  Further flips while moving undo the lateral
-        // progress and can leave the vehicle stopped beside the obstacle.
+        double map_lateral_slope = 0.0;
+        int map_entry_side = 0;  // +1 left / -1 right, latched on measured entry
+        // The one-reselection limit belongs to the legacy dynamic bypass.
+        // Static approaches keep both sides available until physical entry;
+        // a still-valid incumbent, rather than a flip counter, prevents churn.
         bool map_side_reselected = false;
+        // Enumeration exhaustion is valid only under the same side authority.
+        // Reopening a previously forbidden side resets search positions only.
+        unsigned map_search_side_mask = 0;
         // Enumeration progress only: no unchecked path/geometry crosses cycles.
         std::size_t map_search_cursor = 0;
         std::size_t map_reconnection_cursor = 0;

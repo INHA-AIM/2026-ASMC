@@ -91,7 +91,8 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
     for(const auto& o:objects)if(o.motion_state==ObjectMotionState::LOW_THREAT&&
         o.geometry_valid&&!o.velocity_unavailable)fixed_objects.push_back(o);
     auto validate=[&](const CartesianPath& full_geometry,bool retained) {
-        if(retained&&(context.has_requested_target_d||execution_->avoid.requested_direction!=LateralDirection::NONE)) {
+        if(retained&&(context.has_requested_target_d||
+           execution_->avoid.requested_direction!=LateralDirection::NONE||MapAvoidSideLocked(committed))) {
             double nearest_station=INFINITY,offset=0,last_s=s,nearest_primary=INFINITY,primary_offset=0;
             for(std::size_t i=0;i<full_geometry.x.size();++i) {
                 double ps=s,pd=0;
@@ -110,8 +111,7 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
             }
             const double primary_gap=ReferenceArcDistance(ref_,s,context.obstacle_s);
             if(primary_gap>=0&&primary_gap<=ReferenceArcDistance(ref_,s,last_s)&&
-               ((execution_->avoid.requested_direction==LateralDirection::LEFT&&primary_offset<=context.obstacle_d)||
-                (execution_->avoid.requested_direction==LateralDirection::RIGHT&&primary_offset>=context.obstacle_d))) {
+               !MapAvoidSideAllowed(primary_offset,committed)) {
                 result.rejection_stage="retained.direction";return false;
             }
         }
@@ -408,11 +408,9 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
             if(!central&&!avoid_cfg_.prefer_right_when_equal)left=!left;
             double target=central?centers[i]:(left?gates[i].left+extra:gates[i].right-extra);
             if(gates[i].id==execution_->avoid.obstacle_id) {
-                const auto direction=execution_->avoid.requested_direction;
-                if((direction==LateralDirection::LEFT&&!left)||(direction==LateralDirection::RIGHT&&left))admissible=false;
+                if(!MapAvoidSideAllowed(context.obstacle_d+(left?1:-1),committed))admissible=false;
                 if(context.has_requested_target_d)target=context.requested_target_d;
-                if(committed&&(context.map_lateral_started||context.map_side_reselected||std::fabs(ep)>.10)&&
-                   ((context.target_d>=context.obstacle_d)!=left))admissible=false;
+                if(!MapAvoidSideAllowed(target,committed))admissible=false;
             }
             targets.push_back(target);sides.push_back(left);
         }

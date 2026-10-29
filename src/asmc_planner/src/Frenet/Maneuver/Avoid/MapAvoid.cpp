@@ -95,6 +95,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             result.static_speed_proof_frames=context.static_speed.frames;
         }
     };
+    UpdateMapAvoidEntry(ego,s,d,committed);
     const auto search_started=std::chrono::steady_clock::now();
     const double slice=v2_avoidance_.dynamic_target?avoid_cfg_.map_search_budget_s:
         std::min(avoid_cfg_.map_search_budget_s,replanning_period_s_*.7);
@@ -194,14 +195,11 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     const double cosine=std::cos(initial_heading),metric0=1-initial_ref.kappa*d;
     const double initial_second=(ego.kappa-initial_ref.kappa*cosine/metric0)*metric0*metric0/
         (cosine*cosine*cosine)-(initial_ref.d_kappa*d+initial_ref.kappa*initial_slope)*std::tan(initial_heading);
-    if(committed&&std::fabs(d-v2_avoidance_.map_lateral_origin_d)>=.20)
-        v2_avoidance_.map_lateral_started=true;
     const bool may_retime=committed&&!returning&&!v2_avoidance_.static_recovery_engaged&&
         !v2_avoidance_.map_lateral_started&&gap>clearance+4.0;
-    const bool may_reselect_side=may_retime&&!v2_avoidance_.map_side_reselected&&static_confirmed&&
+    const bool may_reselect_side=committed&&!returning&&static_confirmed&&
+        CanReselectMapAvoidSide(committed)&&(!v2_avoidance_.dynamic_target||may_retime)&&
         (execution_->avoid.phase==AvoidPhase::TRACKING||execution_->avoid.phase==AvoidPhase::SHIFT)&&
-        !v2_avoidance_.has_requested_target_d&&
-        execution_->avoid.requested_direction==LateralDirection::NONE&&
         std::fabs(initial_slope)<.10;
 
     const auto profile_now=std::chrono::steady_clock::now();
@@ -445,6 +443,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         });
         auto evaluate_target=[&](double target_d,const std::vector<double>& delays,double return_advance,bool direct_return=false,bool fresh_entry=false){
             if(search_expired)return;
+            if(gap>=0&&!direct_return&&!MapAvoidSideAllowed(target_d,committed))return;
             // A near-zero offset error can still have a substantial heading
             // error. Reserve distance for that slope to settle; the sampled
             // curvature, acceleration, road and collision checks remain final.
@@ -725,12 +724,16 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             // already passed the full checks at its newly computed geometry.
             if(std::fabs(result.selected_target_d-v2_avoidance_.target_d)<1e-4)
                 result.selected_target_d=v2_avoidance_.target_d;
-            if ((result.selected_target_d >= v2_avoidance_.obstacle_d) !=
+            if (v2_avoidance_.dynamic_target &&
+                (result.selected_target_d >= v2_avoidance_.obstacle_d) !=
                 (v2_avoidance_.target_d >= v2_avoidance_.obstacle_d)) {
                 v2_avoidance_.map_side_reselected = true;
             }
             v2_avoidance_.target_d=result.selected_target_d;
-            if((may_retime||selected_fresh_entry)&&!v2_avoidance_.static_recovery_engaged){
+            const bool static_entry_open=!v2_avoidance_.dynamic_target&&!returning&&
+                CanReselectMapAvoidSide(committed);
+            if((may_retime||selected_fresh_entry)&&
+               (!v2_avoidance_.static_recovery_engaged||static_entry_open)){
                 const double entry_gap=ReferenceArcDistance(ref_, s, result.map_entry_s);
                 v2_avoidance_.map_entry_s=result.map_entry_s;
                 v2_avoidance_.map_transition_distance=result.map_transition_distance;

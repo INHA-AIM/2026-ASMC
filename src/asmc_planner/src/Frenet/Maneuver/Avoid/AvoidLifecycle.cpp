@@ -17,6 +17,65 @@
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
 #include "Frenet/Math/Utils.hpp"
 
+void FrenetPlanner::UpdateMapAvoidEntry(const CartesianState& ego, double s,
+                                      double d, bool committed) {
+    auto& context = v2_avoidance_;
+    const auto reference = Interpolate(ref_, s);
+    const double heading = std::remainder(ego.yaw-reference.theta, 2*M_PI);
+    context.map_lateral_slope = std::tan(heading)*(1-reference.kappa*d);
+    if (committed) {
+        const bool displaced = std::fabs(d-context.map_lateral_origin_d) >= .20;
+        const bool turning = std::fabs(context.map_lateral_slope) > .10 &&
+            std::fabs(ego.v*std::sin(heading)) > .10;
+        // Keep the dynamic entry policy unchanged. For a static bypass, an
+        // observed turn must remain locked even if heading later settles.
+        context.map_lateral_started |= displaced || (!context.dynamic_target && turning);
+        if (!context.dynamic_target && context.map_lateral_started && context.map_entry_side == 0)
+            context.map_entry_side = context.target_d >= context.obstacle_d ? 1 : -1;
+    }
+    if (!context.dynamic_target) {
+        const unsigned mask = (MapAvoidSideAllowed(context.obstacle_d+1, committed) ? 1u : 0u) |
+            (MapAvoidSideAllowed(context.obstacle_d-1, committed) ? 2u : 0u);
+        if (context.map_search_side_mask != mask) {
+            context.map_search_side_mask = mask;
+            context.map_search_cursor = context.map_reconnection_cursor = context.map_corridor_cursor = 0;
+            context.static_search_cursors = {};
+        }
+    }
+}
+
+bool FrenetPlanner::MapAvoidSideLocked(bool committed) const {
+    const auto& context = v2_avoidance_;
+    return committed && (context.map_lateral_started ||
+        std::fabs(context.map_lateral_slope) > .10 ||
+        (context.dynamic_target && context.map_side_reselected));
+}
+
+bool FrenetPlanner::MapAvoidSideAllowed(double passage_d, bool committed) const {
+    if (!std::isfinite(passage_d)) return false;
+    const auto& context = v2_avoidance_;
+    const auto direction = execution_->avoid.requested_direction;
+    if ((direction == LateralDirection::LEFT && passage_d <= context.obstacle_d) ||
+        (direction == LateralDirection::RIGHT && passage_d >= context.obstacle_d)) return false;
+    const int side = passage_d >= context.obstacle_d ? 1 : -1;
+    const int locked = context.map_entry_side != 0 ? context.map_entry_side :
+        (context.target_d >= context.obstacle_d ? 1 : -1);
+    return !MapAvoidSideLocked(committed) || side == locked;
+}
+
+bool FrenetPlanner::CanReselectMapAvoidSide(bool committed) const {
+    return !MapAvoidSideLocked(committed) && !v2_avoidance_.has_requested_target_d &&
+        execution_->avoid.requested_direction == LateralDirection::NONE;
+}
+
+const char* FrenetPlanner::avoid_side_policy_name() const {
+    if (v2_avoidance_.has_requested_target_d ||
+        execution_->avoid.requested_direction != LateralDirection::NONE) return "requested";
+    if (v2_avoidance_.dynamic_target && v2_avoidance_.map_side_reselected) return "dynamic_locked";
+    if (execution_->avoid.committed && v2_avoidance_.map_lateral_started) return "entered";
+    return MapAvoidSideLocked(execution_->avoid.committed) ? "heading_guard" : "pre_entry";
+}
+
 bool FrenetPlanner::CanCommitAvoid(const AvoidPrepareResult& result) const {
     // 확보하지 않은 목표를 잠그지 않는다. 호출자가 candidate_valid를 먼저
     // 확인해야 하지만, 여기서도 막는다.

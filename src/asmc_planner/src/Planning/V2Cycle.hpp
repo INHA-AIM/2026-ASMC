@@ -947,6 +947,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                        ? "committed avoid path blocked by collision"
                        : "could not generate the committed avoid path");
             if(committed.search_pending)detail+="; static corridor search pending";
+            detail+="; side_policy="+std::string(port.planner().avoid_side_policy_name());
             if(committed.static_search_pending_level>=0)
                 detail+="; static search pending level="+std::to_string(committed.static_search_pending_level);
             if(!committed.rejection_stage.empty())detail+="; corridor rejection="+committed.rejection_stage;
@@ -1134,6 +1135,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 " proof_frames="+std::to_string(committed.static_speed_proof_frames);
         if(committed.static_speed_retry)executing.detail+=" speed_retry=1";
         if(!committed.static_corridor_kind.empty())executing.detail+="; corridor="+committed.static_corridor_kind;
+        executing.detail+="; side_policy="+std::string(port.planner().avoid_side_policy_name());
         if(committed.static_search_pending_level>=0)
             executing.detail+="; static search pending level="+std::to_string(committed.static_search_pending_level);
         if(committed.escape_recovery_required)executing.detail+="; initial_margin_escape=1";

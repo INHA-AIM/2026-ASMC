@@ -110,6 +110,17 @@ An accepted incumbent is checked first. A new corridor follows this priority:
 3. Complete body-clear routes at 0.30, 0.20, 0.10 and 0 m, in that order.
 4. Explicitly enabled 0.5 m/s contact-progress prefixes.
 
+Before measured lateral entry, a blocked committed route may select another
+fully checked side more than once. A valid incumbent remains preferred even
+when another side becomes cheaper or opens again. Entry is latched from at
+least 0.20 m lateral displacement or a moving heading change relative to the
+reference; a past selection alone never latches static entry. Explicit FSM
+directions and target poses retain their authority. All map candidate generators
+share this side policy. Changing the permitted sides invalidates enumeration
+positions only, preserving the command, recovery limits and measured progress.
+Feedback reports `side_policy=pre_entry`, `entered` or `requested`.
+`heading_guard` distinguishes a current heading constraint from latched motion.
+
 The interval proposal includes side objects outside the original reference
 corridor. It does not replace dense spatial, timed collision, road-exterior,
 curvature, slew, acceleration, jerk or stop-tail checks. A certified center
