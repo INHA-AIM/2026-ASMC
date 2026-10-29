@@ -106,6 +106,7 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Maneuver/Avoid/StaticAvoidCorridor.cpp
   src/Frenet/Maneuver/Avoid/StaticAvoidPolicy.cpp
   src/Frenet/Maneuver/Avoid/StaticAvoidRecovery.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidCreep.cpp
   src/Frenet/Maneuver/Follow.cpp
   src/Frenet/Maneuver/Keep.cpp
   src/Frenet/Maneuver/LaneChange/LaneChange.cpp

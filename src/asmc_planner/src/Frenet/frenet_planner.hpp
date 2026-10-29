@@ -507,6 +507,8 @@ public:
         double static_progress_margin=.45;
         double static_contact_cost=0;
         double static_minimum_clearance=std::numeric_limits<double>::infinity();
+        bool static_progress_fresh=false;
+        std::string static_recovery_rejection;
 
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
@@ -1071,6 +1073,12 @@ private:
         double speed,double initial_a,const std::vector<TrackedObject>& objects,
         const PlannerCommand& command,bool committed,AvoidPrepareResult& result,
         std::chrono::steady_clock::time_point deadline);
+    bool PlanStaticAvoidCreep(const CartesianState& ego,double s,double d,
+        double speed,double initial_a,const std::vector<TrackedObject>& objects,
+        const PlannerCommand& command,AvoidPrepareResult& result,
+        std::chrono::steady_clock::time_point deadline,const StaticAvoidPolicy& policy);
+    bool AcquireStaticAvoidGroup(double s,const std::vector<TrackedObject>& objects,
+        const PlannerCommand& command);
     bool AvoidProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -1125,6 +1133,13 @@ private:
         std::size_t map_corridor_cursor = 0;
         unsigned map_search_turn = 0;
         int static_progress_level=0;
+        // Recovery belongs to this finite maneuver, independent of tracker IDs.
+        bool static_group_recovery=false;
+        bool static_recovery_engaged=false;
+        bool static_contact_used=false;
+        bool static_progress_fresh=false;
+        std::size_t static_creep_cursor=0;
+        unsigned static_target_missing_cycles=0;
         int static_search_level=1;
         int static_normal_clear_cycles=0;
         struct StaticSearchCursor { std::size_t corridor=0,reconnection=0; };

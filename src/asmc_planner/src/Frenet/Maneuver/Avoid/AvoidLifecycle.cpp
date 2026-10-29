@@ -63,8 +63,13 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.map_group_valid=result.map_group_valid;
     v2_avoidance_.map_group_end_s=result.map_group_end_s;
     v2_avoidance_.static_progress_level=result.static_progress_level;
-    if(result.static_progress_mode==StaticAvoidPolicy::NORMAL) {
+    v2_avoidance_.static_recovery_engaged|=result.static_progress_mode!=StaticAvoidPolicy::NORMAL;
+    v2_avoidance_.static_contact_used|=result.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS;
+    v2_avoidance_.static_progress_fresh=result.static_progress_fresh;
+    v2_avoidance_.static_group_recovery|=result.static_progress_fresh;
+    if(result.static_progress_level==0&&!result.static_progress_fresh) {
         v2_avoidance_.last_nominal=result;
+        v2_avoidance_.last_nominal.static_progress_mode=StaticAvoidPolicy::NORMAL;
         if(v2_avoidance_.last_nominal.spatial_geometry.x.empty())
             v2_avoidance_.last_nominal.spatial_geometry=result.candidate_path;
     }
@@ -78,6 +83,7 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
         ? initial_gap - std::max(0.0, entry_gap) : shift_distance;
     execution_.initializeAvoidEntry({std::isfinite(initial_gap) &&
         initial_gap <= v2_avoidance_.shift_entry_distance});
+    if(v2_avoidance_.static_recovery_engaged)execution_.beginAvoidShiftProbe();
     // PREPARE에서 복구 후보로만 READY가 된 transaction은 COMMIT 직후에도
     // 같은 거리 기반 정책을 이어가야 한다. TRACKING이면 아직 복구가 필요할
     // 단계가 아니므로 latch하지 않는다.
@@ -173,11 +179,13 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     const double clear_distance =
         rear_overhang + v2_avoidance_.obstacle_longitudinal_half_extent +
         avoid_cfg_.pass_clearance;
-    const bool longitudinally_cleared =
-        std::isfinite(gap) && std::isfinite(clear_distance) &&
+    const bool group_owned=v2_avoidance_.static_group_recovery&&v2_avoidance_.map_group_valid;
+    const bool longitudinally_cleared = group_owned?
+        ReferenceArcDistance(ref_,ego_s,v2_avoidance_.map_group_end_s)<=0:
+        (std::isfinite(gap) && std::isfinite(clear_distance) &&
         clear_distance > kProgressEpsilon && gap < -clear_distance &&
         (!v2_avoidance_.map_group_valid ||
-         ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_group_end_s)<=0.0);
+         ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_group_end_s)<=0.0));
 
     // Follow the accepted spatial maneuver, not a newly observed obstacle rear
     // edge. A return is committed only after complete road/body validation.

@@ -173,6 +173,7 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
                 if(!clear){result.rejection_stage=road.drivable?"reconnection.collision":"reconnection.road";if(blocking>=0)result.blocking_object_id=blocking;continue;}
                 ++result.valid_candidate_count;result.blocking_object_id=-1;
                 result.candidate_valid=result.spatial_candidate_selected=true;result.escape_recovery_required=recovery;
+                result.static_progress_fresh=false;
                 result.selected_target_d=via;result.selected_cost=total+AvoidRoadMap::PaintCost(road);
                 result.map_entry_s=s;result.map_transition_distance=first_length;
                 result.map_return_schedule_valid=true;

@@ -160,7 +160,9 @@ bool FrenetPlanner::AvoidProcess(
                 s, *observed_target, v2_avoidance_,
                 /*refresh_committed_target=*/true);
         } else if (!v2_avoidance_.dynamic_target &&
-                   v2_avoidance_.has_last_static_target) {
+                   v2_avoidance_.has_last_static_target &&
+                   ++v2_avoidance_.static_target_missing_cycles<=
+                       static_cast<unsigned>(avoid_cfg_.static_dropout_grace_cycles)) {
             // Keep the last authoritative static OBB in the collision set for
             // the dropout grace.  Otherwise a planner can accelerate through
             // the temporarily invisible target before the tracker reconnects.
@@ -171,6 +173,8 @@ bool FrenetPlanner::AvoidProcess(
     // COMMIT 이후의 종방향 위치와 실제 d를 먼저 반영해야 이번 cycle의
     // 생성 목표가 TRACKING/SHIFT/PASS/RETURN 중 올바른 단계에 맞는다.
     if (avoid_committed) {
+        if(v2_avoidance_.static_recovery_engaged&&execution_->avoid.phase==AvoidPhase::TRACKING)
+            execution_.beginAvoidShiftProbe();
         UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
 
         // 아직 회피를 시작하지 않은 TRACKING에서만 영구 소실을 실패로

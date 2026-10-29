@@ -948,6 +948,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                        : "could not generate the committed avoid path");
             if(committed.search_pending)detail+="; static corridor search pending";
             if(!committed.rejection_stage.empty())detail+="; corridor rejection="+committed.rejection_stage;
+            if(!committed.static_recovery_rejection.empty())
+                detail+="; static recovery rejection="+committed.static_recovery_rejection;
             // TRACKING 중 target 장기 소실은 terminal이다. 그 외 post-COMMIT
             // 생성 실패는 기존대로 transaction/lock을 유지한다.
             port.command_manager_.NotifyPlanFailed(
@@ -1115,12 +1117,15 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 ? "avoid maneuver completed"
                 : "executing committed avoid trajectory";
             if(committed.retained_geometry)executing.detail+="; retained spatial corridor";
-            if(committed.static_progress_mode!=StaticAvoidPolicy::NORMAL)
-                executing.detail+="; static recovery policy="+std::to_string(int(committed.static_progress_mode))+
-                    " margin="+std::to_string(committed.static_progress_margin)+
-                    " clearance="+std::to_string(committed.static_minimum_clearance)+
-                    " contact_cost="+std::to_string(committed.static_contact_cost);
         }
+        // A rejected replacement command must retain its reason while still
+        // exposing the actual locked maneuver's recovery policy.
+        if(committed.static_progress_mode!=StaticAvoidPolicy::NORMAL)
+            executing.detail+="; static recovery policy="+std::to_string(int(committed.static_progress_mode))+
+                " margin="+std::to_string(committed.static_progress_margin)+
+                " clearance="+std::to_string(committed.static_minimum_clearance)+
+                " contact_cost="+std::to_string(committed.static_contact_cost)+
+                " fresh_prefix="+std::to_string(committed.static_progress_fresh);
         port.trajectory_pub_.publish(trajectory);
         port.publishDebugMarkersV2(trajectory, command);
         port.publishFeedbackV2(feedback_command_id, executing, &trajectory,

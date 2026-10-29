@@ -85,7 +85,7 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
         if(contact) {
             // A rolling, stop-capable prefix is retimed from the measured
             // state. Keep the full nominal geometry separately for continuity.
-            const double stop_reserve=4.0+ego.v*ego.v/(limits_.max_longitudinal_accel*1.6)+ego.v;
+            const double stop_reserve=6.0+ego.v*ego.v/(limits_.max_longitudinal_accel*1.6)+ego.v;
             double traveled=0;
             for(std::size_t i=0;i<full_geometry.x.size();++i) {
                 if(i)traveled+=std::hypot(full_geometry.x[i]-full_geometry.x[i-1],full_geometry.y[i]-full_geometry.y[i-1]);
@@ -166,7 +166,7 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
 
     // Spatial execution is the incumbent. Update timing and a C2 connection
     // from the measured pose before considering a different corridor.
-    if(context.map_spatial_geometry.x.size()>2) {
+    if(context.map_spatial_geometry.x.size()>2&&!context.static_progress_fresh) {
         const auto& old=context.map_spatial_geometry;
         std::size_t nearest=0;double distance=INFINITY;
         for(std::size_t i=0;i<old.x.size();++i) {
@@ -242,7 +242,9 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
     }
     gates.resize(count);
     if(std::none_of(gates.begin(),gates.end(),[&](const Gate& g){return g.id==execution_->avoid.obstacle_id;})&&
-       !(committed&&ReferenceArcDistance(ref_, s, context.obstacle_s)<0)) {
+       !(committed&&ReferenceArcDistance(ref_, s, context.obstacle_s)<0)&&
+       !context.static_group_recovery&&!context.static_recovery_engaged&&
+       !(policy&&policy->mode!=StaticAvoidPolicy::NORMAL)) {
         // The command still owns its identity. Earlier blockers can constrain
         // its path, but cannot silently replace an out-of-horizon primary.
         return false;

@@ -138,12 +138,11 @@ void FrenetPlanner::RefreshAvoidObservation(
     context.obstacle_length = object.length;
     context.obstacle_lateral_half_extent = lateral_half_extent;
     context.obstacle_longitudinal_half_extent = longitudinal_half_extent;
-    if (!context.dynamic_target &&
-        object.type == static_cast<int>(asmc_planner::ObjectType::STATIC_OBSTACLE) &&
-        object.geometry_valid) {
+    if (!context.dynamic_target && IsStaticAvoidProgressObject(object)) {
         context.last_static_target = object;
         context.has_last_static_target = true;
-    }
+    } else context.has_last_static_target = false;
+    context.static_target_missing_cycles=0;
 
     // Dynamic map AVOID owns a fully checked in-lane offset. The scalar
     // static-clearance heuristic may disagree with authoritative corners and
@@ -377,10 +376,13 @@ bool FrenetPlanner::PrepareExternalAvoidTargets(
         command.has_avoid_target_d
             ? command.avoid_target_s : 0.0;
 
-    // 가장 가까운 정적 장애물과 회피 방향을 스스로 자동 결정하지 않는다
-    // (계약 D1 0.1절 B 분류, 6.4절).
-    const AvoidTargetStatus status = ResolveExternalAvoidTarget(
+    // Ordinary acquisition follows the requested identity. Explicit static
+    // recovery may acquire the current occupied group after that ID is lost;
+    // the original command still owns COMMIT and requested direction/pose.
+    AvoidTargetStatus status = ResolveExternalAvoidTarget(
         ego_s, command.target_object_id, obstacles, v2_avoidance_);
+    if(status==AvoidTargetStatus::LOST&&AcquireStaticAvoidGroup(ego_s,obstacles,command))
+        status=AvoidTargetStatus::VALID;
     if (status == AvoidTargetStatus::LOST) {
         // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음 행동은
         // FSM이 새 command_id로 결정한다(계약 8.2절).

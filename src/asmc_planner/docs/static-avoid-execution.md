@@ -113,28 +113,57 @@ recovery speed cap is 1 m/s. Search cursors survive each bounded search slice;
 finding no candidate is not a proof of global physical infeasibility.
 
 When body-clear alternatives are not found, the explicitly enabled contact
-policy follows a previously nominally validated spatial reference at 0.5 m/s.
-It executes a rolling prefix with a full stopping tail, retimed from actual
-pose, speed and acceleration. Road containment and actuator checks remain.
+policy executes at 0.5 m/s. A previously nominally validated spatial reference
+is preferred when it reconnects and passes the current checks. Without one,
+the planner generates a new C2 road-constrained rolling prefix from the actual
+pose, speed, heading, curvature and acceleration, with a complete stopping tail.
+This is available before the first successful nominal path and during PREPARE;
+only atomic COMMIT releases an execution trajectory. Road containment and
+actuator checks remain. The prefix is regenerated as the vehicle advances;
+its temporary endpoint cannot become the end of the entire maneuver.
 Only current LOW_THREAT fixed occupancy with valid corners can be a contact
 cost. Vehicles, pedestrians, mobile semantics, UNKNOWN/PENDING/DYNAMIC motion,
 unavailable velocity and invalid geometry retain strict collision checks.
 No time spent waiting, by itself, authorizes throttle or relabels an actor.
+Eligibility is checked per current object, independently of the commanded or
+previously observed primary ID. If that ID disappeared before acquisition,
+recovery can acquire the current fixed group intersecting the route; the
+original command remains its execution owner. Known mobile primary requests
+and in-lane-only dynamic maneuvers do not gain this acquisition exception.
+
+Fresh-prefix recovery owns a finite group of nearby occupied footprints and
+hands off using group passage, a checked response/stop corridor and KEEP
+preview. A separated remote primary cannot keep the near group locked forever.
+UNKNOWN transport type with LOW_THREAT motion uses the same confirmed-fixed
+predicate for recovery and the dropout cache. A changed uncertain/mobile
+observation invalidates that cache, and missing cached footprints expire after
+the configured static dropout grace even during SHIFT/PASS.
 
 Contact cost integrates overlap length and penetration severity; a searched
 replacement with less contact can replace the retained prefix. A newly found
 body-clear path takes precedence over contact progress. Reduced margins latch
 through the maneuver; a normal retained corridor must pass three consecutive
-checks before ordinary execution resumes. Contact execution never overwrites
-the last nominally checked reference.
+checks before nominal clearance resumes. Recovery speed stays latched until
+the maneuver hands off: 1 m/s for margin recovery, or 0.5 m/s once contact
+progress was used. A transient clear scan cannot restore 4.2 m/s. A complete
+nominal-clearance route can return to normal collision policy while retaining
+this independent planning speed cap. This also permits ordinary control after
+complete observation dropout and finite ghost expiry when Behavior proposes
+KEEP; an exception-bearing prefix still requires its fresh AVOID owner.
+Recovery cannot retime SHIFT/PASS back into pre-entry TRACKING. Contact
+execution never overwrites the last nominally checked reference unless a
+complete nominal-clearance corridor is independently established.
 
 `Trajectory.execution_policy` distinguishes normal, reduced-margin and
 contact-progress execution. Failure codes still mean failure. Controller
 checks require a fresh AVOID owner, a stop-capable bounded speed profile, and
 an independent opt-in for contact; braking release still requires a new valid
 plan. Feedback detail records policy, chosen margin, minimum perceived fixed
-object clearance and contact cost. These diagnostics do not certify absence
-of simulator ground-truth contact.
+object clearance, contact cost and `fresh_prefix`. They are appended even when
+feedback also reports rejection of an attempted command replacement. Failure
+detail separately reports `static recovery rejection`, including road,
+curvature/retiming and strict-object collision rejection. These diagnostics
+do not certify absence of simulator ground-truth contact.
 
 The frozen fixture `static_obb_growth_stall.json` records moving-entry and
 stopped observations from bag SHA256
@@ -144,8 +173,21 @@ checks ideal-tracking completion. A separate synthetic test requires progress
 through fixed occupancy while preserving actuator and mobile-actor guards.
 Both regressions also feed every recovery speed profile through Controller's
 independent policy gate. Margin-only execution stays blocked by the synthetic
-physical wall; contact-enabled execution eventually returns to normal policy.
+physical wall; contact-enabled execution eventually hands off, retaining crawl
+speed until that handoff.
 These are frozen-observation tests, not a replay of MORAI actuator physics.
+
+`static_id_loss_stall.json` freezes entry, box collapse, ID disappearance and
+settled observations from bag SHA256
+`f9dd5d815a0a90675c7d0aacac3ba47bff9cc881356e4e2915523918cf1f33c7`.
+Regression holds the stopped observation beyond the dropout grace, then
+requires ideal-tracking completion. Synthetic cases start with no nominal
+history, with a stale request ID, or a separated remote primary; repeated
+tracker churn must not prevent completion or release the crawl limit. Actual
+generator tests retain opt-out, uncertain motion, mobile-actor blocking and
+explicit target-pose/direction constraints.
+Complete observation dropout must regain a fully checked nominal route after
+finite cache expiry without restoring cruise speed prematurely.
 
 For MORAI, compare strict, margin-only and contact-enabled runs on the same
 placement and approach speed. Record actual contacts and forward progress
@@ -154,12 +196,22 @@ policy must not be confused with the planner's contact-progress result. Add
 `--continue-on-static-contact` to record registered fixed static-mission
 contacts while continuing the run; other actors retain collision termination.
 
-Verification includes a full 126-registration CTest run and successful reruns
-of the five affected registrations after the final acceleration/profile fixes.
-The cross-component profile regression also passes. Catkin XML results report
-881 tests, zero errors/failures/skips. Runner mock integration (46), headless UI
-(35), and old/current trajectory decoding (2) tests pass separately. These
-checks do not start MORAI or the workspace's driving stack.
+The group-recovery build passes all 126 CTest registrations. Catkin XML results
+report 881 tests, zero errors/failures/skips; the extended standalone progress
+regression is a separate CTest registration. The final explicit goal/direction
+guard is also checked by that regression. The old/current trajectory decoder's
+two tests and the two launch/configuration tests pass. The prior progress-policy
+change also passed runner mock integration (46) and headless UI (35) tests;
+this group-recovery change does not modify runner code. None of these checks
+starts MORAI or the workspace's driving stack.
+
+An additional sequential-input audit retains the recorded nominal COMMIT and
+feeds all 436 later feedback-time observations/poses from the ID-loss recording.
+After 20.3 s, the old implementation rejects all 258 sampled cycles; the
+updated implementation produces checked recovery trajectories in all 258.
+Recorded poses stay fixed in this audit, so this is a planner re-entry check,
+not a closed-loop completion result. The frozen-snapshot ideal-tracking test
+separately requires recovery and completion.
 
 ## Baseline offline validation and MORAI acceptance
 
@@ -210,6 +262,13 @@ After a full rebuild, use these MORAI gates:
 4. Stops during SHIFT, between blockers and during RETURN, followed by restart.
 5. A newly blocking object and its removal; no release before a new valid path.
 6. Original diagnostic placement, normal signals/traffic, then the full course.
+7. Start at rest with a fixed blockage before any normal bypass is generated.
+8. Let the primary OBB collapse/disappear while other fixed barriers remain;
+   continue recording for more than the three-second dropout grace.
+9. Check that repeated clear/expanded OBB observations never restore cruise
+   speed before group passage; compare selected and normal control outputs.
+10. Repeat cold start with a newly moving actor or pedestrian on the prefix;
+    contact progress must remain blocked until strict collision checks pass.
 
 Record the entire episode, including successful runs: perceived corners and
 motion state, selected command, trajectory, Frenet feedback, vehicle state,

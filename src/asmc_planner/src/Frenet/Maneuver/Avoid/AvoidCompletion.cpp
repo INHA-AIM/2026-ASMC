@@ -18,7 +18,8 @@ bool FrenetPlanner::CanHandoffAvoidToKeep(
     const double gap = ReferenceArcDistance(ref_, s, v2_avoidance_.obstacle_s);
     const double clearance = avoid_cfg_.rear_overhang +
         v2_avoidance_.obstacle_longitudinal_half_extent + avoid_cfg_.pass_clearance;
-    if (!std::isfinite(gap) || gap >= -clearance) return false;
+    const bool group_owned=v2_avoidance_.static_group_recovery&&v2_avoidance_.map_group_valid;
+    if (!group_owned&&(!std::isfinite(gap) || gap >= -clearance)) return false;
     if(v2_avoidance_.map_group_valid &&
        ReferenceArcDistance(ref_, s, v2_avoidance_.map_group_end_s)>0.0)return false;
     const double heading_error = std::remainder(

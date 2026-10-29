@@ -13,13 +13,17 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
        result.direction_conflict||result.target_behind_ego||speed<=.05)return false;
     StaticAvoidPolicy policy;
     for(const auto& o:objects)if(IsStaticAvoidProgressObject(o))policy.object_ids.push_back(o.id);
-    // A reclassified target cannot silently receive a static exception.
-    if(std::find(policy.object_ids.begin(),policy.object_ids.end(),execution_->avoid.obstacle_id)==policy.object_ids.end())return false;
+    // Eligibility belongs to each current footprint, never to the primary ID.
+    // Reclassified/mobile/uncertain actors remain in the strict collision set.
+    const auto contact_reserve=std::chrono::milliseconds(6);
+    const auto margin_deadline=avoid_cfg_.static_contact_progress_enabled?
+        std::max(std::chrono::steady_clock::now(),deadline-contact_reserve):deadline;
     const double margins[]={collision_cfg_.safety_margin,.30,.20,.10,0.0};
     std::size_t generated=result.generated_candidate_count,valid=result.valid_candidate_count;
     auto run=[&](int level,bool retained_only,AvoidPrepareResult& trial) {
         trial=result;trial.candidate_valid=false;trial.generated_candidate_count=trial.valid_candidate_count=0;
         trial.retained_geometry=false;trial.rejection_stage.clear();
+        trial.static_progress_fresh=false;
         policy.mode=level==0?StaticAvoidPolicy::NORMAL:
             level==5?StaticAvoidPolicy::CONTACT_PROGRESS:StaticAvoidPolicy::REDUCED_MARGIN;
         policy.margin=level==5?0.0:margins[level];
@@ -38,14 +42,18 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
         auto& slot=context.static_search_cursors[level];
         context.map_corridor_cursor=slot.corridor;context.map_reconnection_cursor=slot.reconnection;
         CartesianPath active_geometry;
-        if(level==5) {
+        const bool old_nominal=level==5&&!context.static_progress_fresh&&
+            context.last_nominal.candidate_valid;
+        if(old_nominal) {
             active_geometry=std::move(context.map_spatial_geometry);
             context.map_spatial_geometry=context.last_nominal.spatial_geometry;
         }
         const auto now=std::chrono::steady_clock::now();
         const auto budget=retained_only?now:std::min(deadline,now+std::chrono::milliseconds(6));
-        bool ok=PlanStaticAvoidCorridor(ego,s,d,cap,seed,objects,command,committed,trial,budget,&policy);
-        if(level==5) {
+        bool ok=false;
+        if(level!=5||!context.static_progress_fresh)
+            ok=PlanStaticAvoidCorridor(ego,s,d,cap,seed,objects,command,committed,trial,budget,&policy);
+        if(old_nominal) {
             context.map_spatial_geometry=std::move(active_geometry);
             if(ok&&trial.retained_geometry) {
                 const auto& old=context.last_nominal;
@@ -54,6 +62,18 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
                 trial.map_return_schedule_valid=old.map_return_schedule_valid;
                 trial.map_return_start_s=old.map_return_start_s;trial.map_return_end_s=old.map_return_end_s;
                 trial.map_group_valid=old.map_group_valid;trial.map_group_end_s=old.map_group_end_s;
+            }
+        }
+        if(level==5&&!retained_only&&(!ok||std::chrono::steady_clock::now()<budget)) {
+            AvoidPrepareResult fresh=result;
+            fresh.candidate_valid=false;fresh.generated_candidate_count=fresh.valid_candidate_count=0;
+            if(PlanStaticAvoidCreep(ego,s,d,cap,seed,objects,command,fresh,budget,policy)&&
+               (!ok||fresh.static_contact_cost+.1<trial.static_contact_cost)) {
+                generated+=trial.generated_candidate_count;valid+=trial.valid_candidate_count;
+                trial=std::move(fresh);ok=true;
+            } else {
+                generated+=fresh.generated_candidate_count;valid+=fresh.valid_candidate_count;
+                if(!ok&&!fresh.rejection_stage.empty())trial.rejection_stage=fresh.rejection_stage;
             }
         }
         if(!retained_only&&std::chrono::steady_clock::now()<budget&&(!ok||level==5)) {
@@ -72,13 +92,15 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
         context.map_corridor_cursor=saved_corridor;context.map_reconnection_cursor=saved_reconnect;
         generated+=trial.generated_candidate_count;valid+=trial.valid_candidate_count;
         if(ok) {
+            trial.static_recovery_rejection.clear();
             trial.static_progress_mode=policy.mode;trial.static_progress_level=level;
             trial.static_progress_margin=policy.margin;
             // A newly generated body-clear route is preferable to contact.
-            if(level==5&&trial.static_contact_cost==0&&!trial.retained_geometry) {
+            if(level==5&&trial.static_contact_cost==0&&!trial.retained_geometry&&!trial.static_progress_fresh) {
                 trial.static_progress_mode=StaticAvoidPolicy::REDUCED_MARGIN;trial.static_progress_level=4;
             }
         }
+        if(!ok&&!trial.rejection_stage.empty())result.static_recovery_rejection=trial.rejection_stage;
         return ok;
     };
     const auto accept=[&](AvoidPrepareResult& trial) {
@@ -98,16 +120,16 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
         if(margins[level]>=collision_cfg_.safety_margin)continue;
         if(run(level,true,trial))return accept(trial);
     }
-    for(int attempt=0;attempt<4&&std::chrono::steady_clock::now()<deadline;++attempt) {
+    for(int attempt=0;attempt<4&&std::chrono::steady_clock::now()<margin_deadline;++attempt) {
         int level=context.static_search_level;
         context.static_search_level=level==4?1:level+1;
         if(margins[level]>=collision_cfg_.safety_margin)continue;
         if(active>0&&active<5&&level<active)continue;
         if(run(level,false,trial))return accept(trial);
     }
-    // Contact is an explicitly enabled simulator policy, following a previously
-    // nominally checked route. It never exempts unknown/moving/new mobile actors.
-    if(committed&&avoid_cfg_.static_contact_progress_enabled&&context.last_nominal.candidate_valid) {
+    // A fresh rolling road-constrained prefix is also available during PREPARE,
+    // before any nominal route exists. Execution still requires atomic COMMIT.
+    if(avoid_cfg_.static_contact_progress_enabled) {
         if(run(5,false,trial))return accept(trial);
     }
     result.generated_candidate_count=generated;result.valid_candidate_count=valid;
