@@ -449,7 +449,7 @@ void FrenetPlanner::RevokeRoundaboutReadiness() {
 }
 bool FrenetPlanner::CanCommitRoundaboutMerge(const MergePrepareResult& result) const {
     return execution_.canCommitMerge(roundabout_merge_enabled(),
-        result.epoch==roundabout_epoch_, result.candidate_valid, result.ready,
+        result.epoch==roundabout_epoch_, result.candidate_valid&&result.departure_certified, result.ready,
         last_roundabout_result_.ready, !result.candidate_path.x.empty());
 }
 void FrenetPlanner::ApplyRoundaboutMergeCommit(const MergePrepareResult&) {
@@ -553,6 +553,8 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         if(roundabout_bridge_settled_>=.5)roundabout_bridge_active_=false;
     }
     bool early_departure_clear=true;int uncertain=-1;
+    const bool entry_inputs_fresh=planning_time-observation_stamp<=.25&&
+        observation_stamp<=planning_time+.05;
     if(!execution_->merge.committed) {
     // MakeMergeProfile starts at the measured speed/acceleration and unwinds
     // braking under the existing jerk limit. Certify that actual schedule
@@ -596,8 +598,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     // establishes motion/classification. Small roadside fixtures are excluded.
     if(uncertain<0)uncertain=UnclassifiedCirculatingObject(obstacles,roundabout_zone_,
         conflict.x,conflict.y);
-    early_departure_clear=uncertain<0&&
-        planning_time-observation_stamp<=.25&&observation_stamp<=planning_time+.05;
+    early_departure_clear=uncertain<0&&entry_inputs_fresh;
     if(uncertain>=0)result.blocking_object_id=uncertain;
     }
     double best_cost=std::numeric_limits<double>::infinity();
@@ -713,6 +714,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                 progress_alternatives.push_back({path,geometry.second});
             }
         }
+        bool departure_certified=false;
         double cost=check.exit_time+AvoidRoadMap::PaintCost(road)+std::fabs(geometry.second);
         if(valid) {
             nominal_candidate_found=nominal_family_valid=true;
@@ -724,6 +726,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                     vehicle_shape_,collision_cfg_,path_cfg_.dt,roundabout_merge_cfg_.min_front_time_gap,
                     merge_cfg_.min_rear_time_gap,true);
                 valid=final.safe;
+                departure_certified=final.safe;
                 if(!valid&&final.blocking_object_id>=0)result.blocking_object_id=final.blocking_object_id;
             }
         }
@@ -731,6 +734,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         if(!valid)continue;
         ++result.valid;
         if(cost<best_cost){best_cost=cost;selected_d=geometry.second;selected_bridge=bridge;result.candidate_valid=true;
+            result.departure_certified=departure_certified;
             result.entry_time=check.entry_time;result.exit_time=check.exit_time;
             result.candidate_path=std::move(path);}
     }
@@ -812,7 +816,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         return braking;
     }
     // Every selected departure has already passed the same final models.
-    if(!result.candidate_valid||!early_departure_clear) {
+    if(!result.departure_certified) {
         roundabout_safe_observations_=0;roundabout_last_entry_=-1;
     } else if(observation_stamp>roundabout_last_observation_+1e-6) {
         double absolute_entry=planning_time+result.entry_time;
@@ -825,9 +829,16 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     roundabout_last_observation_=observation_stamp;
     // Restrict early commitment to one body length before the frontier. A
     // distant forecast is not permission to commit while still approaching.
-    result.ready=result.candidate_valid && early_departure_clear && roundabout_safe_observations_>=merge_cfg_.safe_confirm_cycles &&
+    result.ready=result.departure_certified && roundabout_safe_observations_>=merge_cfg_.safe_confirm_cycles &&
         ctx.s>=roundabout_zone_.stop_s-vehicle_shape_.length &&
         ctx.s<=roundabout_zone_.stop_s+1.0;
+    if(!entry_inputs_fresh)result.entry_status=RoundaboutEntryStatus::STALE_INPUT;
+    else if(uncertain>=0)result.entry_status=RoundaboutEntryStatus::OBSERVATION_UNVERIFIABLE;
+    else if(!result.departure_certified)result.entry_status=RoundaboutEntryStatus::PATH_REJECTED;
+    else if(roundabout_safe_observations_<merge_cfg_.safe_confirm_cycles)
+        result.entry_status=RoundaboutEntryStatus::CONFIRMING;
+    else if(!result.ready)result.entry_status=RoundaboutEntryStatus::OUTSIDE_ENTRY_ZONE;
+    else result.entry_status=RoundaboutEntryStatus::READY;
     // Once actually stopped in the departure zone, hold here until a fresh
     // full departure is authorized. Do not inch forward just to stop again.
     execution_.observeMergeWaiting(ego.v<=.1&&
@@ -905,7 +916,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                collision_cfg_,path_cfg_.dt))out_path=std::move(aligned);
     }
     if(!ok&&result.ready&&ego.v<.1){PlanExternalStopHold(ego,ctx.s,out_path);ok=true;}
-    if(!ok)result.ready=false;
+    if(!ok){result.ready=false;result.entry_status=RoundaboutEntryStatus::WAITING_PATH_INVALID;}
     last_roundabout_result_=result;
     return ok;
 }

@@ -248,8 +248,8 @@ planner:
     stop_buffer: 3.5           # [m] 정지 목표 s=882.26 (자차 반길이+안전마진+추가 여유)
     conflict_radius: 6.0       # [m] 순환차 곡선예측의 충돌점 최근접 허용거리
     min_object_speed: 0.5      # [m/s] 이보다 느린 객체는 순환 차량에서 제외
-    min_front_time_gap: 1.0    # [s] 선행 순환차 통과 후 최소 여유
-    min_rear_time_gap: 2.0     # [s] Ego 진입 후 후속 순환차까지 최소 여유
+    min_front_time_gap: 0.6    # [s] 선행 순환차 통과 후 최소 여유
+    min_rear_time_gap: 1.0     # [s] Ego 진입 후 후속 순환차까지 최소 여유
     ego_clear_time: 1.5        # [s] Ego의 conflict zone 통과 시간
     max_wait_time: 10.0        # [s] 진입 gap 탐색 시간범위
     completion_distance: 8.0   # [m] 충돌점 통과 후 MERGE 종료 거리

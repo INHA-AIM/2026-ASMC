@@ -5,6 +5,6 @@ scene_runs: 1
 section_runs:
   static: 10
   dynamic: 10
-  roundabout: 10
+  roundabout: 5
   high_speed: 10
   tunnel: 10
