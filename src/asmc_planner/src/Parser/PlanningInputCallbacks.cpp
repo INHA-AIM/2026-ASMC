@@ -45,17 +45,25 @@ void PlanningPort::behaviorCallback(
 }
 
 PlanningPort::InputSnapshot PlanningPort::takeSnapshot() const {
-    std::lock_guard<std::mutex> lock(input_mutex_);
     InputSnapshot snapshot;
-    snapshot.vehicle = latest_vehicle_;
-    snapshot.objects = latest_objects_;
-    snapshot.behavior = latest_behavior_;
-    snapshot.vehicle_received_at = vehicle_received_at_;
-    snapshot.objects_received_at = objects_received_at_;
-    snapshot.behavior_received_at = behavior_received_at_;
-    snapshot.has_vehicle = has_vehicle_;
-    snapshot.has_objects = has_objects_;
-    snapshot.has_behavior = has_behavior_;
+    {
+        std::lock_guard<std::mutex> lock(input_mutex_);
+        snapshot.vehicle = latest_vehicle_;
+        snapshot.objects = latest_objects_;
+        snapshot.behavior = latest_behavior_;
+        snapshot.vehicle_received_at = vehicle_received_at_;
+        snapshot.objects_received_at = objects_received_at_;
+        snapshot.behavior_received_at = behavior_received_at_;
+        snapshot.has_vehicle = has_vehicle_;
+        snapshot.has_objects = has_objects_;
+        snapshot.has_behavior = has_behavior_;
+    }
+    // The stored observation remains untouched. Match Behavior's per-cycle
+    // policy before every Frenet consumer, including v1 and reference returns.
+    if (static_mission_policy_ && snapshot.has_vehicle && snapshot.has_objects) {
+      const auto& ego = snapshot.vehicle;
+      static_mission_policy_->apply(ego.x, ego.y, ego.yaw, ego.valid, snapshot.objects);
+    }
     return snapshot;
 }
 

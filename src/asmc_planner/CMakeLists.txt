@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs visualization_msgs)
 find_package(yaml-cpp REQUIRED)
 find_package(Boost REQUIRED)
+find_package(OpenSSL REQUIRED)
 catkin_package(INCLUDE_DIRS src
   LIBRARIES asmc_signal_policy_core asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_core
     asmc_planner_execution_core asmc_planner_behavior_module asmc_planner_ros_adapters
@@ -194,6 +195,7 @@ add_library(asmc_planner_ros_adapters
   src/Parser/DetectedObjects.cpp
   src/Parser/MoraiObjects.cpp
   src/Parser/PlanningInput.cpp
+  src/Parser/StaticMissionPolicy.cpp
   src/Parser/PlanningInputCallbacks.cpp
   src/Parser/RuntimeConfig.cpp
   src/Parser/Traffic/ros_traffic_light_provider.cpp
@@ -209,7 +211,7 @@ target_include_directories(asmc_planner_ros_adapters PUBLIC src ${catkin_INCLUDE
 add_dependencies(asmc_planner_ros_adapters ${catkin_EXPORTED_TARGETS})
 target_link_libraries(asmc_planner_ros_adapters
   asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_module
-  asmc_planner_execution_core yaml-cpp ${catkin_LIBRARIES})
+  asmc_planner_execution_core yaml-cpp OpenSSL::Crypto ${catkin_LIBRARIES})
 set_source_files_properties(
   src/Output/PlanningFeedback.cpp
   src/Output/PlanningOutput.cpp

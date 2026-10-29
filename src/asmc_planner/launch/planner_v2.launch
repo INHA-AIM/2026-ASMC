@@ -7,6 +7,7 @@
   <arg name="objects_input_type" default="morai"/>
   <arg name="planning_objects_topic" default="/planning/objects"/>
   <arg name="avoid_path_margin_m" default="0.4"/>
+  <arg name="static_obstacle_unknown" default="true"/>
   <rosparam ns="behavior_planner" command="load"
             file="$(find asmc_planner)/config/behavior/behavior_params.yaml"
             subst_value="true"/>
@@ -18,6 +19,13 @@
   <param name="/frenet_planner/planner/config_path" value="$(find asmc_planner)/config/frenet/params.yaml"/>
   <param name="/frenet_planner/highway_merge_enabled" value="$(arg highway_merge)"/>
   <node pkg="asmc_planner" type="asmc_planner_node" name="asmc_planner" output="screen">
+    <!-- Shared internal policy only; perception topics keep original labels.
+         Official route and station bounds are loaded from HD-map metadata. -->
+    <param name="static_obstacle_policy/enabled"
+           value="$(eval arg('static_obstacle_unknown') and arg('objects_input_type') == 'detected')"/>
+    <param name="static_obstacle_policy/metadata_file"
+           value="$(find asmc_hd_map)/config/kcity2025_competition_metadata.yaml"/>
+    <param name="static_obstacle_policy/data_root" value="$(optenv ASMC_DATA /data)"/>
     <remap from="/vehicle/state" to="$(arg state_topic)"/>
     <remap from="/perception/objects" to="$(arg planning_objects_topic)"/>
   </node>

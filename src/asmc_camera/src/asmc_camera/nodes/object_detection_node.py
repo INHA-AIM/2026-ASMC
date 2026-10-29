@@ -161,11 +161,15 @@ class ObjectDetectionNode:
                             if self.input_source else rospy.Subscriber(topics[v], CompressedImage,
                             partial(self._callback, view=v), queue_size=1, buff_size=2**24) for v in self.views]
         self.subscriber = self.subscribers[0]
-        rospy.on_shutdown(self.shutdown)
         self.worker = threading.Thread(target=self._worker, daemon=True)
         self.monitor = threading.Thread(target=self._monitor, daemon=True)
         self.worker.start()
         self.monitor.start()
+        # rospy invokes this hook immediately if shutdown arrived during model
+        # loading. Both threads must exist and have been started before joining.
+        rospy.on_shutdown(self.shutdown)
+        if self.stop.is_set():
+            return
         rospy.loginfo("camera object detector ready: model=%s device=%s", backend.info.get("weights_sha256"),
                       backend.info.get("device"))
 

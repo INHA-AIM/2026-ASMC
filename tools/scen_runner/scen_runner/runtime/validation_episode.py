@@ -46,7 +46,9 @@ class EpisodeRoute:
     def section(self,name):
         if name in self._sections:return self._sections[name]
         c=self.cfg['sections'][name]
-        start=max(0.,self.lanes[c['start_link']]['route_station_start_m']-c['lead_in_m'])
+        anchor=c.get('start_anchor','start')
+        if anchor not in ('start','end'):raise ValueError('start_anchor는 start/end여야 합니다.')
+        start=max(0.,self.lanes[c['start_link']][f'route_station_{anchor}_m']-c['lead_in_m'])
         end=self.lanes[c['end_link']]['route_station_end_m']
         x,y,z,h=self.curve.pose(start)
         pose=dict(x=x,y=y,z=z+self.cfg['section_height_offset_m'],roll=0.,pitch=0.,yaw=math.degrees(h))
@@ -186,6 +188,7 @@ class EpisodeController:
         self.lease=lease if lease is not None else ValidationLease(self.base['morai']['host'],self.base['morai']['port'])
         self.planning=None  # Optional external supervisor; keyboard validation stays independent.
         self.section_finish_pending=False
+        self.ego_start_delay_s=0.;self.ego_release_at=None
 
     def claim_simulator(self):
         self.lease.acquire()
@@ -255,6 +258,11 @@ class EpisodeController:
         # GUI selection changes are committed only after the previous planner
         # and objects have been stopped/cleaned. All restarts share this path.
         if selection:self.mode,self.section=selection
+        self.ego_start_delay_s=(float(self.route.cfg.get('sections',{}).get(self.section,{}).get('ego_start_delay_s',0.))
+                               if self.mode=='section' and self.replay_seed is None else 0.)
+        if not math.isfinite(self.ego_start_delay_s) or self.ego_start_delay_s<0:
+            raise ValueError('ego 출발 대기 시간은 0 이상의 유한한 초 단위 값이어야 합니다.')
+        self.ego_release_at=None
         if reset_budget and self.run_budget:self.run_budget.reset(self.mode,self.section)
         self.current_operation=dict(section=None,action='reset')
         self.pose=self.route.start(self.mode,self.section);self.link.reset(self.pose)
@@ -370,8 +378,73 @@ class EpisodeController:
             self.finish_runs(label,already_held=True);return None
         return reason
 
+    def pause_prepared_traffic(self):
+        errors=[]
+        for adapter in self.adapters:
+            pause=getattr(adapter,'pause_prepared',None)
+            if pause is None:continue
+            try:pause()
+            except Exception as error:errors.append(f'{adapter.name}: {error}')
+        if errors:raise RuntimeError('NPC 준비 정지 복구 실패: '+'; '.join(errors))
+
+    def release_prepared_ego(self,states):
+        recovery=bool(self.planning) and self.section=='tunnel'
+        section_end=(self.route.prepare_section_end(self.section,
+            self.route.planning_recovery_tail if recovery else 0.)
+            if self.mode=='section' and (self.replay_seed is None or recovery) else None)
+        self.link.release()
+        if self.phase=='ego_wait':
+            now=self.clock()
+            for adapter in self.adapters:
+                set_wait=getattr(adapter,'set_ego_wait',None)
+                if set_wait is not None:set_wait(False,now)
+        with self.contact_lock:
+            if self.run_budget is not None:self.run_budget.start_run()
+            self.run_started=self.clock();self.phase='running';self.ego_release_at=None
+            self.completion.reset((self.pose['x'],self.pose['y']),self.run_started)
+            if section_end is not None:section_end.reset((self.pose['x'],self.pose['y']),self.run_started)
+            if self.stagnation:self.stagnation.reset((self.pose['x'],self.pose['y']),self.run_started)
+            if self.on_episode_ready:self.on_episode_ready(self,states)
+        self.status='주행 허용 · '+('판제·MPC 준비 확인' if self.planning else '기존 주행 코드 입력 사용')
+        count='' if self.run_budget is None else f' · 주행 {self.run_budget.started}/{self.run_budget.limit}'
+        print('[검증 준비 완료] ego 주행 허용'+count,flush=True)
+        configuration=self.planning.configuration() if self.planning else {}
+        self.record_lifecycle('driving_ready',owned_ids=sorted(self.owned),
+                              planning_configuration=configuration if isinstance(configuration,dict) else {})
+
+    def wait_for_ego_departure(self):
+        """Keep the GUI responsive and NPC traffic live during the ego hold."""
+        try:
+            self.current_operation=dict(section=self.section,action='ego_start_delay')
+            self.signals.check()
+            if self.planning:self.planning.check()
+            if not self.link.held_at(self.pose):
+                raise RuntimeError('출발 대기 중 ego 위치 또는 속도가 정지 조건을 벗어났습니다.')
+            for adapter in self.adapters:
+                if self.cancelled.is_set():break
+                adapter.tick();self.refresh_owned()
+            states=self.read_states()
+            if self.cancelled.is_set():
+                self.pause_prepared_traffic();return None
+            remaining=max(0.,self.ego_release_at-self.clock())
+            self.status=f'NPC 선출발 · ego 정지 · 출발까지 {remaining:.1f}초'
+            if remaining>0:return None
+            self.signals.verify()
+            if self.planning:self.planning.check()
+            if self.cancelled.is_set():
+                self.pause_prepared_traffic();return None
+            self.release_prepared_ego(states)
+        except Exception:
+            try:self.pause_prepared_traffic()
+            finally:self.link.hold()
+            raise
+        return None
+
     def step(self):
-        if self.cancelled.is_set():return None
+        if self.cancelled.is_set():
+            if self.phase=='ego_wait':self.pause_prepared_traffic()
+            return None
+        if self.phase=='ego_wait':return self.wait_for_ego_departure()
         if self.phase in ('preparing','running'):
             try:self.signals.check()
             except Exception:
@@ -406,27 +479,29 @@ class EpisodeController:
             if self.planning and not self.planning.ready(self.pose,self.episode):
                 self.status='ego 정지 · '+self.planning.status
                 return None
-            recovery=bool(self.planning) and self.section=='tunnel'
-            section_end=(self.route.prepare_section_end(self.section,
-                self.route.planning_recovery_tail if recovery else 0.)
-                if self.mode=='section' and (self.replay_seed is None or recovery) else None)
-            now=self.clock()
-            for adapter in self.adapters:adapter.resume_schedule(now)
             self.signals.verify()
-            self.link.release()
-            with self.contact_lock:
-                if self.run_budget is not None:self.run_budget.start_run()
-                self.run_started=self.clock();self.phase='running'
-                self.completion.reset((self.pose['x'],self.pose['y']),self.run_started)
-                if section_end is not None:section_end.reset((self.pose['x'],self.pose['y']),self.run_started)
-                if self.stagnation:self.stagnation.reset((self.pose['x'],self.pose['y']),self.run_started)
-                if self.on_episode_ready:self.on_episode_ready(self,states)
-            self.status='주행 허용 · '+('판제·MPC 준비 확인' if self.planning else '기존 주행 코드 입력 사용')
-            count='' if self.run_budget is None else f' · 주행 {self.run_budget.started}/{self.run_budget.limit}'
-            print('[검증 준비 완료] ego 주행 허용'+count,flush=True)
-            configuration=self.planning.configuration() if self.planning else {}
-            self.record_lifecycle('driving_ready',owned_ids=sorted(self.owned),
-                                  planning_configuration=configuration if isinstance(configuration,dict) else {})
+            now=self.clock()
+            try:
+                for adapter in self.adapters:
+                    if self.cancelled.is_set():break
+                    adapter.resume_schedule(now)
+                if self.cancelled.is_set():
+                    self.pause_prepared_traffic();return None
+                if self.ego_start_delay_s>0:
+                    wait_started=self.clock()
+                    for adapter in self.adapters:
+                        set_wait=getattr(adapter,'set_ego_wait',None)
+                        if set_wait is not None:set_wait(True,wait_started)
+                    self.ego_release_at=wait_started+self.ego_start_delay_s
+                    self.phase='ego_wait'
+                    self.status=f'NPC 선출발 · ego 정지 · 출발까지 {self.ego_start_delay_s:.1f}초'
+                    self.record_lifecycle('npc_head_start',ego_delay_s=self.ego_start_delay_s)
+                    return None
+                self.release_prepared_ego(states)
+            except Exception:
+                try:self.pause_prepared_traffic()
+                finally:self.link.hold()
+                raise
         if self.phase=='running':
             if self.planning:
                 try:self.planning.check()

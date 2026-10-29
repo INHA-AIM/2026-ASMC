@@ -57,9 +57,9 @@ def load_local_config() -> dict:
         raise ValueError(f"개인 설정 YAML 오류: {LOCAL_CONFIG} · {error}") from error
     if data is None:
         data = {}
-    fields = {"morai": {"host", "port"}, "dll": {"managed_path"}}
+    fields = {"morai": {"host", "port"}, "dll": {"managed_path"}, "bridge": {"script"}}
     if not isinstance(data, dict) or data.keys() - fields.keys():
-        raise ValueError(f"{LOCAL_CONFIG}: morai, dll 항목만 설정할 수 있습니다.")
+        raise ValueError(f"{LOCAL_CONFIG}: morai, dll, bridge 항목만 설정할 수 있습니다.")
     for section, values in data.items():
         if not isinstance(values, dict) or values.keys() - fields[section]:
             allowed = ", ".join(sorted(fields[section]))
