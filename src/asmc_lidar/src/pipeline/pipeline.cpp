@@ -148,6 +148,12 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   const bool updates_active=!config_.tunnel_only_updates||tunnel_updates_armed_;
   auto refinement_config=config_.camera_point_refinement;
   if(!updates_active) {
+    // Camera classification/fusion remains global. Only camera-owned point
+    // extraction (including residual splitting and wall cleanup) is scoped.
+    // Both entry switches must be off: steel can otherwise project/carve
+    // points even when general refinement is disabled.
+    refinement_config.enabled=false;
+    refinement_config.steel_fragment_merge=false;
     refinement_config.vehicle_history_enabled=false;
     refinement_config.detached_wall_cleanup=false;
     vehicle_history_.clear();

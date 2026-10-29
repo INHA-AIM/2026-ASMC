@@ -35,6 +35,7 @@ venv/
 /checkpoints/
 # Verified local links installed from the camera model release; binaries remain external.
 *.bag
+*.bag.active
 *.bagidx
 
 # Env

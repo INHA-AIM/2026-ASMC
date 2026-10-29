@@ -248,7 +248,7 @@ planner:
     stop_buffer: 3.5           # [m] 정지 목표 s=882.26 (자차 반길이+안전마진+추가 여유)
     conflict_radius: 6.0       # [m] 순환차 곡선예측의 충돌점 최근접 허용거리
     min_object_speed: 0.5      # [m/s] 이보다 느린 객체는 순환 차량에서 제외
-    min_front_time_gap: 0.6    # [s] 선행 순환차 통과 후 최소 여유
+    min_front_time_gap: 0.6    # [s] 기존 gap 계산용; 현재 회전교차로는 roundabout_merge.min_front_time_gap_s 사용
     min_rear_time_gap: 1.0     # [s] Ego 진입 후 후속 순환차까지 최소 여유
     ego_clear_time: 1.5        # [s] Ego의 conflict zone 통과 시간
     max_wait_time: 10.0        # [s] 진입 gap 탐색 시간범위
@@ -511,8 +511,10 @@ roundabout_merge:
   speed_cap_mps: 6.944444444444445
   preview_distance_m: 45.0
   max_horizon_s: 10.0
-  # Roundabout only; highway/common MERGE headways remain unchanged.
-  min_front_time_gap_s: 0.7
+  # 진입 전 선행차 시간 여유. planner.merge.min_front_time_gap보다 우선한다.
+  # 후행차 여유는 planner.merge.min_rear_time_gap(1.0초)을 유지한다.
+  # 고속도로 합류와 회전교차로 진입 후 주행에는 적용하지 않는다.
+  min_front_time_gap_s: 0.3
   # [m/s] Preliminary LiDAR error allowance, not a certified 2-D error bound.
   # The history spread gate is twice this value (opposite-signed errors).
   speed_measurement_error_mps: 5.0

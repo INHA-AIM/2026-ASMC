@@ -2,6 +2,17 @@
 
 기본 배포의 `fusion.views: all`, `mission15_no_cone_v1`, 전·후방 군집 허용거리와 semantic-motion 정책은 유지한다. 새 정제는 기본적으로 꺼져 있다. 원본 sensor ROI Z는 사용자 요청대로 [-2,+2]m다. 기존 전체 YAML을 복사해 카메라 모델이나 융합 정책을 되돌리지 않는다.
 
+When `tunnel_only_updates: true` is selected (the `lidar_wall_vehicle.yaml`
+profile), camera-owned point extraction, residual splitting, steel fragment
+merging and measured-vehicle history run only inside the existing
+`pre_entry_wall` route window. Its configured `lead_m: 30.0`,
+`exit_buffer_m: 10.0`, lateral/direction checks and hysteresis are unchanged.
+GPS loss retains a previously verified window; GPS loss elsewhere cannot arm
+it. Outside that window refinement reports `enabled: false` and projects no
+points. Global camera CAR classification and HD-map delivery protection are
+separate and remain enabled, so the monitor can still show YOLO vehicle
+protection or joint point/OBB support outside a tunnel.
+
 ## 프로필 생성
 
 선택한 main 설정을 입력으로 새 실행 설정 파일을 생성한다. 입력과 기존 출력 파일은 덮어쓰지 않는다.
