@@ -357,7 +357,7 @@ planner:
     speed_error_correlation_s: 0.3
     motion_fit_min_span_s: 0.2
     provisional_lateral_speed_mps: 0.25 # only small position-contradicted lateral observations
-    max_rear_decel_mps2: 3.0
+    max_rear_decel_mps2: 5.0 # competition rear response; ego limits unchanged
     completion_settle_s: 0.5
     completion_heading_rad: 0.12
     completion_lateral_m: 0.5
@@ -511,6 +511,8 @@ roundabout_merge:
   speed_cap_mps: 6.944444444444445
   preview_distance_m: 45.0
   max_horizon_s: 10.0
+  execution_reaction_time_s: 0.3 # 11 fixed-input bag sequences; NPC response assumption
+  execution_max_rear_decel_mps2: 3.0
   # Roundabout only; highway/common MERGE headways remain unchanged.
   min_front_time_gap_s: 0.7
   # [m/s] Preliminary LiDAR error allowance, not a certified 2-D error bound.

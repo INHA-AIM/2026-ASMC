@@ -46,6 +46,8 @@ struct RoundaboutMergeConfig {
     // a partial-only occupancy uses these FULL sizes as its half extents.
     double partial_vehicle_length = 6.0;
     double partial_vehicle_width = 3.0;
+    double execution_reaction_time = 1.0;
+    double execution_max_rear_decel = 3.0;
 };
 
 struct RoundaboutMergeZone {
@@ -85,3 +87,9 @@ MergeCandidateCheck CheckRoundaboutCandidate(
 // certify departure from an initial zero-velocity estimate.
 int UnclassifiedCirculatingObject(const std::vector<TrackedObject>& objects,
     const RoundaboutMergeZone& zone,double conflict_x,double conflict_y);
+
+class RoundaboutPrediction;
+CartesianCollisionCheckResult EvaluateRoundaboutExecutionSafety(
+    const CartesianPath&,const RoundaboutMergeZone&,const std::vector<TrackedObject>&,
+    const VehicleShape&,const CollisionCheckConfig&,double,const RoundaboutPrediction&,
+    const RoundaboutMergeConfig&,double entry_age_s);

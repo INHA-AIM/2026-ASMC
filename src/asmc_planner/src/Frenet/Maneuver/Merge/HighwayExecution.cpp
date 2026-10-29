@@ -2,6 +2,7 @@
 #include "Frenet/Maneuver/Merge/HighwayVelocityRecovery.hpp"
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/SpatialStop.hpp"
+#include "Frenet/Maneuver/Merge/ExecutionResponse.hpp"
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Generator/LateralGenerator.hpp"
 #include "Frenet/Generator/CartesianRetimer.hpp"
@@ -697,11 +698,36 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
         // After commitment a blocked path brakes in place along this route;
         // it never restarts a wait at a frontier now behind the vehicle.
         build_maintenance();
+        // A rejected moving schedule does not prove that a slower STOP is
+        // rear-safe. Keep the existing front/road braking certificate, and
+        // distinguish the conditional rear certificate from the existing
+        // nominal maintenance certificate. No new catalogue/model is added.
+        if(maintenance_ok&&highway_committed_)for(const auto& raw_actor:candidate_obstacles) {
+            const auto actor=AdvanceObjectObservation(raw_actor,std::max(0.0,ego_stamp-observation));
+            if(!merge_response::Rear(actor,maintenance_path,vehicle_shape_,collision_cfg_))continue;
+            if(std::none_of(zone.following_lanes.begin(),zone.following_lanes.end(),
+                [&](const auto& lane){return lane.reference.get()==actor.prediction_lane.get();}))continue;
+            const auto& origin=actor.prediction_origin?*actor.prediction_origin:actor;
+            const double age=actor.prediction_origin?actor.prediction_origin_offset_s:0;
+            if(origin.prediction_lane.get()!=actor.prediction_lane.get()||
+               !merge_response::Clear(maintenance_path,origin,vehicle_shape_,collision_cfg_,path_cfg_.dt,
+                   highway_rear_response::reaction_s,cfg.max_rear_decel_mps2,
+                   maintenance_path.x.size(),recovery_budget(),age)) {
+                // This is a failure of the conditional rear envelope, not a
+                // failure of the original physical/road/front maintenance
+                // certificate. An unconditional emergency STOP would be even
+                // slower. Preserve the existing controlled maintenance output
+                // as risk mitigation, without claiming a certified rear response
+                // or issuing a new merge approval. Replan on the next sample.
+                result.detail+="; rear_response_unverified="+std::to_string(actor.id)+
+                    "; nominal_maintenance_only";break;
+            }
+        }
         if(!maintenance_ok) {
             result.ready=false;highway_readiness_.Reset();
             if(result.check.blocking_object_id>=0)
                 last_failure_reason_=PlanFailureReason::COLLISION_BLOCKED;
-            result.detail+="; no_safe_corridor_maintenance";highway_last_result_=result;return false;
+            result.detail+="; no_safe_corridor_maintenance; emergency_command_not_certified_stop";highway_last_result_=result;return false;
         }
         if(highway_committed_)result.detail="highway_braking: "+result.detail;
         output=std::move(maintenance_path);

@@ -247,3 +247,5 @@ KEEP/STOP/FOLLOW/곡선 속도 시험. 이전 사용자 정의 Frenet YAML에도
 탈락했으므로 제외했다. 현재 프로필은 회전교차로 이후 2개와 재밍 이후 5개
 도로만 지정하며, 나머지 도로는 기본 한계를 사용한다. 도로 ID는 기존
 외부 명령의 source_link_id를 사용하고 지도 파일을 바꾸지 않는다.
+
+합류 실행 중 후행 차량 처리와 조건부 NPC 반응 가정은 [merge-response-execution.md](docs/merge-response-execution.md)를 참고하세요. 완전한 후방 안전 인증과 기존 명목 유지 경로의 위험 완화를 진단에서 구분합니다.

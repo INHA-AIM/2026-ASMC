@@ -1536,6 +1536,7 @@ private:
     double object_evaluation_time_ = -1;
     std::unordered_map<int, ObjectTrack> object_tracks_{};
     RoundaboutPrediction roundabout_prediction_{};
+    double roundabout_physical_entry_time_=-1;
     bool roundabout_exit_prediction_active_=false;
     double roundabout_exit_prediction_until_=-1;
 };

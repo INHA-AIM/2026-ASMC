@@ -263,6 +263,8 @@ bool FrenetPlanner::InitImpl(const std::string& yaml_path,
             roundabout_merge_cfg_.speed_measurement_error = merge["speed_measurement_error_mps"].as<double>(5.0);
             roundabout_merge_cfg_.partial_vehicle_length = merge["partial_vehicle_length_m"].as<double>(6.0);
             roundabout_merge_cfg_.partial_vehicle_width = merge["partial_vehicle_width_m"].as<double>(3.0);
+            roundabout_merge_cfg_.execution_reaction_time = merge["execution_reaction_time_s"].as<double>(1.0);
+            roundabout_merge_cfg_.execution_max_rear_decel = merge["execution_max_rear_decel_mps2"].as<double>(3.0);
             roundabout_merge_cfg_.source_link = merge["source_link"].as<std::string>(roundabout_merge_cfg_.source_link);
             roundabout_merge_cfg_.target_link = merge["target_link"].as<std::string>(roundabout_merge_cfg_.target_link);
             roundabout_merge_cfg_.stop_node = merge["stop_node"].as<std::string>(roundabout_merge_cfg_.stop_node);
@@ -274,6 +276,8 @@ bool FrenetPlanner::InitImpl(const std::string& yaml_path,
                 !std::isfinite(roundabout_merge_cfg_.speed_measurement_error) || roundabout_merge_cfg_.speed_measurement_error <= 0 ||
                 !std::isfinite(roundabout_merge_cfg_.partial_vehicle_length) || roundabout_merge_cfg_.partial_vehicle_length <= 0 ||
                 !std::isfinite(roundabout_merge_cfg_.partial_vehicle_width) || roundabout_merge_cfg_.partial_vehicle_width <= 0 ||
+                !std::isfinite(roundabout_merge_cfg_.execution_reaction_time) || roundabout_merge_cfg_.execution_reaction_time < 0 ||
+                !std::isfinite(roundabout_merge_cfg_.execution_max_rear_decel) || roundabout_merge_cfg_.execution_max_rear_decel <= 0 ||
                 !std::isfinite(roundabout_merge_cfg_.preview_distance) || roundabout_merge_cfg_.preview_distance <= 0)
                 throw std::runtime_error("invalid roundabout merge configuration");
             if (!avoid_road_map_.enabled()) throw std::runtime_error("roundabout MERGE requires the HD map");

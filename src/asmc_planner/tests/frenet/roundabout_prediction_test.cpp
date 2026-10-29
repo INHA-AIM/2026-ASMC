@@ -305,6 +305,27 @@ int main(){
         expect(retained.MissingDepartureOccupancies(1016,[](double,double){return true;},6,3,1).empty(),
             "one-second history is unchanged: no missing vehicle model survives fifteen seconds");
     }
+    // Execution lane authority is independent of a fully visible body. It
+    // still needs fresh, direction-consistent displacement on the supplied map.
+    history.Reset();object.id=60;object.type=0;object.length=2;object.width=.9;
+    object.motion_state=ObjectMotionState::DYNAMIC;object.vx=5;object.vy=0;
+    for(int i=0;i<4;++i){object.x=5*i*.1;object.y=0;observe(1200+i*.1,1);}
+    auto partial=history.ExecutionMappedMotion(object,{supplied_lane},2);
+    expect(bool(partial.prediction_lane)&&partial.corners[0].x==object.corners[0].x&&
+        !history.MappedMotion(object,{supplied_lane},2).prediction_lane,
+        "partial body can support execution lane motion without granting PREPARE whole-body confidence");
+    expect(!history.ExecutionMappedMotion(object,{},2).prediction_lane&&
+        !history.ExecutionMappedMotion(object,{supplied_lane},30).prediction_lane,
+        "execution cannot fabricate missing map coverage");
+    object.velocity_unavailable=true;
+    expect(!history.ExecutionMappedMotion(object,{supplied_lane},2).prediction_lane,
+        "partial execution authority cannot repair unavailable velocity");
+    object.velocity_unavailable=false;object.type=2;
+    expect(!history.ExecutionMappedMotion(object,{supplied_lane},2).prediction_lane,
+        "pedestrians do not inherit a partial-vehicle execution lane");
+    object.type=0;object.vy=5;object.vx=0;
+    expect(!history.ExecutionMappedMotion(object,{supplied_lane},2).prediction_lane,
+        "a fresh crossing velocity cannot inherit the previous straight history");
     return failures?1:0;
 }
 
