@@ -35,6 +35,7 @@ struct Config {
   double preferred_clearance = .40;
   double low_speed_rate_floor = 1.;
   double maneuver_reserve = 0.; // Keep turn room if a verified prefix ends at an obstacle.
+  double maneuver_speed_cap = 0.; // Optional close, tight swept-path maneuver cap;0 disables.
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;
@@ -109,6 +110,7 @@ struct Result {
   std::vector<Candidate> candidates;
   unsigned candidates_omitted = 0;
   double recovery_cost = 0;
+  double maneuver_cap = 0;
   unsigned recovery_obb_overlap = 0;
 };
 // Yaw/speed is unobservable at rest. A fresh measured CAN front-wheel angle

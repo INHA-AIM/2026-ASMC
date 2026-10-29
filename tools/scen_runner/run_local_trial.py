@@ -83,6 +83,9 @@ def main():
     p.add_argument("--empty", action="store_true")
     p.add_argument("--lidar-config", type=Path)
     p.add_argument("--planner-config", type=Path)
+    p.add_argument("--family-gap-start-s",type=float,default=8.)
+    p.add_argument("--family-gap-duration-s",type=float,default=0.,
+                   help="standalone-only receive-drop fault; raw camera family is unchanged")
     p.add_argument(
         "--start-perception",
         action="store_true", default=True,
@@ -107,6 +110,9 @@ def main():
         or not 0 < args.distance <= 300
         or not 0 <= args.lease_wait_seconds <= 600
         or not 5 <= args.stationary_timeout <= 30
+        or not 0 <= args.family_gap_start_s <= 90
+        or not 0 <= args.family_gap_duration_s <= 3
+        or (args.integrated and args.family_gap_duration_s>0)
     ):
         raise ValueError("bounded duration/cap required")
     if args.near_blind_assist and args.cap > 5:
@@ -284,6 +290,7 @@ def main():
 
     transport_gate = None
     transport_timer = None
+    family_fault_dropped = 0
     def commands(topic, name):
         stream = (root / name).open("x")
         handles.append(stream)
@@ -422,6 +429,19 @@ def main():
         start(['roslaunch',str(bridge_path)],'bridge')
         rospy.wait_for_message("/Ego_topic", __import__("morai_msgs.msg", fromlist=["EgoVehicleStatus"]).EgoVehicleStatus, timeout=15)
         rospy.wait_for_message("/imu", __import__("sensor_msgs.msg", fromlist=["Imu"]).Imu, timeout=10)
+        if args.family_gap_duration_s:
+            from asmc_msgs.msg import LaneBoundaryFamily
+            family_relay=rospy.Publisher('/local_trial/family',LaneBoundaryFamily,queue_size=2)
+            def family_input(message):
+                nonlocal family_fault_dropped
+                released=latest.get('released_monotonic')
+                elapsed=time.monotonic()-released if released is not None else -1.
+                if args.family_gap_start_s<=elapsed<args.family_gap_start_s+args.family_gap_duration_s:
+                    family_fault_dropped+=1
+                    if family_fault_dropped==1:emit(dict(event='family_receive_fault_started',source_stamp=message.header.stamp.to_sec()))
+                    return
+                family_relay.publish(message) # Exact original stamp/geometry, no fake valid flag.
+            subscriptions.append(rospy.Subscriber('/perception/lane/boundary_family',LaneBoundaryFamily,family_input,queue_size=4))
         if args.start_perception:
             # LOCAL-2C: acquire the shared simulator lease BEFORE any producer
             # startup. A concurrent worktree remains an exclusive owner.
@@ -551,6 +571,7 @@ def main():
             "/ctrl_cmd",
             "/ctrl_cmd/jamming",
             "/local_trial/actuator_cmd",
+            "/local_trial/family",
             "/CollisionData",
             "/image_jpeg/compressed",
             "/cam_left/image_jpeg/compressed",
@@ -589,8 +610,7 @@ def main():
                 ],
                 "selector",
             )
-            local = start(
-                [
+            local_command = [
                     "roslaunch",
                     "asmc_planner",
                     "local.launch",
@@ -601,9 +621,20 @@ def main():
                     "speed_cap_kph:=" + str(args.cap),
                     "near_blind_assist:=" + str(args.near_blind_assist).lower(),
                     "planner_config:=" + str(args.planner_config or workspace/'src/asmc_planner/config/local_planner.yaml'),
-                ],
-                "local",
-            )
+                ]
+            if args.family_gap_duration_s:
+                # Remap only this included standalone LOCAL stack. Camera
+                # inference/raw family and every other master remain intact.
+                trial_xml=ET.Element('launch')
+                ET.SubElement(trial_xml,'remap',{'from':'/perception/lane/boundary_family','to':'/local_trial/family'})
+                include=ET.SubElement(trial_xml,'include',{'file':'$(find asmc_planner)/launch/local.launch'})
+                for argument in local_command[3:]:
+                    key,value=argument.split(':=',1)
+                    ET.SubElement(include,'arg',{'name':key,'value':value})
+                trial_path=root/'trial-local.launch'
+                ET.ElementTree(trial_xml).write(str(trial_path),encoding='unicode')
+                local_command=['roslaunch',str(trial_path)]
+            local=start(local_command,'local')
             mode = rospy.Publisher("/planning/mode", UInt8, queue_size=1, latch=True)
             mode.publish(UInt8(1))
         # Sensor orientation is stale while paused. Settle with P before D.
@@ -678,6 +709,7 @@ def main():
         r.mode = VehicleControlMode.VEHICLE_CONTROL_AUTO_MODE
         link.check(link._require()._actor_stub.SetVehicleControlMode(r, timeout=3),"enable native auto control")
         link.release()
+        latest['released_monotonic']=time.monotonic()
         transport_gate.release()
         if monitor:monitor.update(phase='driving',actuation_hold=False)
         emit(dict(event='actuation_gate_released',held_commands=transport_gate.held,
@@ -864,6 +896,7 @@ def main():
             closed_loop_acceptance=False,
             child_exits=child_exits,
             transport_gate=dict(held_commands=transport_gate.held,forwarded_commands=transport_gate.forwarded) if transport_gate else None,
+            family_receive_fault=dict(start_s=args.family_gap_start_s,duration_s=args.family_gap_duration_s,dropped=family_fault_dropped),
         )
         (root / "trial-result.json").write_text(json.dumps(result, indent=2))
         print(json.dumps(result), flush=True)

@@ -51,12 +51,23 @@ bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
                                                           last-c.width*.5);
           if (std::abs(preferred - .5 * (first + last)) > .15)
             goals.push_back({x, preferred});
+          // A connected strip can have its centroid and home BOTH to the
+          // right while its left edge is the only way around a near drum.
+          // Sample both inset edges instead of treating a centroid's sign as
+          // proof that the opposite opening is unavailable. Every resulting
+          // arc still passes the unchanged current body/OBB/exterior sweep.
+          const double inset=.5*c.width+c.margin+g.resolution;
+          if(last-first>=2*inset)
+            for(double y:{first+inset,last-inset})
+              if(std::none_of(goals.begin(),goals.end(),[&](const auto &p){return p[0]==x && std::abs(p[1]-y)<.15;}))
+                goals.push_back({x,y});
         }
         open = false;
       }
     }
   }
   if (goals.empty()) {++out.rejected["recovery_no_observed_opening"];return false;}
+  if(goals.size()>12)goals.resize(12); // Bounded near-first rollouts, plus the two directional probes below.
   double best_cost = std::numeric_limits<double>::infinity();
   std::vector<Pose> best;
   unsigned best_overlap = 0;

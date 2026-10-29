@@ -87,6 +87,31 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   out.steering_cap = steering_gradient > 1e-8 ?
       .9*c.max_steer_rate/steering_gradient : c.speed_cap;
   out.raw_cap = c.speed_cap;
+  out.maneuver_cap=c.speed_cap;
+  if(c.maneuver_speed_cap>0.) {
+    for(const auto &o:s.obstacles) {
+      double near=1e9,far=-1e9;
+      for(auto p:o.polygon){near=std::min(near,p.x);far=std::max(far,p.x);}
+      if(near>10. || far < -c.rear)continue;
+      // This is current selected-path geometry, not YOLO presence or a motion
+      // class. Slow before a tight maneuver so the calibrated steering delay
+      // and repeated replans do not consume the remaining turn room at10km/h.
+      for(size_t i=1;i<out.path.size();++i) {
+        const auto &a=out.path[i-1],&b=out.path[i];
+        if(a.x>far+c.rear+.5)break;
+        const int count=std::clamp(int(std::ceil(std::hypot(b.x-a.x,b.y-a.y)/.5)),1,100);
+        for(int k=0;k<=count;++k) {
+          const double t=double(k)/count;
+          const auto body=MakeEgoFootprint(CartesianState{a.x+t*(b.x-a.x),a.y+t*(b.y-a.y),a.yaw+t*(b.yaw-a.yaw),0,0,0},VehicleShape{c.width,c.length,c.rear},0.);
+          if(geometry::ConvexPolygonDistance(body,o.polygon)<=c.preferred_clearance+o.uncertainty+o.extra_clearance+.10) {
+            out.maneuver_cap=std::min(c.speed_cap,c.maneuver_speed_cap);break;
+          }
+        }
+        if(out.maneuver_cap<c.speed_cap)break;
+      }
+      if(out.maneuver_cap<c.speed_cap)break;
+    }
+  }
   out.curve_cap = std::sqrt(c.lateral_accel * .95 / std::max(1e-4, maxk));
   // Path s is already rear-axle travel after a full-body collision check; do
   // not subtract the front overhang a second time. Reserve jerk ramp +
@@ -116,11 +141,13 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   out.stopping_cap = SpaceSpeed(distance - .1, s.acceleration, lag, braking);
   out.space_cap =
       std::max(0., SpaceSpeed(distance - .1, c.accel, lag, c) - .35);
-  out.chosen_cap = std::min({out.raw_cap, out.curve_cap, out.steering_cap, out.space_cap});
+  out.chosen_cap = std::min({out.raw_cap, out.maneuver_cap, out.curve_cap, out.steering_cap, out.space_cap});
   out.speed_reason = out.chosen_cap == out.space_cap ? "verified_stopping_space"
                      : out.chosen_cap == out.steering_cap ? "steering_slew"
                      : out.chosen_cap == out.curve_cap ? "curvature"
                                                        : "requested_cap";
+  if(out.chosen_cap==out.maneuver_cap && out.maneuver_cap<out.raw_cap)
+    out.speed_reason="close_swept_path_maneuver";
   if (out.assisted && !out.recovery && out.chosen_cap > 5. / 3.6) {
     out.chosen_cap = 5. / 3.6;
     out.speed_reason = "experimental_near_blind_assist";

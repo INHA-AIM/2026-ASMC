@@ -34,6 +34,36 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty();for(auto &p:s.home)p[1]=-3.5;
+    Obstacle o;o.id=125;o.uncertainty=.18;
+    o.polygon={{5.,-1.5},{5.3,-1.5},{5.3,-1.2},{5.,-1.2}};s.obstacles={o};
+    Config c;c.recovery=true;c.margin=.3;c.low_speed_rate_floor=.1;
+    Result r;
+    expect(BuildRecoveryPath(s,c,r) && BuildSpeedProfile(s,c,r) && r.path.back().y>0.,
+           "an observed left edge remains a recovery candidate when road centroid/home are on the blocked right");
+    Config check=c;check.recovery_geometry=true;
+    for(const auto &p:r.path){Result tested;expect(CheckFootprint(s,check,p,tested),
+        "edge-guided recovery retains the current physical/OBB/exterior margin");}
+  }
+  {
+    auto s=empty();s.speed=2.7;Config c;c.speed_cap=10./3.6;c.maneuver_speed_cap=5./3.6;
+    c.preferred_clearance=.55;
+    Result open;open.path={{0,0,0,0,0},{15,0,0,0,15}};
+    expect(BuildSpeedProfile(s,c,open) && open.chosen_cap==c.speed_cap,
+           "empty-road cruise is not slowed by a maneuver policy");
+    Obstacle o;o.polygon={{7.,1.6},{8.,1.6},{8.,2.0},{7.,2.0}};s.obstacles={o};
+    Result close;close.path=open.path;
+    expect(BuildSpeedProfile(s,c,close) && close.chosen_cap<=5./3.6 &&
+           close.speed_reason=="close_swept_path_maneuver",
+           "a tight measured selected-path pass slows before consuming steering room");
+    expect(close.trajectory.front()[4]==s.speed,
+           "maneuver cap cannot clip away the measured initial speed");
+    for(auto &p:s.obstacles[0].polygon)p.x+=20.;
+    Result far;far.path=open.path;
+    expect(BuildSpeedProfile(s,c,far) && far.chosen_cap==c.speed_cap,
+           "a distant object alone is not a near-maneuver speed trigger");
+  }
+  {
     ObjectPrediction prediction;std::vector<Obstacle> objects;
     auto sample=[](int i,const std::string& group,const std::string& name,double y=0.) {
       Obstacle o;o.id=i;o.classification=group;o.camera_class=name;
