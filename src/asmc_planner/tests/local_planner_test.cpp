@@ -56,6 +56,10 @@ int main() {
     s.speed=1.; s.acceleration=1.;
     expect(!BuildSpeedProfile(s,c,r) && r.reason=="initial_steering_slew_infeasible",
            "an infeasible initial state is not hidden by instant speed clipping");
+    s.speed=1.;s.acceleration=0.;
+    Result future;future.path={{0,0,0,0,0},{6,0,0,0,6},{6.1,0,.01,.19,6.1},{15,1,.2,.19,15}};
+    expect(BuildSpeedProfile(s,c,future),
+           "a feasible straight braking interval is not rejected by the worst future steering gradient");
     Result straight; straight.path={{0,0,0,0,0},{15,0,0,0,15}};s=empty();
     expect(BuildSpeedProfile(s,c,straight) && straight.steering_cap==c.speed_cap,
            "straight normal geometry has no added steering slowdown");

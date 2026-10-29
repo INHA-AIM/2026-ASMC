@@ -71,6 +71,7 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   // Keep the physical steering/curvature bounds; do not invent a larger radius
   // limit or clip the measured initial speed/acceleration instantaneously.
   double steering_gradient = 0.;
+  std::vector<double> gradients(out.path.size(),0.);
   for (size_t i = 1; i < out.path.size(); ++i) {
     const auto &a = out.path[i-1], &b = out.path[i];
     const double dk = std::abs(b.k-a.k), ds = b.s-a.s;
@@ -80,8 +81,8 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
     }
     const double mink = a.k*b.k <= 0. ? 0. : std::min(std::abs(a.k),std::abs(b.k));
     const double scale = c.wheelbase/c.gain;
-    steering_gradient = std::max(steering_gradient,
-        scale/(1.+scale*scale*mink*mink)*dk/ds);
+    gradients[i]=scale/(1.+scale*scale*mink*mink)*dk/ds;
+    steering_gradient = std::max(steering_gradient,gradients[i]);
   }
   out.steering_cap = steering_gradient > 1e-8 ?
       .9*c.max_steer_rate/steering_gradient : c.speed_cap;
@@ -157,10 +158,19 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
     const auto step =
         AdvancePhysicalSpeed({cap, v, a, .05}, {c.accel, braking.decel, c.jerk});
     const double new_v = step.target_speed;
-    // If the real starting state cannot follow this geometry while braking,
-    // reject it. A speed cap is not evidence of instantaneous deceleration.
-    // The same conservative derivative bounds every portion of the path.
-    if (steering_gradient * .5*(v+new_v) > c.max_steer_rate+1e-6) {
+    // A sharp FUTURE segment must not invalidate today's straight braking
+    // interval. Check only the actually swept s range for this physical step;
+    // every later step is checked in turn. Keep the global desired cap, source
+    // state and exact curvature derivative; never clip speed instantaneously.
+    const double next_s=travelled+.5*(v+new_v)*.05;
+    double current_gradient=0.;
+    for(size_t k=index;k<out.path.size() && out.path[k-1].s<=next_s;++k) {
+      current_gradient=std::max(current_gradient,gradients[k]);
+      if(out.path[k].s>=next_s)break;
+    }
+    // The jerk bound also covers an interior speed peak between time samples.
+    const double speed_bound=std::max(v,new_v)+.5*c.jerk*.05*.05;
+    if (current_gradient * speed_bound > c.max_steer_rate+1e-6) {
       out.reason="initial_steering_slew_infeasible";
       out.trajectory.clear(); return false;
     }
