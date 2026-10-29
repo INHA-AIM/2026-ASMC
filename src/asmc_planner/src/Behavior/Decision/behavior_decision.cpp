@@ -372,7 +372,8 @@ BehaviorContextData BehaviorDecision::decide(
   context.hard.max_speed=std::min(context.hard.max_speed,selected_ceiling);
   if(boundary_cap_>0){context.hard.max_speed=std::min(context.hard.max_speed,boundary_cap_);
     context.extra_flags["lower_next_link_speed_cap"]=true;
-    context.debug.hard_rule_reason+=";A153_lower_next_link_speed_cap";}
+    context.debug.hard_rule_reason+=";A153_lower_next_link_speed_cap;boundary_distance_m="+
+        std::to_string(route.lower_boundary_s-feature.ego.s)+";next_cap_kph="+std::to_string(boundary_cap_*3.6);}
 
   context.target.desired_speed=std::min(context.target.desired_speed,context.hard.max_speed);
   if((context.selected_behavior==BehaviorType::LEFT_CHANGE||context.selected_behavior==BehaviorType::RIGHT_CHANGE)&&

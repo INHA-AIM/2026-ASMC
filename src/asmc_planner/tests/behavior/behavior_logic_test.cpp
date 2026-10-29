@@ -1483,6 +1483,7 @@ TEST(NormalCruiseTest,A153LowerCeilingPreviewsAndSurvivesBoundaryJitter) {
  }
  EXPECT_DOUBLE_EQ(tick(50).hard.max_speed,70./3.6);
  f.highway.speed_cap_mps=40./3.6;EXPECT_DOUBLE_EQ(tick(95).hard.max_speed,40./3.6);
+ f.highway.speed_cap_mps=57.5/3.6;EXPECT_DOUBLE_EQ(tick(95).hard.max_speed,57.5/3.6);
  f.highway.speed_cap_mps=70./3.6;tick(95);++f.route.route_generation;
  EXPECT_DOUBLE_EQ(tick(89.9).hard.max_speed,70./3.6);
 }
