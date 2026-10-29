@@ -28,6 +28,16 @@ def check_delivery_clock_and_marked_drive_window(tmp_path):
 
 
 class DeliveryMetricsTest(unittest.TestCase):
+    def test_brief_udp_contacts_survive_clear_and_stale_ids_rearm_only_after_clear(self):
+        from run_local_trial import fresh_udp_contacts
+        q={(0,1)}
+        rows=[(1.,[dict(type=0,id=1)]),(1.1,[]),(1.12,[dict(type=0,id=7)]),(1.15,[])]
+        found,t=fresh_udp_contacts(rows,0.,q)
+        self.assertEqual(found,{(0,7)})
+        self.assertEqual(q,set())
+        found,_=fresh_udp_contacts([(1.2,[dict(type=0,id=1)])],t,q)
+        self.assertEqual(found,{(0,1)})
+
     def test_dynamic_replay_actions_remain_owned_and_bounded(self):
         from run_local_trial import validate_trial_definition
         raw={'replay':{'tunnel':{'baseline':[{'record':{'key':'ped','definition':{'type':'crossing'}}}]}},

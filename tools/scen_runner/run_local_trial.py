@@ -25,6 +25,17 @@ def collision_objects(message):
             for o in message.collision_object if o.type>=0]
 
 
+def fresh_udp_contacts(events,after,quarantine):
+    fresh=set()
+    for received,objects in events:
+        if received<=after:continue
+        current={(o['type'],o['id']) for o in objects}
+        quarantine.intersection_update(current)
+        fresh.update(current-quarantine)
+        after=received
+    return fresh,after
+
+
 def selected_command_ready(latest,now):
     wire=latest.get('wire')
     if latest.get('mode') not in (0,1) or not wire:return False
@@ -576,6 +587,7 @@ def main():
         from scen_runner.records.local_margin_audit import footprint
         link.release()
         started = time.monotonic()
+        last_udp_evaluation=started
         # The earlier LOCAL fixture runner only prepared saved actors. Without
         # resuming/ticking ReplaySection, pedestrians/events stayed frozen and
         # a nominal dynamic test was actually a static-placement test.
@@ -613,9 +625,8 @@ def main():
             current_contacts=set(state.get('native_contacts',[]))-{link.ego_id,''}
             preexisting_contacts.intersection_update(current_contacts)
             native=sorted(current_contacts-preexisting_contacts)
-            current_udp={(o['type'],o['id']) for _,objects in collision_events[-1:] for o in objects}
-            udp_quarantine.intersection_update(current_udp)
-            udp=[f'udp:{t}:{i}' for t,i in current_udp-udp_quarantine]
+            new_udp,last_udp_evaluation=fresh_udp_contacts(list(collision_events),last_udp_evaluation,udp_quarantine)
+            udp=[f'udp:{t}:{i}' for t,i in new_udp]
             own_box=footprint(state)
             boxes=[(x.actor_info.id.value,footprint(actor_state(x))) for x in snapshot
                    if x.actor_info.id.value in section.owned()]
