@@ -518,12 +518,12 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
   OBB와 제어 trace를 표시한다. 별도 dashboard 서버를 켜지 않는다.
 
 판제 알고리즘 기본값 승격이 아니라 명시적 실행 선택이다.
-[LOCAL-2D 검증 상태](../records/planning/2026-10-29-local-continuity.md)의 공급 공백과
-폐루프 미수락 항목은 이 연결로 해결된 것으로 처리하지 않는다.
-노면 reference 복구 후보는 기본 OFF다. 실험 profile의 접촉 없는 통과를 기본 선택의
-전환·회피 수락으로 혼동하지 않는다.
-후속 실험 profile·반복 회피 결과는 [LOCAL-2E 기록](../records/planning/2026-10-29-local-avoidance-continuity.md)을 따른다.
-기본 camera 선택과 LOCAL10km/h 상한은 유지하며, 실험용 노면 reference는 기본 OFF다.
+현재 이 브랜치의 LOCAL YAML은 노면 reference 복구·짧은 기하 운동 예측·안쪽 최소
+여유30cm·쾌적 감속2m/s²·controlled brake3m/s² 후보를 사용한다. 정적 asset 기억은
+OFF이며, CAN 조향 시작상태 후보는 별도 시험 profile에서만 켠다.
+[LOCAL-2G 검증과 남은 정체·인지 누락](../records/planning/2026-10-29-local-obstacle-campaign.md)을
+확인한다. 거리 도달과 공급·충돌 수락은 구분하며, 늦은 횡단·작은 동물 사례까지
+해결된 운영 정본으로 표시하지 않는다. 기본 camera 선택과 LOCAL10km/h 상한은 유지한다.
 
 ## 자동 LOCAL 시나리오의 실시간 대시보드
 

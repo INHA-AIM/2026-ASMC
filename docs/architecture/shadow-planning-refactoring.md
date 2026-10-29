@@ -2,8 +2,9 @@
 
 ## 최신 LOCAL 실험
 
-2026-10-29 LOCAL-2F의 구조·제동·복구·인지 입력 점검은
-[LOCAL-2F 기록](../records/planning/2026-10-29-local-braking-recovery.md)을 따른다.
+2026-10-29 LOCAL-2G의 정적·동적 시나리오, 여유·조향/속도와 자동 실험 웹 연결은
+[LOCAL-2G 기록](../records/planning/2026-10-29-local-obstacle-campaign.md)을 따른다.
+이전 [LOCAL-2F 기록](../records/planning/2026-10-29-local-braking-recovery.md)은 당시 결과다.
 일반 제어와 기존 camera 기본 선택은 유지한다. 시험 소스와 profile, 성공·실패를
 구분하며 과거 기록의 수치와 계약을 현재 운영 수락으로 확대하지 않는다.
 
