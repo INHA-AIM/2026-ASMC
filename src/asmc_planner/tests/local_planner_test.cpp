@@ -33,6 +33,24 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty(); Config c; c.low_speed_rate_floor=.1;
+    Result r; r.path={{0,0,0,0,0},{.1,0,.01,.19,.1},{4,.4,.3,.19,4}};
+    expect(BuildSpeedProfile(s,c,r) && r.steering_cap>.1 && r.steering_cap<.16 &&
+           r.speed_reason=="steering_slew", "tight crawl geometry receives a physical steering-speed cap");
+    double previous=std::atan(c.wheelbase*r.trajectory.front()[3]/c.gain);
+    for(size_t i=1;i<r.trajectory.size();++i) {
+      double delta=std::atan(c.wheelbase*r.trajectory[i][3]/c.gain);
+      expect(std::abs(delta-previous)<=c.max_steer_rate*.05+1e-8,
+             "time sampled crawl trajectory respects calibrated steering slew"); previous=delta;
+    }
+    s.speed=1.; s.acceleration=1.;
+    expect(!BuildSpeedProfile(s,c,r) && r.reason=="initial_steering_slew_infeasible",
+           "an infeasible initial state is not hidden by instant speed clipping");
+    Result straight; straight.path={{0,0,0,0,0},{15,0,0,0,15}};s=empty();
+    expect(BuildSpeedProfile(s,c,straight) && straight.steering_cap==c.speed_cap,
+           "straight normal geometry has no added steering slowdown");
+  }
+  {
     auto s=empty();Obstacle o;o.id=3;o.polygon={{8.,-.5},{9.,-.5},{9.,.5},{8.,.5}};s.obstacles={o};
     Config c;c.maneuver_reserve=1.2;
     Result prefix;prefix.path={{0,0,0,0,0},{4,0,0,0,4}};

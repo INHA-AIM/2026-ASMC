@@ -294,6 +294,7 @@ class Node {
       << ",\"phase\":" << std::quoted(phase)
       << ",\"detail_enabled\":" << (detail ? "true" : "false")
       << ",\"requested_kph\":" << config.speed_cap * 3.6
+      << ",\"steering_kph\":" << r.steering_cap * 3.6
       << ",\"curve_kph\":" << r.curve_cap * 3.6
       << ",\"space_kph\":" << r.space_cap * 3.6
       << ",\"actual_state_stopping_kph\":" << r.stopping_cap * 3.6
@@ -1114,7 +1115,7 @@ public:
         config.maneuver_reserve<0. || config.maneuver_reserve>2. ||
         config.decel<1.5 || config.decel>3. ||
         config.preferred_clearance<config.margin || config.preferred_clearance>1. ||
-        config.low_speed_rate_floor<.5 || config.low_speed_rate_floor>1. ||
+        config.low_speed_rate_floor<.1 || config.low_speed_rate_floor>1. ||
         config.controlled_decel<config.decel || config.controlled_decel>3. ||
         config.width < 1.892 || config.length < 4.5 || config.rear <= 0 ||
         config.rear >= config.length || config.margin < 0 ||

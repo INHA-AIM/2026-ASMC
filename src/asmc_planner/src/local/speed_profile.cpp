@@ -65,6 +65,26 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   double maxk = 0;
   for (auto &p : out.path)
     maxk = std::max(maxk, std::abs(p.k));
+  // Geometry can turn sharply while crawling, but its speed must respect the
+  // calibrated wheel-angle slew. For linearly interpolated curvature, the
+  // largest |d atan(L*k/gain)/ds| is at the smallest |k| (also across zero).
+  // Keep the physical steering/curvature bounds; do not invent a larger radius
+  // limit or clip the measured initial speed/acceleration instantaneously.
+  double steering_gradient = 0.;
+  for (size_t i = 1; i < out.path.size(); ++i) {
+    const auto &a = out.path[i-1], &b = out.path[i];
+    const double dk = std::abs(b.k-a.k), ds = b.s-a.s;
+    if (ds <= 1e-8) {
+      if (dk > 1e-8) { out.reason="zero_length_steering_change"; return false; }
+      continue;
+    }
+    const double mink = a.k*b.k <= 0. ? 0. : std::min(std::abs(a.k),std::abs(b.k));
+    const double scale = c.wheelbase/c.gain;
+    steering_gradient = std::max(steering_gradient,
+        scale/(1.+scale*scale*mink*mink)*dk/ds);
+  }
+  out.steering_cap = steering_gradient > 1e-8 ?
+      .9*c.max_steer_rate/steering_gradient : c.speed_cap;
   out.raw_cap = c.speed_cap;
   out.curve_cap = std::sqrt(c.lateral_accel * .95 / std::max(1e-4, maxk));
   // Path s is already rear-axle travel after a full-body collision check; do
@@ -95,8 +115,9 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   out.stopping_cap = SpaceSpeed(distance - .1, s.acceleration, lag, braking);
   out.space_cap =
       std::max(0., SpaceSpeed(distance - .1, c.accel, lag, c) - .35);
-  out.chosen_cap = std::min({out.raw_cap, out.curve_cap, out.space_cap});
+  out.chosen_cap = std::min({out.raw_cap, out.curve_cap, out.steering_cap, out.space_cap});
   out.speed_reason = out.chosen_cap == out.space_cap ? "verified_stopping_space"
+                     : out.chosen_cap == out.steering_cap ? "steering_slew"
                      : out.chosen_cap == out.curve_cap ? "curvature"
                                                        : "requested_cap";
   if (out.assisted && !out.recovery && out.chosen_cap > 5. / 3.6) {
@@ -136,6 +157,13 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
     const auto step =
         AdvancePhysicalSpeed({cap, v, a, .05}, {c.accel, braking.decel, c.jerk});
     const double new_v = step.target_speed;
+    // If the real starting state cannot follow this geometry while braking,
+    // reject it. A speed cap is not evidence of instantaneous deceleration.
+    // The same conservative derivative bounds every portion of the path.
+    if (steering_gradient * .5*(v+new_v) > c.max_steer_rate+1e-6) {
+      out.reason="initial_steering_slew_infeasible";
+      out.trajectory.clear(); return false;
+    }
     a = step.target_acceleration;
     travelled += .5 * (v + new_v) * .05;
     v = new_v;

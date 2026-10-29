@@ -28,6 +28,6 @@ controlled_braking_limit_mps2: 3.0
 
 comfort_deceleration_mps2: 2.0
 preferred_clearance: 0.55
-low_speed_rate_floor_mps: 0.5
+low_speed_rate_floor_mps: 0.1
 local_motion_prediction: true
 maneuver_reserve_m: 1.2

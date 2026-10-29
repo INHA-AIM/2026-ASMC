@@ -88,7 +88,7 @@ bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
     const double requested=request.second;
     Pose p;
     p.k =
-        s.speed > .3 ? std::clamp(s.yaw_rate / s.speed, -c.max_k, c.max_k) : 0.;
+        s.speed > .1 ? std::clamp(s.yaw_rate / s.speed, -c.max_k, c.max_k) : 0.;
     std::vector<Pose> path{p};
     double cost = 0.;
     unsigned overlap = 0;
