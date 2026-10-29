@@ -108,7 +108,7 @@ OPEN·미병합이며 원격 head는 각각 `e95dba0e`, `1fdd6c02`다. 이 PR들
 별도 등록 run `jamming-three-way-replay-20261029-r01`에서 원시 GPS/IMU/CAN/LiDAR·4뷰 JPEG
 55.24초를 재처리했다. 세 옵션이 같은 컨테이너에서 자기 camera/LiDAR와 단일 selector를
 실행하고 선택하지 않은 제어기가 없음을 확인했다. bridge나 SDK 제어 연결은 시작하지 않았다.
-`replays/center-raw-three-way-r05`가 입력 생산자 계약까지 맞춘 회차다. 재생에서만
+`replays/center-raw-three-way-r07`이 입력 생산자·진단 기록 검증까지 마친 회차다. 재생에서만
 `/jamming_raw_input`을 명시적으로 허용하고 운영 `/morai_udp_bridge` 계약은 유지했다.
 
 | 재생 결과 | camera | LOCAL | localization |
@@ -128,3 +128,14 @@ stale를 무시해 성공으로 만들지 않았다. 실시간 자원 조건과 
 밀어내던 오류(`e22c3831`)를 수정했다. 동일 source/master 콘솔만 재사용한다. 자동 replay는
 별도11374·8087/8098이며 role·run·trial과 재접속 identity를 검증했다. 종료·heartbeat 소실 시
 이전 현재 위치와 경로를 숨긴다. 수동 콘솔의 WAIT는 입력 없음이며 주행 수락을 뜻하지 않는다.
+
+진단 수집기의 동시 JSON 쓰기 손상을 r05에서 발견했다. 원시 bag과 손상된 진단 원본은
+보존하고 callback 쓰기 잠금·회차별 recorder 바인딩을 적용했다. r06의 실행기 이름 충돌도
+보존했다. 최종 r07은 모든 UTF-8/JSON 줄과 topic별 수신 개수의 일치를 검증했다.
+배포·실주행 지연을 이 CPU 제한 재생의 메시지 개수나 brake 수신 개수로 대신 평가하지 않는다.
+
+선정 가능한 실주행 근거는 아직 없으며, 후속 비교는 같은 `test1` 배치·FOGGY13·센서와
+기본10/10/15 및 동일10km/h 조건에서 수행한다. `test1` 객체를 자동 fixture로 덮어쓰지 않는다.
+콘솔 복구·제어 명령 그래프·실패 진단은 ASMC 갤러리 **E746**에 게시했다:
+http://localhost:8000/jamming-three-way-replay-20261029-r01/review-r4/index.html
+그림 생성 코드와 모든 재생·실패 근거는 해당 run에 보존하며 기존 갤러리 번호는 유지했다.
