@@ -1,11 +1,11 @@
 <launch>
   <arg name="highway_merge" default="true"/>
   <arg name="dashboard" default="true"/>
-  <arg name="dashboard_port" default="8088"/>
   <arg name="open_dashboard" default="false"/>
   <arg name="shadow_planner" default="main" doc="main or localization; exactly one JAMMING controller"/>
-  <arg name="shadow_static_avoidance" default="$(eval arg('shadow_planner') == 'localization')" doc="research M3 preview; pending closed-loop acceptance"/>
-  <arg name="shadow_dynamic_obstacles" default="$(eval arg('shadow_planner') == 'localization')" doc="unaccepted observed-motion research preview"/>
+  <arg name="dashboard_port" default="$(eval 8089 if arg('shadow_planner') == 'localization' else 8088)"/>
+  <arg name="shadow_static_avoidance" default="$(eval arg('shadow_planner') == 'localization')" doc="Localization comparison profile: measured static bypass and return; see documented failures"/>
+  <arg name="shadow_dynamic_obstacles" default="$(eval arg('shadow_planner') == 'localization')" doc="Localization comparison profile: observed-motion yield; not general dynamic acceptance"/>
   <arg name="shadow_lane_rules" default="$(eval arg('shadow_planner') == 'localization')" doc="verified shadow zone paint exemption; physical road stays hard"/>
   <arg name="shadow_run_id" default="localization-autonomy"/>
   <arg name="shadow_speed_cap_kph" default="15"/>

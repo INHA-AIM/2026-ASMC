@@ -43,13 +43,15 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 
 ## Localization 음영 위치 추종 연구 옵션
 
-`shadow_planner:=main`이 기본값이며 기존 카메라 BBox 음영 처리를 유지합니다.
-`shadow_planner:=localization`는 이 연구 checkout의 위치측위 기반 M2 경로 추종기를
-선택합니다. 별도 LOCAL 작업트리의 로컬 탐색 플래너와 구분합니다.
-기본 연구 실행은 M2 지도 경로 추종과 OBB 정지 검사를 사용합니다.
-M3 정적 회피·복귀 코드는 `shadow_static_avoidance:=true` 실험 인자로 연결했으나
-실제 장애물 반복 수락 전이므로 기본은 꺼져 있습니다. 이상 추종 조건의 15km/h
-정적 회피·복귀와 일방 도로 경계 검사는 통과했으며 실차량 성능 보장은 아닙니다.
+`shadow_planner:=main`이 기본값이며 최신 main의 팀원 재밍 처리를 유지합니다.
+`shadow_planner:=localization`은 측위 기반 기존 Frenet 회피·추종 비교안을 선택합니다.
+이 옵션에서는 정적 회피·관측 운동 대응·음영 차선 예외가 켜지고 속도 상한은 15km/h입니다.
+일반 main의 속도 정책은 바꾸지 않습니다. 20km/h·회전 정차차량·모든 보행자 장면은
+수락하지 않았습니다. [현재 체크포인트와 비교 조건](../records/planning/2026-10-29-localization-comparison.md)을 먼저 읽습니다.
+
+통합 기준 `fad73f82`에는 별도 LOCAL 선택이 아직 없습니다. 별도 작업트리의 개발 중인
+LOCAL 코드를 가져오지 않았으며 `shadow_planner:=local` 같은 실행 별칭도 만들지 않았습니다.
+이 PR의 내부 `src/local`은 Localization이 재사용하는 기반 구성요소로, 진행 중인 LOCAL 배포와 구분합니다.
 
 | 구간 | 계산·제어 소유자 |
 |---|---|
@@ -64,8 +66,8 @@ LiDAR의 실제 GPS validity·터널 벽/천장 전처리와 카메라 추론은
 
 수동 실행에서는 `asmc-ros-noetic`의 공용 master `11311`과 브릿지만 공유합니다.
 카메라·LiDAR·판제·제어·시각화는 선택한 작업트리의 컨테이너에서 실행합니다.
-현재 전용 컨테이너는 `asmc-shadow-localization`, 작업트리는
-`2026-ASMC-shadow-localization`, 브랜치는 `research/shadow-localization`입니다.
+현재 비교 컨테이너는 `asmc-localization-compare`, 작업트리는
+`2026-ASMC-shadow-localization`, 브랜치는 `integrate/localization-compare-20261029`입니다.
 GPU·host networking·2GiB shared memory를 사용하고 전용 `/build`, `/devel`을 빌드합니다.
 
 새 대화형 Bash는 `.bashrc`가 ROS·해당 `/devel`·공용 master를 적용합니다.
@@ -73,7 +75,7 @@ GPU·host networking·2GiB shared memory를 사용하고 전용 `/build`, `/deve
 노드와 master는 bashrc에서 자동 시작하지 않습니다.
 
 ```bash
-docker exec -it asmc-shadow-localization bash
+docker exec -it asmc-localization-compare bash
 roslaunch asmc_camera camera.launch
 ```
 
@@ -81,7 +83,7 @@ roslaunch asmc_camera camera.launch
 
 ```bash
 roslaunch asmc_lidar lidar.launch
-roslaunch asmc_lidar view.launch
+roslaunch asmc_lidar view.launch dashboard_port:=8097
 roslaunch asmc_planner autonomy_no_bridges_v2.launch shadow_planner:=localization
 ```
 

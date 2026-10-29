@@ -224,14 +224,14 @@
 |---|---|---|
 | `highway_merge` | `true` | — |
 | `dashboard` | `true` | — |
-| `dashboard_port` | `8088` | — |
 | `open_dashboard` | `false` | — |
 | `shadow_planner` | `main` | main or localization; exactly one JAMMING controller |
-| `shadow_static_avoidance` | `false` | research M3 preview; pending closed-loop acceptance |
-| `shadow_dynamic_obstacles` | `false` | unaccepted observed-motion research preview |
-| `shadow_lane_rules` | `false` | verified shadow zone paint exemption; physical road stays hard |
+| `dashboard_port` | `$(eval 8089 if arg('shadow_planner') == 'localization' else 8088)` | — |
+| `shadow_static_avoidance` | `$(eval arg('shadow_planner') == 'localization')` | Localization comparison profile: measured static bypass and return; see documented failures |
+| `shadow_dynamic_obstacles` | `$(eval arg('shadow_planner') == 'localization')` | Localization comparison profile: observed-motion yield; not general dynamic acceptance |
+| `shadow_lane_rules` | `$(eval arg('shadow_planner') == 'localization')` | verified shadow zone paint exemption; physical road stays hard |
 | `shadow_run_id` | `localization-autonomy` | — |
-| `shadow_speed_cap_kph` | `5` | — |
+| `shadow_speed_cap_kph` | `15` | — |
 | `shadow_journal_path` | `(빈 문자열)` | — |
 | `shadow_start_motion` | `true` | — |
 | `shadow_motion_yaw_source` | `orientation` | — |

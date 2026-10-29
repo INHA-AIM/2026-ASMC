@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "role": "shadow_localization",
-  "branch": "research/shadow-localization",
+  "branch": "integrate/localization-compare-20261029",
   "worktree": "2026-ASMC-shadow-localization",
-  "runtime_container": "asmc-shadow-localization",
-  "build_container": "asmc-shadow-localization-build",
-  "base_image": "asmc/ros-noetic:runtime-main-20261019",
+  "runtime_container": "asmc-localization-compare",
+  "build_container": "asmc-localization-compare-build",
+  "base_image": "asmc/localization:campaign-base-20261029",
   "workspace": "/root/ws",
   "build": "/build",
   "devel": "/devel",
@@ -19,12 +19,20 @@
   "automatic_ros_master": "http://127.0.0.1:11371",
   "automatic_profile": "isolated",
   "automatic_campaign": {
-    "runtime_container": "asmc-shadow-localization-campaign",
-    "build_container": "asmc-shadow-localization-campaign-build",
+    "runtime_container": "asmc-localization-compare",
+    "build_container": "asmc-localization-compare-build",
     "run_mount": "/validation",
     "dashboard_url": "http://localhost:8089/web/index_v2.html",
     "dashboard_role": "persistent observer on the experiment private master; autonomy child dashboard remains false",
-    "identity_guard": ["master URI", "master PID", "clock mode", "worktree", "branch", "revision", "backend and helper SHA"],
+    "identity_guard": [
+      "master URI",
+      "master PID",
+      "clock mode",
+      "worktree",
+      "branch",
+      "revision",
+      "backend and helper SHA"
+    ],
     "trace_geometry_hz": 5,
     "record_raw_sensors": true,
     "storage_floor_source": "workspace .storage/policy.json minimum_free_bytes; user-selected 10 GiB"
@@ -40,7 +48,7 @@
     "roscore",
     "raw bridge"
   ],
-  "private_recovery_profile": ".storage/manifests/localization-integration-20261029-r1/container-create.json",
+  "private_recovery_profile": ".storage/manifests/localization-comparison-20261029-r1/create-compare-runtime.py",
   "model_selection": "latest main camera_runtime manifest plus exact engine SHA and TensorRT/GPU compatibility",
   "git_path_aliases": {
     "scope": "container-only symlinks under the canonical host workspace prefix",
@@ -59,5 +67,7 @@
     "velocity_turn_gain_m2ps": 1.54,
     "velocity_turn_speed_floor_mps": 1.0,
     "model": "inverse-speed incremental turn correction; constant-offset fallback when gain=0"
-  }
+  },
+  "build_root": ".runtime/localization-compare-20261029",
+  "lidar_dashboard_url": "http://localhost:8097"
 }

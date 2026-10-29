@@ -1,5 +1,8 @@
 # Localization integration checkpoint — 2026-10-29
 
+> 아래는 순차 개선의 과거 기록이다. 최신 실행·선정·main 통합은
+> [비교 체크포인트](2026-10-29-localization-comparison.md)를 따른다.
+
 Main `7bb4d9a19f7ea278b496655d75b772fb30e3af17` is pinned. All 114 research
 commits from `06a6c260` were preserved by `--rebase-merges`, producing `b8f4c618`
 before this integration. The archive ref is
