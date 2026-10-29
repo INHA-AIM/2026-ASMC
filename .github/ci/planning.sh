@@ -39,3 +39,9 @@ PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/t
 )
 
 PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_trial_monitor.py'
+
+# Recorder/outcome/gallery regressions retained from the historical LOCAL
+# workflow. Main's fast PR graph remains the workflow owner.
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_sensor_recording.py'
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_shadow_analysis.py'
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_local_gallery.py'
