@@ -60,7 +60,7 @@
   <!-- 차도 위 사람: 최소 person_stop_sec 정지하며 사람 위치를 최신으로 기억한다. 사람이 내 차로를 벗어나거나
        person_settle_sec 동안 person_move_tolerance 이상 움직이지 않거나 person_max_wait_sec가 지나면 그 위치로
        선을 다시 고르고, 출발한 때부터 person_ignore_sec 동안 사람으로 재정지하지 않는다.
-       사람 박스는 계속 장애물이라 피할 경로가 없어지면 기어가지 않고 다시 정지한다. -->
+       사람 박스는 계속 장애물로 피하며, 재선택·무시 중 지날 선이 없으면 정지하지 않고 creep한다. -->
   <arg name="person_stop" default="true"/>
   <arg name="person_stop_sec" default="5.0"/>
   <arg name="person_settle_sec" default="1.0"/>

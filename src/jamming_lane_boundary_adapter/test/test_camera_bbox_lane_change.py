@@ -223,6 +223,13 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(self.status()[1]['locked_lane'],'0')
         self.assertEqual(self.reference.data,0)
 
+    def test_dog_stops_like_person(self):
+        self.feed()
+        self.following()
+        self.feed([0],label='dog',duration=.5)
+        self.stopped('person_stop')
+        self.assertEqual(self.status()[1]['person_state'],'stop')
+
     def test_person_waits_while_moving_then_reselects_from_latest_position(self):
         self.feed()
         self.feed(spans=[(-1.5,-0.9,10.)],label='person',speed=0.,duration=.5)
@@ -269,15 +276,29 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(status['person_state'],'ignore',status)
         self.assertLess(line,4.0)
 
-    def test_person_restops_instead_of_creep_without_clear_distance(self):
+    def test_person_ignore_creeps_instead_of_restop_without_clear_distance(self):
         self.feed()
         self.feed(spans=[(0.9,1.5,10.)],label='person',speed=0.,duration=6.2)
         self.following()
         self.assertEqual(self.status()[1]['person_state'],'ignore')
-        # While ignoring, the person blocks every line: stop again rather than creep towards the person.
+        # While ignoring, no line is clear (e.g. a narrow gap seen as blocked): creep, do not stop again.
         self.feed(spans=[(-4.0,5.0,10.)],label='person',speed=0.,duration=.5)
+        message,status=self.status()
+        self.assertTrue(message.startswith('creep:'),status)
+        self.assertGreater(self.command.accel,0.)
+        self.assertEqual(status['person_state'],'ignore')
+
+    def test_person_reselect_creeps_when_lidar_blocks_every_line_without_clear_distance(self):
+        self.feed()
+        self.feed(spans=[(0.9,1.5,10.)],label='person',speed=0.,duration=.5)
         self.stopped('person_stop')
-        self.assertEqual(self.status()[1]['person_state'],'stop')
+        # The person leaves; LiDAR reports a gap too narrow for any line. After the stop: creep, not a stuck stop.
+        narrow=[(12.,13.,1.3,3.0,1.),(12.,13.,-3.0,-1.3,1.)]
+        self.feed(speed=0.,lidar=narrow,duration=5.)
+        message,status=self.status()
+        self.assertEqual(message,'creep:no_clear_line',status)
+        self.assertGreater(self.command.accel,0.)
+        self.assertEqual(status['person_state'],'ignore')
 
     def test_repeat_changes_use_new_own_lane_and_reset_completion(self):
         self.feed()
@@ -836,9 +857,10 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(status['road_obstacles'],'1')
         # The wall at -3.0 m keeps the right side to the wall: line 3 (centre line) instead of line 5.
         self.assertAlmostEqual(line,3.0)
-        # A valid empty scan is the latest snapshot: the remembered LiDAR obstacle is released.
+        # Measured LiDAR length is used for passing.
         self.feed(shift=-1.75,speed=8.,lidar=[],duration=1.5)
-        self.assertEqual(self.line_status()[1]['line_obstacles'],'0')
+        self.assertAlmostEqual(self.line_status()[0],3.0)
+        self.feed(shift=-1.75,speed=8.,lidar=[],duration=1.5)
         self.assertAlmostEqual(self.line_status()[0],4.0)
 
     def test_straddle_lidar_memory_follows_latest_scan_in_narrow_gap(self):

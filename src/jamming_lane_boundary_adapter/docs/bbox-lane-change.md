@@ -1,19 +1,5 @@
 # BBOX 검출에 따른 반복 차선변경
 
-## LiDAR 장애물 입력 — 2026-10-29 (main #137의 LiDAR 처리만 반영)
-
-- 카메라 BBOX 장애물·사람 정지(5초 정지 → 최신 위치로 재선택 → 4초 무시)·creep 판단은 그대로다.
-  main의 카메라 입력 제거·동적 위험 정지·재밍 튜닝값 변경은 가져오지 않았다.
-- `/perception/lidar/observations_local`(session/generation)이 실행 시점에 발행 중이면 그것을,
-  아니면 `lidar_objects_topic` 배열을 구독한다. 같은 source 안에서만 시각 역행을 거부하고,
-  객체는 `OBSERVED`/`PREDICTED`만 쓴다. 예측 형상은 확인 횟수를 늘리지 않는다.
-- 형상은 OBB 8개 꼭짓점의 외접 범위와 XY 윤곽이다. 운동은 유효한 LiDAR 절대 속도를 우선 쓰고,
-  재밍으로 무효면 같은 source+track ID의 연속 위치와 자차 속도·IMU로 추정한다.
-- 매 제어 주기에 스캔 지연 동안의 자차 이동·IMU 회전·물체 운동을 보정해 현재 위치로 옮긴다.
-- 선 기억의 LiDAR 장애물은 새 유효 스캔마다 최신 스냅샷으로 교체한다(과거 OBB·빠진 ID를
-  쌓지 않음). 확인 횟수는 같은 source+track ID에서만 이어받는다.
-- 진단: `lidar_source`, `lidar_snapshot_sequence`, `lidar_predicted_objects`.
-
 ## PR #127 통합·시험 경계 — 2026-10-28
 
 - `CameraBBoxLaneResult`의 `contact_x/contact_y_min/contact_y_max` 배열은 최신 main(PR #128)과
