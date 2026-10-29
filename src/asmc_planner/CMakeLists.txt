@@ -964,7 +964,7 @@ endif()
 if(CATKIN_ENABLE_TESTING)
   add_test(NAME static_avoid_launch_margin_test
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/static_avoid_launch_margin_test.py)
-  foreach(regression static_avoid_progress_test static_avoid_corridor_test avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
+  foreach(regression static_avoid_speed_recovery_test static_avoid_progress_test static_avoid_corridor_test avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
     add_executable(${regression} tests/frenet/${regression}.cpp)
     target_link_libraries(${regression} asmc_planner_frenet_core yaml-cpp)
     target_compile_definitions(${regression} PRIVATE
@@ -976,6 +976,9 @@ if(CATKIN_ENABLE_TESTING)
   target_include_directories(static_avoid_progress_test PRIVATE
     ${catkin_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../asmc_controller/src)
   add_dependencies(static_avoid_progress_test ${catkin_EXPORTED_TARGETS})
+  target_include_directories(static_avoid_speed_recovery_test PRIVATE
+    ${catkin_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../asmc_controller/src)
+  add_dependencies(static_avoid_speed_recovery_test ${catkin_EXPORTED_TARGETS})
 endif()
 
 if(CATKIN_ENABLE_TESTING)

@@ -13,6 +13,7 @@
 #include "Frenet/Geometry/ObservedMotion.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutMerge.hpp"
 #include "Frenet/Maneuver/Avoid/StaticAvoidPolicy.hpp"
+#include "Frenet/Speed/StaticAvoidSpeedRecovery.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
 #include "Frenet/Maneuver/Merge/HighwayMerge.hpp"
 #include "Frenet/Maneuver/Merge/HighwayTransitionPath.hpp"
@@ -50,6 +51,13 @@ public:
     }
     bool static_margin_recovery_enabled() const { return avoid_cfg_.static_margin_recovery_enabled; }
     bool static_contact_progress_enabled() const { return avoid_cfg_.static_contact_progress_enabled; }
+    void InvalidateStaticAvoidSpeedProof() {
+        auto& context=v2_avoidance_;
+        context.static_speed.ResetProof();
+        if(context.static_recovery_engaged)
+            context.static_speed.cap=std::min(context.static_speed.cap,context.static_contact_used?
+                avoid_cfg_.static_contact_speed_cap:avoid_cfg_.static_recovery_speed_cap);
+    }
     const AvoidRoadMap& road_map() const { return avoid_road_map_; }
     VehicleShape vehicle_shape() const { return vehicle_shape_; }
     double rear_overhang() const { return avoid_cfg_.rear_overhang; }
@@ -509,6 +517,10 @@ public:
         double static_minimum_clearance=std::numeric_limits<double>::infinity();
         bool static_progress_fresh=false;
         std::string static_recovery_rejection;
+        bool static_speed_recovery_active=false;
+        double static_execution_speed_cap=0;
+        double static_next_speed_cap=0;
+        unsigned static_speed_proof_frames=0;
 
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
@@ -1137,6 +1149,9 @@ private:
         bool static_group_recovery=false;
         bool static_recovery_engaged=false;
         bool static_contact_used=false;
+        StaticAvoidSpeedRecovery static_speed;
+        double static_speed_travel=0;
+        double static_speed_last_s=0;
         bool static_progress_fresh=false;
         std::size_t static_creep_cursor=0;
         unsigned static_target_missing_cycles=0;
@@ -1181,6 +1196,7 @@ private:
         // failed plans invalidate it rather than advancing an unchecked path.
         bool map_speed_profile_valid = false;
         std::chrono::steady_clock::time_point map_speed_profile_at{};
+        double map_speed_profile_cap=0;
         // Keep an accepted spatial lateral profile through SHIFT/RETURN even
         // when launch speed crosses the normal generator boundary.
         bool spatial_lateral_active = false;

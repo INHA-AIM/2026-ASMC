@@ -33,7 +33,8 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
         if(level>0) {
             const double elapsed=std::max(replanning_period_s_,std::chrono::duration<double>(
                 std::chrono::steady_clock::now()-context.map_speed_profile_at).count());
-            const bool same_cap=context.static_progress_level==level&&context.map_speed_profile_valid;
+            const bool same_cap=context.static_progress_level==level&&context.map_speed_profile_valid&&
+                std::fabs(context.map_speed_profile_cap-cap)<1e-6;
             seed=AvoidAccelerationSeed(ego.a,ego.v,cap,same_cap,context.map_recovery_path.a,
                 path_cfg_.dt,elapsed,limits_.max_longitudinal_accel*.8,limits_.max_longitudinal_accel,
                 same_cap,same_cap);
@@ -93,6 +94,7 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
         generated+=trial.generated_candidate_count;valid+=trial.valid_candidate_count;
         if(ok) {
             trial.static_recovery_rejection.clear();
+            trial.static_execution_speed_cap=cap;
             trial.static_progress_mode=policy.mode;trial.static_progress_level=level;
             trial.static_progress_margin=policy.margin;
             // A newly generated body-clear route is preferable to contact.

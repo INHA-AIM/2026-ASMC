@@ -27,11 +27,31 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             "[AVOID_DIAGNOSTIC] generated=%u kinematic=%u road=%u collision=%u clear=%u paint_only=%u boundary=%u least_overlap=%.6f least_paint=%.6f\n",
             generated,kinematic_rejected,road_rejected,collision_rejected,clear,paint_only,boundary,least_overlap,least_paint);}
     } diagnostic;
-    if(v2_avoidance_.static_recovery_engaged)
-        speed=std::min(speed,v2_avoidance_.static_contact_used?
-            avoid_cfg_.static_contact_speed_cap:avoid_cfg_.static_recovery_speed_cap);
+    const double requested_speed=speed;
+    auto& speed_context=v2_avoidance_;
+    bool nominal_pose_clear=true;
+    if(speed_context.static_recovery_engaged) {
+        const double traveled=ReferenceArcDistance(ref_,speed_context.static_speed_last_s,s);
+        if(!std::isfinite(traveled)||std::fabs(traveled)>2) {
+            InvalidateStaticAvoidSpeedProof();speed_context.static_speed_travel=0;
+        } else speed_context.static_speed_travel+=traveled;
+        speed_context.static_speed_last_s=s;
+        auto exterior=vehicle_shape_;exterior.width=std::max(exterior.width,exterior.road_outer_width);
+        nominal_pose_clear=avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,exterior);
+        const auto body=MakeEgoFootprint(ego,vehicle_shape_,0);
+        for(const auto& object:obstacles)
+            if(geometry::ConvexPolygonDistance(body,PredictObstacleFootprint(object,0))<=collision_cfg_.safety_margin+1e-9)
+                nominal_pose_clear=false;
+        if(!nominal_pose_clear) {
+            speed_context.static_speed.ResetProof();
+            speed_context.static_speed.cap=std::min(speed_context.static_speed.cap,avoid_cfg_.static_recovery_speed_cap);
+        }
+        speed=std::min(speed,speed_context.static_speed.cap);
+    }
+    result.static_execution_speed_cap=std::min(speed,avoid_cfg_.bypass_speed_cap);
     const auto retain_static_policy=[&]() {
         auto& context=v2_avoidance_;
+        const bool was_engaged=context.static_recovery_engaged;
         context.static_recovery_engaged|=result.static_progress_mode!=StaticAvoidPolicy::NORMAL;
         context.static_contact_used|=result.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS;
         context.static_progress_level=result.static_progress_level;
@@ -44,9 +64,24 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 context.last_nominal.spatial_geometry=result.candidate_path;
             result.static_progress_margin=collision_cfg_.safety_margin;
         }
-        if(context.static_recovery_engaged&&result.static_progress_level>0) {
-            result.static_progress_mode=context.static_contact_used?
-                StaticAvoidPolicy::CONTACT_PROGRESS:StaticAvoidPolicy::REDUCED_MARGIN;
+        if(context.static_recovery_engaged) {
+            if(!was_engaged){context.static_speed_last_s=s;context.static_speed_travel=0;}
+            if(result.static_progress_mode!=StaticAvoidPolicy::NORMAL) {
+                // The current geometry selects the cap. A past contact does
+                // not keep a later body-clear reduced-margin route at crawl.
+                context.static_speed.Enter(result.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS?
+                    avoid_cfg_.static_contact_speed_cap:avoid_cfg_.static_recovery_speed_cap);
+            } else if(committed&&nominal_pose_clear&&!result.escape_recovery_required&&!context.map_recovery_active) {
+                context.static_speed.ObserveNominal(object_observation_time_,context.static_speed_travel,
+                    std::min({requested_speed,avoid_cfg_.bypass_speed_cap,avoid_cfg_.static_normal_resume_speed_cap}),
+                    avoid_cfg_.static_speed_confirm_time,avoid_cfg_.static_speed_confirm_distance,
+                    avoid_cfg_.static_speed_step);
+            } else {
+                context.static_speed.ResetProof();
+            }
+            result.static_speed_recovery_active=true;
+            result.static_next_speed_cap=context.static_speed.cap;
+            result.static_speed_proof_frames=context.static_speed.frames;
         }
     };
     const auto search_started=std::chrono::steady_clock::now();
@@ -170,8 +205,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         (execution_->avoid.phase==AvoidPhase::SHIFT ||
          execution_->avoid.phase==AvoidPhase::PASS || returning);
     // A newly reduced cap must not borrow a release from the faster profile.
-    const bool release_cap_unchanged=!v2_avoidance_.map_recovery_path.v.empty()&&
-        v2_avoidance_.map_recovery_path.v.back()<=crawl+.1;
+    const bool release_cap_unchanged=v2_avoidance_.map_speed_profile_valid&&
+        std::fabs(v2_avoidance_.map_speed_profile_cap-crawl)<1e-6;
     const double initial_a=AvoidAccelerationSeed(ego.a,ego.v,crawl,
         bypass_active,v2_avoidance_.map_recovery_path.a,dt,elapsed,
         decel,limits_.max_longitudinal_accel,release_cap_unchanged,
@@ -350,6 +385,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 v2_avoidance_.map_recovery_path=continuation;
                 v2_avoidance_.map_speed_profile_valid=true;
                 v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
+                v2_avoidance_.map_speed_profile_cap=crawl;
                 retain_static_policy();
                 output=continuation;UpdateCommittedAvoidLifecycle(s,d,ego.v,result,
                     CanHandoffAvoidToKeep(ego,s,d,obstacles));
@@ -629,6 +665,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     else if(!search_expired)v2_avoidance_.map_search_cursor=0;
     if(committed){
         if(!result.candidate_valid){
+            InvalidateStaticAvoidSpeedProof();
             ++v2_avoidance_.map_search_turn;
             v2_avoidance_.map_speed_profile_valid=false;
             last_failure_reason_=result.blocking_object_id>=0?
@@ -685,6 +722,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
         v2_avoidance_.map_speed_profile_valid=true;
         v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
+        v2_avoidance_.map_speed_profile_cap=result.static_execution_speed_cap;
         v2_avoidance_.map_search_turn=0;
         if(v2_avoidance_.static_recovery_engaged&&execution_->avoid.phase==AvoidPhase::TRACKING)
             execution_.beginAvoidShiftProbe();

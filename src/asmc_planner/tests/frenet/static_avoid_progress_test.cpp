@@ -92,15 +92,17 @@ void Contact(const std::string& config) {
         if(p.avoid_completed()){completed=true;break;}
         moving|=r.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS;
         contact_seen|=r.static_contact_cost>0;
+        const double cap=r.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS?.5:
+            r.static_progress_mode==StaticAvoidPolicy::REDUCED_MARGIN?1:2;
         if(moving)slow&=*std::max_element(path.v.begin(),path.v.end())<=
-            std::max(.5,ego.v+std::pow(std::max(0.0,path.a.front()),2)/12)+.11;
+            std::max(cap,ego.v+std::pow(std::max(0.0,path.a.front()),2)/12)+.11;
         consumer&=ConsumerAllows(path,r.static_progress_mode);
         slew&=PathObeysSteeringRate(path,.1,3,{.844,1,5,.1});
         ego={path.x[1],path.y[1],path.yaw[1],path.kappa[1],path.v[1],path.a[1]};
     }
     Expect(valid&&moving&&contact_seen&&completed,"explicit contact policy follows the stored reference through fixed occupancy and completes");
     Expect(slew,"contact prefixes remain actuator-feasible");
-    Expect(slow,"nominal-clearance geometry never releases the latched recovery speed before handoff");
+    Expect(slow,"each recovery candidate obeys its current policy speed cap");
     Expect(consumer,"contact recovery profiles are executable by the Controller policy gate");
     // No globally weakened collision checker, even after contact was used.
     CartesianPath straight;straight.x={0,1,2};straight.y={0,0,0};straight.yaw=straight.y;
@@ -141,7 +143,7 @@ void LostId(const std::string& config) {
         if(!ok){std::cout<<"ID-loss failure "<<r.rejection_stage<<" recovery="<<r.static_recovery_rejection<<'\n';valid=false;break;}
         phase&=std::string(p.avoid_phase_name())!="TRACKING";
         consumer&=ConsumerAllows(path,r.static_progress_mode);
-        slow&=*std::max_element(path.v.begin(),path.v.end())<=.6;
+        slow&=*std::max_element(path.v.begin(),path.v.end())<=1.1;
     }
     Expect(valid&&phase,"stationary ID-loss scene keeps producing recovery beyond the dropout grace without TRACKING regression");
     Expect(consumer&&slow,"ID-loss recovery retains a Controller-executable crawl policy");
@@ -181,13 +183,14 @@ void ColdStart(const std::string& config,int request_kind) {
         contact|=r.static_contact_cost>0;
         consumer&=ConsumerAllows(path,r.static_progress_mode);
         phase&=std::string(p.avoid_phase_name())!="TRACKING";
-        slow&=*std::max_element(path.v.begin(),path.v.end())<=.6;
+        const double cap=r.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS?.5:1;
+        slow&=*std::max_element(path.v.begin(),path.v.end())<=cap+.1;
         auto shape=p.vehicle_shape();shape.width=std::max(shape.width,shape.road_outer_width);
         road&=p.road_map().PathClear(path,shape);
         ego={path.x[1],path.y[1],path.yaw[1],path.kappa[1],path.v[1],path.a[1]};
     }
     Expect(valid&&completed&&contact,"cold-start recovery progresses through fixed occupancy and finishes despite repeated ID churn");
-    Expect(consumer&&phase&&slow&&road,"cold-start progress keeps its stop tail, crawl cap, road containment and execution phase until handoff");
+    Expect(consumer&&phase&&slow&&road,"cold-start progress keeps its stop tail, policy cap, road containment and execution phase until handoff");
     if(request_kind==2)Expect(completed&&ego.x<100,"nearby recovery group hands off before a separated remote primary");
 }
 
@@ -234,9 +237,9 @@ void EmptyObservationRecovery(const std::string& config) {
         valid&=p.PlanCommittedAvoid(ego,{},c,path,r)&&path.v.size()>1;
         if(!valid)break;
         nominal|=r.static_progress_mode==StaticAvoidPolicy::NORMAL;
-        slow&=*std::max_element(path.v.begin(),path.v.end())<=.6;
+        slow&=*std::max_element(path.v.begin(),path.v.end())<=1.1;
     }
-    Expect(valid&&nominal&&slow,"complete observation dropout can regain a normal certified path without releasing the crawl cap");
+    Expect(valid&&nominal&&slow,"complete observation dropout can regain a normal path without exceeding the body-clear cap before progress");
 }
 }
 

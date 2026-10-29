@@ -1126,6 +1126,10 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 " clearance="+std::to_string(committed.static_minimum_clearance)+
                 " contact_cost="+std::to_string(committed.static_contact_cost)+
                 " fresh_prefix="+std::to_string(committed.static_progress_fresh);
+        if(committed.static_speed_recovery_active)
+            executing.detail+="; static speed_cap="+std::to_string(committed.static_execution_speed_cap)+
+                " next_speed_cap="+std::to_string(committed.static_next_speed_cap)+
+                " proof_frames="+std::to_string(committed.static_speed_proof_frames);
         port.trajectory_pub_.publish(trajectory);
         port.publishDebugMarkersV2(trajectory, command);
         port.publishFeedbackV2(feedback_command_id, executing, &trajectory,

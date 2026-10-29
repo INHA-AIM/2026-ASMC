@@ -67,6 +67,12 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.static_contact_used|=result.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS;
     v2_avoidance_.static_progress_fresh=result.static_progress_fresh;
     v2_avoidance_.static_group_recovery|=result.static_progress_fresh;
+    v2_avoidance_.static_speed.ResetProof();
+    v2_avoidance_.static_speed_last_s=last_s_;
+    v2_avoidance_.static_speed_travel=0;
+    if(v2_avoidance_.static_recovery_engaged&&v2_avoidance_.static_speed.cap<=0)
+        v2_avoidance_.static_speed.Enter(result.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS?
+            avoid_cfg_.static_contact_speed_cap:avoid_cfg_.static_recovery_speed_cap);
     if(result.static_progress_level==0&&!result.static_progress_fresh) {
         v2_avoidance_.last_nominal=result;
         v2_avoidance_.last_nominal.static_progress_mode=StaticAvoidPolicy::NORMAL;
@@ -78,6 +84,7 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
     v2_avoidance_.map_speed_profile_valid=!result.candidate_path.x.empty();
     v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
+    v2_avoidance_.map_speed_profile_cap=result.static_execution_speed_cap;
     const double entry_gap = ReferenceArcDistance(ref_, last_s_, result.map_entry_s);
     v2_avoidance_.shift_entry_distance = avoid_road_map_.enabled()
         ? initial_gap - std::max(0.0, entry_gap) : shift_distance;

@@ -143,13 +143,35 @@ Contact cost integrates overlap length and penetration severity; a searched
 replacement with less contact can replace the retained prefix. A newly found
 body-clear path takes precedence over contact progress. Reduced margins latch
 through the maneuver; a normal retained corridor must pass three consecutive
-checks before nominal clearance resumes. Recovery speed stays latched until
-the maneuver hands off: 1 m/s for margin recovery, or 0.5 m/s once contact
-progress was used. A transient clear scan cannot restore 4.2 m/s. A complete
-nominal-clearance route can return to normal collision policy while retaining
-this independent planning speed cap. This also permits ordinary control after
-complete observation dropout and finite ghost expiry when Behavior proposes
-KEEP; an exception-bearing prefix still requires its fresh AVOID owner.
+checks before nominal clearance resumes. Speed follows the current checked
+geometry: contact prefixes use 0.5 m/s and complete body-clear reduced-margin
+routes use 1 m/s. A prior contact no longer forces later body-clear routes to
+remain at 0.5 m/s. A complete nominal-clearance route can return to normal
+collision policy and gradually regain speed during the same maneuver.
+
+Nominal speed recovery requires at least five distinct perception timestamps,
+one second of successful nominal checks and 0.5 m of measured forward progress
+per step. Replanning one observation, waiting at rest, backward time/progress,
+or a sensor gap over 0.25 s cannot accumulate this permission. A failed plan or
+input/conversion failure resets the proof; a reduced-margin/contact selection
+also resets it and chooses its own cap. Each successful step raises only the
+NEXT candidate's cap by 0.5 m/s, up to 2 m/s and within the command and bypass
+limits. That higher-speed candidate must pass current collision, road, lateral
+acceleration, steering slew, longitudinal acceleration/jerk and stop-tail checks
+before execution. Accepted profile history records its actual requested cap;
+the zero-speed stopping endpoint cannot be used to infer cap continuity.
+The current full road exterior must be inside the drivable area and the body
+must already have nominal clearance from every perceived object. Initial-margin
+escape and ongoing road-boundary recovery do not accumulate nominal speed proof.
+
+The optional `planner/avoid/static_normal_resume_speed_cap`,
+`static_speed_confirm_time`, `static_speed_confirm_distance` and
+`static_speed_step` keys configure 2.0 m/s, 1.0 s, 0.5 m and 0.5 m/s defaults.
+These govern recovery inside the active AVOID maneuver. Ordinary AVOID without
+a preceding recovery retains its existing bypass cap; completion hands back
+to normal KEEP speed planning. Complete observation dropout and finite ghost
+expiry can still regain a full nominal path when Behavior proposes KEEP; an
+exception-bearing prefix still requires its fresh AVOID owner.
 Recovery cannot retime SHIFT/PASS back into pre-entry TRACKING. Contact
 execution never overwrites the last nominally checked reference unless a
 complete nominal-clearance corridor is independently established.
@@ -159,7 +181,9 @@ contact-progress execution. Failure codes still mean failure. Controller
 checks require a fresh AVOID owner, a stop-capable bounded speed profile, and
 an independent opt-in for contact; braking release still requires a new valid
 plan. Feedback detail records policy, chosen margin, minimum perceived fixed
-object clearance, contact cost and `fresh_prefix`. They are appended even when
+object clearance, contact cost and `fresh_prefix`. Speed recovery also reports
+`static speed_cap`, `next_speed_cap` and `proof_frames`, including on normal
+paths. They are appended even when
 feedback also reports rejection of an attempted command replacement. Failure
 detail separately reports `static recovery rejection`, including road,
 curvature/retiming and strict-object collision rejection. These diagnostics
@@ -173,8 +197,8 @@ checks ideal-tracking completion. A separate synthetic test requires progress
 through fixed occupancy while preserving actuator and mobile-actor guards.
 Both regressions also feed every recovery speed profile through Controller's
 independent policy gate. Margin-only execution stays blocked by the synthetic
-physical wall; contact-enabled execution eventually hands off, retaining crawl
-speed until that handoff.
+physical wall; contact-enabled execution eventually hands off while every
+published candidate obeys the cap for its current policy.
 These are frozen-observation tests, not a replay of MORAI actuator physics.
 
 `static_id_loss_stall.json` freezes entry, box collapse, ID disappearance and
@@ -183,11 +207,30 @@ settled observations from bag SHA256
 Regression holds the stopped observation beyond the dropout grace, then
 requires ideal-tracking completion. Synthetic cases start with no nominal
 history, with a stale request ID, or a separated remote primary; repeated
-tracker churn must not prevent completion or release the crawl limit. Actual
+tracker churn must not prevent completion or bypass the current policy cap. Actual
 generator tests retain opt-out, uncertain motion, mobile-actor blocking and
 explicit target-pose/direction constraints.
 Complete observation dropout must regain a fully checked nominal route after
 finite cache expiry without restoring cruise speed prematurely.
+
+`static_speed_recovery_bag.json` freezes twelve paths and perceived-object
+snapshots from bag SHA256
+`8464fd158059d156bf6fb93d4a8a07faaf3f5878d73162450bbc6e898127c518`.
+All ten nominal snapshots pass strict 0.45 m collision, road and retiming
+checks for 1.0, 1.5 and 2.0 m/s targets from the recorded entry state. Two
+reduced-margin snapshots pass the per-object reduced policy at 1.0 m/s.
+Retargeting a low-speed path to 4.2 m/s lets the retimer reduce the actual peak
+to approximately 2.72-3.90 m/s. Hypothetically entering those same geometries
+already at 4.2 m/s rejects seven of ten for steering slew. Geometry clearance
+therefore cannot, by itself, restore the old cruising speed.
+
+The speed regression checks repeated-scan, stationary, sensor-gap and backward
+time/progress guards. A synthetic ideal-tracking episode uses 456 cycles with
+a fixed 0.5 m/s nominal recovery ceiling and 375 with certified recovery to
+2 m/s; both complete. A new fixed blocker after acceleration must produce a
+newly checked 0.5 m/s contact candidate and still complete. These comparisons
+use frozen observations/ideal tracking and do not establish faster MORAI
+closed-loop completion or ground-truth clearance.
 
 For MORAI, compare strict, margin-only and contact-enabled runs on the same
 placement and approach speed. Record actual contacts and forward progress
@@ -196,10 +239,10 @@ policy must not be confused with the planner's contact-progress result. Add
 `--continue-on-static-contact` to record registered fixed static-mission
 contacts while continuing the run; other actors retain collision termination.
 
-The group-recovery build passes all 126 CTest registrations. Catkin XML results
-report 881 tests, zero errors/failures/skips; the extended standalone progress
-regression is a separate CTest registration. The final explicit goal/direction
-guard is also checked by that regression. The old/current trajectory decoder's
+The speed-recovery build passes all 127 CTest registrations. Catkin XML results
+report 881 tests, zero errors/failures/skips; the standalone progress and speed
+regressions are separate CTest registrations. The final cap-continuity and
+current-pose guards are rechecked by those two regressions. The old/current trajectory decoder's
 two tests and the two launch/configuration tests pass. The prior progress-policy
 change also passed runner mock integration (46) and headless UI (35) tests;
 this group-recovery change does not modify runner code. None of these checks
@@ -266,9 +309,14 @@ After a full rebuild, use these MORAI gates:
 8. Let the primary OBB collapse/disappear while other fixed barriers remain;
    continue recording for more than the three-second dropout grace.
 9. Check that repeated clear/expanded OBB observations never restore cruise
-   speed before group passage; compare selected and normal control outputs.
+   speed from a transient clear frame. Sustained full nominal paths and actual
+   progress should raise the cap gradually, up to 2 m/s; compare selected and
+   normal control outputs and the speed-proof diagnostics.
 10. Repeat cold start with a newly moving actor or pedestrian on the prefix;
     contact progress must remain blocked until strict collision checks pass.
+11. After nominal acceleration, add a fixed blocker again. Require a checked
+    reduced/contact speed profile rather than a stale high-speed continuation,
+    followed by a new confirmation interval before nominal acceleration.
 
 Record the entire episode, including successful runs: perceived corners and
 motion state, selected command, trajectory, Frenet feedback, vehicle state,
