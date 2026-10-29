@@ -543,14 +543,22 @@ def main():
         # MORAI can retain the native unknown-contact marker after a removed
         # actor (observed after drive06). Preserve/quarantine startup records;
         # they are not a new contact. UDP events remain independently active.
-        before_drive=actor_state(link.ego())
+        before_states=link.states()
+        before_drive=actor_state(next(x for x in before_states if x.actor_info.id.value==link.ego_id))
         preexisting_contacts=set(before_drive['native_contacts'])-{link.ego_id,''}
         if preexisting_contacts:
             native_evidence_limited=True
             emit(dict(event='preexisting_native_contact',contacts=sorted(preexisting_contacts),
                       limitation='Persistent startup IDs cannot certify later contact release; raw samples and UDP evidence retained.'))
-            if any(not aid.startswith('-') for aid in preexisting_contacts):
-                raise RuntimeError('known actor contact before trial release')
+            from scen_runner.runtime.contact_evidence import inspect_contacts
+            evidence=inspect_contacts(dict(contacts=preexisting_contacts,owned_ids=set(section.owned()),
+                actor_states=before_states,query_s=0.),set(section.owned()),link.ego_id)
+            emit(dict(event='startup_contact_geometry',evidence=evidence))
+            # Native IDs can be reused after a deleted contact. Existing team
+            # contact_evidence rejects only bodies that are provably far away;
+            # never dismiss a physically nearby startup contact as stale.
+            if any(e['verdict']!='rejected' for e in evidence):
+                raise RuntimeError('near/unknown owned actor contact before trial release')
         link.release()
         started = time.monotonic()
         # The earlier LOCAL fixture runner only prepared saved actors. Without
