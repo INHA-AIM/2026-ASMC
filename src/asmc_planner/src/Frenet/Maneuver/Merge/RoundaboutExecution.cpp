@@ -1,4 +1,5 @@
 #include "Frenet/Maneuver/Merge/ProgressStoppingCertificate.hpp"
+#include "Frenet/Maneuver/Merge/RoundaboutDeparture.hpp"
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
@@ -491,6 +492,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     }
     auto departure_obstacles=ctx.predicted_obstacles;
     std::vector<TrackedObject> departure_bounds;
+    std::vector<RoundaboutPrediction::MissingDepartureObservation> missing_departure;
     if(!execution_->merge.committed) {
         ctx.predicted_obstacles=roundabout_prediction_.ApproachOccupancies(ctx.predicted_obstacles);
         departure_obstacles=ctx.predicted_obstacles;
@@ -504,6 +506,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         departure_obstacles=RoundaboutPrediction::ExpandTurnModels(
             roundabout_prediction_.WithObservedSpeedRanges(departure_obstacles),
             object_tracking_cfg_.yaw_rate_clamp_rad_s);
+        missing_departure=roundabout_prediction_.MissingDepartureOccupancies(evaluation_time,
+            [&](double x,double y){return roundabout_zone_.SupportsCirculatingObservation(x,y);},
+            roundabout_merge_cfg_.partial_vehicle_length,roundabout_merge_cfg_.partial_vehicle_width,
+            object_tracking_cfg_.yaw_rate_clamp_rad_s,
+            Interpolate(ref_,roundabout_zone_.conflict_start_s).x,
+            Interpolate(ref_,roundabout_zone_.conflict_start_s).y);
     }
     if(execution_->merge.committed)
         ctx.predicted_obstacles=roundabout_prediction_.ExecutionOccupancies(ctx.predicted_obstacles,
@@ -512,6 +520,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     const double observation_age=std::max(0.0,evaluation_time-observation_stamp);
     for(auto& object:ctx.predicted_obstacles)object=AdvanceObjectObservation(object,observation_age);
     for(auto& object:departure_obstacles)object=AdvanceObjectObservation(object,observation_age);
+    for(const auto& missing:missing_departure) {
+        if(missing.models.empty()){++result.unverified_missing_objects;continue;}
+        ++result.retained_missing_objects;
+        // These models are already ego-aligned. The mandatory candidate-local
+        // missing check below uses them without a second time adjustment.
+    }
     last_s_=ctx.s;last_d_=ctx.d;has_last_s_=true;
     double dd,ddd;ArcDerivToTimeDeriv(ctx.s_dot,ctx.s_ddot,ctx.d_prime,ctx.d_pprime,dd,ddd);
     auto start=ClampInitialBoundaryState(ctx.s,ctx.s_dot,ctx.s_ddot,ctx.d,dd,ddd,limits_);
@@ -589,6 +603,10 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         return true;
     };
     const auto checked_occupancy=[&](int id) {
+        // Defer missing IDs to the mandatory full candidate check. This does
+        // not certify them or bypass the confidence policy for current objects.
+        if(std::any_of(missing_departure.begin(),missing_departure.end(),
+            [&](const auto& missing){return missing.id==id;}))return true;
         return std::any_of(departure_bounds.begin(),departure_bounds.end(),
             [&](const auto& bound){return bound.id==id;})||passed(id);
     };
@@ -602,7 +620,13 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     if(uncertain>=0)result.blocking_object_id=uncertain;
     }
     double best_cost=std::numeric_limits<double>::infinity();
-    bool nominal_candidate_found=false;
+    bool nominal_candidate_found=false, certified_candidate_found=false;
+    MissingDepartureCheck selected_missing;
+    MergeCandidateCheck selected_departure;
+    const auto selection_complete=[&]() {
+        return execution_->merge.committed||!early_departure_clear?
+            nominal_candidate_found:certified_candidate_found;
+    };
     // A departure certificate must also be obtainable from a slightly displaced
     // waiting pose. It does not execute movement during PREPARE: the stop path
     // remains authoritative, and the complete departure still needs gap and
@@ -666,16 +690,16 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     // Strict grid containment is preferred; an execution/waiting recovery bridge is bounded
     // by 15 cm, 10% of the footprint, 6 m and 5 s before settled re-entry.
     for(bool allow_bridge:{false,true}) {
-    if(allow_bridge&&((!execution_->merge.committed&&!waiting_boundary_recovery)||nominal_candidate_found))break;
+    if(allow_bridge&&((!execution_->merge.committed&&!waiting_boundary_recovery)||selection_complete()))break;
     for(bool release_positive_accel:{false,true}) {
-    if(release_positive_accel&&(ego.a<=0||!profile_failed||nominal_candidate_found))break;
+    if(release_positive_accel&&(ego.a<=0||!profile_failed||selection_complete()))break;
     std::vector<std::pair<double,double>> geometries{
         {ordinary_settle,roundabout_preferred_d_},{6,roundabout_preferred_d_},
         {10,.35},{10,-.35},{6,.35},{6,-.35}};
     if(roundabout_preferred_d_!=0){geometries.push_back({ordinary_settle,0});geometries.push_back({6,0});}
     for(const auto geometry:geometries) {
     double nominal_family_cost=std::numeric_limits<double>::infinity(),nominal_family_paint=0;
-    bool nominal_family_valid=false;
+    bool nominal_family_valid=false, certified_family_valid=false;
     for(double fraction:{1.0,.8,.6,.4}) {
         ++result.generated;
         CartesianPath path;
@@ -715,6 +739,8 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             }
         }
         bool departure_certified=false;
+        MissingDepartureCheck missing_check;
+        MergeCandidateCheck departure_check;
         double cost=check.exit_time+AvoidRoadMap::PaintCost(road)+std::fabs(geometry.second);
         if(valid) {
             nominal_candidate_found=nominal_family_valid=true;
@@ -722,19 +748,29 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             // Select among the existing candidates AFTER the full certificate.
             // No extra speed/geometry catalogue or delayed-entry samples.
             if(!execution_->merge.committed&&early_departure_clear) {
-                const auto final=CheckRoundaboutCandidate(path,roundabout_zone_,departure_obstacles,
+                departure_check=CheckRoundaboutCandidate(path,roundabout_zone_,departure_obstacles,
                     vehicle_shape_,collision_cfg_,path_cfg_.dt,roundabout_merge_cfg_.min_front_time_gap,
                     merge_cfg_.min_rear_time_gap,true);
-                valid=final.safe;
-                departure_certified=final.safe;
-                if(!valid&&final.blocking_object_id>=0)result.blocking_object_id=final.blocking_object_id;
+                if(departure_check.safe)
+                    missing_check=CheckMissingRoundaboutDeparture(path,roundabout_zone_,missing_departure,
+                        vehicle_shape_,collision_cfg_,path_cfg_.dt,roundabout_merge_cfg_.min_front_time_gap,
+                        merge_cfg_.min_rear_time_gap);
+                departure_certified=departure_check.safe&&missing_check.safe;
+                certified_candidate_found|=departure_certified;
+                certified_family_valid|=departure_certified;
             }
         }
-        last_candidate_paths_.push_back(path);last_candidate_validity_.push_back(valid);
+        last_candidate_paths_.push_back(path);
+        last_candidate_validity_.push_back(valid&&
+            (execution_->merge.committed||!early_departure_clear||departure_certified));
         if(!valid)continue;
         ++result.valid;
-        if(cost<best_cost){best_cost=cost;selected_d=geometry.second;selected_bridge=bridge;result.candidate_valid=true;
+        // A cheap diagnostic-only candidate must never mask a certified one.
+        if(!result.candidate_valid||(departure_certified&&!result.departure_certified)||
+           (departure_certified==result.departure_certified&&cost<best_cost)){
+            best_cost=cost;selected_d=geometry.second;selected_bridge=bridge;result.candidate_valid=true;
             result.departure_certified=departure_certified;
+            selected_missing=missing_check;selected_departure=departure_check;
             result.entry_time=check.entry_time;result.exit_time=check.exit_time;
             result.candidate_path=std::move(path);}
     }
@@ -746,11 +782,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     if(!progress_certificate.x.empty())break;
     // Prefer the original reference geometry when it is feasible. Alternate
     // local shapes rescue geometry or prolonged paint contact, with bounded work.
-    if(nominal_family_valid&&nominal_family_paint<.3)break;
+    if(nominal_family_valid&&nominal_family_paint<.3&&
+       (execution_->merge.committed||!early_departure_clear||certified_family_valid))break;
     }
-    if(nominal_candidate_found||!progress_certificate.x.empty())break;
+    if(selection_complete()||!progress_certificate.x.empty())break;
     }
-    if(nominal_candidate_found||!progress_certificate.x.empty())break;
+    if(selection_complete()||!progress_certificate.x.empty())break;
     }
     if(!execution_->merge.committed&&uncertain>=0)result.blocking_object_id=uncertain;
     else if(result.candidate_valid)result.blocking_object_id=-1;
@@ -814,6 +851,23 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             ctx.predicted_obstacles,out_path);
         last_failure_reason_=braking?PlanFailureReason::NONE:PlanFailureReason::COLLISION_BLOCKED;
         return braking;
+    }
+    if(uncertain<0&&early_departure_clear&&result.candidate_valid) {
+        result.missing_status=selected_missing.status;
+        result.missing_reason=selected_missing.reason;
+        result.missing_models_checked=selected_missing.models_checked;
+        result.missing_non_interference=selected_missing.non_interference_proven;
+        result.blocking_object_id=selected_departure.safe?selected_missing.blocking_id:
+            selected_departure.blocking_object_id;
+        result.blocking_history_age=selected_missing.age;
+        result.blocking_path_time=selected_departure.safe?selected_missing.time:selected_departure.blocking_time;
+        result.blocking_gap_shift=selected_departure.safe?selected_missing.shift:selected_departure.blocking_shift;
+        if(selected_departure.safe&&!selected_missing.safe&&
+           std::string(selected_missing.status)=="unverifiable")uncertain=selected_missing.blocking_id;
+    }
+    if(result.departure_certified) {
+        result.blocking_object_id=-1;result.blocking_history_age=-1;
+        result.blocking_path_time=-1;result.blocking_gap_shift=0;
     }
     // Every selected departure has already passed the same final models.
     if(!result.departure_certified) {

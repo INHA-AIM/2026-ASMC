@@ -724,8 +724,10 @@ if(CATKIN_ENABLE_TESTING)
     add_test(NAME ${merge_test} COMMAND ${merge_test})
   endforeach()
 
-  add_executable(roundabout_execution_shadow tools/frenet/roundabout_execution_shadow.cpp)
-  target_link_libraries(roundabout_execution_shadow asmc_planner_frenet_core yaml-cpp)
+  add_executable(roundabout_execution_shadow tools/frenet/roundabout_execution_shadow.cpp src/Parser/PlanningInput.cpp)
+  target_include_directories(roundabout_execution_shadow PRIVATE ${catkin_INCLUDE_DIRS})
+  add_dependencies(roundabout_execution_shadow ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(roundabout_execution_shadow asmc_planner_frenet_core yaml-cpp ${catkin_LIBRARIES})
 
   # MERGE contract only: does not enable the runtime capability gate.
   add_executable(merge_contract_test tests/frenet/merge_contract_test.cpp)

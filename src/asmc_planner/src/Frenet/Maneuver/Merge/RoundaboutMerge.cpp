@@ -183,7 +183,9 @@ MergeCandidateCheck CheckRoundaboutCandidate(const CartesianPath& path,
     if(!entering&&!safety.clear&&safety.blocking_sample_index==0)
         safety=EvaluateCartesianTrajectorySafety(path,objects,shape,collision,dt,
                                                  safety.blocking_object_id);
-    if(!safety.clear){result.blocking_object_id=safety.blocking_object_id;return result;}
+    if(!safety.clear){result.blocking_object_id=safety.blocking_object_id;
+        result.rejection_reason="physical_collision";
+        result.blocking_time=safety.blocking_sample_index*dt;return result;}
     if(entering)for(size_t i=0;i<count;++i){
         auto p=Pose(path,i);if(!zone.Overlaps(p,shape,collision.safety_margin))continue;
         // Check intermediate time shifts, not only the two endpoints: a fast
@@ -192,11 +194,13 @@ MergeCandidateCheck CheckRoundaboutCandidate(const CartesianPath& path,
             double t=std::max(0.0,i*dt+shift);
             auto footprint=MakeEgoFootprint(p,shape,collision.safety_margin+collision.margin_growth_rate*t);
             for(const auto& object:objects)if(CheckObstacleOverlap(footprint,{},object,t)){
-                result.blocking_object_id=object.id;return result;
+                result.blocking_object_id=object.id;
+                result.rejection_reason=shift<0?"front_gap":"rear_gap";
+                result.blocking_time=i*dt;result.blocking_shift=shift;return result;
             }
         }
     }
-    result.safe=true;return result;
+    result.safe=true;result.rejection_reason="none";return result;
 }
 
 int UnclassifiedCirculatingObject(const std::vector<TrackedObject>& objects,

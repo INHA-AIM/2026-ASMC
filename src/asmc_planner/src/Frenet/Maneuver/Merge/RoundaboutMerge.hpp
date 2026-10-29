@@ -69,6 +69,8 @@ struct MergeCandidateCheck {
     bool covers_exit = false;
     double entry_time = -1, exit_time = -1;
     int blocking_object_id = -1;
+    const char* rejection_reason = "path_uncovered";
+    double blocking_time = -1, blocking_shift = 0;
 };
 // Uses the candidate's actual positions/times. Stationary objects are included.
 // extra temporal buffers apply before entry only; committed replanning still
