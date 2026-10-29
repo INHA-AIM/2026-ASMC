@@ -107,7 +107,7 @@ def main():
                 conditions=dict(planner=strategy,input_bag=str(args.bag),rate=args.rate))
             rows=(trial/'observations.jsonl').open('x');counts=Counter();modes=[];reasons=Counter()
             record_lock=threading.Lock()
-            def record(topic,message,rows=rows,counts=counts,modes=modes,reasons=reasons):
+            def record_message(topic,message,rows=rows,counts=counts,modes=modes,reasons=reasons):
                 counts[topic]+=1
                 if isinstance(message,CtrlCmd):value=dict(accel=message.accel,brake=message.brake,steering=message.steering)
                 elif isinstance(message,DiagnosticArray):
@@ -125,7 +125,7 @@ def main():
                     except (ValueError,AttributeError):value={}
                     if isinstance(value,dict) and 'reason' in value:reasons[str(value['reason'])]+=1
                 rows.write(json.dumps(dict(topic=topic,ros_time=rospy.Time.now().to_sec(),monotonic=time.monotonic(),value=value))+'\n')
-            def observe(topic,message,record=record,lock=record_lock,rows=rows):
+            def observe(topic,message,record=record_message,lock=record_lock,rows=rows):
                 with lock:
                     if not rows.closed:record(topic,message)
             subscribers=[rospy.Subscriber(t,k,lambda m,t=t,callback=observe:callback(t,m),queue_size=50) for t,k in
