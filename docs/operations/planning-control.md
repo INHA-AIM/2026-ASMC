@@ -67,42 +67,37 @@ LOCAL 코드를 가져오지 않았으며 `jamming_planner:=local` 같은 실행
 검증되지 않은 anchor는 기본 경로의 4초 복귀 timeout으로 우회하지 않습니다.
 LiDAR의 실제 GPS validity·터널 벽/천장 전처리와 카메라 추론은 변경하지 않습니다.
 
-수동 실행에서는 `asmc-ros-noetic`의 공용 master `11311`과 브릿지만 공유합니다.
-카메라·LiDAR·판제·제어·시각화는 선택한 작업트리의 컨테이너에서 실행합니다.
-현재 비교 컨테이너는 `asmc-localization-compare`, 작업트리는
-`2026-ASMC-shadow-localization`, 브랜치는 `integrate/localization-compare-20261029`입니다.
-GPU·host networking·2GiB shared memory를 사용하고 전용 `/build`, `/devel`을 빌드합니다.
+수동 실행은 컨테이너별 독립 master와 브릿지를 사용합니다. 설치된 대화형 profile은
+자기 source/devel만 읽고, 노드나 master를 자동 시작하지 않습니다.
 
-새 대화형 Bash는 `.bashrc`가 ROS·해당 `/devel`·공용 master를 적용합니다.
-별도 env 파일을 source하거나 점검 도구를 먼저 실행할 필요가 없습니다.
-노드와 master는 bashrc에서 자동 시작하지 않습니다.
+| 컨테이너 | 수동 master | 판제 | LiDAR |
+|---|---|---|---|
+| asmc-ros-noetic | 11311 | 8088 | 8091 |
+| asmc-local2c-20261028 | 11348 | 8090 | 8092 |
+| asmc-localization-compare | 11372 | 8089 | 8097 |
+
+새 터미널에서 `docker exec -it asmc-localization-compare bash`로 접속한 뒤,
+아래 명령을 각각 다른 터미널에서 실행합니다. 별도 source는 필요 없습니다.
 
 ```bash
-docker exec -it asmc-localization-compare bash
+roscore
+roslaunch asmc_bridge bridge.launch
 roslaunch asmc_camera camera.launch
-```
-
-같은 컨테이너의 다른 터미널에서 각각 실행합니다.
-
-```bash
-roslaunch asmc_lidar lidar.launch
-roslaunch asmc_lidar view.launch dashboard_port:=8097
+roslaunch asmc_lidar lidar.launch debug:=true
+roslaunch asmc_lidar view.launch
 roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=localization
 ```
 
-LiDAR 콘솔에서 점군 전처리 단계를 보려면 위 `lidar.launch`에 `debug:=true`를 추가합니다.
-기본 실행은 debug 점군 발행이 꺼져 있어 진단과 객체 상태를 확인하는 용도입니다.
+profile의 `roscore` 함수는 해당 master 포트를 선택합니다. `roslaunch` 함수는 판제·LiDAR
+콘솔에 표의 포트를 적용하며, 명시한 `dashboard_port`가 있으면 그 값을 사용합니다.
+사용 중인 HTTP 포트는 ROS 노드 등록 전에 거절합니다. 실제 MORAI UDP 브릿지는 한
+컨테이너씩 교대하며, 공용 physical lease와 UDP 소켓 검사를 거칩니다. 교대 전 기존
+자율주행과 브릿지를 원래 터미널에서 종료합니다. 다른 worktree의 코드를 바꾸지 않습니다.
+[설치·복구 범위](../../tools/runtime/README.md)를 따릅니다.
 
-GPS가 정상인 전역경로상의 현재 위치에서 초기화합니다. 동일한 공용 master에서는
-인지·주행 전체 파이프라인을 한 작업트리씩 실행합니다. 컨테이너만 달라도 같은
-ROS 이름으로 실행하면 다른 작업의 노드를 교체할 수 있습니다.
-
-에이전트의 자동 시험은 `ASMC_ROS_PROFILE=isolated`와 전용 master `11371`을 사용합니다.
-비대화형 실행기는 `/root/localization-env.sh`로 환경을 명시하며, 이 helper의 기본은 격리입니다.
-호스트의 저장소 관리용 `.storage/env.sh`와는 별개입니다. 자동 bag 평가는 독립적이며,
-실제 차량을 움직일 때는 공용 physical lease와 endpoint·UDP·제어 소유권을 모두 확인합니다.
-공용 브릿지를 끄거나 다른 작업의 노드를 종료해서 시험 자리를 만들지 않습니다.
-`check_shared_autonomy.py`와 자동 runner는 에이전트 검증 도구입니다.
+자동 시험은 기존 `/root/localization-env.sh`를 명시해 private master11371을 사용합니다.
+수동11372와 구분하며, 자동 bag 평가에서는 추가 독립 master를 사용합니다.
+호스트 저장 관리용 `.storage/env.sh`는 컨테이너에서 source하지 않습니다.
 
 GPS·IMU·Ego와 자체 LiDAR의 `/perception/lidar/tracks_local`,
 `planning_observations_map`이 필요합니다. LiDAR 기본 융합과 실제 GPS 기반

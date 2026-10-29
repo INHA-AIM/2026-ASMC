@@ -15,7 +15,7 @@
   "runtime_memory_bytes": 12884901888,
   "build_cpus": 2,
   "build_memory_bytes": 6442450944,
-  "interactive_ros_master": "http://127.0.0.1:11311",
+  "interactive_ros_master": "http://127.0.0.1:11372",
   "automatic_ros_master": "http://127.0.0.1:11371",
   "automatic_profile": "isolated",
   "automatic_campaign": {
@@ -37,17 +37,14 @@
     "record_raw_sensors": true,
     "storage_floor_source": "workspace .storage/policy.json minimum_free_bytes; user-selected 10 GiB"
   },
-  "interactive_profile": "shared",
+  "interactive_profile": "standalone",
   "bashrc_starts_nodes": false,
   "source_helper": "/root/localization-env.sh",
   "physical_lease_mount": "/validation-lease",
   "physical_endpoint": "host.docker.internal:7789",
   "same_endpoint_loopback_alias": "127.0.0.1:7789",
   "perception_owner": "selected worktree container",
-  "manual_shared_services": [
-    "roscore",
-    "raw bridge"
-  ],
+  "manual_shared_services": [],
   "private_recovery_profile": ".storage/manifests/localization-comparison-20261029-r1/create-compare-runtime.py",
   "model_selection": "latest main camera_runtime manifest plus exact engine SHA and TensorRT/GPU compatibility",
   "git_path_aliases": {
@@ -69,5 +66,11 @@
     "model": "inverse-speed incremental turn correction; constant-offset fallback when gain=0"
   },
   "build_root": ".runtime/localization-compare-20261029",
-  "lidar_dashboard_url": "http://localhost:8097"
+  "lidar_dashboard_url": "http://localhost:8097",
+  "manual_ports": {
+    "planning": 8089,
+    "lidar": 8097
+  },
+  "manual_bridge_policy": "one physical MORAI bridge at a time; shared endpoint lease and UDP preflight",
+  "interactive_install": "tools/runtime/install_container_profiles.py"
 }
