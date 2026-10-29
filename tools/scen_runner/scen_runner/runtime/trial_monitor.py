@@ -194,7 +194,7 @@ class TrialMonitor:
         self.lock=(self.state_dir/'owner.lock').open('a')
         fcntl.flock(self.lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         self.endpoint=ensure_frontend(self.workspace,self.state_dir,preferred)
-        def git(*args):return subprocess.check_output(['git',*args],cwd=self.workspace,text=True).strip()
+        def git(*args):return subprocess.check_output(['git','-c','safe.directory='+str(self.workspace),*args],cwd=self.workspace,text=True).strip()
         self.meta=dict(protocol=PROTOCOL,instance_id=uuid.uuid4().hex,run_id=self.root.name,
              branch=git('branch','--show-current'),revision=git('rev-parse','HEAD'),
              dirty=bool(git('status','--porcelain')),workspace=str(self.workspace),
