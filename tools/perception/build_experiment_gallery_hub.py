@@ -137,6 +137,7 @@ def category(row):
 
 
 def friendly_group(group):
+    if group.startswith('local2g-'):return 'LOCAL-2G · 동적 횡단·정적 회피·물리 여유 검수 · '+group[len('local2g-'):]
     if group.startswith('local2f-'):return 'LOCAL-2F · 제동·복구 경로 검수 · '+group[len('local2f-'):]
     if group.startswith('local2e-'):return 'LOCAL-2E · 전환·장애물 회피 개선 · '+group[len('local2e-'):]
     if group.startswith('local2d-'):return 'LOCAL-2D · 공급·전환·주행 검수 · '+group[len('local2d-'):]

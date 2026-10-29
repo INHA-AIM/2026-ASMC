@@ -21,7 +21,7 @@ struct Obstacle {
   // LOCAL short relative-pose evidence, independent of semantic group/map GPS.
   // Original measured polygon and public LiDAR motion/velocity remain intact.
   geometry::Polygon2D motion_sweep;
-  double local_vx = 0, local_vy = 0;
+  double local_vx = 0, local_vy = 0, prediction_evidence_age = 0;
   double extra_clearance = 0; // Vulnerable-object space, never a motion assertion.
 };
 struct Config {

@@ -892,6 +892,7 @@ class Node {
             << ",\"retained_measurement\":" << (ob.retained?"true":"false")
             << ",\"motion_budget_mps\":" << ob.motion_budget
             << ",\"local_velocity_mps\":[" << ob.local_vx << ',' << ob.local_vy << ']'
+            << ",\"prediction_evidence_age_s\":" << ob.prediction_evidence_age
             << ",\"local_motion_prediction\":" << (!ob.motion_sweep.empty()?"true":"false")
             << ",\"polygon\":[";
       for (size_t j = 0; j < ob.polygon.size(); ++j) {

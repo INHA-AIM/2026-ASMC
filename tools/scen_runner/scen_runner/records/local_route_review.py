@@ -35,7 +35,7 @@ def build(reference, output, roots):
     if e>1e-8:raise ValueError('mid-segment regression')
     runs=[];omitted=[]
     for root in map(Path,roots):
-        events=[json.loads(l) for l in (root/'events.jsonl').open()]
+        events=[json.loads(l) for l in (root/'events.jsonl').open()] if (root/'events.jsonl').exists() else []
         modes=[e for e in events if e.get('event')=='mode']
         samples=[e for e in events if e.get('event')=='native_sample']
         if not samples:

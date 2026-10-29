@@ -104,6 +104,21 @@ int main() {
     for(int i=0;i<8;++i)history.apply(objects,Pose{},20.,2.);
     expect(objects[0].motion_sweep.empty(),"duplicate scans never confirm motion");
     history.clear();expect(history.size()==0,"epoch reset clears relative object motion");
+    for(int i=0;i<6;++i) {
+      Obstacle o;o.id=45;o.polygon=polygon(8.,2.-.08*i);
+      // Full-history dimensions vary; the most recent confirmed box remains compatible.
+      if(i==5)for(auto &p:o.polygon)p.x+=p.x>8.?.14:-.14;
+      objects={o};history.apply(objects,Pose{},30.+.08*i,2.);
+    }
+    objects[0].polygon=polygon(8.,1.52);
+    for(auto &p:objects[0].polygon)p.x+=p.x>8.?.24:-.24;
+    history.apply(objects,Pose{},30.48,2.);
+    expect(!objects[0].motion_sweep.empty(),"a bounded compatible current box keeps a recently confirmed crossing prediction");
+    for(int i=0;i<4;++i) {
+      objects[0].polygon=polygon(8.,1.52);history.apply(objects,Pose{},30.56+.08*i,2.);
+    }
+    expect(objects[0].motion_sweep.empty(),"recent prediction cannot renew itself after the object actually stops");
+    history.clear();
     auto near=empty();Obstacle ob;ob.id=3;ob.polygon=polygon(2.,c.width*.5+.36);near.obstacles={ob};
     c.recovery_geometry=true;Result margin;
     expect(!CheckFootprint(near,c,Pose{},margin),"crawl retains ten centimetre minimum physical OBB margin");
