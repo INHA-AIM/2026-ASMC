@@ -63,7 +63,7 @@ class ReplaySection(Section):
 
     def ready_live(self, states):
         if (self.definition.get('allow_empty_scene') is True and
-                self.definition.get('baseline')==[] and not self.events):
+                self.definition.get('baseline')==[]):
             return not self.actors
         return super().ready_live(states)
 
@@ -160,7 +160,7 @@ class ReplaySection(Section):
             elif actor.kind==2:
                 plan=self.plans[actor.request_id]
                 if not plan.replay_finished:self.link.register_crossing(actor.native_id,plan)
-                self.link.pause_actor(actor.native_id,2,plan.replay_finished)
+                self.link.pause_actor(actor.native_id,2,plan.replay_finished or getattr(plan,'hold_at_start',False))
                 plan.registered=True
 
     def register_live_crossings(self,states):
@@ -170,7 +170,7 @@ class ReplaySection(Section):
                 plan=self.plans[actor.request_id]
                 if not getattr(plan,'registered',False) and actor.native_id in live:
                     if not plan.replay_finished:self.link.register_crossing(actor.native_id,plan)
-                    self.link.pause_actor(actor.native_id,2,plan.replay_finished)
+                    self.link.pause_actor(actor.native_id,2,plan.replay_finished or getattr(plan,'hold_at_start',False))
                     plan.registered=True
 
     def tick(self):

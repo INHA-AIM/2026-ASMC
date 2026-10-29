@@ -8,8 +8,8 @@ vehicle_length: 4.635
 rear_axle_to_bumper: 0.790
 clearance_margin: 0.30
 planning_budget_ms: 40.0
-# Fresh semantic near-field recovery is explicitly capped at3km/h. It is a
-# soft-cost simulation trial and must not be reported as collision-free space.
+# Fresh near-field recovery is capped at3km/h. Internal semantic occlusion can
+# be a soft cost, but body clearance, current OBB and exterior checks stay hard.
 recovery: true
 near_blind_assist: false
 # LOCAL-2B experimental near-body evidence, not a filled current semantic mask.
@@ -18,10 +18,10 @@ near_blind_assist: false
 causal_road_memory: true
 # Match the local solver bound; NORMAL's2m/s^2 configuration stays unchanged.
 acceleration_limit_mps2: 1.0
-# Candidate for a missing/folded home reference. Current raster/OBB collision
-# checks remain authoritative; unvalidated candidate stays OFF in this profile.
+# Missing/folded home reference falls back to current observed semantic space.
+# Current raster/OBB collision checks remain authoritative; no mask is filled.
 semantic_reference_fallback: true
-# LOCAL-2F short measured-asset retention candidate, max200ms; OFF until A/B.
+# Short measured-asset retention did not improve A/B consistently; keep OFF.
 retain_static_observations: false
 # Comfort2.0m/s²; controlled3.0 only when actual-state braking needs it.
 controlled_braking_limit_mps2: 3.0

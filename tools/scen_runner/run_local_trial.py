@@ -444,6 +444,14 @@ def main():
                 ],
             )
         )
+        for action in list(actions):
+            if action['action']=='pause' and action['time_s']==0 and action.get('ego_travel_m',0)==0:
+                actor=section.by_key.get(action['key'])
+                if actor is None or actor.kind!=2:
+                    raise ValueError('initial pause requires an owned prepared pedestrian')
+                section.plans[actor.request_id].hold_at_start=True
+                actions.remove(action)
+                emit(dict(event='scripted_actor_action',definition=action,actor_id=actor.native_id,phase='pre_release'))
         prefix = "/experimental/shadow/semantic_space_trial/"
         topics = [
             "/Ego_topic",
