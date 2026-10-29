@@ -51,6 +51,12 @@ class P1BContractTest(unittest.TestCase):
         self.assertEqual(md5s["DetectedObjectArray"], "14fbd9679c2d87ae7498e4269d9678da")
         self.assertEqual(md5s["LaneBoundaryFamily"], "70ac79f98ca1244c782ea4067becd6af")
 
+    def test_local_trajectory_uses_ros_odometry_without_changing_map_contract(self):
+        self.assertEqual(ros1_md5("LocalTrajectory", self.specs),
+                         "d95a161dd0c92f0250a150ed1bbc40c3")
+        self.assertEqual(ros1_md5("Trajectory", self.specs),
+                         "38657ba74f761a20afb310b0265cb085")
+
     def test_sensor_timing_contract_matches_source_and_requires_exact_join(self):
         contract = yaml.safe_load((REPO_ROOT / 'config/contracts/sensor_frame_timing_v1.yaml').read_text())
         definition = contract['messages']['asmc_msgs/SensorFrameTiming']

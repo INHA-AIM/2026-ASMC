@@ -45,6 +45,10 @@ public:
     VehicleShape vehicle_shape() const { return vehicle_shape_; }
     double rear_overhang() const { return avoid_cfg_.rear_overhang; }
     CollisionCheckConfig collision_config() const { return collision_cfg_; }
+    void SetShadowWallPermission(bool value){avoid_road_map_.SetShadowWallPermission(value);}
+    bool SetShadowWallOverlay(const std::vector<geometry::Polygon2D>& polygons) {
+        return !avoid_committed()&&avoid_road_map_.SetShadowWallOverlay(polygons);
+    }
     // Caller-owned cooperative slice; reducing it changes search scheduling,
     // never the candidate checks. Other callers retain their configured budget.
     bool LimitAvoidSearchBudget(double seconds) {

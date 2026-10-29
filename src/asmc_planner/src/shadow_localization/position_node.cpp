@@ -201,7 +201,7 @@ class PositionNode {
       r.reason="position_objects_stale";
     else if(state->header.stamp.toNSec()==last_state_stamp)return;
     else {
-      Scene scene;scene.speed=origin->v;scene.acceleration=origin->a;scene.age=std::max(now-t,now-object_stamp);
+      Scene scene;scene.speed=origin->v;scene.yaw_rate=origin->w;scene.acceleration=origin->a;scene.age=std::max(now-t,now-object_stamp);
       const double cs=std::cos(origin->yaw),sn=std::sin(origin->yaw);
       for(auto ob:world_objects){
         for(auto& point:ob.polygon){double x=point.x-origin->x,y=point.y-origin->y;
@@ -221,9 +221,11 @@ class PositionNode {
         paint_exempt=shadow_lane_rules&&paint_zone&&paint_window.update(t,selected,true,
             paint_zone->Contains(map_pose[0],map_pose[1],origin->yaw+transform.yaw));
         planner->set_paint_exemption(paint_exempt);
+        planner->set_wall_permission(shadow_lane_rules&&selected&&paint_zone&&
+          paint_zone->Contains(map_pose[0],map_pose[1],origin->yaw+transform.yaw));
         r=static_avoidance?planner->plan(scene,config,*origin,transform):planner->reference(scene,config,*origin,transform);}
     }
-    if(!computed){paint_window.reset();paint_exempt=false;planner->set_paint_exemption(false);}
+    if(!computed){paint_window.reset();paint_exempt=false;planner->set_paint_exemption(false);planner->set_wall_permission(false);}
     last_state_stamp=state->header.stamp.toNSec();++sequence;
     asmc_msgs::LocalTrajectory output;output.header=state->header;output.ego_at_plan=*state;
     output.valid=r.valid;output.reason=r.reason;output.run_id=run;output.plan_sequence=sequence;
@@ -375,8 +377,8 @@ class PositionNode {
     if(shadow_lane_rules){
       std::string zone_path;double start=0,end=0,lateral=6.,heading=1.2;
       if(!nh.getParam("/planning_mode/shadow_zone/path_file",zone_path)||
-         !nh.getParam("/planning_mode/shadow_zone/station_start_m",start)||
-         !nh.getParam("/planning_mode/shadow_zone/station_end_m",end))
+         !nh.getParam("/planning_mode/physical_tunnel/station_start_m",start)||
+         !nh.getParam("/planning_mode/physical_tunnel/station_end_m",end))
         throw std::runtime_error("paint exemption requires the configured known shadow zone");
       nh.param("/planning_mode/shadow_zone/lateral_tolerance_m",lateral,lateral);
       nh.param("/planning_mode/shadow_zone/heading_tolerance_rad",heading,heading);
@@ -389,7 +391,7 @@ class PositionNode {
     if(mode_gated) {
       mode_sub=nh.subscribe<std_msgs::UInt8>("/planning/mode",1,
         [this](const std_msgs::UInt8::ConstPtr& m){selected=m->data==1;});
-      prepare_sub=nh.subscribe<std_msgs::Bool>("/planning/localization/prepare",1,
+      prepare_sub=nh.subscribe<std_msgs::Bool>("/planning/jamming/prepare",1,
         [this](const std_msgs::Bool::ConstPtr& m){preparing=m->data;});
     }
     p.param<std::string>("gps_topic",gps_topic,"/gps");
@@ -410,6 +412,8 @@ class PositionNode {
     if(!std::isfinite(config.speed_cap)||config.speed_cap<=0||config.speed_cap>20./3.6)
       throw std::runtime_error("localization trial cap must be in (0,20] km/h");
     planner=std::make_unique<StaticPlanner>(parameters);
+    std::string wall_file;p.param<std::string>("wall_corridor_file",wall_file,"");
+    if(!wall_file.empty())planner->load_wall_corridor(wall_file);
     planner->enable_dynamic(dynamic_obstacles);
     bool continuity=false;p.param("reuse_verified_path",continuity,false);
     planner->enable_path_continuity(continuity);

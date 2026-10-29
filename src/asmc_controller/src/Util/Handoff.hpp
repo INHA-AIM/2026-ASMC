@@ -17,9 +17,9 @@ class HandoffParticipant {
   bool enabled=false;
   void setup(ros::NodeHandle& nh,bool on,uint8_t target) {
     enabled=on;target_=target;if(!on)return;
-    candidate_pub_=nh.advertise<asmc_msgs::ControlHandoff>("/planning/localization/handoff_candidate",4);
-    request_sub_=nh.subscribe<asmc_msgs::ControlHandoff>("/planning/localization/handoff_request",1,
-      [this](const asmc_msgs::ControlHandoff::ConstPtr& m){request_=*m;received_=ros::SteadyTime::now();});
+    candidate_pub_=nh.advertise<asmc_msgs::ControlHandoff>("/planning/jamming/handoff_candidate",4);
+    request_sub_=nh.subscribe<asmc_msgs::ControlHandoff>("/planning/jamming/handoff_request",1,
+      [this](const asmc_msgs::ControlHandoff::ConstPtr& m){if(m->epoch<request_.epoch)return;request_=*m;received_=ros::SteadyTime::now();});
     applied_sub_=nh.subscribe<morai_msgs::CtrlCmd>("/ctrl_cmd",1,
       [this](const morai_msgs::CtrlCmd::ConstPtr& m){applied_=*m;applied_at_=ros::SteadyTime::now();});
   }

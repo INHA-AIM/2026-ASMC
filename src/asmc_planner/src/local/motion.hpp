@@ -18,7 +18,10 @@ struct Motion {
 // A missing/retrograde sample starts a new epoch; receive freshness is external.
 class MotionHistory {
 public:
+  double latest_stamp()const{return samples.empty()?0.:samples.back().t;}
   unsigned epoch = 0;
+  bool signed_observation = false;
+  double forecast_limit_s=.05;
   double reorder_tolerance_s=0; // opt-in; default LOCAL epoch policy unchanged
   double velocity_reference_offset_m=0;
   double velocity_turn_gain_m2ps=0; // opt-in empirical Molit model; zero keeps constant offset
@@ -37,7 +40,7 @@ public:
   }
   bool add(double t, double v, double w, double roll = 0, double pitch = 0,
            double orientation_yaw = NAN) {
-    if (!std::isfinite(t + v + w + roll + pitch) || t <= 0 || v < -reverse_tracking_limit_mps ||
+    if (!std::isfinite(t + v + w + roll + pitch) || t <= 0 || (!signed_observation && v < -reverse_tracking_limit_mps) ||
         std::abs(w) > 2.) {
       reset();
       return false;
@@ -50,7 +53,7 @@ public:
       reset();
     Motion m;
     m.t = t;
-    m.v = reverse_tracking_limit_mps>.05?v:std::max(0., v);
+    m.v = (signed_observation || reverse_tracking_limit_mps>.05)?v:std::max(0., v);
     m.w = w;
     m.roll = roll;
     m.pitch = pitch;
@@ -85,7 +88,7 @@ public:
     return true;
   }
   std::optional<Motion> at(double t) const {
-    if (samples.empty() || t < samples.front().t || t > samples.back().t + .05)
+    if (samples.empty() || t < samples.front().t || t > samples.back().t + forecast_limit_s)
       return {};
     if (t >= samples.back().t) {
       auto m = samples.back();

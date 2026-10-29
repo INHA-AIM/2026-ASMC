@@ -1,26 +1,40 @@
 <launch>
   <!-- Independent LOCAL-1 experiment. No normal controller, old follower,
        selector, camera inference or LiDAR producer is started here.
-       Control trials must not also start autonomy_no_bridges_v2.launch.
+       Do not separately start this launch alongside autonomy. The integrated
+       autonomy jamming_planner:=local option includes it exactly once.
        /ctrl_cmd/jamming is only the existing selector routing slot; local
        control uses one MPC instance, not the old jamming follower. -->
+  <arg name="smooth_handoff" default="false"/>
   <arg name="enable_control" default="false"/>
   <arg name="run_id" default="local-preview"/>
   <arg name="journal_path" default=""/>
+  <arg name="planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
   <arg name="speed_cap_kph" default="25"/>
   <arg name="recovery" default="true"/>
   <arg name="near_blind_assist" default="false"/>
+  <arg name="semantic_input" default="false"/>
+  <arg name="active_in_jamming_only" default="false"/>
+  <!-- Empty in isolated trials. Integrated launch names the only permitted
+       NORMAL controller and wire selector; other publishers remain conflicts. -->
+  <arg name="normal_controller_node" default=""/>
+  <arg name="selector_node" default=""/>
+  <include if="$(arg semantic_input)" file="$(find asmc_camera)/launch/semantic_space.launch"/>
   <node pkg="asmc_planner" type="asmc_local_planner_node" name="local_planner" output="screen" required="true">
-    <rosparam command="load" file="$(find asmc_planner)/config/local_planner.yaml"/>
+    <rosparam command="load" file="$(arg planner_config)"/>
     <param name="run_id" value="$(arg run_id)"/>
     <param name="journal_path" value="$(arg journal_path)"/>
     <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
     <param name="recovery" value="$(arg recovery)"/>
     <param name="near_blind_assist" value="$(arg near_blind_assist)"/>
+    <param name="active_in_jamming_only" value="$(arg active_in_jamming_only)"/>
   </node>
   <node pkg="asmc_controller" type="asmc_local_controller_node" name="local_controller" output="screen" required="true">
     <rosparam command="load" file="$(find asmc_controller)/config/local_controller.yaml"/>
+    <param name="smooth_handoff" value="$(arg smooth_handoff)"/>
     <param name="enable_control" value="$(arg enable_control)"/>
+    <param name="normal_controller_node" value="$(arg normal_controller_node)"/>
+    <param name="selector_node" value="$(arg selector_node)"/>
     <param name="controller_config" value="$(find asmc_controller)/config/controller.yaml"/>
   </node>
 </launch>

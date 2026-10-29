@@ -1,3 +1,4 @@
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../asmc_geometry/include)
 cmake_minimum_required(VERSION 3.0.2)
 project(asmc_planner LANGUAGES CXX)
 
@@ -8,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs nav_msgs diagnostic_msgs geometry_msgs
   sensor_msgs visualization_msgs)
 find_package(yaml-cpp REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(Boost REQUIRED)
 catkin_package(INCLUDE_DIRS src
   LIBRARIES asmc_signal_policy_core asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_core
@@ -209,7 +211,7 @@ target_include_directories(asmc_planner_ros_adapters PUBLIC src ${catkin_INCLUDE
 add_dependencies(asmc_planner_ros_adapters ${catkin_EXPORTED_TARGETS})
 target_link_libraries(asmc_planner_ros_adapters
   asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_module
-  asmc_planner_execution_core yaml-cpp ${catkin_LIBRARIES})
+  asmc_planner_execution_core yaml-cpp OpenSSL::Crypto ${catkin_LIBRARIES})
 set_source_files_properties(
   src/Output/PlanningFeedback.cpp
   src/Output/PlanningOutput.cpp
@@ -329,9 +331,11 @@ if(CATKIN_ENABLE_TESTING)
     tests/gps_mode_source_main.cpp src/Planning/GpsModeSource.cpp)
   target_include_directories(gps_mode_source_test_node PRIVATE src ${catkin_INCLUDE_DIRS})
   add_dependencies(gps_mode_source_test_node ${catkin_EXPORTED_TARGETS})
-  target_link_libraries(gps_mode_source_test_node ${catkin_LIBRARIES})
+  target_link_libraries(gps_mode_source_test_node asmc_planner_frenet_core OpenSSL::Crypto ${catkin_LIBRARIES})
   add_rostest(tests/gps_mode_source.test DEPENDENCIES gps_mode_source_test_node)
   add_rostest(tests/shadow_recovery_gate.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/jamming_handoff.test DEPENDENCIES gps_mode_source_test_node asmc_control_selector_node)
+  add_rostest(tests/jamming_entry.test DEPENDENCIES gps_mode_source_test_node asmc_control_selector_node)
   add_rostest(tests/localization_handoff.test DEPENDENCIES gps_mode_source_test_node asmc_control_selector_node)
   add_rostest(tests/localization_seed.test)
   add_rostest(tests/localization_approach.test DEPENDENCIES gps_mode_source_test_node)
@@ -1002,7 +1006,7 @@ configure_file(scripts/dashboard_localization.py
   ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_localization.py COPYONLY)
 install(FILES scripts/dashboard_localization.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 # LOCAL-1 is opt-in; reuse the existing pure geometry/speed implementation.
-add_library(asmc_local_planner_core src/local/planner.cpp)
+add_library(asmc_local_planner_core src/local/planner.cpp src/local/speed_profile.cpp src/local/recovery.cpp)
 target_include_directories(asmc_local_planner_core PUBLIC src)
 target_compile_options(asmc_local_planner_core PRIVATE -O2 -Wall -Wextra)
 target_link_libraries(asmc_local_planner_core asmc_planner_frenet_core)
@@ -1014,7 +1018,7 @@ add_executable(asmc_local_planner_node src/local/node.cpp)
 add_dependencies(asmc_local_planner_node ${catkin_EXPORTED_TARGETS})
 target_include_directories(asmc_local_planner_node PRIVATE src ${catkin_INCLUDE_DIRS})
 target_compile_options(asmc_local_planner_node PRIVATE -O2)
-target_link_libraries(asmc_local_planner_node asmc_shadow_localization_core ${catkin_LIBRARIES} pthread)
+target_link_libraries(asmc_local_planner_node asmc_local_planner_core ${catkin_LIBRARIES} pthread)
 add_executable(asmc_shadow_localization_node src/shadow_localization/position_node.cpp)
 add_dependencies(asmc_shadow_localization_node ${catkin_EXPORTED_TARGETS})
 target_include_directories(asmc_shadow_localization_node PRIVATE src ${catkin_INCLUDE_DIRS})
@@ -1058,4 +1062,12 @@ if(CATKIN_ENABLE_TESTING)
  add_dependencies(localization_input_test ${catkin_EXPORTED_TARGETS})
  target_link_libraries(localization_input_test asmc_local_planner_core)
  add_test(NAME localization_input_regression COMMAND localization_input_test)
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  add_executable(jamming_wall_scope_test tests/jamming_wall_scope_test.cpp)
+  target_include_directories(jamming_wall_scope_test PRIVATE src)
+  target_compile_definitions(jamming_wall_scope_test PRIVATE JAMMING_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(jamming_wall_scope_test asmc_shadow_localization_core)
+  add_test(NAME jamming_wall_scope COMMAND jamming_wall_scope_test)
 endif()

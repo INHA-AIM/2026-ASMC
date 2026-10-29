@@ -26,3 +26,5 @@ and Localization11372/8089/8097. Automated Localization keeps private11371.
 The private workspace record `.storage/manifests/container-standalone-20261029-r1/` owns exact bindings,
 backups and the six-console/three-master smoke evidence. Those machine-specific files are not team presets.
 A single physical simulator still supports one active bridge/controller; different masters do not clone the vehicle.
+
+The three-way comparison container is `asmc-jamming-compare`, source `2026-ASMC-jamming-compare`, interactive master11373 and automatic11374. Its planning/LiDAR ports are8089/8097. A dedicated shell profile applies only to that new container; the previous three personal profiles remain separate. See `docs/operations/jamming-comparison.md`.

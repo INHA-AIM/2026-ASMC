@@ -9,6 +9,7 @@
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
 #include <std_msgs/Int8.h>
 #include <asmc_msgs/LaneBoundaryFamily.h>
+#include <asmc_msgs/control_handoff.hpp>
 #include <asmc_msgs/LidarObjectArray.h>
 #include <asmc_msgs/LidarObservation.h>
 #include <ros/master.h>
@@ -423,6 +424,16 @@ struct LaneHold {
 ros::Publisher reference_lane_publisher;
 bool mode_active = false;
 bool mode_received = false;
+bool smooth_handoff=false,prepared_ready=false;
+asmc_msgs::ControlHandoff handoff_request;
+ros::SteadyTime handoff_received;
+ros::Subscriber handoff_sub,applied_handoff_sub;
+double applied_steering=0.;ros::SteadyTime applied_handoff_received;
+ros::Publisher handoff_pub;
+ros::Time ego_source_stamp;
+bool preparingHandoff(){return smooth_handoff && handoff_request.valid && handoff_request.target_mode==1 &&
+    (ros::SteadyTime::now()-handoff_received).toSec()<=.25;}
+
 namespace dynamic_risk = lane_boundary_adapter::dynamic_risk;
 dynamic_risk::MotionHistory dynamic_motion;
 struct DynamicStopState {
@@ -566,7 +577,7 @@ int main(int argc, char** argv) {
         ros::WallRate control_rate(params.control_rate);
         while (ros::ok() && !shutdown_requested) {
             ros::spinOnce();
-            if (mode_active) {
+            if (mode_active || preparingHandoff()) {
                 cameraLaneFollowingProcess();
             } else {
                 // Sensor callbacks still refresh observations. The control loop
@@ -600,7 +611,8 @@ void resetActuationLifecycle() {
     follower_state.stop_reason = "confirming_own_lane";
     follower_state.selected_lane = LaneChain{};
     follower_state.target_point = FamilyPoint2d{};
-    follower_state.last_steering = 0.0;
+    follower_state.last_steering = smooth_handoff && !applied_handoff_received.isZero() &&
+      (ros::SteadyTime::now()-applied_handoff_received).toSec()<=.25?applied_steering:0.;
     follower_state.last_control_time = ros::SteadyTime::now();
 
     // Keep sensor observations; reset actuation state on activation.
@@ -656,7 +668,7 @@ void modeCallback(const std_msgs::UInt8::ConstPtr& message) {
     if (next_active == mode_active) return;
     mode_active = next_active;
     if (mode_active) {
-        resetActuationLifecycle();
+        if(!(preparingHandoff()&&prepared_ready))resetActuationLifecycle();
     } else {
         std_msgs::Int8 automatic_lane;
         automatic_lane.data = -1;
@@ -671,6 +683,7 @@ void egoCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& message) {
     // Keep the validated main contract; do not integrate absent/lateral y into odometry or pedal control.
     const double speed = std::fabs(message->velocity.x);
     if (!std::isfinite(speed)) return;
+    ego_source_stamp=message->header.stamp;
     ego_speed.speed = speed;
     ego_speed.received_at = ros::SteadyTime::now();
     ego_speed.received = true;
@@ -1072,6 +1085,7 @@ void cameraLaneFollowingProcess() {
     }
 
     // 4. 제어 결과와 RViz / 진단 정보 발행.
+    prepared_ready=tracking && egoSpeedFresh() && imuFresh() && lidarFresh();
     publishControlCommand(command);
     publishLaneMarkers(tracking);
     publishDiagnostics(tracking, stop_reason, command);
@@ -1239,6 +1253,14 @@ morai_msgs::CtrlCmd makeFollowingCommand(double dt) {
 
 void publishControlCommand(const morai_msgs::CtrlCmd& command) {
     ros_interface.preview_pub.publish(command);
+    if(preparingHandoff()){
+        asmc_msgs::ControlHandoff out;out.header.stamp=ros::Time::now();out.header.frame_id=ros::this_node::getName();
+        out.epoch=handoff_request.epoch;out.target_mode=1;out.valid=prepared_ready;
+        out.state_stamp=ego_source_stamp;out.trajectory_stamp=follower_state.source_stamp;
+        out.state_frame="base_link";out.reason="camera_prepared_path";
+        out.longl_cmd_type=command.longlCmdType;out.steering=command.steering;out.accel=command.accel;out.brake=command.brake;
+        handoff_pub.publish(out);
+    }
 
     if (params.enable_control && mode_active) {
         ros_interface.control_pub.publish(command);
@@ -1942,6 +1964,19 @@ void initializeRosInterface(ros::NodeHandle& nh) {
     ros_interface.diagnostic_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(params.diagnostics_topic, 1);
     ros_interface.lane_sub = nh.subscribe(params.input_topic, 1, laneBoundaryCallback);
     ros_interface.stop_sub = nh.subscribe(params.emergency_stop_topic, 1, emergencyStopCallback);
+    ros::NodeHandle("~").param("smooth_handoff",smooth_handoff,false);
+    if(smooth_handoff){
+        applied_handoff_sub=nh.subscribe<morai_msgs::CtrlCmd>("/ctrl_cmd",1,
+          [&](const morai_msgs::CtrlCmd::ConstPtr& m){if(m->longlCmdType==1&&std::isfinite(m->steering)){
+            applied_steering=m->steering;applied_handoff_received=ros::SteadyTime::now();}});
+        handoff_pub=nh.advertise<asmc_msgs::ControlHandoff>("/planning/jamming/handoff_candidate",4);
+        handoff_sub=nh.subscribe<asmc_msgs::ControlHandoff>("/planning/jamming/handoff_request",1,
+            [&](const asmc_msgs::ControlHandoff::ConstPtr& m){
+                if(m->epoch<handoff_request.epoch)return;
+                if(m->epoch!=handoff_request.epoch){prepared_ready=false;if(!mode_active&&m->valid&&m->target_mode==1)resetActuationLifecycle();}
+                handoff_request=*m;handoff_received=ros::SteadyTime::now();
+            });
+    }
     mode_subscriber = nh.subscribe("/planning/mode", 1, modeCallback);
     gps_return_subscriber = nh.subscribe("/planning/mode/gps_return", 1, gpsReturnCallback);
     if (params.straddle_avoidance || params.dynamic_obstacle_stop) ego_subscriber = nh.subscribe(params.ego_topic, 1, egoCallback);

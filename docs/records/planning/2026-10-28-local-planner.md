@@ -128,7 +128,7 @@ drive19는 별도 장애물 actor가 없는 접근 구간에서도 unknown OBB�
 
 ## 통합 웹·직접 확인
 
-[실행 명령](../../operations/commands.md#local-1-실험-계산과-모니터)과
+[실행 명령](../../operations/commands.md#local-실험-계산과-모니터)과
 `http://localhost:8088/web/index_v2.html`을 사용한다. 별도 renderer를 중복
 구현하지 않고 기존 V2 캔버스와 독립 local.html이 같은 renderer를 쓴다.
 자동 보기 또는 `LOCAL-1 경로·노면·fusion`에서 노면·family·후보·선택 경로·
@@ -199,3 +199,6 @@ F1 matching 임계값을 정확도 검증 없이 늘려서 문제를 감추지 �
 
 후속 분석: [시간·속도 정책과 AIMDrive DR pilot](2026-10-28-local-timing-and-dr-pilot.md).
 후진 소실·고속 공백·빈 도로 저속의 직접 조건과 LOCAL-2A~2D 작업 단위를 정리했다.
+
+후속 구현: [LOCAL-2A 입력 정렬·흰선–벽 측정·반복 주행](2026-10-28-local-input-alignment.md).
+본 문서의 당시 실패·수치는 보존하며, 현재 입력 경계와 남은 LOCAL-2B는 후속 기록을 따른다.

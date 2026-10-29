@@ -123,3 +123,11 @@ src/link_node/out/*
 
 # Isolated Localization build/runtime caches.
 /.runtime/position-b*/
+# Local integration checkouts may expose existing build/runtime directories as symlinks.
+/build
+/devel
+/install
+/tools/scen_runner/.runtime
+
+# Dedicated three-strategy build cache; experiment outputs live on registered D runs.
+/.runtime/jamming-compare-20261029/

@@ -2,13 +2,16 @@
   <arg name="highway_merge" default="true"/>
   <arg name="dashboard" default="true"/>
   <arg name="open_dashboard" default="false"/>
-  <arg name="jamming_planner" default="camera" doc="camera: existing main, localization: map localization; LOCAL is pending PR138"/>
-  <arg name="dashboard_port" default="$(eval 8089 if arg('jamming_planner') == 'localization' else 8088)"/>
+  <arg name="jamming_planner" default="camera" doc="camera: main follower, local: observed local road, localization: map localization"/>
+  <arg name="dashboard_port" default="8089"/>
+  <arg name="jamming_speed_kph" default="$(eval {'camera':10.0,'local':10.0,'localization':15.0}[arg('jamming_planner')])"/>
+  <arg name="local_semantic_input" default="true"/>
+  <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
   <arg name="shadow_static_avoidance" default="$(eval arg('jamming_planner') == 'localization')" doc="Localization comparison profile: measured static bypass and return; see documented failures"/>
   <arg name="shadow_dynamic_obstacles" default="$(eval arg('jamming_planner') == 'localization')" doc="Localization comparison profile: observed-motion yield; not general dynamic acceptance"/>
   <arg name="shadow_lane_rules" default="$(eval arg('jamming_planner') == 'localization')" doc="verified shadow zone paint exemption; physical road stays hard"/>
   <arg name="shadow_run_id" default="localization-autonomy"/>
-  <arg name="shadow_speed_cap_kph" default="15"/>
+  <arg name="shadow_speed_cap_kph" default="$(arg jamming_speed_kph)"/>
   <arg name="shadow_journal_path" default=""/>
   <arg name="shadow_start_motion" default="true"/>
   <arg name="shadow_motion_yaw_source" default="orientation"/>
@@ -50,22 +53,14 @@
   <arg name="jamming_creep_speed_kph" default="3.0"/>
   <arg name="jamming_creep_clear_distance" default="0.0" doc="[m] 0보다 크면 앞 범퍼부터 이 거리 안 경로 장애물에 정지"/>
 
-  <!-- 재밍 판정(/planning/mode, asmc_planner 내부 GpsModeSource). 별도 인자 없이 자동이다.
-       진입: raw GPS 0 좌표 | no-fix | 1s 이상 끊김 | GPS 위치가 음영 구간 안.
-       복귀: 모든 원인이 1s 연속으로 없을 때. 상태: rostopic echo /planning/mode/status
-       음영 구간 = competition metadata gps_shadow_candidate (A448 종료 ~ A126 종료)의
-       전역경로 station. 시뮬레이터가 blackout을 주지 않아도 구간에서 분리된다.
-       시작은 metadata(1877.74)보다 30m 앞당겼다. 구간 초입의 정지 장애물을 일반
-       플래너가 먼저 보고 회피 후보 없음으로 정지하지 않도록 재밍 회피가 맡게 한다. -->
-  <arg name="shadow_zone_start_m" default="1847.744798966"/>
+  <!-- One route/health/ownership policy for all three strategies. -->
+  <rosparam ns="planning_mode" command="load" file="$(find asmc_planner)/config/jamming_transition.yaml"/>
   <group ns="planning_mode">
-    <param name="smooth_handoff" value="$(eval arg('jamming_planner') == 'localization')"/>
-    <param name="localization_approach_speed_kph" value="$(eval float(arg('shadow_speed_cap_kph')) if arg('jamming_planner') == 'localization' else 0.0)"/>
-    <param name="recovery_ready_topic" value="$(eval {'camera': '', 'localization': '/planning/localization/recovery_ready'}[arg('jamming_planner')])"/>
-    <param name="shadow_zone/path_file"
-           value="$(find asmc_planner)/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"/>
-    <param name="shadow_zone/station_start_m" value="$(arg shadow_zone_start_m)"/>
-    <param name="shadow_zone/station_end_m" value="1996.730791531"/>
+    <param name="strategy" value="$(arg jamming_planner)"/>
+    <param name="links_file" value="$(find asmc_planner)/config/behavior/link_set.json"/>
+    <param name="jamming_controller" value="$(eval {'camera':'/camera_bbox_lane_change','local':'/local_controller','localization':'/localization_controller'}[arg('jamming_planner')])"/>
+    <param name="recovery_ready_topic" value="$(eval '/planning/localization/recovery_ready' if arg('jamming_planner') == 'localization' else '')"/>
+    <param name="shadow_zone/path_file" value="$(find asmc_planner)/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"/>
     <param name="shadow_zone/state_topic" value="$(arg state_topic)"/>
   </group>
 
@@ -102,18 +97,22 @@
   </include>
   <include file="$(find asmc_controller)/launch/controller.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>
-    <arg name="suspend_in_jamming" value="$(eval arg('jamming_planner') == 'localization')"/>
-    <arg name="smooth_handoff" value="$(eval arg('jamming_planner') == 'localization')"/>
-    <arg name="localization_approach_speed_kph" value="$(eval float(arg('shadow_speed_cap_kph')) if arg('jamming_planner') == 'localization' else 0.0)"/>
+    <arg name="suspend_in_jamming" value="true"/>
+    <arg name="smooth_handoff" value="true"/>
+    <arg name="initial_ready_topic" value="$(eval '/planning/localization/anchor_ready' if arg('jamming_planner') == 'localization' else '')"/>
   </include>
   <node pkg="asmc_planner" type="asmc_control_selector_node"
         name="asmc_control_selector" output="screen" required="true">
-    <param name="smooth_handoff" value="$(eval arg('jamming_planner') == 'localization')"/>
+    <param name="smooth_handoff" value="true"/>
+    <param name="initial_ready_topic" value="$(eval '/planning/localization/anchor_ready' if arg('jamming_planner') == 'localization' else '')"/>
+    <param name="jamming_controller" value="$(eval {'camera':'/camera_bbox_lane_change','local':'/local_controller','localization':'/localization_controller'}[arg('jamming_planner')])"/>
+    <param name="jamming_frame_prefix" value="$(eval 'base_link' if arg('jamming_planner') == 'camera' else 'local/')"/>
   </node>
   <!-- 재밍 BBOX 입력은 camera_bbox_frame_bridge가 /perception/camera/objects를 직접 받는다
        (별도 YOLO 변환 어댑터 없음, 소비 cutoff는 bbox_conf_thres 0.7). -->
   <include if="$(eval arg('jamming_planner') == 'camera')" file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
     <arg name="enable_control" value="true"/>
+    <arg name="smooth_handoff" value="true"/>
     <!-- PR127 recovery is intentional; PR128 highway/dashboard ownership above stays unchanged. -->
     <arg name="return_to_entry_lane" value="true"/>
     <arg name="control_topic" value="/ctrl_cmd/jamming"/>
@@ -131,8 +130,8 @@
     <arg name="use_lidar_obstacles" value="$(arg jamming_use_lidar_obstacles)"/>
     <arg name="creep_speed_kph" value="$(arg jamming_creep_speed_kph)"/>
     <arg name="creep_clear_distance" value="$(arg jamming_creep_clear_distance)"/>
-    <arg name="target_speed_kph" value="10.0"/>
-    <arg name="avoid_speed_kph" value="10.0"/>
+    <arg name="target_speed_kph" value="$(arg jamming_speed_kph)"/>
+    <arg name="avoid_speed_kph" value="$(eval min(10.,float(arg('jamming_speed_kph'))))"/>
     <arg name="avoid_shift_length" value="7.0"/>
     <arg name="max_lateral_accel" value="1.8"/>
     <arg name="max_steering_rate" value="1.0"/>
@@ -142,6 +141,18 @@
     <arg name="max_accel_pedal" value="0.15"/>
     <arg name="dynamic_acceleration_mps2" value="1.5"/>
     <arg name="max_brake_pedal" value="0.5"/>
+  </include>
+  <include if="$(eval arg('jamming_planner') == 'local')" file="$(find asmc_planner)/launch/local.launch">
+    <arg name="enable_control" value="true"/>
+    <arg name="smooth_handoff" value="true"/>
+    <arg name="active_in_jamming_only" value="true"/>
+    <arg name="normal_controller_node" value="/mpc_controller"/>
+    <arg name="selector_node" value="/asmc_control_selector"/>
+    <arg name="semantic_input" value="$(arg local_semantic_input)"/>
+    <arg name="speed_cap_kph" value="$(arg jamming_speed_kph)"/>
+    <arg name="run_id" value="$(arg shadow_run_id)"/>
+    <arg name="journal_path" value="$(arg shadow_journal_path)"/>
+    <arg name="planner_config" value="$(arg local_planner_config)"/>
   </include>
   <include if="$(eval arg('jamming_planner') == 'localization')" file="$(find asmc_planner)/launch/shadow_localization.launch">
     <arg name="run_id" value="$(arg shadow_run_id)"/>

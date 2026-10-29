@@ -11,7 +11,7 @@ using namespace local_planning;
 int failures=0;
 void check(bool value,const char* name){std::cout<<(value?"PASS ":"FAIL ")<<name<<'\n';if(!value)++failures;}
 Scene scene(const Motion& m,bool obstacle=true){
-  Scene s;s.speed=m.v;s.acceleration=m.a;s.age=.05;
+  Scene s;s.speed=m.v;s.yaw_rate=m.w;s.acceleration=m.a;s.age=.05;
   s.grid.rows=250;s.grid.cols=160;s.grid.probability.assign(40000,255);s.grid.coverage.assign(40000,255);
   if(!obstacle)return s;
   Obstacle o;o.id=7;o.stamp=m.t;o.classification="unknown";
@@ -92,11 +92,12 @@ int main(int argc,char** argv){
   for(int i=0;i<1500;++i){
     auto s=scene(m);auto result=planner.plan(s,cfg,m,transform);phases.insert(planner.phase());
     if(!result.valid||result.trajectory.size()<2){
+      for(size_t k=0;k<std::min<size_t>(15,result.path.size());++k)std::cout<<"geometry "<<k<<" s="<<result.path[k].s<<" k="<<result.path[k].k<<" yaw="<<result.path[k].yaw<<"\n";
       std::cout<<"trial failure i="<<i<<" x="<<m.x<<" phase="<<planner.phase()<<" reason="<<result.reason<<" prefix="<<(result.path.empty()?0:result.path.back().s)<<" v="<<m.v<<" y="<<m.y<<" lasty="<<(result.path.empty()?0:result.path.back().y)<<'\n';for(auto& x:result.rejected)std::cout<<x.first<<":"<<x.second<<" ";std::cout<<" blocked="<<result.blocked_x<<","<<result.blocked_y<<"\n";break;
     }
     valid=true;min_clearance=std::min(min_clearance,result.minimum_clearance);
     const auto& next=result.trajectory[1];double cs=std::cos(m.yaw),sn=std::sin(m.yaw);
-    m.x+=cs*next[0]-sn*next[1];m.y+=sn*next[0]+cs*next[1];m.yaw+=next[2];m.v=next[4];m.a=next[5];m.t+=.05;
+    m.x+=cs*next[0]-sn*next[1];m.y+=sn*next[0]+cs*next[1];m.yaw+=next[2];m.w=next[2]/.05;m.v=next[4];m.a=next[5];m.t+=.05;
     lateral=std::max(lateral,std::abs(m.y));signed_lateral=std::abs(m.y)>std::abs(signed_lateral)?m.y:signed_lateral;
     if(m.x>80&&std::abs(m.y)<.25&&planner.phase()=="KEEP")break;
     if(m.x>110)break;
@@ -146,6 +147,13 @@ int main(int argc,char** argv){
         "stable measured hull support can qualify rest despite a flickering producer dynamic flag");
   check(flagged_moving.confirmed_rest()==0,
         "the same semantic/motion flags never qualify a translating hull as rest");
+  shadow_localization::StaticPlanner person((dir/"params.yaml").string());person.enable_dynamic(true);
+  for(int i=0;i<16;++i){observed.t=30.+.1*i;auto fixed=scene(observed);fixed.obstacles.front().camera_class="person";person.plan(fixed,cfg,observed,transform);}
+  check(person.confirmed_rest()==1,"stationary person qualifies for bypass from fresh geometric evidence");
+  for(int i=0;i<8;++i){observed.t=31.6+.1*i;auto crossing=scene(observed);auto& ob=crossing.obstacles.front();ob.camera_class="person";
+    for(auto& q:ob.polygon)q.y+=.1*(i+1);for(auto& q:ob.observation.corners)q.y+=.1*(i+1);ob.observation.y+=.1*(i+1);
+    person.plan(crossing,cfg,observed,transform);}
+  check(person.confirmed_rest()==0,"restarted pedestrian motion revokes stationary bypass evidence");
   shadow_localization::StaticPlanner waiting((dir/"params.yaml").string());
   Motion waiting_origin{};waiting_origin.x=30.;waiting_origin.t=1.;
   Result approach;Config waiting_cfg=cfg;waiting_cfg.speed_cap=3./3.6;

@@ -1,0 +1,18 @@
+{
+  "schema_version":1,
+  "branch":"integrate/jamming-three-way-20261029",
+  "worktree":"2026-ASMC-jamming-compare",
+  "runtime_container":"asmc-jamming-compare",
+  "build_container":"asmc-jamming-compare-build",
+  "build":"/build","devel":"/devel","workspace":"/root/ws",
+  "interactive_master":"http://127.0.0.1:11373",
+  "automatic_master":"http://127.0.0.1:11374",
+  "network":"host","gpu":"all","shm_bytes":2147483648,
+  "build_cpus":2,"build_memory_bytes":6442450944,
+  "physical_lease":"/validation-lease","physical_endpoint":"host.docker.internal:7789",
+  "planning_url":"http://localhost:8089/web/index_v2.html",
+  "lidar_url":"http://localhost:8097",
+  "planner_default":"camera","planner_choices":["camera","local","localization"],
+  "speed_kph":{"approach":25,"camera":10,"local":10,"localization":15},
+  "weather":"Foggy","hour":13,"raw_recording":true
+}

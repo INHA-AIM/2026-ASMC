@@ -3,6 +3,7 @@
 // not smooth the same value twice.
 
 #include "Frenet/Speed/TargetSpeedResolver.hpp"
+#include "local/preparation_limit.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -57,6 +58,17 @@ double Resolve(const TargetSpeedInput& input, double reference_cap) {
 }  // namespace
 
 int main() {
+    PlannerCommand entry{};
+    asmc_planner::local::ApplyPreparationLimit(entry,false,true,0.,10.);
+    Expect(!entry.has_max_speed,"default NORMAL/camera policy unchanged");
+    asmc_planner::local::ApplyPreparationLimit(entry,true,true,.51,10.);
+    Expect(!entry.has_max_speed,"stale preparation cannot limit speed");
+    asmc_planner::local::ApplyPreparationLimit(entry,true,true,.1,10.);
+    Expect(entry.has_max_speed && std::abs(entry.max_speed-10./3.6)<1e-9,
+           "fresh LOCAL preparation sets upstream cap");
+    entry.max_speed=1.;
+    asmc_planner::local::ApplyPreparationLimit(entry,true,true,.1,10.);
+    Expect(entry.max_speed==1.,"preparation never raises a stricter existing limit");
     TargetSpeedInput unconstrained{};
     unconstrained.ego_speed = 10.0;
     const double reference_cap = Resolve(unconstrained, 12.0);

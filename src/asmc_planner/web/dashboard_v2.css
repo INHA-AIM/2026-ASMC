@@ -262,3 +262,11 @@ aside { min-height:0; height:100%; }
 
 body.local-experiment-active aside .hero-v2,
 body.local-experiment-active aside .shadow-panel:not(#localExperimentPanel) { display:none; }
+
+/* The optional trial identity occupies real layout height, never covers canvas. */
+body[data-interface="v2"] { display:flex; flex-direction:column; }
+body[data-interface="v2"] > header { height:auto; min-height:52px; flex-shrink:0; flex-wrap:wrap; gap:6px; padding-top:8px; padding-bottom:8px; }
+body[data-interface="v2"] > main { flex:1; min-height:0; height:auto; }
+.trial-monitor { flex:1 0 100%; overflow-wrap:anywhere; color:#ffce87; font-size:12px; line-height:1.5; }
+.trial-monitor.live { color:#77efc0; }
+.trial-monitor[hidden] { display:none; }

@@ -1,0 +1,16 @@
+schema_version: 1
+contract_id: local_trajectory_experiment_v1
+status: experimental_not_operational_default
+messages:
+  asmc_msgs/LocalTrajectory:
+    md5: d95a161dd0c92f0250a150ed1bbc40c3
+    required_fields: [header, valid, reason, run_id, plan_sequence, scene_stamp, ego_at_plan, dt, points]
+frame: local/<producer-session>/<generation>
+planning_time: header.stamp
+perception_freshness_time: scene_stamp
+state: nav_msgs/Odometry
+policy:
+  - ego_at_plan frame and stamp must match header exactly
+  - points are sampled with uniform dt in the same local frame
+  - source freshness is not renewed by geometry alignment
+  - map Trajectory and NORMAL controller remain separate

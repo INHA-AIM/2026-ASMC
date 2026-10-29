@@ -29,6 +29,12 @@ struct SpeedProfileOutput {
     bool initialized = false;
 };
 
+// Physical velocity/acceleration transition. Unlike the scalar cap owner below,
+// a lower target never teleports velocity or discards the braking ramp. LOCAL
+// trajectory generation reuses the same analytical S-curve through this API.
+SpeedProfileOutput AdvancePhysicalSpeed(const SpeedProfileInput& input,
+                                        const SpeedProfileLimits& limits);
+
 class SpeedProfiler {
 public:
     // Computes one transition without mutating state.  Candidate-aware KEEP

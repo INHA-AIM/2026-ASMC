@@ -79,6 +79,10 @@ def canonical_family_hash():
                  LaneEpochGate=inert, ModelGridGroundProjector=inert,
                  invalid_support_config_from_dict=inert, planning_zones_from_config=inert,
                  DEFAULT_PLANNING_ZONES=[], TemporalBoundaryTracker=inert,
+                 # Backend availability is diagnostics only; the geometry hash
+                 # deliberately excludes native/Python selection. No ROS/GPU
+                 # backend is loaded by this constructor-prefix contract test.
+                 association_backend_info=inert,
                  _names=lambda values: values)
     exec(compile(ast.Module(body=[constructor], type_ignores=[]), '<camera-hash-prefix>', 'exec'), scope)
     instance = SimpleNamespace(_runtime_invalidate=inert,_imu_callback=inert)

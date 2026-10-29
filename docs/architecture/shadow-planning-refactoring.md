@@ -1,6 +1,14 @@
 # 음영구간 판제 개선: 현재 연결과 다음 작업
 
-## 현재 기준과 이번 변경
+## 최신 LOCAL 실험
+
+2026-10-29 LOCAL-2G의 정적·동적 시나리오, 여유·조향/속도와 자동 실험 웹 연결은
+[LOCAL-2G 기록](../records/planning/2026-10-29-local-obstacle-campaign.md)을 따른다.
+이전 [LOCAL-2F 기록](../records/planning/2026-10-29-local-braking-recovery.md)은 당시 결과다.
+일반 제어와 기존 camera 기본 선택은 유지한다. 시험 소스와 profile, 성공·실패를
+구분하며 과거 기록의 수치와 계약을 현재 운영 수락으로 확대하지 않는다.
+
+## 기반 변경 (2026-10-28)
 
 2026-10-28, PR #122 병합 main `54f6bb9a`와 실행 일치 수정 `4932b7d6`를 기준으로 한다.
 3뷰 matching은 구현·기본 적용돼 있다. [3뷰 fusion](../../src/asmc_lidar/docs/three-view-fusion.md),
@@ -121,6 +129,25 @@ planner/controller·BBox lane classifier/follower·selector는 실행돼 있지 
 map planner/controller와 구 BBox follower 및 selector를 시작한다. preview는 명령을
 발행하지 않아 읽기 전용 대조에 사용할 수 있지만, 이번 성능 시험에서는 구 계산 노드도
 제외하여 부하 원인을 분리한다. 기존 운영 기본 launch는 변경하지 않았다.
+| `local.launch` | 기본은 planner/controller preview. `semantic_input`으로 노면 투영 입력 선택 가능. 구 BBox·센서 추론·selector는 시작하지 않음 |
+| 계산 코어 | 기존 Frenet quintic·충돌 기하·속도 수학과 MPC solver를 링크해서 호출. 기존 ROS planner·행동 판단 루프·BBox 차선변경 루프는 호출하지 않음 |
+| 제어 시험 | `run_local_trial.py`가 기존 제어/모드 발행자를 먼저 거부하고 selector 하나와 local만 시작 |
+| `/ctrl_cmd/jamming` | 기존 selector의 선택 슬롯을 재사용한 이름. 새 local 제어를 연결할 때 구 follower도 가동한다는 뜻이 아님 |
+| 실행 중 충돌 | 독립 시험은 NORMAL 생산자도 거부. 통합 실행만 지정된 NORMAL MPC와 selector를 허용하며, 같은 JAMMING 슬롯의 다른 생산자는 계속 거부. 1초 주기 검사이며 원자적 lease나 즉시 차단은 아님 |
+| dashboard | 구 BBox 결과와 새 local 결과를 읽어 표시. 구 제어 알고리즘·경로 계산을 실행하지 않음 |
+
+**독립 `local.launch`와 autonomy를 따로 겹쳐 실행하지 않는다.**
+2026-10-29부터 `autonomy_no_bridges_v2.launch jamming_planner:=local`이 LOCAL을 한 번
+include하고 구 BBox 경로를 제외한다. 기본 `camera`는 이전 행동을 유지한다.
+통합 LOCAL MPC는 NORMAL 중 계산하지 않는다. 속도/IMU 이력을 유지하고 기존 음영
+진입30m 전부터 경로만 준비한다. 같은 센서 session·설정·local frame의 준비 입력과
+경로는 진입 때 유지한다. 모드 변경은 계산 중 이전 모드 결과만 차단하고, 센서 세대
+변경·재시작은 입력·노면 기억·경로도 폐기한다. 이 둘을 같은 초기화로 취급하지 않는다.
+통합 이름으로 허용된 `/mpc_controller` 외의 NORMAL 생산자, 다른 JAMMING 생산자,
+지정 selector 외 wire 생산자를 허용하지 않는다. 기존 selector의250ms watchdog은 유지한다.
+노면 투영 입력은 `asmc_camera/launch/semantic_space.launch`가 소유하며 시나리오 launch도
+이를 include한다. 추가 추론이나 구 제어 루프를 실행하지 않는다.
+실행·공유 master 설정은 [명령 안내](../operations/commands.md#구성-요소별-local-음영-주행-선택)를 따른다.
 
 사용자가 확정한 새 local의 탐색 규약은 다음과 같다.
 
@@ -150,6 +177,12 @@ map planner/controller와 구 BBox follower 및 selector를 시작한다. previe
 센서와 시뮬 장면으로 측정하고 곡선·입출구·벽 소실·오차를 검수한 뒤 통로 사전값으로
 사용한다. 차선폭을 단순히 두 배 해서 벽 위치로 고정하거나 흰선 밖을 미리 차단하지 않는다.
 현재 통로폭은 측정·수락하지 않았으므로 새 상수를 추가하지 않았다.
+[LOCAL-2A 측정](../records/planning/2026-10-28-local-input-alignment.md#흰선과-실제-수직-벽-사이-여유)에서
+겹치는 두35m 구간의 흰선–수직 벽 간격을 기록했다. 첫 구간 중앙값은 좌1.42m/우2.20m,
+25m 앞에서 시작한 구간은 좌1.87m/우2.13m였다. 원본 RGB에 재투영해 확인했지만
+터널 전체·독립 충돌 mesh·통과 가능한 노면의 수락은 아니다. 좌측 간격이 구간별로 달라
+고정 대칭 통로폭을 만들지 않았으며, 점 지지·시각·거리별 측정과 불가 사유를 보존했다.
+턱·비노면·장애물을 확인하기 전에는 이 폭으로 semantic 구멍을 자유공간으로 채우지 않는다.
 
 연산은 한 번 만든 scene·grid index를 재사용하고, 물리 통로로 명백히 불가능한 후보를
 먼저 줄인 뒤 필요한 차체 footprint에서 노면·OBB를 상세 검사하는 방향이 적절하다.
@@ -171,6 +204,45 @@ map planner/controller와 구 BBox follower 및 selector를 시작한다. previe
 시각·상태/관측 분리를 먼저 수행한다. 이어2B에서 위 우측 reference·자유공간 역할과
 단일 scene 재사용을 적용하고 무장애 추종을 검증한다. entry-route/DR 대조는 같은
 입력·MPC 경계의 보조 후보이며 전체 map planner를 두 번째로 실행하는 방식은 사용하지 않는다.
+### LOCAL-2B: 우측 reference와 실제 검증 공간 분리
+
+[LOCAL-2B 경로 안정화 결과](../records/planning/2026-10-28-local-path-stability.md)에
+수정 전 실패부터 반복시험까지 연결했다. 입력은 우측 본차로의 role2/3 support를 사용하고,
+사용하지 않는 왼쪽 흰선 support 때문에 전체 경로를 자르지 않는다. 그 끝은 후륜축의
+참조 경로이며 차량 앞부분 길이를 다시 빼지 않는다. 실제 진전 가능 거리는 전체 차체의
+semantic grid·OBB sweep으로 따로 검사한다. 전체3경계를3/5개 추종선으로 선택하지 않는다.
+
+- raster index를 한 번 만들고 strict/근거리 보조 후보에서 재사용한다.
+- 이전 경로의 남은 부분도 현 시각으로 정렬하여 다시 검사하고, 비슷한 비용이면 유지한다.
+- 현재 관측되지 않는 근거리에는 과거 **실제로 관측된 노면**만 최대5초/6m로 정렬해
+  보조한다. 최신 비노면·LiDAR 객체가 우선하며 source 시각을 갱신하지 않는다.
+- 물리 차체+최소10cm+격자 오차는 hard 제한이다. 그 바깥 속도별 semantic 여유는
+  선호 비용으로 분리한다. LiDAR 객체 충돌 제한은 유지한다.
+- 속도 계획의 양의 가속·jerk 제동거리를 포함하고 가속/제동마다 상한이 왕복하지 않게
+  한다. 실험 local 가속 상한1m/s²이며 NORMAL actuator 변환과 정책은 유지한다.
+- 350ms source freshness를 제어 시점까지 지키기 위해250ms를 넘은 묶음으로 새 계산을
+  시작하지 않고 최신 완료 묶음을 기다린다. 이전 명령을 새 timestamp로 발행하지 않는다.
+
+[LOCAL-2A 결과](../records/planning/2026-10-28-local-input-alignment.md)의 signed 상태·독립
+입력 선택·한 번의 상대 정렬·callback 분리는 유지한다. 빈 터널에서 측정한 LOCAL-2B
+범위를 장애물 회피·전체 터널·25km/h 수락으로 확대하지 않는다. 다음 작은 단위는
+가감속 시 노면 잔여점의 긴 OBB와 실제 장애물을 분리하는 검증이다. 측정된 벽 간격으로
+semantic 구멍을 일괄 채우거나 인지 오류를 planner의 무조건 통과로 숨기지 않는다.
+
+### LOCAL-2C: 속도 연속성과 노면 OBB 원인 대조
+
+[LOCAL-2C 결과](../records/planning/2026-10-28-local-speed-continuity.md)에서10·15km/h
+추종과 노면 OBB 원인을 분리했다. 사용자의 최신 결정으로25km/h 달성을 완료 조건으로
+요구하지 않는다. LOCAL 궤적은 scalar cap 대신 기존 S-curve의 물리 끝점 상태를
+재사용하며 NORMAL 속도 정책은 유지한다.200.9ms 계획 교체와67µs 미래 상태의
+순간 급제동은 발행 없는 bounded 대기로 보완했다. 미래/만료 입력으로 새 계산을 하지 않는다.
+
+문제 scan의262점은 기존 추정 평면 아래에 남은 노면 군집이었다. 지면 fitting만0.10m로
+분리한 후보는 이를 제거했지만 다른 벽면 잔류점·계산 비용이 늘었다. 실제 barrier117scan
+대조도 남겼으며 운영 fitting 기본값은 유지한다. 길이/나이/낮은 높이만으로 객체를 버리는
+planner 필터는 추가하지 않았다. 반복시험의 노면 OBB 재발과 입력 지연 정지는 아직
+미해결로 표시한다. 다음 우선 단위는 **지면 후보의 실제 장애물 보존·벽 혼입 검증**이다.
+IMU localization 별도 worktree와는 같은 조건의 중간 평가 후 집중할 방향을 정한다.
 
 ## 두 개선 방향의 비교
 
@@ -274,3 +346,42 @@ S1의 추가 여유·조기 차로 변경 선택 후보는 concrete 통과를 �
 성능 문제와 구분했다. 다음 단위는 signed 상대 상태·원본 관측 표시와 비차단
 snapshot을 정리하는 LOCAL-2A다. 무장애25km/h, 인지 노이즈 응답, 정적 회피는
 각각 후속 수락 단위다. AIMDrive 전체 이식 또는 GPS 무효 검사의 제거가 아니다.
+원인과 LOCAL-2A~2D 작업 순서를 보존한다. 후속 [LOCAL-2A 구현·실험](../records/planning/2026-10-28-local-input-alignment.md)은
+후진 시 관측 소실·카메라 계산용 추가10Hz 제한·50ms local join과 callback 차단을
+정리했다.3km/h 가림 회복·20m 관측/제동 상한은 남는다. 무장애25km/h는2B,
+인지 노이즈 응답은2C, 정적 회피는2D의 별도 수락 단위다. AIMDrive 전체 이식 또는
+GPS 무효 검사의 제거가 아니다.
+
+## 2026-10-29 LOCAL-2D 착수 기반
+
+[main 리베이스·전용 실행 경계](../records/planning/2026-10-29-local-rebase.md)를 따른다.
+PR127 기존 음영 방식과 독립 LOCAL 제어를 동시에 실행하지 않는다.
+
+LOCAL-2D는 리베이스·클린 빌드·NORMAL/LOCAL 경계 검증을 완료했다. 실제 시각의 MPC
+이력, fitting0.10m, 공통 후보 비용은 독립 worktree에 구현됐으며
+[오프라인 결과와 남은 수락](../records/planning/2026-10-29-local-rebase.md#local-2d-오프라인-구현검증)을 따른다.
+그 이후 공급·소유권·시각·인계 보완과 실제 반복 시험은
+[LOCAL-2D 연속성 결과](../records/planning/2026-10-29-local-continuity.md)가 정본이다.
+실험 profile은 통합 전환·좌/우 장애물 각3회 접촉 없이 통과했지만 저속 복구, 일부
+본차로 오차,250ms 초과 유효 경로 공백과 진입 full brake2회가 있어 **전체 미수락**이다.
+기본 camera와350ms freshness를 유지하고 노면 reference 후보는 기본 OFF로 둔다.
+다음은 준비 경로의 시간 여유·첫 계산 위상과 reference 전환을 다루는 LOCAL-2E다.
+이전25km/h 목표를 반복하거나 보호 동작을 제거해 성공으로 표시하지 않는다.
+
+## LOCAL-2E 반복 회피·전환 보완
+
+[LOCAL-2E 결과와 실행 profile](../records/planning/2026-10-29-local-avoidance-continuity.md)에
+모드 즉시 첫 계산, source-aged 방향 선호, 짧은/0진행 prefix 재탐색과 공정한 측방 후보
+계산 순서를 기록한다. 일반 판제·차체 외곽·신선도는 유지하며 별도 localization 연구를
+병합하지 않는다.10km/h 배치와12km/h 확장 시험을 구분하고, 복구/미관측 보조와
+남은 terminal braking 실패를 정규 회피 수락으로 표시하지 않는다.
+
+
+## LOCAL-2H 1차 비교 체크포인트
+
+[10월29일 연속성·검증 경로·실제 실패](../records/planning/2026-10-29-local-first-comparison.md)를
+최신 결과로 따른다. family 일시 누락은 현재 노면으로 이어가고, 긴 reference와 검증 후 짧은
+경로를 구분한다. FOGGY 여러 배치의 거리 도달과 남은 짧은 정지·이격·공급 실패를 함께 보존한다.
+6m 복구 목표는 이득이 없어 기본4m를 유지한다. 새 경로 유지/단계적5개 기준선은 내부 비교
+정책으로 원본 연구 branch에만 보존한다. 배포 코어에서는 제외한다.
+[main 기반 LOCAL 옵션 배포](../records/planning/2026-10-29-local-deployment.md)를 현재 실행 정본으로 따른다.

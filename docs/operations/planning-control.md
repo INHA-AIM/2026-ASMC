@@ -1,5 +1,7 @@
 # Planning/Control 실행·검증
 
+> 이 비교 브랜치의 세 방식 선택·포트·master·A448 정책은 [세 재밍 플래너 비교 실행](jamming-comparison.md)이 현재 정본입니다. 아래의 과거 개별 브랜치 안내와 구분합니다.
+
 현재 패키지는 `asmc_planner`, `asmc_controller`, `planning_inputs`입니다.
 bridge·카메라·LiDAR는 별도 실행합니다. LiDAR 정본은 `asmc_lidar`이며 구 Main은 고정 revision에서만 재현합니다. 전체 시작 순서는 [실행 명령](commands.md),
 실제 인자/기본값은 [launch 목록](launch-reference.md)이 정본입니다.

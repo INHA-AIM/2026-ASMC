@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Load both complete launch graphs without starting any ROS node."""
+"""Load three complete launch graphs without starting any ROS node."""
 from pathlib import Path
 import roslaunch.config,roslaunch.xmlloader
 
@@ -8,7 +8,7 @@ def graph(choice, extra=None):
     config=roslaunch.config.ROSLaunchConfig()
     roslaunch.xmlloader.XmlLoader().load(str(path),config,argv=([] if choice is None else ['jamming_planner:='+choice])+['dashboard:=false']+(extra or []),verbose=False)
     return config
-for choice in ('camera','localization'):
+for choice in ('camera','local','localization'):
     c=graph(choice);names=[n.name for n in c.nodes]
     assert len(names)==len(set(names)),names
     assert names.count('asmc_control_selector')==1 and names.count('asmc_planner')==1
@@ -17,9 +17,16 @@ for choice in ('camera','localization'):
     assert ('camera_bbox_frame_bridge' in names)==(choice=='camera'),names
     for name in ('localization_motion','localization','localization_controller'):
         assert (name in names)==(choice=='localization'),names
-    assert c.params['/mpc_controller/suspend_in_jamming'].value==(choice=='localization')
-    for key in ('/mpc_controller/localization_approach_speed_kph','/planning_mode/localization_approach_speed_kph'):
-        assert c.params[key].value==(15. if choice=='localization' else 0.)
+    assert c.params['/mpc_controller/suspend_in_jamming'].value is True
+    assert c.params['/planning_mode/approach_speed_kph'].value==25.
+    assert abs(c.params['/planning_mode/shadow_zone/station_start_m'].value-1859.6415782400395)<1e-6
+    assert ('local_planner' in names)==(choice=='local')
+    assert ('local_controller' in names)==(choice=='local')
+    assert ('semantic_space_trial' in names)==(choice=='local')
+    owner={'camera':'camera_bbox_lane_change','local':'local_planner','localization':'localization'}[choice]
+    cap_key={'camera':'target_speed_kph','local':'speed_cap_kph','localization':'speed_cap_kph'}[choice]
+    assert c.params['/'+owner+'/'+cap_key].value=={'camera':10.,'local':10.,'localization':15.}[choice]
+    assert c.params['/behavior_planner/maximum_speed_kph'].value==57.5
     assert bool(c.params['/planning_mode/recovery_ready_topic'].value)==(choice=='localization')
     if choice=='localization':
         assert c.params['/localization/dynamic_obstacles'].value is True
@@ -33,7 +40,7 @@ for choice in ('camera','localization'):
         assert c.params['/localization_controller/comfort_acceleration_rise_rate_mps3'].value==2.
         assert c.params['/localization_controller/bounded_standstill_rollback_mps'].value==.05
         assert c.params['/localization/longitudinal/jerk_limit_mps3'].value==2.
-        assert c.params['/localization_controller/integrated_normal_controller'].value=='/mpc_controller'
+        assert c.params['/localization_controller/normal_controller_node'].value=='/mpc_controller'
     else:
         assert '/localization_motion/velocity_turn_gain_m2ps' not in c.params
         assert not any(k.endswith('/experimental_speed_cap_ceiling_kph') for k in c.params)
@@ -58,9 +65,6 @@ else:raise AssertionError('unknown mode silently accepted')
 
 c=graph('localization',['shadow_motion_yaw_source:=rate'])
 assert c.params['/localization_motion/yaw_source'].value=='rate'
-c=graph('localization',['shadow_speed_cap_kph:=15'])
-assert c.params['/mpc_controller/localization_approach_speed_kph'].value==15.
-assert c.params['/planning_mode/localization_approach_speed_kph'].value==15.
 try:graph('localization',['shadow_motion_yaw_source:=bad'])
 except Exception:print('PASS unsupported motion yaw source rejected before launch')
 else:raise AssertionError('unknown yaw source accepted')
@@ -71,7 +75,5 @@ arguments={a.get('name'):a.get('default') for a in ET.parse(path).findall('arg')
 assert arguments['jamming_planner']=='camera'
 assert 'shadow_planner' not in arguments
 assert [(n.package,n.type,n.name) for n in graph(None).nodes]==[(n.package,n.type,n.name) for n in graph('camera').nodes]
-try:graph('local')
-except Exception:print('PASS unmerged LOCAL cannot silently select a different controller')
-else:raise AssertionError('unavailable LOCAL was accepted')
-print('PASS single jamming_planner selector; camera default; compatibility alias removed')
+assert 'local_planner' in [n.name for n in graph('local').nodes]
+print('PASS one selector and A448 entry for camera/local/localization; camera default')

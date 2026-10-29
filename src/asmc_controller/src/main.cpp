@@ -100,25 +100,12 @@ int main(int argc, char** argv) {
     if(!std::isfinite(validation_speed_cap_kph)||validation_speed_cap_kph<0||validation_speed_cap_kph>60)
         throw std::runtime_error("invalid private validation speed cap");
     g_control.validation_speed_cap_mps=validation_speed_cap_kph/3.6;
-    double approach_kph=0;private_nh.param("localization_approach_speed_kph",approach_kph,0.);
-    if(!std::isfinite(approach_kph)||approach_kph<0||approach_kph>15.)
-        throw std::runtime_error("invalid localization approach speed");
-    g_control.localization_approach_speed_mps=approach_kph/3.6;
-    ros::Subscriber approach_sub;ros::Publisher approach_trace;
-    ros::SteadyTime approach_received,last_approach_trace;
-    if(approach_kph>0){
-        approach_sub=nh.subscribe<std_msgs::Bool>("/planning/localization/prepare",1,
-          [&](const std_msgs::Bool::ConstPtr& m){
-            // A missing update may retain a conservative cap, never release it.
-            g_control.localization_approaching=m->data;approach_received=ros::SteadyTime::now();
-          });
-        approach_trace=nh.advertise<std_msgs::String>("/planning/localization/approach_trace",1);
-    }
     bool smooth_handoff=false;private_nh.param("smooth_handoff",smooth_handoff,false);
     HandoffParticipant handoff;handoff.setup(nh,smooth_handoff,0);
-    bool initial_anchor_ready=!smooth_handoff;
+    std::string initial_ready_topic;private_nh.param<std::string>("initial_ready_topic",initial_ready_topic,"");
+    bool initial_anchor_ready=initial_ready_topic.empty();
     ros::Subscriber anchor_sub;
-    if(smooth_handoff)anchor_sub=nh.subscribe<std_msgs::Bool>("/planning/localization/anchor_ready",1,
+    if(!initial_ready_topic.empty())anchor_sub=nh.subscribe<std_msgs::Bool>(initial_ready_topic,1,
       [&](const std_msgs::Bool::ConstPtr& m){initial_anchor_ready|=m->data;});
     if(smooth_handoff)g_control.before_solve=[&] {
         if(!normal_selected&&handoff.preparing())handoff.seed(g_control.latest_vehicle_state.acceleration);
@@ -140,15 +127,6 @@ int main(int argc, char** argv) {
         ros::WallDuration(1.0 / frequency),
         [&](const ros::SteadyTimerEvent& event) {
             const auto now=ros::SteadyTime::now();
-            if(approach_kph>0&&(last_approach_trace.isZero()||(now-last_approach_trace).toSec()>=.2)){
-                std_msgs::String trace;
-                trace.data=std::string("{\"approaching\":")+(g_control.localization_approaching?"true":"false")+
-                    ",\"normal_selected\":"+(normal_selected?"true":"false")+
-                    ",\"effective_cap_kph\":"+std::to_string(3.6*CombinedSpeedCap(g_control.validation_speed_cap_mps,
-                       g_control.localization_approach_speed_mps,g_control.localization_approaching))+
-                    ",\"prepare_age_s\":"+std::to_string(approach_received.isZero()?-1.:(now-approach_received).toSec())+"}";
-                approach_trace.publish(trace);last_approach_trace=now;
-            }
             // The selector owns timeout stops; an unselected NORMAL MPC need
             // not solve or publish commands while the research MPC is selected.
             if(initial_anchor_ready && (!suspend_in_jamming || normal_selected || handoff.preparing()))

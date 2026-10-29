@@ -216,6 +216,26 @@
 | `diagnostics_topic` | `diagnostics` | — |
 | `trace_topic` | `trace` | — |
 
+## Single-container complete driving stack
+
+[소스](../../src/asmc_planner/launch/autonomy.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `jamming_planner` | `camera` | — |
+| `transport_profile` | `local` | — |
+| `cmd_ip` | `$(optenv MORAI_CMD_IP 127.0.0.1)` | — |
+| `cmd_port` | `9093` | — |
+| `invert_steer` | `false` | — |
+| `dashboard_port` | `8089` | — |
+| `lidar_dashboard_port` | `8097` | — |
+| `lidar_view` | `true` | — |
+| `lidar_debug` | `false` | — |
+| `jamming_speed_kph` | `$(eval {'camera':10.,'local':10.,'localization':15.}[arg('jamming_planner')])` | — |
+| `local_run_id` | `$(optenv ASMC_RUNTIME_SESSION_ID standalone)` | — |
+| `local_journal_path` | `(빈 문자열)` | — |
+| `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
+
 ## Integrated planning/control
 
 [소스](../../src/asmc_planner/launch/autonomy_no_bridges_v2.launch)
@@ -225,13 +245,16 @@
 | `highway_merge` | `true` | — |
 | `dashboard` | `true` | — |
 | `open_dashboard` | `false` | — |
-| `jamming_planner` | `camera` | camera: existing main, localization: map localization; LOCAL is pending PR138 |
-| `dashboard_port` | `$(eval 8089 if arg('jamming_planner') == 'localization' else 8088)` | — |
+| `jamming_planner` | `camera` | camera: main follower, local: observed local road, localization: map localization |
+| `dashboard_port` | `8089` | — |
+| `jamming_speed_kph` | `$(eval {'camera':10.0,'local':10.0,'localization':15.0}[arg('jamming_planner')])` | — |
+| `local_semantic_input` | `true` | — |
+| `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
 | `shadow_static_avoidance` | `$(eval arg('jamming_planner') == 'localization')` | Localization comparison profile: measured static bypass and return; see documented failures |
 | `shadow_dynamic_obstacles` | `$(eval arg('jamming_planner') == 'localization')` | Localization comparison profile: observed-motion yield; not general dynamic acceptance |
 | `shadow_lane_rules` | `$(eval arg('jamming_planner') == 'localization')` | verified shadow zone paint exemption; physical road stays hard |
 | `shadow_run_id` | `localization-autonomy` | — |
-| `shadow_speed_cap_kph` | `15` | — |
+| `shadow_speed_cap_kph` | `$(arg jamming_speed_kph)` | — |
 | `shadow_journal_path` | `(빈 문자열)` | — |
 | `shadow_start_motion` | `true` | — |
 | `shadow_motion_yaw_source` | `orientation` | — |
@@ -254,7 +277,6 @@
 | `jamming_use_lidar_obstacles` | `true` | — |
 | `jamming_creep_speed_kph` | `3.0` | — |
 | `jamming_creep_clear_distance` | `0.0` | [m] 0보다 크면 앞 범퍼부터 이 거리 안 경로 장애물에 정지 |
-| `shadow_zone_start_m` | `1847.744798966` | — |
 
 ## Planner component
 
@@ -277,8 +299,8 @@
 |---|---|---|
 | `state_topic` | `/vehicle/state` | — |
 | `suspend_in_jamming` | `false` | — |
+| `initial_ready_topic` | `(빈 문자열)` | — |
 | `smooth_handoff` | `false` | — |
-| `localization_approach_speed_kph` | `0` | — |
 
 ## Planning state component
 
@@ -350,6 +372,7 @@
 | `hood_crop_bottom_ratio` | `0.0` | — |
 | `ego_mask_enabled` | `$(eval float(arg('hood_crop_bottom_ratio')) == 0)` | — |
 | `ego_mask_config` | `$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml` | — |
+| `smooth_handoff` | `false` | — |
 | `enable_control` | `false` | — |
 | `lookahead_distance` | `8.0` | — |
 | `target_speed_kph` | `20.0` | — |
@@ -594,9 +617,15 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
+| `smooth_handoff` | `false` | — |
 | `enable_control` | `false` | — |
 | `run_id` | `local-preview` | — |
 | `journal_path` | `(빈 문자열)` | — |
+| `planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
 | `speed_cap_kph` | `25` | — |
 | `recovery` | `true` | — |
 | `near_blind_assist` | `false` | — |
+| `semantic_input` | `false` | — |
+| `active_in_jamming_only` | `false` | — |
+| `normal_controller_node` | `(빈 문자열)` | — |
+| `selector_node` | `(빈 문자열)` | — |

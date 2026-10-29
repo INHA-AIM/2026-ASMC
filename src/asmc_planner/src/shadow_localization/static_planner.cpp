@@ -3,13 +3,14 @@
 #include <chrono>
 #include <stdexcept>
 #include <set>
+#include <yaml-cpp/yaml.h>
 
 namespace shadow_localization {
 using namespace local_planning;
 StaticPlanner::StaticPlanner(const std::string& parameters,bool sequential_targets)
     :parameters_(parameters),sequential_targets_(sequential_targets){reset();}
 void StaticPlanner::reset(){
-  previous_path_.clear();
+  previous_path_.clear();motion_evidence_.clear();
   core_=std::make_unique<FrenetPlanner>();tracks_.clear();phase_="unavailable";retargets_=0;
   if(!core_->Init(parameters_))throw std::runtime_error("localization core init failed");
   if(!core_->LimitAvoidSearchBudget(.025))
@@ -18,6 +19,8 @@ void StaticPlanner::reset(){
   if(!core_->SetConservativeVehicleEnvelope({physical.width,physical.length,physical.rear,
       std::max(physical.width,core_->vehicle_shape().road_outer_width)}))
     throw std::runtime_error("localization physical envelope cannot shrink native geometry");
+  if(!wall_overlay_.empty()&&!core_->SetShadowWallOverlay(wall_overlay_))throw std::runtime_error("wall overlay reset refused");
+  core_->SetShadowWallPermission(wall_permission_);
   set_paint_exemption(paint_exempt_);
 }
 void StaticPlanner::remember_path(const Result& result,const Motion& origin,const Transform& map){
@@ -52,6 +55,12 @@ bool StaticPlanner::stationary(const Obstacle& ob,const Motion& origin){
     h.push_back(q);
     while(h.size()>1&&q.t-h.front().t>1.)h.pop_front();
   }
+  std::vector<asmc_geometry::motion_evidence::Point> shape;
+  const double ca=std::cos(origin.yaw),sa=std::sin(origin.yaw);
+  for(auto p:ob.polygon)shape.push_back({origin.x+ca*p.x-sa*p.y,origin.y+sa*p.x+ca*p.y});
+  const auto& q=h.back();
+  const auto evidence=motion_evidence_.update("localization_odom",ob.id,ob.stamp,
+      {(.5*(q.xmin+q.xmax)),(.5*(q.ymin+q.ymax))},0,0,true,nullptr,&shape);
   // Rest is evidence from distinct, ego-compensated observations, never a
   // consequence of unavailable absolute velocity or a static-looking class.
   if(h.size()<4||h.back().t-h.front().t<.5)return false;
@@ -65,7 +74,8 @@ bool StaticPlanner::stationary(const Obstacle& ob,const Motion& origin){
   // is rejected. Revealing another face inside the observed extent is not
   // motion. Keep the former 15cm support-displacement tolerance.
   if(std::hypot(std::max(0.,xmax-xmin-max_x),std::max(0.,ymax-ymin-max_y))>.15)return false;
-  return ob.camera_class!="person"&&ob.camera_class!="dog";
+  const bool vulnerable=ob.camera_class=="person"||ob.camera_class=="dog";
+  return !vulnerable||(evidence.valid&&evidence.stationary);
 }
 bool StaticPlanner::observed_velocity(int id,double& vx,double& vy) const {
   const auto found=tracks_.find(id);if(found==tracks_.end())return false;
@@ -457,3 +467,24 @@ Result StaticPlanner::plan(const Scene& scene,const Config& cfg,const Motion& or
   return checked;
 }
 } // namespace shadow_localization
+
+namespace shadow_localization {
+void StaticPlanner::load_wall_corridor(const std::string& path){
+  const auto file=YAML::LoadFile(path);
+  if(file["schema"].as<std::string>()!="asmc.localization.wall_corridor/v1" ||
+     file["frame_id"].as<std::string>()!="map" || file["simulator"].as<std::string>()!="25.S4.MolitComp03" ||
+     file["base_product_sha256"].as<std::string>()!=core_->road_map().product_sha256() ||
+     file["wall_reserve_m"].as<double>()<.65)
+    throw std::runtime_error("wall corridor map/frame/simulator/reserve mismatch");
+  std::vector<geometry::Polygon2D> areas;double previous=-INFINITY;
+  for(const auto& segment:file["segments"]){
+    const double a=segment["station_start"].as<double>(),b=segment["station_end"].as<double>();
+    if(!std::isfinite(a+b)||a<1877.744798966||b>1996.730791531||a<previous||b<=a)throw std::runtime_error("wall station scope mismatch");
+    previous=b;geometry::Polygon2D polygon;
+    for(const auto& xy:segment["polygon"])polygon.push_back({xy[0].as<double>(),xy[1].as<double>()});
+    areas.push_back(std::move(polygon));
+  }
+  if(areas.empty()||!core_->SetShadowWallOverlay(areas))throw std::runtime_error("wall corridor geometry refused");
+  wall_overlay_=std::move(areas);
+}
+}

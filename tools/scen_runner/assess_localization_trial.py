@@ -47,7 +47,7 @@ def assess(root):
     heading=[abs(float(r['heading_deg'])) for r in reference if int(r['projected'])]
     sources=Counter(r['value']['source'] for r in decisions)
     handoffs=[]
-    for r in data('/planning/localization/handoff_trace'):
+    for r in data('/planning/jamming/handoff_trace'):
         near=[n for n in native if abs(n['ros_time']-r['ros_time'])<=.5]
         commands=[c for c in data('/ctrl_cmd') if abs(c['ros_time']-r['ros_time'])<=.15]
         handoffs.append(dict(**r['value'], stamp=r['ros_time'],

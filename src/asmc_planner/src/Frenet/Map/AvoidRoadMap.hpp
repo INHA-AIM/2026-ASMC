@@ -14,7 +14,12 @@ class AvoidRoadMap {
  public:
   bool Load(const std::string& areas, const std::string& lines, std::string& error);
   bool enabled() const { return enabled_; }
+  const std::string& product_sha256()const{return product_sha256_;}
   void SetPaintExemption(bool value) { paint_exempt_=value; }
+  // Private Localization map layer. It is active only with the scoped shadow
+  // permission; the canonical raster and every default caller remain intact.
+  void SetShadowWallPermission(bool value){wall_permission_=value;}
+  bool SetShadowWallOverlay(const std::vector<geometry::Polygon2D>& polygons);
   // Full canonical XY footprint against the original raster; unknown is false.
   bool IntersectsDrivable(const geometry::Polygon2D& footprint) const;
   bool PoseClear(double x, double y, double yaw, const VehicleShape& shape) const;
@@ -74,11 +79,14 @@ class AvoidRoadMap {
   bool TouchesPaint(double x, double y, double yaw, const VehicleShape& shape,
                     bool all_solids = false) const;
   bool enabled_ = false;
+  bool wall_permission_=false;
   bool paint_exempt_ = false;
   double grid_resolution_ = 0.0, grid_x_ = 0.0, grid_y_ = 0.0;
   int grid_width_ = 0, grid_height_ = 0;
   std::vector<std::vector<std::pair<int,int>>> grid_rows_;
   std::vector<Polygon> areas_;
+  std::vector<Polygon> shadow_wall_areas_;
+  std::string product_sha256_;
   std::vector<Segment> protected_lines_;
   std::unordered_map<std::uint64_t,std::vector<std::size_t>> line_bins_;
 };

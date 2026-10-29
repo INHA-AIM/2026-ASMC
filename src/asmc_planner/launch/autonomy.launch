@@ -1,0 +1,40 @@
+<launch>
+  <!-- Full single-container composition. scripts/drive.sh owns the master,
+       lease and port preflight; this launch owns exactly one full ROS stack. -->
+  <arg name="jamming_planner" default="camera"/>
+  <arg name="transport_profile" default="local"/>
+  <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
+  <arg name="cmd_port" default="9093"/>
+  <arg name="invert_steer" default="false"/>
+  <arg name="dashboard_port" default="8089"/>
+  <arg name="lidar_dashboard_port" default="8097"/>
+  <arg name="lidar_view" default="true"/>
+  <arg name="lidar_debug" default="false"/>
+  <arg name="jamming_speed_kph" default="$(eval {'camera':10.,'local':10.,'localization':15.}[arg('jamming_planner')])"/>
+  <arg name="local_run_id" default="$(optenv ASMC_RUNTIME_SESSION_ID standalone)"/>
+  <arg name="local_journal_path" default=""/>
+  <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
+  <include file="$(find asmc_bridge)/launch/bridge.launch">
+    <arg name="transport_profile" value="$(arg transport_profile)"/>
+    <arg name="cmd_ip" value="$(arg cmd_ip)"/>
+    <arg name="cmd_port" value="$(arg cmd_port)"/>
+    <arg name="invert_steer" value="$(arg invert_steer)"/>
+    <!-- Planning owns its own state adapter. No unused duplicate state producer. -->
+    <arg name="enable_vehicle_state" value="false"/>
+  </include>
+  <include file="$(find asmc_camera)/launch/camera.launch"/>
+  <include file="$(find asmc_lidar)/launch/lidar.launch">
+    <arg name="debug" value="$(arg lidar_debug)"/>
+  </include>
+  <include file="$(find asmc_planner)/launch/autonomy_no_bridges_v2.launch">
+    <arg name="jamming_planner" value="$(arg jamming_planner)"/>
+    <arg name="dashboard_port" value="$(arg dashboard_port)"/>
+    <arg name="jamming_speed_kph" value="$(arg jamming_speed_kph)"/>
+    <arg name="shadow_run_id" value="$(arg local_run_id)"/>
+    <arg name="shadow_journal_path" value="$(arg local_journal_path)"/>
+    <arg name="local_planner_config" value="$(arg local_planner_config)"/>
+  </include>
+  <include if="$(arg lidar_view)" file="$(find asmc_lidar)/launch/view.launch">
+    <arg name="dashboard_port" value="$(arg lidar_dashboard_port)"/>
+  </include>
+</launch>

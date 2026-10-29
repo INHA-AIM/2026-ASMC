@@ -35,6 +35,30 @@
   const view = {scale: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0, follow: false};
   const tracks = new Map();
   let bounds = null, localPanelOpened=false, localizationCentered=false;
+  let monitorInstance=null;
+  function clearTrialObservations() {
+    for(const key of ['command','feedback','feature','trajectory','ego','lidarObjects','lidarMotionDebug',
+      'planningMarkers','debugConfig','recentPlanningIssue','localExperiment','localControl','localDetail','localLastGood','localLastDetail'])data[key]=null;
+    data.receivedAt={};data.shadow={};data.localReceiveAge=Infinity;data.localLastTime=0;
+    tracks.clear();previousObjects=new Map();motionDebugById=new Map();
+    lidarFrameKey=null;lidarFrameIndex=0;lidarChanges={appeared:[],disappeared:[],typeChanged:[]};
+  }
+  function applyTrialMonitor(meta) {
+    const node=$('trialMonitor');
+    if(!meta) {if(node)node.hidden=true;return;}
+    if(monitorInstance!==meta.instance_id || !meta.data_available)clearTrialObservations();
+    monitorInstance=meta.instance_id;
+    const phases={preparing:'준비 중',driving:'실험 주행 중',finishing:'종료 정리 중',ended:'실험 종료',
+      interrupted:'실험 프로세스 종료',stale:'실험 heartbeat 지연',idle:'실험 대기',running:'전체 스택 실행 중'};
+    if(node) {
+      node.hidden=false;
+      node.textContent=[phases[meta.phase]||meta.phase,meta.run_id||'대기',
+        (meta.branch||'')+' @ '+(meta.revision||'').slice(0,8)+(meta.dirty?' +미커밋':''),
+        meta.master_uri||'',meta.actuation_hold&&meta.phase==='preparing'?'준비 중 · 시뮬 제동 유지':'',meta.data_available?'관측 서버 연결 · LOCAL 수신 '+(Number.isFinite(meta.local_receive_age_s)?Math.round(meta.local_receive_age_s*1000)+'ms':'대기'):'현재 관측 없음 · 과거 경로 숨김',meta.reason||''].filter(Boolean).join(' | ');
+      node.className='trial-monitor '+(meta.data_available?'live':'waiting');
+    }
+  }
+
   let lidarFrameKey = null;
   let lidarFrameIndex = 0;
   let previousObjects = new Map();
@@ -443,10 +467,11 @@
       $(id).disabled = localView() || localExperimentView();
     if (localExperimentView()) {
       const invalid=data.localExperiment && !data.localExperiment.valid;
-      const retained=invalid && data.localLastGood?.frame===data.localExperiment.frame && performance.now()-data.localLastTime<1000;
+      const observed=Boolean(data.localExperiment?.scene_valid);
+      const retained=invalid && !observed && data.localLastGood?.frame===data.localExperiment.frame && performance.now()-data.localLastTime<1000;
       $('lidarStatus').textContent='LOCAL OBB '+(data.localExperiment?.scene?.obstacles?.length||0);
-      $('lidarStatus').className='chip '+(localExperimentFresh()&&data.localExperiment?.valid?'ok':'bad');
-      localRenderer.draw(retained?data.localLastGood:data.localExperiment,localExperimentFresh()&&!invalid,
+      $('lidarStatus').className='chip '+(localExperimentFresh()&&(observed||!invalid)?'ok':'bad');
+      localRenderer.draw(retained?data.localLastGood:data.localExperiment,localExperimentFresh()&&(observed||!invalid),
         retained?data.localLastDetail:data.localDetail,{
         road:$('showLocalRoad').checked,family:$('showLocalFamily').checked,
         candidates:$('showLocalCandidates').checked,sweep:$('showLocalSweep').checked,
@@ -806,26 +831,47 @@
   }
   function updateLocalExperimentPanel(){
     const r=data.localExperiment,c=data.localControl,fresh=localExperimentFresh();
-    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL-1 CONTROL':'LOCAL-1 PREVIEW'):'LOCAL-1 STALE'):'LOCAL-1 WAIT';
+    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL CONTROL · ACTIVE':r.phase==='prepare'?'LOCAL PREPARE':r.phase==='idle'?'LOCAL IDLE':'LOCAL PREVIEW'):'LOCAL STALE'):'LOCAL WAIT';
     $('localStatus').className='chip '+(fresh?'ok':'bad');
     $('localExperimentPanel').hidden=!r;
     if(!r)return;
     if(!localPanelOpened){const sidebar=document.querySelector?.('aside');if(sidebar)sidebar.scrollTop=0;localPanelOpened=true;}
     $('localExperimentState').textContent=(fresh?'':'STALE · ')+(r.valid?r.reason:'계산 불가: '+r.reason);
     $('localExperimentGrid').innerHTML=kv([
-      ['run / plan',r.run_id+' / '+r.plan_sequence],['실제 제어',c?.control_enabled?'연결됨':'계산 전용'],
+      ['run / plan',r.run_id+' / '+r.plan_sequence],['실행 단계',r.phase||'기존 기록'],['실제 제어',c?.control_enabled?'연결됨':'계산 전용'],
       ['목표 / 제한 속도',fmt(r.requested_kph)+' / '+fmt(r.selected_kph)+' km/h'],
-      ['최종 속도 제한',r.speed_reason],['계획 / MPC',fmt(r.processing_ms,2)+' / '+fmt(c?.processing_ms,2)+' ms'],
+      ['최종 속도 제한',r.speed_reason],
+      ['현재 경로 기준',r.input_join?.reference_source==='semantic_right_offset_trial'?'최신 노면 대체 · 최대5km/h':'family 본차로 선호 · 노면/OBB 별도 검사'],
+      ['근접 기동 속도 상한',fmt(r.maneuver_kph)+' km/h · 가까운 OBB와 선택 차체 sweep 기준'],
+      ['곡률 / 조향 변화 속도 상한',fmt(r.curve_kph)+' / '+fmt(r.steering_kph)+' km/h'],
+      ['쾌적 제동거리 / 적용 한계',fmt(r.comfort_stopping_m)+' m / '+fmt(r.braking_limit_mps2)+' m/s²'],
+      ['필요 / 확보 제동거리',fmt(r.required_stopping_m)+' / '+fmt(r.available_stopping_m)+' m'],
+      ['미래 실행 지연 여유',fmt(r.execution_delay_s??.5,2)+'s · 관측 freshness와 별개'],
+      ['회피 공간 확보',fmt(r.maneuver_reserve_m)+' m (우회 미완성 접근에서만)'],
+      ['선택 경로의 OBB 간격',r.minimum_object_clearance_m<1e6?fmt(r.minimum_object_clearance_m,2)+' m · 인지 OBB 기준':'주변 객체 없음'],
+      ['복구 경로 연장',fmt(r.recovery_extension_m)+' m (연장부는 현재 차체 sweep 검사)'],
+      ['선택 길이 / 탐색 한계',fmt(r.selected_length_m,1)+' / '+fmt(r.search_horizon_m,1)+'m'],
+      ['본차로 근거 끝 / 선택',fmt(r.reference_end_m,1)+'m · '+(r.path_source||'—')],
+      ['추가 노면 여유 비용',String(r.soft_semantic_margin_visits||0)+' sample visits · 차체+최소 여유는 별도 검사'],
+      ['이전 실제 노면 근거',String(r.scene?.recent_road_cells||0)+' cells · 최대 '+fmt(r.scene?.recent_road_max_age_s,2)+'s (청회색)'],['계획 / MPC',fmt(r.processing_ms,2)+' / '+fmt(c?.processing_ms,2)+' ms'],
       ['입력 나이',fmt(r.age_s,3)+'s'],
+      ['이동 점유 예측',(r.scene?.obstacles||[]).filter(o=>o.local_motion_prediction).length+'개 · 파란 점선, 의미 그룹과 별개'],
+      ['낮은 변위의 시각 여유',(r.scene?.obstacles||[]).filter(o=>o.quiescent_geometry_padding).length+'개 · 2m/s 이동 가능성 유지(0 아님) · 정적 판정 아님'],
+      ['장애물 현재 / 과거 측정',(r.scene?.obstacles||[]).filter(o=>!o.retained_measurement).length+' / '+(r.scene?.obstacles||[]).filter(o=>o.retained_measurement).length+' (과거 측정은 보라 점선)'],
       ['실제 선택 source 차 (LiDAR−family)',fmt(r.inputs?.lidar_minus_family_source_ms,1)+'ms · '+(r.inputs?.lidar_minus_family_source_ms>=0?'LiDAR 기준시각이 뒤':'family 기준시각이 뒤')],
       ['결과 수신 순서',r.inputs?.timing_available?(r.inputs.lidar_minus_family_receive_ms>=0?'LiDAR':'family')+'가 '+fmt(Math.abs(r.inputs.lidar_minus_family_receive_ms),1)+'ms 늦게 도착':'수신 시각 대기'],
       ['family 기준시각→수신',fmt(r.inputs?.family_source_to_receive_ms,1)+'ms'],
       ['LiDAR 기준시각→수신',fmt(r.inputs?.lidar_source_to_receive_ms,1)+'ms'],
       ['callback 대기 family / LiDAR',fmt(r.inputs?.family_callback_queue_ms,1)+' / '+fmt(r.inputs?.lidar_callback_queue_ms,1)+'ms'],
+      ['입력 잠금 대기 / 유지',fmt(r.input_lock_wait_ms,2)+' / '+fmt(r.input_lock_hold_ms,2)+'ms'],
+      ['노면 기억 / debug 생성',fmt(r.memory_ms,2)+' / '+fmt(r.debug_geometry_ms,2)+'ms'],
+      ['소유권 확인 나이 / 조회',fmt(c?.ownership_age_s,2)+'s / '+fmt(c?.ownership_query_ms,2)+'ms'],
       ['정렬 / 탐색 / 속도 계산',fmt(r.alignment_ms,2)+' / '+fmt(r.search_ms,2)+' / '+fmt(r.speed_ms,2)+'ms'],
       ['노면 대응',data.localDetail?.reason||'같은 시각 격자 대기'],
-      ['무효 시 회색 표시',!r.valid?'최근 유효 기하 최대1초 · 현재 판단은 무효':'현재 계획 기하'],
-      ['MPC 상태',c?.reason||'대기'],['경로 오차',fmt(c?.tracking_error_m,3)+'m (본차로 오차와 별도)']]);
+      ['관측 / 계획',r.scene_valid?'현재 관측 표시 · '+(r.valid?'전진 계획 유효':'전진 계획 무효'):'관측 무효 · 최근 기하 최대1초 회색'],
+      ['시각 정렬',r.inputs?.alignment||'source 기준'],
+      ['LiDAR 관측 나이',fmt(r.inputs?.lidar_age_s,3)+'s'],
+      ['MPC 상태',c?.reason||'대기'],['이번 주기 명령 발행',c?.command_published===false?'없음 (preview·표본 대기 포함)':c?.command_published===true?'발행':'구 기록'],['경로 오차',fmt(c?.tracking_error_m,3)+'m (본차로 오차와 별도)']]);
     $('localExperimentReasons').textContent=JSON.stringify({blocked_object:r.blocking_id,rejections:r.rejected,
       speed_reason:r.speed_reason,recovery_obb_overlap:r.recovery_obb_overlap,candidates_omitted:r.candidates_omitted},null,2);
     $('localExperimentEvidence').textContent=JSON.stringify({inputs:r.inputs,obstacles:r.scene?.obstacles,
@@ -996,24 +1042,35 @@
       let snapshot;
       try { snapshot = await fetch('../api/snapshot', {cache: 'no-store', signal: abort.signal}).then(response => response.json()); }
       finally { clearTimeout(timer); }
+      const transition=$('jammingTransition');
+      if(transition){
+        const ts=snapshot.received_at?.jamming_transition;
+        const fresh=Boolean(snapshot.jamming_transition_fresh);
+        transition.textContent=[snapshot.jamming_strategy||'camera',fresh?snapshot.jamming_transition?.status:'전환 정보 대기 / stale',snapshot.observer?.branch||'',(snapshot.observer?.revision||'').slice(0,8)].filter(Boolean).join(' | ');
+        transition.className='trial-monitor '+(fresh?'live':'waiting');
+      }
+      const runtime=snapshot.runtime_session;
+      applyTrialMonitor(snapshot.trial_monitor || (runtime && {...runtime,
+        instance_id:runtime.session_id,data_available:true,
+        local_receive_age_s:snapshot.local_receive_age_s}));
       data.localExperiment=snapshot.local_experiment||null;
       data.localControl=snapshot.local_control||null;
       data.localReceived=performance.now();
       data.localReceiveAge=snapshot.local_receive_age_s??Infinity;
       if(data.localExperiment && data.localDetail?.plan_sequence!==data.localExperiment.plan_sequence){
-        const response=await fetch('../api/local-scene?sequence='+data.localExperiment.plan_sequence,{cache:'no-store'});
+        const response=await fetch('../api/local-scene?sequence='+data.localExperiment.plan_sequence+'&frame='+encodeURIComponent(data.localExperiment.frame||'')+'&run_id='+encodeURIComponent(data.localExperiment.run_id||'')+(monitorInstance?'&monitor_instance='+encodeURIComponent(monitorInstance):''),{cache:'no-store'});
         data.localDetail=response.ok?{...await response.json(),plan_sequence:data.localExperiment.plan_sequence}:null;
       }
-      if(data.localExperiment?.valid && data.localDetail?.raster_available){
+      if((data.localExperiment?.scene_valid||data.localExperiment?.valid) && data.localDetail?.raster_available){
         data.localLastGood=data.localExperiment;data.localLastDetail=data.localDetail;data.localLastTime=performance.now();
       }
+      updateLocalExperimentPanel();
       data.localization=snapshot.localization||null;data.localizationReceived=performance.now();
       data.experiment=snapshot.experiment||null;data.observer=snapshot.observer||null;
       data.experimentReceived=performance.now();
       data.localizationHandoff=snapshot.localization_handoff||null;
       data.localizationHandoffFresh=snapshot.localization_handoff_fresh||false;
       data.normalPathFresh=snapshot.normal_path_fresh||false;
-      updateLocalExperimentPanel();
       updateLocalizationPanel();
       if(localizationView() && localizationFresh() && data.localization?.ego && !localizationCentered){view.scale=Math.max(4,canvas.getBoundingClientRect().width/90);view.follow=true;localizationCentered=true;}
       if(!localizationView())localizationCentered=false;
@@ -1037,11 +1094,15 @@
         motionDebugById = new Map(
           (snapshot.lidar_motion_debug.objects || []).map(object => [Number(object.id), object]));
       }
-      $('rosStatus').textContent = 'ROS CONNECTED';
-      $('rosStatus').className = 'chip ok';
+      $('rosStatus').textContent = snapshot.trial_monitor && !snapshot.trial_monitor.data_available?'RUN '+(snapshot.trial_monitor.phase||'WAIT').toUpperCase():'ROS CONNECTED';
+      $('rosStatus').className = 'chip '+(snapshot.trial_monitor && !snapshot.trial_monitor.data_available?'bad':'ok');
       updatePanel();
       draw();
     } catch (error) {
+      if(monitorInstance) {
+        clearTrialObservations();draw();
+        const monitor=$('trialMonitor');if(monitor)monitor.textContent='관측 연결 끊김 · 과거 경로 숨김';
+      }
       $('rosStatus').textContent = 'ROS OFFLINE';
       $('rosStatus').className = 'chip bad';
       console.warn('dashboard snapshot unavailable', error);

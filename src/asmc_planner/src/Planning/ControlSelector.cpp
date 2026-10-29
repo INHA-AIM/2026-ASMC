@@ -6,13 +6,16 @@
 namespace asmc_planner {
 ControlSelector::ControlSelector(ros::NodeHandle nh) : nh_(std::move(nh)) {
   ros::NodeHandle("~").param("smooth_handoff",smooth_handoff_,false);
+  ros::NodeHandle("~").param<std::string>("jamming_controller",jamming_controller_,"/localization_controller");
+  ros::NodeHandle("~").param<std::string>("jamming_frame_prefix",jamming_frame_prefix_,"local/");
+  std::string anchor_topic;ros::NodeHandle("~").param<std::string>("initial_ready_topic",anchor_topic,"");
   if(smooth_handoff_) {
-    initial_anchor_ready_=false;
-    anchor_sub_=nh_.subscribe<std_msgs::Bool>("/planning/localization/anchor_ready",1,
+    initial_anchor_ready_=anchor_topic.empty();
+    if(!anchor_topic.empty())anchor_sub_=nh_.subscribe<std_msgs::Bool>(anchor_topic,1,
       [this](const std_msgs::Bool::ConstPtr& m){initial_anchor_ready_|=m->data;});
-    request_sub_=nh_.subscribe("/planning/localization/handoff_request",1,&ControlSelector::handoffRequest,this);
-    candidate_sub_=nh_.subscribe("/planning/localization/handoff_candidate",4,&ControlSelector::handoffCandidate,this);
-    handoff_trace_pub_=nh_.advertise<std_msgs::String>("/planning/localization/handoff_trace",10);
+    request_sub_=nh_.subscribe("/planning/jamming/handoff_request",1,&ControlSelector::handoffRequest,this);
+    candidate_sub_=nh_.subscribe("/planning/jamming/handoff_candidate",4,&ControlSelector::handoffCandidate,this);
+    handoff_trace_pub_=nh_.advertise<std_msgs::String>("/planning/jamming/handoff_trace",10);
   }
   ros::NodeHandle("~").param("command_timeout_s", command_timeout_s_, 0.25);
   if (!std::isfinite(command_timeout_s_) || command_timeout_s_ <= 0.0)
@@ -119,14 +122,17 @@ void ControlSelector::handoffRequest(const asmc_msgs::ControlHandoff::ConstPtr& 
   if(request_.epoch && m->epoch<request_.epoch)return;
   if(m->epoch!=request_.epoch)candidates_={};
   request_=*m;request_received_=ros::SteadyTime::now();
+  if(m->valid&&has_mode_&&awaiting_selected_command_&&m->target_mode==static_cast<uint8_t>(mode_)){
+    pending_handoff_=true;pending_mode_=mode_;pending_started_=ros::SteadyTime::now();
+  }
   if(!m->valid && pending_handoff_) {
     pending_handoff_=false;awaiting_selected_command_=true;publishStop();
   }
 }
 
 void ControlSelector::handoffCandidate(const asmc_msgs::ControlHandoff::ConstPtr& m) {
-  if(m->target_mode>1 || m->header.frame_id!=(m->target_mode==0?"/mpc_controller":"/localization_controller"))return;
-  if(m->target_mode==0 ? m->state_frame!="map" : m->state_frame.rfind("local/",0)!=0)return;
+  if(m->target_mode>1 || m->header.frame_id!=(m->target_mode==0?"/mpc_controller":jamming_controller_))return;
+  if(m->target_mode==0 ? m->state_frame!="map" : m->state_frame.rfind(jamming_frame_prefix_,0)!=0)return;
   if(m->epoch==request_.epoch && !m->valid) {
     candidates_[m->target_mode]={};return;
   }

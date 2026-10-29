@@ -435,6 +435,32 @@ TEST(GroundFilter, FitIsDeterministicAndHistoryFree) {
     EXPECT_TRUE(SameBits(oa->points[i], ob->points[i]));
 }
 
+// LOCAL-2C audit: fitting and removal are separate decisions. A tight fit must
+// neither erase a thin elevated return nor change the absolute-distance rule.
+TEST(GroundFilter, TightConsensusRetainsElevatedThinAndBelowPlanePoints) {
+  for (double band : {0., .10}) {
+    GroundConfig c;
+    c.fit_threshold_m = band;
+    GroundFilter filter(c);
+    auto cloud = NewCloud(), output = NewCloud();
+    AddFlatGround(*cloud, -1.8f);
+    // A steel bar hit by one ring remains an obstacle despite zero Z span.
+    for (int i = 0; i < 24; ++i) cloud->push_back(P(8.f+i*.05f, 0.f, -1.1f, 1));
+    // This candidate corrects plane selection, NOT a new below-plane deletion.
+    for (int i = 0; i < 8; ++i) cloud->push_back(P(9.f+i*.05f, 1.f, -2.4f, 2));
+    filter.Filter(cloud, output, nullptr);
+    ASSERT_TRUE(filter.CurrentPlane().valid);
+    int elevated = 0, below = 0;
+    for (const auto& p : *output) {
+      elevated += p.intensity == 1;
+      below += p.intensity == 2;
+    }
+    EXPECT_EQ(elevated, 24);
+    EXPECT_EQ(below, 8);
+    EXPECT_NEAR(filter.CurrentPlane().coefficients[3], 1.8, .015);
+  }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) { testing::InitGoogleTest(&argc, argv); return RUN_ALL_TESTS(); }

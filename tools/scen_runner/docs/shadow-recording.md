@@ -112,7 +112,13 @@ Source/header는 원문대로 보존하며 ROS receipt와 monotonic 시간을 �
 모델·bbox confidence·family freshness·차로 변경 timeout은 두 설정에서 유지한다.
 실제 실패와 후속 단위는 [음영 판제 계획](../../../docs/architecture/shadow-planning-refactoring.md)을 따른다.
 
-## S1 수정 후보를 별도로 실행
+## S1 수정 후보를 별도로 실행 — 역사적 재현 전용
+
+2026-10-29 main 리베이스 이후 아래 실행은 현재 노드와 호환되지 않는다.
+`archive/local-before-rebase-20261029` (`3bb14526`)에서만 당시 메시지·노드를
+함께 빌드해 재현한다. 현재 NORMAL/기존 음영 노드는 PR127을 따르고, 독립 LOCAL은
+`run_local_trial.py`를 사용한다. 옛 실험 환경값은 조용히 무시하지 않고 거부한다.
+원본 bag·접점 fixture·분석 코드는 당시 증거로 보존한다.
 
 후속4시간 실험에서는 동일한 제어기 안에 제한된 clearance 후보를 추가했다.
 일반 `autonomy.launch`는 그대로이며, 아래 환경값을 **scenario planning 실행기 시작 전**에 지정할 때만
@@ -151,3 +157,33 @@ source devel/setup.bash
 판정 비용은 해당 주기에 실제 계획한 표본만 집계하고, 세 카메라 stamp는 뷰/session/generation별로 비교한다.
 추가 native 접촉 기록은 배경 actor도 포함하며 종료 query 오류도 보존한다. 이 기록은 독립 연속 GT와 다르다.
 수정별 성공·실패와 복구 경계는 [S1 수정 결과](../../../docs/records/planning/2026-10-28-shadow-contact-clearance.md)를 따른다.
+
+## LOCAL-2C 재현 도구
+
+위 S1은 당시 방식의 재현 설명이다. 현재 별도 LOCAL 실험의
+[속도·지면 결과](../../../docs/records/planning/2026-10-28-local-speed-continuity.md)는
+`run_local_trial.py`, `replay_local.py`, `scen_runner.records.local_*`로 재현한다.
+
+- `run_local_trial.py --start-perception`: 공유 validation lease를 얻고 기존 camera/LiDAR
+  생산자가 없을 때만 자기 프로세스를 실행한다. 기존 bridge·semantic 입력은 재사용한다.
+  `--lidar-config`는 이 모드에서만 허용하며 실제 설정 SHA를 기록한다. control/mode
+  생산자가 있으면 시험을 거부하며 다른 worktree의 노드를 종료하지 않는다.
+- `replay_local.py --cap`: 같은 bag을 local 속도 상한별로 비교한다. 독립 master에서
+  수행하며 실제 MORAI 제어나 폐루프 수락을 대신하지 않는다.
+- `analyze_local_speed`: 실제 native 주행 시작10초 이후 고정 구간과 모든 제어 실패를
+  집계한다. `--output`으로 새 등록 run에 저장하면 동결 원본은 변경하지 않는다.
+- `local_campaign`·`local_gallery`: 준비 실패도 보존하고 정확한 source stamp의
+  RGB/semantic/선택·탈락 경로를 연결한다. `local_speed_report`, `local_ground_report`,
+  `local_ground_preservation`은 해당 LOCAL-2C 입력 manifest 전용 비교 보고서다.
+
+native 속도 probe는 빌드된 local 코어와 동일한 Plan을 호출한다. master·제어 출력이 없다.
+
+```bash
+cd /root/ws
+g++ -std=c++17 -O2 -Isrc/asmc_planner/src tools/scen_runner/local_speed_probe.cpp \
+  -Ldevel/lib -lasmc_local_planner_core -lasmc_planner_frenet_core -o /tmp/local_speed_probe
+LD_LIBRARY_PATH="$PWD/devel/lib:${LD_LIBRARY_PATH:-}" /tmp/local_speed_probe
+```
+
+결과를 저장할 때는 새 등록 run을 사용한다. 동일 run의 실패/초기 결과를 덮어쓰거나
+raw pointcloud가 없는 replay0scan을 통과로 세지 않는다.

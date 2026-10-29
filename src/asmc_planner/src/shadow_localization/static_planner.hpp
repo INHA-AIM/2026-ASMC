@@ -4,6 +4,7 @@
 #include "shadow_localization/anchor.hpp"
 #include "shadow_localization/path_memory.hpp"
 #include <memory>
+#include <asmc_geometry/motion_evidence.hpp>
 #include <set>
 
 namespace shadow_localization {
@@ -13,6 +14,9 @@ class StaticPlanner {
  public:
   explicit StaticPlanner(const std::string& parameters,bool sequential_targets=true);
   void reset();
+  void load_wall_corridor(const std::string&);
+  void set_wall_permission(bool value){wall_permission_=value;core_->SetShadowWallPermission(value);}
+  bool wall_loaded()const{return !wall_overlay_.empty();}
   local_planning::Result plan(const local_planning::Scene&,
       const local_planning::Config&,const local_planning::Motion&,const Transform&);
   const std::string& phase() const {return phase_;}
@@ -52,7 +56,9 @@ class StaticPlanner {
   std::unique_ptr<FrenetPlanner> core_;
   bool sequential_targets_=true;
   bool dynamic_enabled_=false;
-  bool paint_exempt_=false;
+  bool paint_exempt_=false,wall_permission_=false;
+  std::vector<geometry::Polygon2D> wall_overlay_;
+  asmc_geometry::motion_evidence::MotionHistory motion_evidence_;
   unsigned moving_objects_=0;
   unsigned pending_motion_objects_=0;
   unsigned rest_motion_disagreements_=0;

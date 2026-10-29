@@ -31,7 +31,11 @@
         "asmc_local_controller_node",
         "localization_input_test",
         "shadow_localization_test",
-        "control_binding_test"
+        "control_binding_test",
+        "local_planner_test",
+        "local_execution_history_test",
+        "local_ownership_probe",
+        "jamming_wall_scope_test"
       ],
       "script": ".github/ci/essential-planning.sh"
     },

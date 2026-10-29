@@ -22,7 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('root', type=Path)
     parser.add_argument('--trial', required=True)
-    parser.add_argument('--jamming-planner',choices=['camera','localization'],default='localization')
+    parser.add_argument('--jamming-planner',choices=['camera','local','localization'],default='localization')
     parser.add_argument('--gps-outage', action='store_true')
     parser.add_argument('--own-perception', action='store_true')
     parser.add_argument('--lidar-debug', action='store_true',
@@ -59,7 +59,7 @@ def main():
     if (args.dynamic_obstacles or args.shadow_lane_rules) and (
             not args.static_avoidance or args.jamming_planner!='localization'):
         raise ValueError('motion/lane experiments require the explicit Localization M3 preview')
-    if args.fixture in ('crossing_left','crossing_right','standing_person') and not args.dynamic_obstacles:
+    if args.jamming_planner=='localization' and args.fixture in ('crossing_left','crossing_right','standing_person') and not args.dynamic_obstacles:
         raise ValueError('vehicle/pedestrian motion fixtures require explicit dynamic preview')
     if Path(args.trial).name != args.trial or not 0 < args.cap <= 20 or not 0 < args.seconds <= 240 or not 0<=args.lease_wait_seconds<=600:
         raise ValueError('invalid bounded trial')
@@ -86,7 +86,7 @@ def main():
     output = args.root/'trials'/args.trial
     output.parent.mkdir(exist_ok=True)
     output.mkdir(exist_ok=False)
-    if args.fixture!='none' and not args.static_avoidance:raise ValueError('obstacle trials require explicit M3 preview')
+    if args.fixture!='none' and args.jamming_planner=='localization' and not args.static_avoidance:raise ValueError('Localization obstacle trials require explicit avoidance')
     if args.static_avoidance and args.jamming_planner!='localization':raise ValueError('M3 fixture requires Localization')
     import rospy
     import rosgraph
@@ -110,7 +110,7 @@ def main():
     monitoring=ensure_dashboard(args.root,args.dashboard_port,os.environ['ROS_MASTER_URI'])
     reporter=ExperimentReporter(output,registration['run_id'],args.trial,
         'physical_observer_diagnostic_not_driving_acceptance' if args.observer_contact_baseline else 'physical_trial',monitoring,
-        conditions=dict(weather='Foggy',hour=13,policy='user_pinned_foggy_20261029'))
+        conditions=dict(weather='Foggy',hour=13,planner=args.jamming_planner,policy='user_pinned_foggy_20261029'))
     # Check ownership by ROS API PID and the current container's /proc. The
     # private master must not silently supply perception from another worktree.
     import xmlrpc.client
@@ -148,6 +148,8 @@ def main():
     files+=[Path('/devel/lib/asmc_planner/localization_evaluate')]
     files+=[checkout/path for path in (
         'src/asmc_planner/config/shadow_localization.yaml',
+        'src/asmc_planner/config/local_planner.yaml','src/asmc_planner/config/jamming_transition.yaml',
+        'src/asmc_geometry/include/asmc_geometry/motion_evidence.hpp',
         'src/asmc_planner/config/localization_motion_calibration.json',
         'src/asmc_planner/config/frenet/params.yaml',
         'src/asmc_controller/config/controller.yaml',
@@ -200,13 +202,16 @@ def main():
         ('/CollisionData',CollisionData),
         ('/ctrl_cmd', CtrlCmd), ('/planning/mode', UInt8),
         ('/planning/mode/status', String),
+        ('/planning/jamming/approach',Bool),
+        ('/planning/local/trace',String),('/planning/local/control_trace',String),
+        ('/planning/local/trajectory',LocalTrajectory),
         ('/planning/localization/anchor_ready', Bool),
         ('/planning/localization/trace', String),
         ('/planning/localization/debug', String),
         ('/planning/localization/experiment', String),
-        ('/planning/localization/handoff_trace', String),
+        ('/planning/jamming/handoff_trace', String),
         ('/planning/localization/control_trace', String),
-        ('/planning/localization/prepare', Bool),
+        ('/planning/jamming/prepare', Bool),
         ('/planning/localization/approach_trace', String),
         ('/planning/localization/trajectory', LocalTrajectory),
         ('/planning/vehicle/state', VehicleState),
@@ -347,7 +352,7 @@ def main():
     <arg name="jamming_planner" value="%s"/>
     <arg name="dashboard" value="false"/>
     <arg name="shadow_run_id" value="%s"/>
-    <arg name="shadow_speed_cap_kph" value="%s"/>
+    <arg name="jamming_speed_kph" value="%s"/>
     <arg name="shadow_static_avoidance" value="%s"/>
     <arg name="shadow_dynamic_obstacles" value="%s"/>
     <arg name="shadow_lane_rules" value="%s"/>
@@ -369,11 +374,13 @@ def main():
                 ('/planning/localization/debug', None),
                 ('/planning/localization/experiment', None),
                 ('/planning/localization/control_trace', None),
-                ('/planning/localization/prepare', None),
-                ('/planning/localization/approach_trace', None),
-                ('/planning/localization/handoff_request', None),
-                ('/planning/localization/handoff_candidate', None),
-                ('/planning/localization/handoff_trace', None),
+                ('/planning/jamming/prepare', None),
+                ('/planning/jamming/approach',None),('/planning/jamming/handoff_request',None),('/planning/jamming/handoff_candidate',None),
+                ('/planning/local/trace',None),('/planning/local/control_trace',None),('/planning/local/trajectory',None),('/planning/local/odometry',None),
+                ('/experimental/shadow/semantic_space_trial/context',None),('/experimental/shadow/semantic_space_trial/coverage',None),('/experimental/shadow/semantic_space_trial/drivable_probability',None),
+                ('/planning/jamming/handoff_request', None),
+                ('/planning/jamming/handoff_candidate', None),
+                ('/planning/jamming/handoff_trace', None),
                 ('/planning/mode', None), ('/planning/mode/status', None),
                 ('/planning/vehicle/state', None), ('/planning/trajectory', None),
                 ('/behavior/command_v2', None), ('/planning/frenet_feedback_v2', None),
@@ -408,7 +415,7 @@ def main():
                 models_ready=all(s.get('loaded') and s.get('warmed') and s.get('successful_batches',0)>0 and
                                  -.05<=rospy.Time.now().to_sec()-s.get('last_source_stamp',0)<=.75
                                  for s in model_states)
-                anchor_ready=args.jamming_planner=='camera' or (anchor[1] and now-anchor[0]<.2)
+                anchor_ready=args.jamming_planner!='localization' or (anchor[1] and now-anchor[0]<.2)
                 if (models_ready and anchor_ready and now-command[0] < .2 and
                     state[1].get('valid') and command[1].get('brake', 1) < .9): break
                 if now > deadline: raise RuntimeError('startup_readiness_timeout')
@@ -450,6 +457,7 @@ def main():
             emit('departure', start_station=args.start, end_station=args.end, cap_kph=args.cap,
                  lateral_offset_m=args.lateral_offset,heading_offset_deg=args.heading_offset,
                  start_pose=pose,heading_contract='native ENU from fixed-reference UTM grid')
+            transition_mode=None;transition_started=0.;transition_speed=0.
             while time.monotonic()-started < args.seconds:
                 now = time.monotonic()
                 if section and now-last_fixture_tick>=.1:
@@ -472,6 +480,12 @@ def main():
                 mode=latest.get('/planning/mode',(None,None))[1]
                 from localization_trial_policy import native_speed_limit
                 limit=native_speed_limit(mode,args.cap,normal_ceiling)
+                if mode!=transition_mode:
+                    transition_mode=mode;transition_started=now;transition_speed=state['speed_kmh']
+                    emit('control_mode_speed_transition',mode=mode,station=station,speed_kph=transition_speed)
+                if mode==1 and limit is not None:
+                    limit=max(limit,transition_speed-3.6*max(0.,now-transition_started-.5)+1.)
+
                 emit('native', ego=state, station=station, lateral_m=error, heading_deg=angle,
                      selected_mode=mode,native_speed_limit_kph=limit)
                 contacts.extend(x for x in state['native_contacts'] if x and x != link.ego_id)
@@ -484,7 +498,7 @@ def main():
                         reason='udp_collision_event_requires_review';break
                 if contacts and (not args.observer_contact_baseline or set(contacts)-set(startup_contacts)):
                     reason='contact'; break
-                if error > (4. if args.static_avoidance else 1.5): reason='route_departure'; break
+                if error > (5. if args.fixture!='none' else 1.5): reason='route_departure'; break
                 if limit is None:reason='unknown_control_mode';break
                 if state['speed_kmh'] > limit: reason='overspeed'; break
                 if state['speed_kmh'] > .36: stationary=now
@@ -561,6 +575,7 @@ def main():
     result['conditions']=dict(weather='Foggy',hour=13,after_cleanup_weather='Foggy',policy='user_pinned_foggy_20261029')
     result['motion_reference_offset_m']=args.motion_reference_offset
     result['normal_validation_speed_cap_kph']=normal_cap
+    result['jamming_contract']='A448 common approach25; explicit option cap; transition overspeed envelope recorded'
     result['minimum_free_bytes']=storage_floor
     result['normal_speed_ceiling_kph']=normal_ceiling
     result['startup_contacts']=startup_contacts

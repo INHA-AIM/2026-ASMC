@@ -24,6 +24,9 @@ struct GroundConfig {
   int minimum_seed_points = 30;
   // GPS-independent signed half-space removal. False preserves legacy replay behavior.
   bool remove_below_plane = false;
+  // 0 preserves the deployed far-band fit. LOCAL-2C audit separates fitting
+  // consensus from removal tolerance; no length/age-based object rejection.
+  double fit_threshold_m = 0.;
 };
 
 // Main NormalVectorFiltering() common branch. The constructor applies Main's

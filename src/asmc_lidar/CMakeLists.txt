@@ -215,6 +215,9 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
   target_compile_options(lidar_pipeline_node PRIVATE -Wall -Wextra)
   add_dependencies(lidar_pipeline_node ${pipeline_msg_targets})
 
+  # Reproducible LOCAL-2C offline plane-consensus audit, not a ROS producer.
+  add_executable(lidar_ground_fit_audit tools/ground_fit_audit.cpp)
+  target_link_libraries(lidar_ground_fit_audit asmc_lidar_pipeline)
   add_executable(lidar_replay tools/lidar_replay.cpp)
   target_link_libraries(lidar_replay asmc_lidar_runtime ${rosbag_LIBRARIES} ${catkin_LIBRARIES})
   target_compile_options(lidar_replay PRIVATE -Wall -Wextra)
@@ -224,7 +227,7 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   install(FILES tools/tracking_samples.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-  install(TARGETS lidar_pipeline_node lidar_replay
+  install(TARGETS lidar_pipeline_node lidar_replay lidar_ground_fit_audit
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
   install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
   # Read-only web monitor (python, no build): node script, pure-python core and web assets.

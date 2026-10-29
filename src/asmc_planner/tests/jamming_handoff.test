@@ -1,0 +1,18 @@
+<launch>
+  <arg name="strategy" default="camera"/>
+  <group ns="planning_mode">
+    <param name="smooth_handoff" value="true"/>
+    <param name="jamming_controller" value="$(eval {'camera':'/camera_bbox_lane_change','local':'/local_controller','localization':'/localization_controller'}[arg('strategy')])"/>
+    <param name="exit_hold_s" value="0.05"/>
+    <param name="gps_timeout_s" value="0"/>
+    <param name="recovery_ready_topic" value="/planning/localization/recovery_ready"/>
+  </group>
+  <node pkg="asmc_planner" type="gps_mode_source_test_node" name="gps_mode_source_test_node" required="true"/>
+  <node pkg="asmc_planner" type="asmc_control_selector_node" name="asmc_control_selector" required="true">
+    <param name="smooth_handoff" value="true"/>
+    <param name="initial_ready_topic" value="/planning/localization/anchor_ready"/>
+    <param name="jamming_controller" value="$(eval {'camera':'/camera_bbox_lane_change','local':'/local_controller','localization':'/localization_controller'}[arg('strategy')])"/>
+    <param name="jamming_frame_prefix" value="$(eval 'base_link' if arg('strategy') == 'camera' else 'local/')"/>
+  </node>
+  <test pkg="asmc_planner" type="localization_handoff_test.py" test-name="jamming_handoff" time-limit="30"/>
+</launch>

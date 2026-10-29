@@ -7,6 +7,10 @@
 
 ## 확인한 원인
 
+이 문서는 LOCAL-2A 구현 **전** 분석을 보존한다. 이후 변경·35m 반복 주행3회와
+흰선–벽 측정은 [LOCAL-2A 결과](2026-10-28-local-input-alignment.md)를 따른다.
+아래 추가10Hz·50ms join·후진 reset 설명을 현재 실행 설정으로 다시 적용하지 않는다.
+
 | 증상 | 현재 코드·probe 근거 | 처리 책임 |
 |---|---|---|
 | 후진 시 local 그림 소실 | MotionHistory는 v<-0.05에서 epoch reset. 음수51표본의 native probe 출력0개 | 상대 상태는 signed motion을 지원하고 관측 표시는 전진 계획 유효성과 분리 |

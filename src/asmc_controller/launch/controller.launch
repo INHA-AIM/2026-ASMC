@@ -1,16 +1,16 @@
 <launch>
   <arg name="state_topic" default="/vehicle/state"/>
   <arg name="suspend_in_jamming" default="false"/>
+  <arg name="initial_ready_topic" default=""/>
   <arg name="smooth_handoff" default="false"/>
-  <arg name="localization_approach_speed_kph" default="0"/>
   <node pkg="asmc_controller" type="mpc_controller_node"
         name="mpc_controller" output="screen">
     <rosparam command="load"
               file="$(find asmc_controller)/config/runtime.yaml"/>
     <param name="topics/vehicle_state" value="$(arg state_topic)"/>
     <param name="suspend_in_jamming" value="$(arg suspend_in_jamming)"/>
+    <param name="initial_ready_topic" value="$(arg initial_ready_topic)"/>
     <param name="smooth_handoff" value="$(arg smooth_handoff)"/>
-    <param name="localization_approach_speed_kph" value="$(arg localization_approach_speed_kph)"/>
     <param name="mpc/config_path"
            value="$(find asmc_controller)/config/controller.yaml"/>
   </node>

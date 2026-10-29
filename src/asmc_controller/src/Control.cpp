@@ -467,8 +467,7 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
             GetMPCParams().accel_min,GetMPCParams().accel_max);
         acceleration_limit=std::isfinite(acceleration_limit) ? std::min(acceleration_limit,recovery_limit) : recovery_limit;
     }
-    const double speed_cap=CombinedSpeedCap(g_control.validation_speed_cap_mps,
-        g_control.localization_approach_speed_mps,g_control.localization_approaching);
+    const double speed_cap=g_control.validation_speed_cap_mps;
     if(speed_cap>0) {
         const double trial_limit=RecoveryAccelerationLimit(speed_cap,
             current_state.vx,g_control.latest_vehicle_state.acceleration,.5,

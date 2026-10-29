@@ -1,13 +1,44 @@
-# LOCAL-1 simulator experiment only. NORMAL/jamming configurations are unchanged.
+# GPS-independent LOCAL runtime. NORMAL and the camera jamming selector remain separate.
+# LOCAL-2G: geometric motion forecasts, turn-room reserve and measured-gap checks.
 # VehicleSpec width=1.892m; SDK bounding box width=2.1608348m. Until a contact
 # envelope test resolves the difference, use the larger physical test envelope.
 # No separate expansion of the LiDAR OBB: clearance is applied once here.
 vehicle_width: 2.160835
 vehicle_length: 4.635
 rear_axle_to_bumper: 0.790
-clearance_margin: 0.10
+clearance_margin: 0.30
 planning_budget_ms: 40.0
-# Fresh semantic near-field recovery is explicitly capped at3km/h. It is a
-# soft-cost simulation trial and must not be reported as collision-free space.
+# Fresh near-field recovery is target5km/h; physical constraints may lower it. Internal semantic occlusion can
+# be a soft cost, but body clearance, current OBB and exterior checks stay hard.
 recovery: true
 near_blind_assist: false
+# LOCAL-2B experimental near-body evidence, not a filled current semantic mask.
+# Actual observed free road only, max5s/6m, fresh nonroad/OBB always veto.
+# Set false for the LOCAL-2A memory-OFF comparison (same runtime, no extra node).
+causal_road_memory: true
+# Match the local solver bound; NORMAL's2m/s^2 configuration stays unchanged.
+acceleration_limit_mps2: 1.0
+# Missing/folded home reference falls back to current observed semantic space.
+# Current raster/OBB collision checks remain authoritative; no mask is filled.
+semantic_reference_fallback: true
+# Short measured-asset retention did not improve A/B consistently; keep OFF.
+retain_static_observations: false
+# Comfort2.0m/s²; controlled3.0 only when actual-state braking needs it.
+controlled_braking_limit_mps2: 3.0
+
+comfort_deceleration_mps2: 2.0
+preferred_clearance: 0.55
+low_speed_rate_floor_mps: 0.1
+local_motion_prediction: true
+maneuver_reserve_m: 1.2
+
+# LOCAL-2H first-comparison profile, validated at10km/h in FOGGY13.
+# Current OBB/30cm body clearance and350ms source freshness are unchanged.
+# A close tight selected sweep gets maneuver time, not every YOLO detection.
+maneuver_speed_cap_kph: 5.0
+# Six unique rigid source observations allow a nonzero2m/s past-age envelope.
+# Known mobile groups are vetoed; raw velocity and valid absolute-speed floors remain.
+quiescent_geometry_padding: true
+
+# User-requested low-speed recovery target; not a forced minimum through hazards.
+recovery_target_kph: 5.0

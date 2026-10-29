@@ -11,12 +11,12 @@ class HandoffTest(unittest.TestCase):
         commands=[];modes=[];requests=[]
         rospy.Subscriber('/ctrl_cmd',CtrlCmd,lambda m:commands.append((time.monotonic(),m)))
         rospy.Subscriber('/planning/mode',UInt8,lambda m:modes.append(m.data))
-        rospy.Subscriber('/planning/localization/handoff_request',ControlHandoff,lambda m:requests.append(m))
+        rospy.Subscriber('/planning/jamming/handoff_request',ControlHandoff,lambda m:requests.append(m))
         normal=rospy.Publisher('/ctrl_cmd/normal',CtrlCmd,queue_size=1)
         anchor=rospy.Publisher('/planning/localization/anchor_ready',Bool,queue_size=1,latch=True)
         ready=rospy.Publisher('/planning/localization/recovery_ready',Bool,queue_size=1)
         gps=rospy.Publisher('/gps',GPSMessage,queue_size=1)
-        candidate=rospy.Publisher('/planning/localization/handoff_candidate',ControlHandoff,queue_size=4)
+        candidate=rospy.Publisher('/planning/jamming/handoff_candidate',ControlHandoff,queue_size=4)
         feedback=rospy.Publisher('/planning/frenet_feedback_v2',FrenetFeedback,queue_size=4)
         def wait(predicate):
             end=time.monotonic()+5
@@ -32,8 +32,8 @@ class HandoffTest(unittest.TestCase):
         def evidence(req,age=0):
             c=ControlHandoff(epoch=req.epoch,target_mode=req.target_mode,valid=True,longl_cmd_type=1,accel=.2)
             c.header.stamp=rospy.Time.now()-rospy.Duration(age)
-            c.header.frame_id='/mpc_controller' if c.target_mode==0 else '/localization_controller'
-            c.state_stamp=c.trajectory_stamp=c.header.stamp;c.state_frame='map' if c.target_mode==0 else 'local/test'
+            c.header.frame_id='/mpc_controller' if c.target_mode==0 else rospy.get_param('/planning_mode/jamming_controller','/localization_controller')
+            c.state_stamp=c.trajectory_stamp=c.header.stamp;c.state_frame='map' if c.target_mode==0 else rospy.get_param('/asmc_control_selector/jamming_frame_prefix','local/')+'test'
             return c
         old=evidence(request);old.epoch-=1;candidate.publish(old);time.sleep(.015);self.assertEqual(modes[-1],0)
         stale=evidence(request,.3);candidate.publish(stale);time.sleep(.015);self.assertEqual(modes[-1],0)

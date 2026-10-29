@@ -16,6 +16,7 @@
     $('info').textContent=r?JSON.stringify({run:r.run_id,frame:r.frame,plan:r.plan_sequence,inputs:r.inputs,reason:r.reason,
       source_age_s:r.age_s,target_kph:r.requested_kph,selected_kph:r.selected_kph,speed_reason:r.speed_reason,
       curve_kph:r.curve_kph,stopping_space_kph:r.space_kph,planning_ms:r.processing_ms,
+      required_stopping_m:r.required_stopping_m,available_stopping_m:r.available_stopping_m,recovery_extension_m:r.recovery_extension_m,
       assisted:r.assisted,recovery_obb_overlap:r.recovery_obb_overlap,expanded:r.expanded,
       candidates_omitted:r.candidates_omitted,budget_exhausted:r.budget_exhausted,journal_dropped:r.journal_dropped},null,2):'local.launch는 기본 계산 전용입니다.';
     $('failures').textContent=JSON.stringify(r?.rejected||{},null,2);$('control').textContent=JSON.stringify(c||{},null,2);

@@ -10,6 +10,11 @@ except `UrbanFeatureDebug` is now `asmc_msgs/UrbanFeatureDebug`.
 roslaunch asmc_planner autonomy_no_bridges_v2.launch
 ```
 
+전체 컨테이너 단독 실행은 `/root/ws`의 `./scripts/drive.sh`를 쓴다.
+LOCAL 선택은 `./scripts/drive.sh jamming_planner:=local`이다. master11311·bridge·인지·판제·
+웹8088/8091을 포함한다. 위 `autonomy_no_bridges_v2.launch`는 기존 분리 실행용이며 중복 실행하지 않는다.
+[실행/복귀 안내](../../docs/operations/commands.md#local-배포-선택과-기본-방식-복귀--2026-10-29)를 따른다.
+
 신호등 추론·발행은 카메라 담당의 `asmc_camera/camera.launch`가 단독 소유합니다.
 판제는 `/perception/traffic_light/detection`을 소비하며 별도 ResNet을 시작하지 않습니다.
 기존 `traffic_light`·장치·checkpoint·camera_topic 인자는 제거했습니다. 실행 중 중단·재개·주기는

@@ -41,6 +41,7 @@ class ControlSelector final {
   bool jamming_received_ = false;
   bool smooth_handoff_=false,pending_handoff_=false;
   bool initial_anchor_ready_=true;
+  std::string jamming_controller_="/localization_controller",jamming_frame_prefix_="local/";
   PlanningMode pending_mode_=PlanningMode::NORMAL;
   ros::Subscriber request_sub_,candidate_sub_,anchor_sub_;
   ros::Publisher handoff_trace_pub_;

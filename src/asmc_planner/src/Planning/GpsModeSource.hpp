@@ -46,7 +46,8 @@ class GpsModeSource final {
   double approach_speed_mps_=0,approach_distance_m_=0;
   asmc_msgs::ControlHandoff handoff_request_;
   ros::SteadyTime handoff_started_;
-  ros::Publisher handoff_request_pub_,prepare_pub_;
+  ros::Publisher handoff_request_pub_,prepare_pub_,approach_pub_;
+  std::string jamming_controller_;
   ros::Subscriber candidate_sub_;
   ros::Publisher mode_pub_;
   ros::Publisher status_pub_;

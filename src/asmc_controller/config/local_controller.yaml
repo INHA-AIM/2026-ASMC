@@ -5,3 +5,5 @@
 prediction_horizon: 49
 steering_change_cost: 25.0
 heading_cost: 6.0
+# Local solver-only cap. Shared actuator conversion/NORMAL bounds are retained.
+acceleration_limit_mps2: 1.0

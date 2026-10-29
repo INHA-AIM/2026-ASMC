@@ -1,27 +1,35 @@
 schema_version: 1
 registry_id: asmc_msgs_contract_registry_v1
 package: asmc_msgs
-
-# Every checked-in asmc_msgs type must be owned by exactly one contract below.
-# The registry contains locations, not duplicate message definitions or MD5s.
 contracts:
-  - path: config/contracts/hd_map_topic_contract_v1.yaml
-    message_sections: [legacy_messages, new_messages]
-  - path: config/contracts/perception_runtime_topic_contract_v1.yaml
-    message_sections: [messages]
-  - path: config/contracts/lidar_candidate_topic_contract_v1.yaml
-    message_sections: [messages]
-  - path: config/contracts/planning_debug_topic_contract_v1.yaml
-    message_sections: [messages]
-  - path: config/contracts/camera_object_observation_v1.yaml
-    message_sections: [messages]
-  - path: config/contracts/camera_inference_control_v2.yaml
-    message_sections: [messages]
-  - path: config/contracts/sensor_frame_timing_v1.yaml
-    message_sections: [messages]
-  - path: config/contracts/camera_model_grid_timing_v1.yaml
-    message_sections: [messages]
-  - path: config/contracts/camera_ground_projection_v1.yaml
-    message_sections: [messages]
-  - path: config/contracts/localization_control_v1.yaml
-    message_sections: [messages]
+- path: config/contracts/hd_map_topic_contract_v1.yaml
+  message_sections:
+  - legacy_messages
+  - new_messages
+- path: config/contracts/perception_runtime_topic_contract_v1.yaml
+  message_sections:
+  - messages
+- path: config/contracts/lidar_candidate_topic_contract_v1.yaml
+  message_sections:
+  - messages
+- path: config/contracts/planning_debug_topic_contract_v1.yaml
+  message_sections:
+  - messages
+- path: config/contracts/camera_object_observation_v1.yaml
+  message_sections:
+  - messages
+- path: config/contracts/camera_inference_control_v2.yaml
+  message_sections:
+  - messages
+- path: config/contracts/sensor_frame_timing_v1.yaml
+  message_sections:
+  - messages
+- path: config/contracts/camera_model_grid_timing_v1.yaml
+  message_sections:
+  - messages
+- path: config/contracts/camera_ground_projection_v1.yaml
+  message_sections:
+  - messages
+- path: config/contracts/jamming_control_v1.yaml
+  message_sections:
+  - messages

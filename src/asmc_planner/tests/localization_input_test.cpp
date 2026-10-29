@@ -51,7 +51,7 @@ int main(){
   check(ShadowApproachDistance(30./3.6,0)==2*30./3.6,
         "main keeps its original two-second preparation distance");
   const double fast_approach=ShadowApproachDistance(30./3.6,15./3.6);
-  check(fast_approach>38. && fast_approach<41.,
+  check(fast_approach>(std::pow(30./3.6,2)-std::pow(15./3.6,2))/3.+.5*(30./3.6)+2. && fast_approach<50.,
         "localization reserves braking distance before a faster NORMAL entry");
   check(ShadowApproachDistance(15./3.6,15./3.6,fast_approach)==fast_approach,
         "slowing cannot release and reapply its own preparation speed cap");

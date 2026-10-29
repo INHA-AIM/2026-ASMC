@@ -8,6 +8,7 @@
   <arg name="hood_crop_bottom_ratio" default="0.0"/>
   <arg name="ego_mask_enabled" default="$(eval float(arg('hood_crop_bottom_ratio')) == 0)"/>
   <arg name="ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
+  <arg name="smooth_handoff" default="false"/>
   <arg name="enable_control" default="false"/>
   <arg name="lookahead_distance" default="8.0"/>
   <arg name="target_speed_kph" default="20.0"/>
@@ -170,6 +171,7 @@
   </include>
   <node pkg="lane_boundary_adapter" type="camera_bbox_lane_change_node" name="camera_bbox_lane_change" output="screen" required="true">
     <param name="clipped_tracking_speed_kph" value="$(arg clipped_tracking_speed_kph)"/>
+    <param name="smooth_handoff" value="$(arg smooth_handoff)"/>
     <param name="enable_control" type="bool" value="$(arg enable_control)"/>
     <param name="lookahead_distance" type="double" value="$(arg lookahead_distance)"/>
     <param name="target_speed_kph" type="double" value="$(arg target_speed_kph)"/>

@@ -4,6 +4,10 @@
 #include <cstdio>
 #include <string>
 #include <utility>
+#include <openssl/sha.h>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
 
 namespace asmc_planner {
 namespace {
@@ -15,6 +19,13 @@ JammingDetectorConfig LoadConfig(const ros::NodeHandle& params) {
   return config;
 }
 double Now() { return ros::SteadyTime::now().toSec(); }
+std::string Digest(const std::string& file){
+  std::ifstream input(file,std::ios::binary);if(!input)throw std::runtime_error("cannot open jamming route contract file");
+  SHA256_CTX context;SHA256_Init(&context);char block[8192];
+  while(input){input.read(block,sizeof block);SHA256_Update(&context,block,input.gcount());}
+  unsigned char result[SHA256_DIGEST_LENGTH];SHA256_Final(result,&context);
+  std::ostringstream out;for(auto byte:result)out<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(byte);return out.str();
+}
 }  // namespace
 
 GpsModeSource::GpsModeSource(ros::NodeHandle nh)
@@ -26,14 +37,16 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   params.param("shadow_zone/path_file", path_file, std::string());
   params.param("recovery_timeout_s", recovery_timeout_s_, recovery_timeout_s_);
   params.param("smooth_handoff",smooth_handoff_,false);
-  params.param("localization_approach_speed_kph",approach_speed_mps_,0.);
-  if(!std::isfinite(approach_speed_mps_)||approach_speed_mps_<0||approach_speed_mps_>15.)
+  params.param("approach_speed_kph",approach_speed_mps_,0.);
+  if(!std::isfinite(approach_speed_mps_)||approach_speed_mps_<0||approach_speed_mps_>60.)
     throw std::runtime_error("invalid localization approach speed");
   approach_speed_mps_/=3.6;
+  params.param<std::string>("jamming_controller",jamming_controller_,"/localization_controller");
   if(smooth_handoff_) {
-    handoff_request_pub_=nh_.advertise<asmc_msgs::ControlHandoff>("/planning/localization/handoff_request",1,true);
-    prepare_pub_=nh_.advertise<std_msgs::Bool>("/planning/localization/prepare",1,true);
-    candidate_sub_=nh_.subscribe("/planning/localization/handoff_candidate",4,&GpsModeSource::candidateCallback,this);
+    handoff_request_pub_=nh_.advertise<asmc_msgs::ControlHandoff>("/planning/jamming/handoff_request",1,true);
+    prepare_pub_=nh_.advertise<std_msgs::Bool>("/planning/jamming/prepare",1,true);
+    approach_pub_=nh_.advertise<std_msgs::Bool>("/planning/jamming/approach",1,true);
+    candidate_sub_=nh_.subscribe("/planning/jamming/handoff_candidate",4,&GpsModeSource::candidateCallback,this);
   }
   std::string recovery_ready_topic;
   params.param<std::string>("recovery_ready_topic",recovery_ready_topic,"");
@@ -51,6 +64,11 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
     params.param("shadow_zone/lateral_tolerance_m", lateral_m, lateral_m);
     params.param("shadow_zone/heading_tolerance_rad", heading_rad, heading_rad);
     // 경로를 못 읽으면 조용히 끄지 않는다. 음영 진입을 놓치면 MPC가 GPS 없이 달린다.
+    std::string path_sha,links_file,links_sha;
+    if(params.getParam("path_sha256",path_sha)&&Digest(path_file)!=path_sha)throw std::runtime_error("jamming route SHA mismatch");
+    if(params.getParam("links_sha256",links_sha)){
+      if(!params.getParam("links_file",links_file)||Digest(links_file)!=links_sha)throw std::runtime_error("jamming link map SHA mismatch");
+    }
     zone_.reset(new ShadowZone(path_file, start_m, end_m, lateral_m, heading_rad));
     std::string state_topic;
     params.param("shadow_zone/state_topic", state_topic, std::string("/planning/vehicle/state"));
@@ -102,11 +120,14 @@ void GpsModeSource::stateCallback(const asmc_msgs::VehicleState::ConstPtr& messa
   double station = -1.0;
   const bool inside = zone_->Contains(message->x, message->y, message->yaw, &station);
   if(smooth_handoff_) {
-    const double lookahead=ShadowApproachDistance(message->speed,approach_speed_mps_,approach_distance_m_);
+    const double lookahead=ShadowApproachDistance(message->speed,approach_speed_mps_,approach_distance_m_,message->acceleration);
     approaching_=inside||(approach_speed_mps_>0
         ?zone_->ApproachingAlongRoute(message->x,message->y,message->yaw,lookahead)
         :zone_->Approaching(message->x,message->y,message->yaw,lookahead));
     approach_distance_m_=approaching_?lookahead:0.;
+    if(mode_==PlanningMode::NORMAL && approaching_ && !handoff_pending_ &&
+       zone_->ApproachingAlongRoute(message->x,message->y,message->yaw,std::max(1.,std::abs(message->speed)*.35)))
+      beginHandoff(PlanningMode::JAMMING);
     publishPrepare();
   }
   zone_station_m_ = inside ? station : -1.0;
@@ -142,10 +163,15 @@ bool GpsModeSource::recoveryReady() const {
 void GpsModeSource::timerCallback(const ros::SteadyTimerEvent&) {
   const double now = Now();
   if (detector_.Update(now)) onDetectorChange();
+  if(smooth_handoff_ && handoff_pending_ && detector_.mode()==PlanningMode::NORMAL &&
+     (ros::SteadyTime::now()-handoff_started_).toSec()>.5){
+    handoff_pending_=false;handoff_request_.valid=false;handoff_request_pub_.publish(handoff_request_);
+  }
   if(smooth_handoff_ && handoff_pending_) {
     handoff_request_pub_.publish(handoff_request_);
-    if((ros::SteadyTime::now()-handoff_started_).toSec()>.25)
-      publishMode(static_cast<PlanningMode>(handoff_request_.target_mode),"handoff preparation deadline; target safety checks required");
+    if(detector_.mode()==PlanningMode::JAMMING && (ros::SteadyTime::now()-handoff_started_).toSec()>.25)
+    {publishMode(static_cast<PlanningMode>(handoff_request_.target_mode),"handoff preparation deadline; target safety checks required");
+      handoff_pending_=false;handoff_request_.valid=false;handoff_request_pub_.publish(handoff_request_);}
   }
   publishPrepare();
   if (recovering_ && (ros::SteadyTime::now() - recovery_started_).toSec() >= recovery_timeout_s_) {
@@ -173,7 +199,8 @@ void GpsModeSource::onDetectorChange() {
     ready_frames_ = 0;
     recovery_ready_=false;
     if(smooth_handoff_) {
-      if(mode_!=PlanningMode::JAMMING ||
+      handoff_started_=ros::SteadyTime::now();
+      if(mode_!=PlanningMode::JAMMING || !handoff_request_.valid ||
          (handoff_pending_ && handoff_request_.target_mode==static_cast<uint8_t>(PlanningMode::JAMMING)))
         beginHandoff(PlanningMode::JAMMING);
       else {handoff_pending_=false;handoff_request_.valid=false;handoff_request_.epoch=ros::SteadyTime::now().toNSec();handoff_request_pub_.publish(handoff_request_);}
@@ -211,7 +238,7 @@ void GpsModeSource::beginHandoff(PlanningMode target) {
 
 void GpsModeSource::candidateCallback(const asmc_msgs::ControlHandoff::ConstPtr& m) {
   if(!handoff_pending_ || !asmc_msgs::handoff::Candidate(*m,handoff_request_,ros::Time::now()))return;
-  if(m->header.frame_id!=(m->target_mode==0?"/mpc_controller":"/localization_controller"))return;
+  if(m->header.frame_id!=(m->target_mode==0?"/mpc_controller":jamming_controller_))return;
   if(m->target_mode==0 && (!recoveryReady()||detector_.mode()!=PlanningMode::NORMAL))return;
   if(m->target_mode==1 && detector_.mode()!=PlanningMode::JAMMING)return;
   publishMode(static_cast<PlanningMode>(m->target_mode),"fresh prepared controller command ready");
@@ -220,6 +247,7 @@ void GpsModeSource::candidateCallback(const asmc_msgs::ControlHandoff::ConstPtr&
 
 void GpsModeSource::publishPrepare() {
   if(!smooth_handoff_)return;
+  std_msgs::Bool approach;approach.data=approaching_ && mode_==PlanningMode::NORMAL;approach_pub_.publish(approach);
   std_msgs::Bool prepare;prepare.data=approaching_ || mode_==PlanningMode::JAMMING ||
       (handoff_pending_&&handoff_request_.target_mode==1);
   prepare_pub_.publish(prepare);

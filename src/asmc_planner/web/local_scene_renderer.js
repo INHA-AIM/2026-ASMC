@@ -28,15 +28,17 @@ window.createLocalExperimentRenderer = canvas => {
     if(row&&raster&&detail?.raster_available&&(options.road!==false)){const R=row.scene?.rotation||[1,0,0,0,1,0,0,0,1],z=row.scene?.ground_z??-.36;
       // Display the producer's plane grid in exactly the planner's level frame.
       // This is an affine display transform, not another camera projection.
-      const A=R[0]-R[2]*R[6]/R[8],B=R[1]-R[2]*R[7]/R[8],D=R[3]-R[5]*R[6]/R[8],E=R[4]-R[5]*R[7]/R[8],r=detail.resolution;
-      const x=A*detail.xmax+B*detail.ymax+R[2]*z/R[8], y=D*detail.xmax+E*detail.ymax+R[5]*z/R[8];
-      const origin=xy(x,y);ctx.save();ctx.transform(30*E*r,30*B*r,30*D*r,30*A*r,origin[0],origin[1]);ctx.imageSmoothingEnabled=false;ctx.drawImage(raster,0,0);ctx.restore();}
+      const t=row.scene?.source_in_plan||[0,0,0],c=Math.cos(t[2]),s=Math.sin(t[2]);
+      const a=R[0]-R[2]*R[6]/R[8],b=R[1]-R[2]*R[7]/R[8],d=R[3]-R[5]*R[6]/R[8],e=R[4]-R[5]*R[7]/R[8];
+      const A=c*a-s*d,B=c*b-s*e,D=s*a+c*d,E=s*b+c*e,r=detail.resolution;
+      const x=t[0]+A*detail.xmax+B*detail.ymax+(c*R[2]-s*R[5])*z/R[8], y=t[1]+D*detail.xmax+E*detail.ymax+(s*R[2]+c*R[5])*z/R[8];
+      const origin=xy(x,y);ctx.save();ctx.transform(30*E*r,30*B*r,30*D*r,30*A*r,origin[0],origin[1]);ctx.imageSmoothingEnabled=false;ctx.drawImage(raster,0,0);ctx.fillStyle='rgba(80,170,200,.55)';(row.scene?.recent_road_runs||[]).forEach(([r,a,b])=>ctx.fillRect(a,r,b-a+1,1));ctx.restore();}
     ctx.strokeStyle='#314254';ctx.fillStyle='#94abbd';ctx.font='12px sans-serif';
     for(let x=-2;x<=20;x+=2){const y=xy(x,0)[1];ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(640,y);ctx.stroke();ctx.fillText(x+'m',8,y-4);}
     for(let y=-10;y<=10;y+=2){const x=xy(0,y)[0];ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,760);ctx.stroke();}
     if(!row){ctx.restore();return;}const v=row.vehicle||{width:2.160835,front:3.845,rear:.79};
     if(options.family!==false){(row.scene?.boundaries||[]).forEach(b=>line(b.points,b.role===2?'#ffe46d':'#e1e6f0',2));line(row.scene?.home||[],'#7ab9ff',2,[8,5]);}
-    if(options.objects!==false)(row.scene?.obstacles||[]).forEach(o=>{const points=o.polygon||[];if(!points.length)return;line([...points,points[0]],o.id===row.blocking_id?'#ff6b5f':'#f1a66f',2);const p=xy(...points[0]);ctx.fillStyle='#ffc594';if(options.labels!==false)ctx.fillText('#'+o.id+' '+(o.camera_class||o.classification||'unknown'),p[0],p[1]-4);});
+    if(options.objects!==false)(row.scene?.obstacles||[]).forEach(o=>{const points=o.polygon||[];if(!points.length)return;if(o.motion_sweep?.length)line([...o.motion_sweep,o.motion_sweep[0]],'#6ac7ff',1,[6,4]);if(!row.valid&&o.id===row.blocking_id&&o.motion_uncertainty_m>0){ctx.save();ctx.lineJoin='round';line([...points,points[0]],'#ef9c4933',60*o.motion_uncertainty_m);ctx.restore();}line([...points,points[0]],o.retained_measurement?'#cc9aff':o.id===row.blocking_id?'#ff6b5f':'#f1a66f',2,o.retained_measurement?[5,4]:[]);const p=xy(...points[0]);ctx.fillStyle=o.retained_measurement?'#cc9aff':'#ffc594';if(options.labels!==false)ctx.fillText('#'+o.id+' '+(o.camera_class||o.classification||'unknown')+(o.retained_measurement?' · 과거 측정 '+Math.round(o.source_age_s*1000)+'ms':'')+(!row.valid&&o.id===row.blocking_id?' · 시각 여유 '+Math.round((o.motion_uncertainty_m||0)*100)+'cm':''),p[0],p[1]-4);});
     if(options.candidates!==false)(row.candidates||[]).forEach(c=>line(c.path,c.reason==='sweep_passed'?'#99aabb':'#9e5e71',1,[3,4]));
     const path=row.path||[];if(options.trajectory!==false)line(path,'#48ffe0',3);
     if(options.sweep!==false)path.filter((p,i)=>i%5===0).forEach(p=>body(p,v,'#278982'));

@@ -11,7 +11,10 @@ def foreign_ros_owners():
         def make_connection(self,host):
             connection=super().make_connection(host);connection.timeout=.3;return connection
     owners={}
-    for port in (11311,11348):
+    from urllib.parse import urlsplit
+    own_port=urlsplit(os.environ.get('ROS_MASTER_URI','')).port
+    for port in (11311,11348,11371,11372,11373,11374):
+        if port==own_port:continue
         try:
             rpc=xmlrpc.client.ServerProxy('http://127.0.0.1:'+str(port),transport=Transport())
             code,_,state=rpc.getSystemState('/localization_foreign_owner_guard')

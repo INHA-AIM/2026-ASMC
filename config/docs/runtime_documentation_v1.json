@@ -50,6 +50,11 @@
       "internal_args": []
     },
     {
+      "title": "Single-container complete driving stack",
+      "path": "src/asmc_planner/launch/autonomy.launch",
+      "internal_args": []
+    },
+    {
       "title": "Integrated planning/control",
       "path": "src/asmc_planner/launch/autonomy_no_bridges_v2.launch",
       "internal_args": []
@@ -154,6 +159,7 @@
     "src/asmc_camera/docs/bdd-pretrained-experiment.md",
     "src/asmc_lidar/docs/web-monitor.md",
     "src/asmc_lidar/docs/planning-runtime.md",
-    "src/asmc_planner/docs/main-integration-20261026.md"
+    "src/asmc_planner/docs/main-integration-20261026.md",
+    "docs/operations/jamming-comparison.md"
   ]
 }

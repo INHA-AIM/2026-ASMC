@@ -9,6 +9,7 @@
 #include "Planning/Compatibility/lane_change_commit_coordinator.hpp"
 #include "Parser/PlanningInput.hpp"
 #include "Planning/Compatibility/steady_freshness.hpp"
+#include "local/preparation_limit.hpp"
 namespace asmc_planner {
 template<class RuntimePort>
 bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
@@ -406,6 +407,15 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
+    }
+    if constexpr(std::is_same_v<RuntimePort,frenet_planner_ros::PlanningPort>) {
+        // LOCAL opt-in only: decelerate on the existing NORMAL path during the
+        // 30m preparation zone. Waiting until blackout handed35km/h to a10km/h
+        // short-range planner and forced its stopping-space guard to reject.
+        local::ApplyPreparationLimit(planner_command, port.local_prepare_enabled_,
+            port.local_preparing_,
+            (ros::SteadyTime::now()-port.local_prepare_received_).toSec(),
+            port.local_entry_cap_kph_);
     }
     // Acceptance can rebind this cycle to an older locked command. A new
     // request's constraint must never be applied to that different identity.

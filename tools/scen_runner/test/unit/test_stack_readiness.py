@@ -3,6 +3,8 @@ from pathlib import Path
 import sys
 from types import SimpleNamespace as S
 import unittest
+from unittest.mock import patch
+import os
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scen_runner.orchestration.control import settings
@@ -10,6 +12,14 @@ from scen_runner.orchestration.readiness import Readiness
 
 
 class ReadinessTest(unittest.TestCase):
+    def test_retired_shadow_flags_cannot_start_current_planning_algorithm(self):
+        from scen_runner.orchestration.stack import launch_configuration
+        for suffix in ('CONTACT_CLEARANCE','LOCAL_CONTACT','SEMANTIC',
+                       'NEAR_EGO_LIDAR','APPROACH_CAP','BEV_MODE'):
+            with self.subTest(flag=suffix), patch.dict(os.environ, {'ASMC_SHADOW_'+suffix:'true'}):
+                with self.assertRaisesRegex(ValueError, 'S1/S2/S3 runtime retired'):
+                    launch_configuration('planning', {})
+
     def setUp(self):
         self.probe = Readiness(settings())
         self.pose = dict(x=10., y=20., yaw=90.)

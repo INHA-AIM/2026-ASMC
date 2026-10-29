@@ -1,5 +1,7 @@
 # ASMC 실행 명령
 
+> 이 비교 브랜치의 세 방식 선택·포트·master·A448 정책은 [세 재밍 플래너 비교 실행](jamming-comparison.md)이 현재 정본입니다. 아래의 과거 개별 브랜치 안내와 구분합니다.
+
 `asmc-ros-noetic`의 `/root/ws`는 실행할 checkout입니다. 현재 worktree를 유지하고
 다른 checkout을 빌드한 setup과 섞지 않습니다. 인자는 `name:=value`이며
 [실제 launch 인자/기본값](launch-reference.md)은 소스에서 자동 생성합니다.
@@ -491,6 +493,93 @@ rosservice call /test/lidar/lidar_pipeline/reset "{}"
 ## LOCAL-1 실험 계산과 모니터
 
 일반 autonomy 실행과 별도로 개발 중인 GPS 독립 경로다. 현재 운영 기본이나
+## 구성 요소별 LOCAL 음영 주행 선택
+
+2026-10-29 후속 요청의 현재 권장은 아래 [단일 컨테이너 실행](#local-배포-선택과-기본-방식-복귀--2026-10-29)이다.
+공유 master는 이전 운용의 선택 사례이며 자동으로 다른 컨테이너의 master/bridge에 연결하지 않는다.
+
+여러 host-network 컨테이너가 브릿지를 공유할 때 master는 기본 컨테이너 한 곳에서만 실행한다.
+각 컨테이너는 **자기 `/root/ws/devel/setup.bash`**를 source한다. 다른 worktree의 setup을
+겹쳐 읽지 않는다. `network=none` 컨테이너는 이 설정만으로 공유 master에 접속할 수 없다.
+
+```bash
+# 기본 컨테이너의 별도 터미널: 이미 roscore가 있으면 다시 시작하지 않는다.
+roscore -p 11311
+```
+
+LOCAL worktree를 연결한 컨테이너에서 아래 환경과 실행 명령을 사용한다.
+새 대화형 Bash에 같은 설정이 적용돼 있으면 export는 생략할 수 있다.
+현재 LOCAL 컨테이너의 대화형 셸과 `/root/local-env.sh` 모두11311이다.
+bag/회귀 실행기는 자식 프로세스에 시험용 master를 명시하며 사용자 셸을 바꾸지 않는다.
+
+```bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source /root/ws/devel/setup.bash
+export ROS_MASTER_URI=http://127.0.0.1:11311
+export ROS_HOSTNAME=127.0.0.1
+unset ROS_IP
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
+```
+
+이 명령은 **차량 제어를 포함**한다. bridge·camera·LiDAR는 공용 master에 각각 한 세트만
+별도로 실행한다. 다른 컨테이너의 autonomy나 `local.launch`, 구 BBox follower와 동시에
+실행하지 않는다. `jamming_planner`의 기본값은 기존 `camera`이며, `local`을 선택하면:
+
+- 기존 GPS/구간 mode 판단과 selector를 재사용한다. 일반 구간은 기존 NORMAL MPC,
+  음영구간은 LOCAL planner/MPC가 담당하고, `/ctrl_cmd` 생산자는 selector 하나다.
+- 구 BBox classifier/follower를 시작하지 않는다. LOCAL MPC는 NORMAL 중 계산하지 않는다.
+  경로는 기존 음영 진입 지점30m 전부터 준비한다. 같은 session·설정·local frame이면
+  준비 입력과 경로를 진입 때 유지하며, 센서 초기화·세대 변경 때만 폐기한다.
+- 기존 카메라 결과에서 IMU 정합 노면 probability/coverage를 만드는 입력도 시작한다.
+  추가 모델 추론은 없다. 같은 `semantic_space_trial`을 이미 사용 중이면
+  `local_semantic_input:=false`를 지정한다.
+- `local_speed_cap_kph` 기본은10이다. 관측·곡률·복구
+  제한은 그대로이며 속도/완주 수락을 보장하는 옵션이 아니다.
+- 웹은 동일한 `http://localhost:8088/web/index_v2.html`이다. LOCAL 경로·노면·family·
+  OBB와 제어 trace를 표시한다. 별도 dashboard 서버를 켜지 않는다.
+
+판제 알고리즘 기본값 승격이 아니라 명시적 실행 선택이다.
+현재 이 브랜치의 LOCAL YAML은 노면 reference 복구·짧은 기하 운동 예측·안쪽 최소
+여유30cm·쾌적 감속2m/s²·controlled brake3m/s² 후보를 사용한다. 정적 asset 기억은
+OFF이며, CAN 조향 시작상태 후보는 별도 시험 profile에서만 켠다.
+현재 선택한 LOCAL profile은 최신 rigid 기하의 비영점 나이 외곽 후보와 실제 좁은 sweep의
+5km/h maneuver 상한을 사용한다. 이는 YOLO 검출 감속이나 물체의 정적 확정이 아니다.
+장애물 없는 LOCAL 상한10km/h, 사용자 요청 회복 목표5km/h를 사용한다. 물리 검사는 더 낮출 수 있다. 6m 복구/경로 유지/단계적5선은
+별도 실험 설정이며 사용자 기본 실행에 자동 활성화하지 않는다.
+[LOCAL-2H 1차 비교·가용 범위](../records/planning/2026-10-29-local-first-comparison.md)와
+[LOCAL-2G 당시 검증](../records/planning/2026-10-29-local-obstacle-campaign.md)을
+확인한다. 거리 도달과 공급·충돌 수락은 구분하며, 늦은 횡단·작은 동물 사례까지
+해결된 운영 정본으로 표시하지 않는다. 기본 camera 선택과 LOCAL10km/h 상한은 유지한다.
+
+## 자동 LOCAL 시나리오의 실시간 대시보드
+
+이 worktree의 `tools/scen_runner/run_local_trial.py`는 통합(`--integrated`)·LOCAL 단독
+시험 모두 관측 서버를 자동으로 시작한다. 시험 중에는 다음 주소만 열거나 새로고침한다.
+별도 roscore·autonomy 실행이나 master 포트 입력은 필요 없다.
+
+**http://localhost:8088/web/index_v2.html**
+
+기본 `자동 NORMAL/map · JAMMING/local` 보기는 통합 전환을 따라간다. LOCAL 후보·선택
+경로·노면·family·fusion·정지 사유·MPC를 집중 확인하려면 **LOCAL 경로·노면·fusion**을
+선택한다. 상단에 branch/revision(+미커밋 여부)·run·실제 master·준비/주행/종료·연결
+상태가 표시된다. run 변경·시험 종료·heartbeat 만료 때 과거 관측/경로를 비운다.
+원본 노면은 기존 source-exact API로 받으며 새 추론·영상 인코딩을 추가하지 않는다.
+
+8088이 다른 실행에 점유돼 있으면 해당 실행을 유지하고18088부터 빈 포트를 선택한다.
+정확한 주소는 시험 `run.log`의 `Live trial dashboard`와 `monitor.json`에서 확인한다.
+이후 같은 worktree의 시험은 그 주소를 재사용한다. 실제 ROS 관측 서버는 시험 소유
+master에만 연결되고 종료 때 정리한다. 작은 HTTP 입구만 다음 시험/종료 안내를 위해
+남는다. 이후 같은 worktree에서 수동 dashboard를 시작하면 **종료된 관측 입구만**
+자동 반환한다. 진행 중인 시험이나 다른 worktree의 포트는 반환하지 않는다.
+
+`--no-dashboard`는 관측 비용 OFF 대조용이다. `resources.jsonl`에 관측 프로세스의
+별도 RSS/CPU 표본, `monitor.json`에 실제 주소·master·identity·HTTP 수량/시간을 남긴다.
+웹을 여는 부하와 계획/제어 지연을 섞어서 성능 향상으로 보고하지 않는다.
+
+## LOCAL 실험 계산과 모니터
+
+아래는 통합 주행 대신 계산만 보는 독립 preview 방법이다. 현재 운영 기본이나
 전 터널 수락 구성이 아니다. [검증 상태·제한](../records/planning/2026-10-28-local-planner.md)을 먼저 확인한다.
 bridge·camera·LiDAR가 한 세트 실행 중인 outer workspace에서 다음을 사용한다.
 
@@ -518,6 +607,7 @@ NORMAL의 map 궤적과 local 궤적을 같은 좌표처럼 섞지 않는다. �
 | 내부 실험 인자 | 기본·용도 |
 |---|---|
 | `enable_control` | false. true는 기존 음영 제어 생산자를 제외한 소유권 통제시험에서만 사용 |
+| `enable_control` | false. 독립 제어 시험 또는 위 통합 launch 내부에서만 true. 별도 autonomy와 중복 시작 금지 |
 | `speed_cap_kph` |25. 경로·관측·회복 제한이 더 낮으면 그 이유와 실제 상한 표시 |
 | `recovery` |true. 신선한 semantic의 저속3km/h 회복 시험; 충돌 없음의 증명 아님 |
 | `near_blind_assist` |false. S3 미관측 보조의 명시적 비교용, 켤 때≤5km/h 시험만 |
@@ -529,3 +619,68 @@ local 제어의 소유권을 함께 관리한다. 실행 중인 정상 판제를
 접촉·원복 결과를 기록한다. bag 비교는 `replay_local.py`, 본차로/급제동 평가는
 `scen_runner.records.analyze_local_following`, 시각/자세 대조는
 `scen_runner.records.audit_local_inputs`를 사용한다.
+
+LOCAL-2B는 [경로·속도·실패 검수](../records/planning/2026-10-28-local-path-stability.md)에
+현재 결과를 기록한다. `http://localhost:8000/`의 **LOCAL-2B 주행·실패 검수** 바로가기와
+**로컬 경로·주행·실패 검수** 분류에서 시험을 선택한다. 주행 그래프와 각 실패의 정확한
+RGB/semantic source·선택/탈락 경로를 연결한다. 실시간 화면에는 선택 길이/탐색 한계,
+본차로 근거 끝, 과거 노면의 나이도 표시한다. 청회색은 새 추론이 아닌 과거 실제 노면이다.
+
+`src/asmc_planner/config/local_planner.yaml`의 `causal_road_memory`는 근거리 과거 노면
+보조의 내부 비교 스위치다. planner/controller의 `acceleration_limit_mps2`는 둘 다1.0으로
+맞춘 local 전용 설정이다. 실행 목표25와 실제 허용속도는 다르며 관측 범위와 정지거리
+때문에 낮아질 수 있다. NORMAL 설정이나 기존 jamming follower에는 적용되지 않는다.
+
+실험 목록 일부만 갱신할 때는 `build_experiment_gallery_hub.py --artifacts <root> --group <run-id>`를
+사용한다. 지정하지 않은 실험과 기존 번호를 보존한다. 전체 재탐색은 `--group` 없이 실행한다.
+
+
+## LOCAL 배포 선택과 기본 방식 복귀 · 2026-10-29
+
+현재 권장은 **한 컨테이너가 ROS master·bridge·카메라·LiDAR·판제·두 웹을 모두 소유**하는 방식이다.
+main 포트 ROS11311·판제8088·LiDAR8091과 기존 bridge UDP를 그대로 쓴다. host network는
+컨테이너별로 포트를 분리하지 않으므로 다른 브랜치의 전체 실행은 종료한 뒤 교대한다.
+다른 실행이 있으면 시작을 거부하며 임의로 종료하거나 다른 master에 붙지 않는다.
+
+컨테이너 내부 `/root/ws`에서 기본 카메라 재밍 방식:
+
+```bash
+./scripts/drive.sh
+```
+
+LOCAL 방식:
+
+```bash
+./scripts/drive.sh jamming_planner:=local
+```
+
+실행기는 설정을 펼쳐 중복 노드·TCP/UDP 수신 포트를 확인하고, 공유 simulator lease와11311을
+소유한 뒤 `asmc_planner/autonomy.launch`를 시작한다. 센서 포트 목록을 별도로 복제하지 않는다.
+종료는 Ctrl+C다. 자기 ROS 노드가 종료된 뒤 자기 master와 lease를 반납한다.
+기본으로 복귀할 때 현재 실행을 종료하고 옵션 없는 명령을 쓴다. roscore·bridge·인지·웹을
+별도로 추가 실행하지 않는다. 시작 전 확인만 하려면 `./scripts/drive.sh --check`를 사용한다.
+
+기존 구성 요소별 실행도 유지한다. 이때 같은 컨테이너에11311 master와 bridge를 한 번 실행하고,
+다음 명령은 각각 별도 터미널에서 실행한다. 전체 실행기와 구성 요소 실행을 겹치지 않는다.
+
+```bash
+roslaunch asmc_camera camera.launch
+roslaunch asmc_lidar lidar.launch
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
+```
+
+LOCAL 목표 상한10km/h, 저속 회복 목표5km/h다. 정지하지 않으려면 검증 가능한 대체 경로가
+필요하며 입력 무효·실제 충돌·물리적으로 불가능한 곡률에 속도만5로 덮어쓰지 않는다.
+기본 재밍 방식은 camera로 유지한다. LOCAL에서만 새 planner/MPC/노면 입력을 시작한다.
+
+판제: <http://localhost:8088/web/index_v2.html>. 자동 보기 또는 `LOCAL 경로·노면·fusion`.
+LiDAR: <http://localhost:8091/>. 전체 실행에는 두 웹이 포함되고 GUI를 자동으로 열지 않는다.
+LiDAR 단계별 상세 점군이 필요할 때만 전체 실행에 `lidar_debug:=true`를 추가한다.
+기본 debug OFF에서도 판제 객체 입력과 웹 객체 표시는 유지된다.
+전체 실행의 branch·revision·session/master를 판제 웹 상단에 표시한다. 관측 연결이 끊기면
+과거 경로를 비우며, 상세 유효성·노면 age·MPC 실패 사유는 기존 패널에서 확인한다.
+
+`jamming_planner`는 현재 camera/local만 허용한다. localization 구현은 이번에 추가하지 않았다.
+향후 같은 상호 배타 include와 selector 슬롯에 연결해 명령 소유권·watchdog·모드 인계를 재사용한다.
+[비교·남은 실패](../records/planning/2026-10-29-local-first-comparison.md)와
+[배포 검증](../records/planning/2026-10-29-local-deployment.md)을 함께 확인한다.

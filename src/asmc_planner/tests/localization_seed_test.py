@@ -12,12 +12,12 @@ from asmc_msgs.msg import ControlHandoff, LocalTrajectory, TrajectoryPoint
 class SeedTest(unittest.TestCase):
     def test_seed_survives_first_frame_and_frame_restart(self):
         candidates=[]
-        rospy.Subscriber('/planning/localization/handoff_candidate',ControlHandoff,
+        rospy.Subscriber('/planning/jamming/handoff_candidate',ControlHandoff,
                          lambda m:candidates.append(m),queue_size=20)
         state=rospy.Publisher('/planning/local/odometry',Odometry,queue_size=1)
         path=rospy.Publisher('/planning/local/trajectory',LocalTrajectory,queue_size=1)
         applied=rospy.Publisher('/ctrl_cmd',CtrlCmd,queue_size=1)
-        request=rospy.Publisher('/planning/localization/handoff_request',ControlHandoff,queue_size=1)
+        request=rospy.Publisher('/planning/jamming/handoff_request',ControlHandoff,queue_size=1)
         deadline=time.monotonic()+5
         while not all(p.get_num_connections() for p in (state,path,applied,request)):
             self.assertLess(time.monotonic(),deadline);time.sleep(.01)

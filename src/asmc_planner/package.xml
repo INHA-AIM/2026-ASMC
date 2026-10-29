@@ -16,8 +16,10 @@
   <depend>sensor_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>yaml-cpp</depend>
+  <depend>libssl-dev</depend>
   <depend>boost</depend>
   <depend>asmc_msgs</depend>
+  <depend>asmc_geometry</depend>
   <depend>roscpp</depend>
   <exec_depend>asmc_controller</exec_depend>
   <exec_depend>asmc_hd_map</exec_depend>

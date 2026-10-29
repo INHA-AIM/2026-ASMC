@@ -40,5 +40,15 @@ class CacheTest(unittest.TestCase):
         self.assertIn("not a planner obstacle", snap["camera_alignment"])
 
 
-if __name__ == "__main__":
-    unittest.main()
+class ExactPlanIndexTest(unittest.TestCase):
+    def test_later_plan_arrival_and_epoch_invalidation(self):
+        cache=LocalDebugCache(capacity=2)
+        cache.plan(dict(run_id='r',frame='epoch-a',plan_sequence=1,scene_stamp_ns=100))
+        cache.plan(dict(run_id='r',frame='epoch-a',plan_sequence=2,scene_stamp_ns=200))
+        self.assertEqual(cache.plan_stamp(1,'r','epoch-a'),100)
+        cache.plan(dict(run_id='r',frame='epoch-b',plan_sequence=1,scene_stamp_ns=300))
+        self.assertIsNone(cache.plan_stamp(1,'r','epoch-a'))
+        self.assertEqual(cache.plan_stamp(1,'r','epoch-b'),300)
+
+
+if __name__=='__main__':unittest.main()

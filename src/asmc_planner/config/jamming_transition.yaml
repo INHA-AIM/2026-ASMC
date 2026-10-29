@@ -1,0 +1,14 @@
+# Common route ownership boundary; GPS health remains a separate observation.
+approach_enabled: true
+approach_speed_kph: 25.0
+smooth_handoff: true
+entry_link: A2256W000448
+entry_node: A1256W000456
+path_sha256: f74ff6f53e27c0c4b2cc0e004e5873f7ee1f68f2107f0429f0aad55254d73ee6
+links_sha256: 5ce0fd57da07b83221c0a4d117b0606b2d9c094c8de476a7d1176c78a4dc5b0f
+shadow_zone:
+  station_start_m: 1859.6415782400395
+  station_end_m: 1996.730791531
+physical_tunnel:
+  station_start_m: 1877.744798966
+  station_end_m: 1996.730791531

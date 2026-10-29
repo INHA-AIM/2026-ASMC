@@ -1,10 +1,13 @@
 #include "local/planner.hpp"
+#include "local/speed_profile.hpp"
+#include "local/recovery.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Frenet/Math/Polynomial.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <set>
 #include <tuple>
 
 namespace local_planning {
@@ -25,27 +28,61 @@ std::array<double, 9> GroundRotation(double a, double b) {
                           std::atan2(a, std::sqrt(1 + b * b)));
 }
 namespace {
-double elapsed(std::chrono::steady_clock::time_point t) {
-  return std::chrono::duration<double, std::milli>(
-             std::chrono::steady_clock::now() - t)
-      .count();
+// One affine transform per footprint check; no trigonometry per raster cell.
+// The raster stays in its original camera plane, including unknown cells.
+struct GridTransform {
+  const Grid &g;
+  double c, s;
+  explicit GridTransform(const Grid &grid)
+      : g(grid), c(std::cos(g.source_in_plan[2])),
+        s(std::sin(g.source_in_plan[2])) {}
+  std::array<double, 3> toPlan(double bx, double by) const {
+    const auto &R = g.rotation;
+    const double bz = (g.ground_z - R[6] * bx - R[7] * by) / R[8];
+    const auto q = Rotate(R, bx, by, bz);
+    return {g.source_in_plan[0] + c * q[0] - s * q[1],
+            g.source_in_plan[1] + s * q[0] + c * q[1], q[2]};
+  }
+  std::array<double, 3> toGrid(double x, double y) const {
+    const double dx = x - g.source_in_plan[0], dy = y - g.source_in_plan[1];
+    const double sx = c * dx + s * dy, sy = -s * dx + c * dy;
+    const auto &R = g.rotation;
+    return {R[0] * sx + R[3] * sy + R[6] * g.ground_z,
+            R[1] * sx + R[4] * sy + R[7] * g.ground_z,
+            R[2] * sx + R[5] * sy + R[8] * g.ground_z};
+  }
+};
+} // namespace
+std::array<double, 3> GridToPlan(const Grid &g, double x, double y) {
+  return GridTransform(g).toPlan(x, y);
 }
-double homeAt(const Scene &s, double x) {
+std::array<double, 3> PlanToGrid(const Grid &g, double x, double y) {
+  return GridTransform(g).toGrid(x, y);
+}
+double ReferenceAt(const Scene &s, double x) {
   if (s.home.empty())
     return 0.;
   for (size_t i = 1; i < s.home.size(); ++i)
     if (s.home[i][0] >= x) {
       auto a = s.home[i - 1], b = s.home[i];
-      double q = std::clamp((x - a[0]) / std::max(1e-6, b[0] - a[0]), 0., 1.);
+      // Navigation tangent may reach the axle from a near-field paint gap.
+      // This does not fill a single road/coverage cell.
+      double q = std::min(1., (x - a[0]) / std::max(1e-6, b[0] - a[0]));
       return a[1] + q * (b[1] - a[1]);
     }
   return s.home.back()[1];
 }
+namespace {
+double elapsed(std::chrono::steady_clock::time_point t) {
+  return std::chrono::duration<double, std::milli>(
+             std::chrono::steady_clock::now() - t)
+      .count();
+}
 double homeSlope(const Scene &s, double x) {
-  return (homeAt(s, x + .25) - homeAt(s, x - .25)) / .5;
+  return (ReferenceAt(s, x + .25) - ReferenceAt(s, x - .25)) / .5;
 }
 double homeSecond(const Scene &s, double x) {
-  return (homeAt(s, x + .25) - 2 * homeAt(s, x) + homeAt(s, x - .25)) / .0625;
+  return (ReferenceAt(s, x + .25) - 2 * ReferenceAt(s, x) + ReferenceAt(s, x - .25)) / .0625;
 }
 bool fail(Result &r, const char *reason, double x, double y, int id = -1) {
   ++r.rejected[reason];
@@ -64,10 +101,15 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   for (const auto &o : s.obstacles) {
     double distance = geometry::ConvexPolygonDistance(physical, o.polygon);
     r.minimum_clearance = std::min(r.minimum_clearance, distance);
-    if (distance <= clearance_margin)
+    // Recovery also retains the configured physical clearance and source-age
+    // uncertainty. A crawl label cannot mean zero centimetres of clearance.
+    if (distance <= (c.recovery_geometry?c.margin:clearance_margin) + o.uncertainty+o.extra_clearance)
       return fail(r, "local_obb", p.x, p.y, o.id);
+    if(!o.motion_sweep.empty() && geometry::ConvexPolygonDistance(physical,o.motion_sweep)<=clearance_margin+o.uncertainty+o.extra_clearance)
+      return fail(r,"predicted_object_sweep",p.x,p.y,o.id);
   }
   const auto &g = s.grid;
+  const GridTransform transform(g);
   if (g.rows <= 0 || g.cols <= 0 ||
       g.probability.size() != size_t(g.rows * g.cols) ||
       g.coverage.size() != g.probability.size())
@@ -78,13 +120,12 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   const double pad = clearance_margin + g.resolution * std::sqrt(.5);
   const double front = c.length - c.rear + pad, rear = c.rear + pad,
                half = c.width * .5 + pad;
-  const auto &R = g.rotation;
   int row0 = g.rows, row1 = 0, col0 = g.cols, col1 = 0;
   for (double a : {-rear, front})
     for (double b : {-half, half}) {
       double x = p.x + cs * a - sn * b, y = p.y + sn * a + cs * b;
-      double bx = R[0] * x + R[3] * y + R[6] * g.ground_z,
-             by = R[1] * x + R[4] * y + R[7] * g.ground_z;
+      const auto source = transform.toGrid(x, y);
+      double bx = source[0], by = source[1];
       int row = std::lround((g.xmax - bx) / g.resolution),
           col = std::lround((g.ymax - by) / g.resolution);
       if (row < 0 || row >= g.rows || col < 0 || col >= g.cols)
@@ -110,8 +151,7 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
       double bx = g.xmax - row * g.resolution, by = g.ymax - col * g.resolution;
       // The published grid's points lie on n.p=ground_z. Restore their Z before
       // changing coordinates, rather than applying camera projection twice.
-      double bz = (g.ground_z - R[6] * bx - R[7] * by) / R[8];
-      auto q = Rotate(R, bx, by, bz);
+      auto q = transform.toPlan(bx, by);
       double x = q[0], y = q[1];
       double dx = x - p.x, dy = y - p.y, a = cs * dx + sn * dy,
              b = -sn * dx + cs * dy;
@@ -120,12 +160,24 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
       const int index = row * g.cols + col;
       auto cover = g.coverage[index];
       // Current occupied ego footprint is a geometric fact, not future
-      // free-space.
-      bool current_body =
-          x >= -c.rear && x <= c.length - c.rear && std::abs(y) <= c.width * .5;
+      // free-space. Half a cell covers quantization at the occupied body edge.
+      bool current_body = x >= -c.rear - .5 * g.resolution &&
+                          x <= c.length - c.rear + .5 * g.resolution &&
+                          std::abs(y) <= c.width * .5 + .5 * g.resolution;
       if (cover != 255) {
+        if(c.recovery_geometry)continue; // Only the original bounded near-field recovery.
         if (current_body)
           continue;
+        // Unknown clearance padding is not a measured collision. The physical
+        // swept body still requires evidence; observed nonroad/OBB retain
+        // margin.
+        if (a < -c.rear || a > c.length - c.rear || std::abs(b) > c.width * .5)
+          continue;
+        if (g.recent_road_age.size() == g.coverage.size() &&
+            g.recent_road_age[index] > 0 && g.recent_road_age[index] <= 5.) {
+          ++r.remembered_cells;
+          continue;
+        }
         bool assist = c.blind_assist && bx >= -c.rear - .35 && bx <= 6.5 &&
                       ((cover == 128 && std::abs(by) <= 2.5) ||
                        (cover == 0 && std::abs(by) <= 1.6));
@@ -135,8 +187,22 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
         }
         return fail(r, cover == 128 ? "ego_occlusion" : "unobserved", x, y);
       }
-      if (g.probability[index] < 153)
-        return fail(r, "observed_nonroad", x, y);
+      if (g.probability[index] < 153) {
+        if(c.recovery_geometry) {
+          if(g.exterior_nonroad.size()!=g.coverage.size())
+            return fail(r,"recovery_boundary_unavailable",x,y);
+          if(!g.exterior_nonroad[index]) {++r.soft_margin_cells;continue;}
+        }
+        // Keep physical body +10cm +cell quantization hard. Additional
+        // speed-dependent semantic clearance is a preference, not collision.
+        // Otherwise a single bonnet-edge pixel30cm outside the body can
+        // truncate a clear15m path to40cm at speed. LiDAR veto is unchanged.
+        const double hard = c.margin + g.resolution * std::sqrt(.5);
+        if (a >= -c.rear - hard && a <= c.length - c.rear + hard &&
+            std::abs(b) <= c.width * .5 + hard)
+          return fail(r, c.recovery_geometry?"recovery_exterior_nonroad":"observed_nonroad", x, y);
+        ++r.soft_margin_cells;
+      }
     }
   }
   return true;
@@ -155,145 +221,67 @@ bool CheckSweep(const Scene &s, const Config &c, const Pose &a, const Pose &b,
   }
   return true;
 }
-namespace {
-// Simulation recovery requested for LOCAL-1: fresh semantic evidence continues
-// to guide a short 3km/h path even if a conservative swept-footprint gate
-// fails. This is explicitly NOT collision-free certification. OBB intrusion is
-// costly, retained in the trace, and any physical contact fails the experiment.
-bool Recovery(const Scene &s, const Config &c, Result &out) {
-  if (!c.recovery)
-    return false;
-  const auto &g = s.grid;
-  const auto &R = g.rotation;
-  auto cell = [&](double x, double y) {
-    double bx = R[0] * x + R[3] * y + R[6] * g.ground_z,
-           by = R[1] * x + R[4] * y + R[7] * g.ground_z;
-    int row = std::lround((g.xmax - bx) / g.resolution),
-        col = std::lround((g.ymax - by) / g.resolution);
-    return row >= 0 && row < g.rows && col >= 0 && col < g.cols
-               ? row * g.cols + col
-               : -1;
+// A common distance integral for analytic, lattice and rechecked paths.
+// Goal heuristics guide search only; they cannot bias final cross-method rank.
+double SegmentQualityCost(const Scene &s, const Config &c, const Pose &a,
+                          const Pose &b, unsigned soft_cells) {
+  const double distance = std::hypot(b.x-a.x, b.y-a.y);
+  if (distance < 1e-8) return 0.;
+  auto previous_y = [&](double x, double fallback) {
+    for (size_t i=1; i<s.previous.size(); ++i) {
+      const auto &p=s.previous[i-1], &q=s.previous[i];
+      if (x >= p.x && x <= q.x && q.x > p.x)
+        return p.y + (q.y-p.y)*(x-p.x)/(q.x-p.x);
+    }
+    // No previous support at this x is not evidence to hold its endpoint.
+    return fallback;
   };
-  // Find distinct near-field observed road intervals. HMAAC's near-row
-  // weighting is used as guidance, but its first/last-pixel midpoint is not
-  // copied: that midpoint can lie in an obstacle between disjoint components.
-  std::vector<std::array<double, 2>> goals;
-  for (double x : {4.5, 6., 8.}) {
-    bool open = false;
-    double first = 0, last = 0;
-    for (int column = 0; column <= 100; ++column) {
-      const double y = -5. + .1 * column;
-      int i = cell(x, y);
-      bool road = i >= 0 && g.coverage[i] == 255 && g.probability[i] >= 166;
-      if (road) {
-        if (!open)
-          first = y;
-        last = y;
-        open = true;
-      }
-      if (open && (!road || column == 100)) {
-        if (last - first >= c.width * .65) {
-          goals.push_back({x, .5 * (first + last)});
-          // A broad connected road should not pull an empty-road vehicle
-          // away from its original lane merely to reach the whole-road mean.
-          const double preferred = std::clamp(homeAt(s, x), first, last);
-          if (std::abs(preferred - .5 * (first + last)) > .15)
-            goals.push_back({x, preferred});
-        }
-        open = false;
-      }
-    }
-  }
-  if (goals.empty())
-    return false;
-  double best_cost = std::numeric_limits<double>::infinity();
-  std::vector<Pose> best;
-  unsigned best_overlap = 0;
-  for (const auto &goal : goals) {
-    const double requested =
-        std::clamp(2 * goal[1] / (goal[0] * goal[0] + goal[1] * goal[1]),
-                   -c.max_k, c.max_k);
-    Pose p;
-    p.k =
-        s.speed > .3 ? std::clamp(s.yaw_rate / s.speed, -c.max_k, c.max_k) : 0.;
-    std::vector<Pose> path{p};
-    double cost = 0.;
-    unsigned overlap = 0;
-    int known = 0;
-    for (int step = 1; step <= 40; ++step) {
-      double k = p.k + std::clamp(requested - p.k, -.015, .015),
-             turn = .05 * (p.k + k);
-      p.x += .1 * std::cos(p.yaw + turn * .5);
-      p.y += .1 * std::sin(p.yaw + turn * .5);
-      p.yaw += turn;
-      p.s += .1;
-      p.k = k;
-      if (std::abs(p.yaw) > .65)
-        break;
-      path.push_back(p);
-      if (step % 4)
-        continue;
-      CartesianState state{p.x, p.y, p.yaw, p.k, 0, 0};
-      auto body =
-          MakeEgoFootprint(state, VehicleShape{c.width, c.length, c.rear}, 0.);
-      for (auto &o : s.obstacles) {
-        double d = geometry::ConvexPolygonDistance(body, o.polygon);
-        if (d <= 0) {
-          cost += 50.;
-          ++overlap;
-        } else
-          cost += .05 / std::max(.05, d);
-      }
-      for (double a : {0., c.length - c.rear})
-        for (double b : {-c.width * .5, 0., c.width * .5}) {
-          double x = p.x + std::cos(p.yaw) * a - std::sin(p.yaw) * b,
-                 y = p.y + std::sin(p.yaw) * a + std::cos(p.yaw) * b;
-          int i = cell(x, y);
-          if (i < 0) {
-            cost += 10.;
-            continue;
-          }
-          if (g.coverage[i] == 255) {
-            ++known;
-            cost += g.probability[i] < 153 ? 4. : 0.;
-          } else if (g.coverage[i] != 128)
-            cost += .8;
-          // The known hood/body mask has no left/right obstacle evidence.
-          // Penalising it as nonroad steers an empty-road car towards the
-          // visible sides. This neutrality is recovery-only, not free space.
-        }
-      cost += .02 * std::pow(p.y - homeAt(s, p.x), 2) + .1 * p.k * p.k;
-      if (!s.previous.empty()) {
-        auto old = std::min_element(
-            s.previous.begin(), s.previous.end(), [&](auto &a, auto &b) {
-              return std::abs(a.x - p.x) < std::abs(b.x - p.x);
-            });
-        cost += .02 * std::pow(p.y - old->y, 2);
-      }
-    }
-    cost += .3 * std::abs(goal[1] - homeAt(s, goal[0])) + .2 * (8. - goal[0]);
-    if (path.size() > 10 && known >= 10 && cost < best_cost) {
-      best_cost = cost;
-      best = std::move(path);
-      best_overlap = overlap;
-    }
-  }
-  if (best.empty())
-    return false;
-  out.path = std::move(best);
-  out.goals = std::move(goals);
-  out.assisted = true;
-  out.recovery = true;
-  out.recovery_cost = best_cost;
-  out.recovery_obb_overlap = best_overlap;
-  return true;
+  auto density = [&](double t) {
+    const double x=a.x+t*(b.x-a.x), y=a.y+t*(b.y-a.y), k=a.k+t*(b.k-a.k);
+    return .04*std::pow(y-ReferenceAt(s,x),2) + .2*k*k +
+           // Preserve near-term control continuity, not an old avoidance
+           // offset over the whole horizon. A constant5x-home history weight
+           // kept drive16 about1.9m off home even after80m with no obstacle.
+           .20*std::exp(-std::max(0.,x)/3.)*std::pow(y-previous_y(x,y),2);
+  };
+  const int samples = 1 + std::max(1, int(std::ceil(
+      (distance+std::abs(b.yaw-a.yaw)*c.length)/(.5*s.grid.resolution))));
+  // Soft margin is a mean sample density, not a raw count dependent on
+  // segment length. Curvature change is squared derivative per metre.
+  // Prefer a wider measured gap when one exists, without inflating the hard
+  // collision envelope a second time or forcing a large-margin deadlock.
+  const auto body=MakeEgoFootprint(CartesianState{(a.x+b.x)*.5,(a.y+b.y)*.5,
+      (a.yaw+b.yaw)*.5,0,0,0},VehicleShape{c.width,c.length,c.rear},0.);
+  double gap=1e9;
+  for(const auto &o:s.obstacles)gap=std::min(gap,geometry::ConvexPolygonDistance(body,o.polygon));
+  const double near=std::max(0.,c.preferred_clearance-gap);
+  return distance*(density(0)+4*density(.5)+density(1))/6. + .4*distance*near*near +
+         std::pow(b.k-a.k,2)/distance + .002*distance*soft_cells/samples;
 }
-} // namespace
-Result Plan(const Scene &input, const Config &c) {
-  const auto start = std::chrono::steady_clock::now();
+void BuildGridIndex(Grid &grid) {
+  grid.blocked_columns.assign(grid.rows, {});
+  grid.exterior_nonroad.assign(grid.rows*grid.cols,0);
+  for (int row = 0; row < grid.rows; ++row) {
+    int first=grid.cols,last=-1;
+    for(int col=0;col<grid.cols;++col) {
+      const int i=row*grid.cols+col;
+      if(grid.coverage[i]==255 && grid.probability[i]>=153) {first=std::min(first,col);last=col;}
+    }
+    for (int col = 0; col < grid.cols; ++col) {
+      int index = row * grid.cols + col;
+      if (grid.coverage[index] != 255 || grid.probability[index] < 153)
+        grid.blocked_columns[row].push_back(col);
+      // No road mask is filled/changed. This current-row exterior protects
+      // actual road sides when an internal occlusion hole is a recovery cost.
+      if(grid.coverage[index]==255 && grid.probability[index]<153 && (col<first || col>last))
+        grid.exterior_nonroad[index]=1;
+    }
+  }
+}
+static Result PlanPrepared(const Scene &, const Config &);
+Result Plan(Scene indexed, const Config &c) {
+  const auto started = std::chrono::steady_clock::now();
   Result out;
-  Scene indexed = input;
-  const Scene &s = indexed;
   auto &grid = indexed.grid;
   if (grid.rows <= 0 || grid.cols <= 0 || grid.rows > 1000 ||
       grid.cols > 1000 || !std::isfinite(grid.resolution) ||
@@ -303,15 +291,29 @@ Result Plan(const Scene &input, const Config &c) {
     out.reason = "grid_invalid";
     return out;
   }
-  grid.blocked_columns.resize(grid.rows);
-  for (int row = 0; row < grid.rows; ++row)
-    for (int col = 0; col < grid.cols; ++col) {
-      int index = row * grid.cols + col;
-      if (grid.coverage[index] != 255 || grid.probability[index] < 153)
-        grid.blocked_columns[row].push_back(col);
+  BuildGridIndex(grid);
+  const double index_ms = elapsed(started);
+  auto out_prepared = PlanPrepared(indexed, c);
+  if(out_prepared.valid) {
+    // Measure the selected geometry, not the minimum across rejected probes.
+    Result measured;
+    for(size_t i=1;i<out_prepared.path.size();++i) {
+      const auto &p=out_prepared.path[i];
+      const auto body=MakeEgoFootprint(CartesianState{p.x,p.y,p.yaw,0,0,0},VehicleShape{c.width,c.length,c.rear},0.);
+      for(const auto &o:indexed.obstacles)
+        measured.minimum_clearance=std::min(measured.minimum_clearance,geometry::ConvexPolygonDistance(body,o.polygon));
     }
-  if (!std::isfinite(s.speed + s.age + s.yaw_rate) || s.speed < 0 ||
-      s.age < 0 || s.age > .35 || s.corridor.empty()) {
+    out_prepared.minimum_clearance=measured.minimum_clearance;
+  }
+  out_prepared.index_ms = index_ms;
+  out_prepared.elapsed_ms = elapsed(started);
+  return out_prepared;
+}
+static Result PlanPrepared(const Scene &s, const Config &c) {
+  const auto start = std::chrono::steady_clock::now();
+  Result out;
+  if (!std::isfinite(s.speed + s.age + s.yaw_rate + s.acceleration) ||
+      s.speed < 0 || s.age < 0 || s.age > .35 || s.home.size() < 2) {
     out.reason = "invalid_scene";
     return out;
   }
@@ -320,12 +322,23 @@ Result Plan(const Scene &input, const Config &c) {
     double cost = 0;
     bool assisted = false;
     size_t goal = 0;
+    unsigned soft_margin_cells = 0;
+    double quality = 0; // final distance-normalized ranking, no goal heuristic
   };
   Pose origin;
   origin.k =
-      s.speed > .3 ? std::clamp(s.yaw_rate / s.speed, -c.max_k, c.max_k) : 0.;
-  const double horizon = std::min(c.max_range, s.corridor.back()[0]) -
-                         (c.length - c.rear) - c.margin;
+      InitialCurvature(s,c);
+  // Paint is a rear-axle navigation reference, not the end of free road.
+  // The full-body grid/OBB check independently limits physical progress.
+  const double margin = c.margin + std::min(.25, .015 * s.speed * s.speed) +
+                        s.grid.resolution * std::sqrt(.5);
+  const double raster_end =
+      std::min(GridToPlan(s.grid, s.grid.xmax, -c.width * .5)[0],
+               GridToPlan(s.grid, s.grid.xmax, c.width * .5)[0]) -
+      (c.length - c.rear) - margin;
+  const double horizon = std::min({c.max_range, s.home.back()[0], raster_end});
+  out.reference_end = s.home.back()[0];
+  out.search_horizon = horizon;
   // Separate connected lateral free intervals; never average across an
   // obstacle. Goals guide the search only. Every connecting swept body is still
   // checked.
@@ -345,7 +358,7 @@ Result Plan(const Scene &input, const Config &c) {
         open = true;
       }
       if (open && (!free || gy >= 6.)) {
-        double preferred = std::clamp(homeAt(s, gx), first, last);
+        double preferred = std::clamp(ReferenceAt(s, gx), first, last);
         out.goals.push_back({gx, preferred});
         if (std::abs(preferred - .5 * (first + last)) > .15)
           out.goals.push_back({gx, .5 * (first + last)});
@@ -353,9 +366,10 @@ Result Plan(const Scene &input, const Config &c) {
       }
     }
   }
+  const bool observed_opening = !out.goals.empty();
   if (out.goals.empty())
     out.goals.push_back(
-        {std::max(1., horizon), homeAt(s, std::max(1., horizon))});
+        {std::max(1., horizon), ReferenceAt(s, std::max(1., horizon))});
   // Bound both spatial alternatives and debug output.
   if (out.goals.size() > 12)
     out.goals.resize(12);
@@ -369,28 +383,55 @@ Result Plan(const Scene &input, const Config &c) {
   // lattice.
   Node analytic_best = best;
   std::vector<double> lateral_targets;
+  // Full-body goal probes can all fail across an object's semantic occlusion
+  // before a usable bypass is even tried. Add measured OBB-face guidance;
+  // these are search seeds only, and every connecting body sweep is unchanged.
+  for(const auto &o:s.obstacles) {
+    double minx=1e9,lo=1e9,hi=-1e9;
+    for(auto p:o.polygon) {minx=std::min(minx,p.x);lo=std::min(lo,p.y);hi=std::max(hi,p.y);}
+    if(minx<4. || minx>18.)continue;
+    double gx=std::min(minx,horizon),pad=c.width*.5+c.margin+o.uncertainty+o.extra_clearance+.25;
+    if(gx<4.)continue;
+    for(double side:{hi+pad,lo-pad}) {
+      if(std::abs(side)>6.)continue;
+      auto q=PlanToGrid(s.grid,gx,side);
+      int row=std::lround((s.grid.xmax-q[0])/s.grid.resolution),col=std::lround((s.grid.ymax-q[1])/s.grid.resolution);
+      if(row<0 || row>=s.grid.rows || col<0 || col>=s.grid.cols)continue;
+      auto i=row*s.grid.cols+col;
+      if(s.grid.coverage[i]==255 && s.grid.probability[i]>=166)
+        lateral_targets.push_back(side-ReferenceAt(s,gx));
+    }
+    if(lateral_targets.size()>=4)break;
+  }
   for (auto &goal : out.goals)
     if (std::none_of(
             lateral_targets.begin(), lateral_targets.end(), [&](double y) {
-              return std::abs(y - (goal[1] - homeAt(s, goal[0]))) < .05;
+              return std::abs(y - (goal[1] - ReferenceAt(s, goal[0]))) < .05;
             }))
-      lateral_targets.push_back(goal[1] - homeAt(s, goal[0]));
-  for (double lateral : lateral_targets)
-    for (double transition : {3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 14., 16.}) {
+      lateral_targets.push_back(goal[1] - ReferenceAt(s, goal[0]));
+  // Round-robin lateral alternatives at each transition distance. Previously
+  // all12 straight-reference seeds could consume the analytic time slice
+  // before either bypass side was tried. Geometry/collision/ranking stay the
+  // same; no extra search budget or rollout is added.
+  for (double transition :
+       {6., 8., 10., 4., 12., 5., 3., 7., 9., 11., 14., 16.})
+    for (double lateral : lateral_targets) {
       if (elapsed(start) > c.budget_ms * .6)
         break;
+      if (transition > horizon - .3)
+        continue;
       // The reference is the measured home strip, not a global straight line.
       // Meet its tangent/curvature, then follow it. A scalar target with yaw=0
       // after transition used to understeer curved tunnel lanes.
       auto polynomial = MakeQuintic(
-          0., 0., origin.k, homeAt(s, transition) + lateral,
+          0., 0., origin.k, ReferenceAt(s, transition) + lateral,
           homeSlope(s, transition), homeSecond(s, transition), transition);
       Node candidate{{origin}, 0, false, 0};
       Result check;
       for (double x = .2; x <= horizon; x += .2) {
         double t = std::min(x, transition),
                y = x < transition ? EvalPos(polynomial, t)
-                                  : homeAt(s, x) + lateral,
+                                  : ReferenceAt(s, x) + lateral,
                d = x < transition ? EvalVel(polynomial, t) : homeSlope(s, x),
                dd = x < transition ? EvalAcc(polynomial, t) : homeSecond(s, x);
         Pose b{x, y, std::atan(d), dd / std::pow(1 + d * d, 1.5), 0};
@@ -400,28 +441,26 @@ Result Plan(const Scene &input, const Config &c) {
         double steering_change =
             std::abs(std::atan(c.wheelbase * b.k / c.gain) -
                      std::atan(c.wheelbase * a.k / c.gain));
-        if (std::abs(b.k) > c.max_k || std::abs(b.yaw) > .65 ||
-            steering_change >
-                c.max_steer_rate * distance / std::max(1., s.speed))
-          break;
+        if(std::abs(b.k)>c.max_k) {++out.rejected["curvature_limit"];break;}
+        if(std::abs(b.yaw)>.65) {++out.rejected["heading_limit"];break;}
+        if(steering_change>c.max_steer_rate*distance/std::max(c.low_speed_rate_floor,s.speed)) {
+          ++out.rejected["steering_rate"];break;
+        }
         ++out.expanded;
+        const auto soft_before = check.soft_margin_cells;
         if (!CheckSweep(s, c, a, b, check))
           break;
         candidate.assisted |= check.assisted;
+        out.remembered_cells += check.remembered_cells;
+        candidate.quality += SegmentQualityCost(s,c,a,b,check.soft_margin_cells-soft_before);
         candidate.path.push_back(b);
-        double target = homeAt(s, x);
-        candidate.cost +=
-            distance * (.04 * (y - target) * (y - target) + .2 * b.k * b.k);
-        if (!s.previous.empty()) {
-          auto old = std::min_element(
-              s.previous.begin(), s.previous.end(), [&](auto &p, auto &q) {
-                return std::abs(p.x - x) < std::abs(q.x - x);
-              });
-          candidate.cost += distance * .02 * (y - old->y) * (y - old->y);
-        }
+        candidate.cost = candidate.quality;
+        candidate.soft_margin_cells = check.soft_margin_cells;
       }
       if (out.candidates.size() < 12) {
         Result::Candidate example;
+        example.lateral_target=lateral;
+        example.transition=transition;
         example.reason =
             candidate.path.back().x >= horizon - .21
                 ? "sweep_passed"
@@ -457,7 +496,7 @@ Result Plan(const Scene &input, const Config &c) {
         double steering_change =
             std::abs(std::atan(c.wheelbase * k / c.gain) -
                      std::atan(c.wheelbase * a.k / c.gain));
-        if (steering_change > c.max_steer_rate * ds / std::max(1., s.speed)) {
+        if (steering_change > c.max_steer_rate * ds / std::max(c.low_speed_rate_floor, s.speed)) {
           ++out.rejected["steering_rate"];
           continue;
         }
@@ -488,7 +527,7 @@ Result Plan(const Scene &input, const Config &c) {
           continue;
         }
         const auto goal = out.goals[node.goal];
-        double target = homeAt(s, b.x);
+        double target = ReferenceAt(s, b.x);
         // A look-ahead goal supplies an early lateral preference before a
         // blocked straight branch terminates. Beyond the opening return
         // preference wins.
@@ -496,7 +535,7 @@ Result Plan(const Scene &input, const Config &c) {
             goal[1] * std::clamp(b.x / std::max(1., goal[0]), 0., 1.);
         double goal_cost =
             b.x <= goal[0] + 2. ? .15 * (b.y - desired) * (b.y - desired) : 0.;
-        double cost = node.cost + goal_cost +
+        double cost = node.cost + goal_cost + .0001 * check.soft_margin_cells +
                       .04 * (b.y - target) * (b.y - target) + .2 * k * k +
                       2 * change * change;
         if (!s.previous.empty()) {
@@ -504,7 +543,7 @@ Result Plan(const Scene &input, const Config &c) {
               s.previous.begin(), s.previous.end(), [&](auto &p, auto &q) {
                 return std::abs(p.x - b.x) < std::abs(q.x - b.x);
               });
-          cost += .08 * (b.y - old->y) * (b.y - old->y);
+          cost += .08 * std::exp(-std::max(0.,b.x)/3.) * (b.y - old->y) * (b.y - old->y);
         }
         auto key = std::make_tuple(int(std::lround(b.y / .15)),
                                    int(std::lround(b.yaw / .06)),
@@ -515,7 +554,9 @@ Result Plan(const Scene &input, const Config &c) {
         Node candidate = node;
         candidate.path.push_back(b);
         candidate.cost = cost;
+        candidate.quality += SegmentQualityCost(s,c,a,b,check.soft_margin_cells);
         candidate.assisted |= check.assisted;
+        candidate.soft_margin_cells += check.soft_margin_cells;
         next.push_back(std::move(candidate));
       }
     if (next.empty())
@@ -529,21 +570,27 @@ Result Plan(const Scene &input, const Config &c) {
       if (per_goal[node.goal]++ < quota)
         diverse.push_back(std::move(node));
     next = std::move(diverse);
-    best = next.front();
+    best = *std::min_element(next.begin(), next.end(), [](const auto &a, const auto &b) {
+      return a.quality < b.quality;
+    });
     beam = std::move(next);
     if (out.budget_exhausted)
       break;
   }
   if (analytic_best.path.back().x > best.path.back().x + .1 ||
       (analytic_best.path.back().x >= best.path.back().x - .1 &&
-       analytic_best.cost < best.cost))
+       analytic_best.quality < best.quality))
     best = std::move(analytic_best);
   out.path = best.path;
   out.assisted = best.assisted;
+  out.soft_margin_cells = best.soft_margin_cells;
   // Recheck previous feasible prefix as a complete candidate; never replay
   // stale control or an unchecked geometry merely because search exhausted its
   // budget.
-  if (s.previous.size() > 1) {
+  if(s.previous_recovery && c.recovery && !observed_opening)++out.rejected["recovery_recheck_no_current_opening"];
+  const int previous_passes=s.previous_recovery && c.recovery && observed_opening?2:1;
+  for(int policy=0;policy<previous_passes;++policy) if (s.previous.size() > 1) {
+    if(policy==1 && out.path_source=="rechecked_previous")continue;
     // Reuse only a geometrically continuous suffix. A stale arc-length or a
     // shortcut from today's axle to yesterday's path must never extend free
     // range.
@@ -553,144 +600,145 @@ Result Plan(const Scene &input, const Config &c) {
         });
     std::vector<Pose> prefix{origin};
     Result check;
+    double old_cost = 0.;
     if (std::hypot(nearest->x, nearest->y) < .20 &&
         std::abs(nearest->yaw) < .08) {
       for (auto it = nearest; it != s.previous.end(); ++it) {
         auto p = *it;
-        if (p.x <= .1)
+        // Keep the generated10cm recovery waypoint. Dropping it compared
+        // a two-step steering change against its shorter chord and falsely
+        // rejected a path generated exactly at the same steering-rate bound.
+        if (p.x <= .001)
           continue;
         const auto &a = prefix.back();
         double ds = std::hypot(p.x - a.x, p.y - a.y), turn = p.yaw - a.yaw;
-        if (ds > .80 || p.x > horizon || std::abs(turn) > c.max_k * ds + .015 ||
-            !CheckSweep(s, c, a, p, check))
-          break;
+        const auto soft_before = check.soft_margin_cells;
+        const double steering_change = std::abs(std::atan(c.wheelbase*p.k/c.gain)-
+                                                std::atan(c.wheelbase*a.k/c.gain));
         p.s = a.s + ds;
+        Config current_policy=c;
+        // A previously labelled recovery is re-evaluated with current OBBs,
+        // current exterior and current road-opening evidence. Do not silently
+        // switch it to a strict bonnet-visibility gate on the next frame.
+        current_policy.recovery_geometry=policy==1 && p.s<=4.;
+        if (ds > .80 || p.x > horizon || std::abs(p.k)>c.max_k ||
+            steering_change > c.max_steer_rate*ds/std::max(c.low_speed_rate_floor,s.speed)+1e-8 ||
+            std::abs(turn) > c.max_k * ds + .015 || !CheckSweep(s, current_policy, a, p, check))
+        {
+          if(policy==1) ++out.rejected[check.rejected.empty()?"recovery_recheck_kinematic":"recovery_recheck_"+check.rejected.begin()->first];
+          break;
+        }
+        p.s = a.s + ds;
+        old_cost += SegmentQualityCost(s,c,a,p,check.soft_margin_cells-soft_before);
         prefix.push_back(p);
       }
-      if (prefix.size() > 1 && prefix.back().x > out.path.back().x + .5) {
+      const bool similar = prefix.size() > 1 &&
+                           prefix.back().x >= out.path.back().x - .2 &&
+                           old_cost <= best.quality * 1.1 + .005;
+      if (prefix.size() > 1 &&
+          (prefix.back().x > out.path.back().x + .5 || similar)) {
+        out.path_source = policy==1?"rechecked_recovery":"rechecked_previous";
+        out.recovery = policy==1;
         out.path = std::move(prefix);
-        out.assisted = check.assisted;
+        out.assisted = policy==1 || check.assisted;
+        out.soft_margin_cells = check.soft_margin_cells;
       }
     }
   }
-  if (out.path.size() < 3 && c.recovery) {
+  const double prefix_lag=c.delay+(s.aligned_to_plan?0.:s.age);
+  const bool short_for_current_speed=out.path.size()>1 &&
+      s.speed*prefix_lag+BrakingDistance(s.speed,s.acceleration,c)>out.path.back().s;
+  // A valid near-zero-speed prefix can otherwise keep a stationary car
+  // stationary forever: it no longer violates current stopping distance.
+  // Seek a longer alternative, never raise the speed of that short prefix.
+  const bool no_crawl_progress=out.path.size()>1 &&
+      std::max(0.,SpaceSpeed(out.path.back().s-.1,c.accel,prefix_lag,c)-.35)<
+      std::min(c.speed_cap,c.recovery_speed);
+  if ((out.path.size() < 3 || short_for_current_speed || no_crawl_progress) && c.recovery) {
     // Prefer a full-horizon swept path with explicitly bounded near-camera
     // unknown assistance over a short centroid arc. Known nonroad and OBBs
     // still veto this candidate, so a distant barrier causes early avoidance.
+    // Also try it before rejecting a short valid prefix: drive01 had2m of
+    // strict road at10km/h while a long crawl sweep remained available. This
+    // is replanning/deceleration, not ignoring insufficient stopping space.
     Config aided = c;
     aided.recovery = false;
     aided.blind_assist = true;
-    aided.speed_cap = std::min(c.speed_cap, 3. / 3.6);
+    aided.speed_cap = std::min(c.speed_cap,c.recovery_speed);
     aided.budget_ms = std::max(1., c.budget_ms - elapsed(start));
-    auto full = Plan(input, aided);
-    if (full.valid && full.path.back().x >= 6.) {
+    auto full = PlanPrepared(
+        s, aided); // Reuse indexed scene; no second raster copy/index.
+    if(!full.valid) ++out.rejected["aided_"+full.reason];
+    // BuildSpeedProfile has already checked this candidate against actual
+    // speed/acceleration and lag. An arbitrary6m gate discarded feasible5m
+    // paths and selected an infeasible4m recovery instead (LOCAL-2F fixture).
+    // A short, physically feasible prefix can reposition a stopped vehicle
+    // before a near obstacle; demanding4m trapped drive07 indefinitely. It
+    // still needs distinct CURRENT road cells at the future nose outside the
+    // already occupied body. An all-unknown raster grants no crawl permission.
+    std::set<int> front_support;
+    if(full.valid && full.path.back().x >= .6) {
+      const auto &g=s.grid;
+      for(const auto &p:full.path) for(double side:{-.45,0.,.45}) {
+        const double nose=c.length-c.rear;
+        const double x=p.x+std::cos(p.yaw)*nose-std::sin(p.yaw)*c.width*side,
+                     y=p.y+std::sin(p.yaw)*nose+std::cos(p.yaw)*c.width*side;
+        if(x<=nose+.5*g.resolution && std::abs(y)<=c.width*.5+.5*g.resolution) continue;
+        const auto q=PlanToGrid(g,x,y);
+        const int row=std::lround((g.xmax-q[0])/g.resolution),
+                  col=std::lround((g.ymax-q[1])/g.resolution);
+        if(row>=0 && row<g.rows && col>=0 && col<g.cols) {
+          const int i=row*g.cols+col;
+          if(g.coverage[i]==255 && g.probability[i]>=166)front_support.insert(i);
+        }
+      }
+    }
+    const bool short_supported=full.valid && full.path.back().x>=.6 &&
+        full.chosen_cap>.1 && front_support.size()>=3;
+    if (full.valid && ((full.path.back().x >= 4. && full.chosen_cap > .3) || short_supported)) {
       full.recovery = true;
-      full.reason = "near_field_assisted_sweep";
-      full.speed_reason = "near_field_recovery_3kph";
+      full.reason = full.path.back().x>=4.?"near_field_assisted_sweep":"near_field_assisted_prefix";
+      if(full.path.back().x<4.)full.path_source="bounded_recovery_prefix";
+      full.speed_reason = full.braking_limit>c.decel?"near_field_controlled_braking":c.recovery_speed>3./3.6?"near_field_recovery_5kph":"near_field_recovery_3kph";
       full.raw_cap = c.speed_cap;
       full.elapsed_ms = elapsed(start);
       return full;
     }
   }
-  if (out.path.size() < 3 && !Recovery(s, c, out)) {
+  // The full-sweep crawl alternative can still fail at a semantic shadow.
+  // Try the separately labelled3km/h near-field recovery before turning a
+  // short prefix into full STOP. Its actual-OBB veto above is unconditional;
+  // terminal speed integration below must still fit the new path length.
+  const bool recovery_attempted=out.path.size()<3 || short_for_current_speed || no_crawl_progress;
+  const bool recovered=recovery_attempted &&
+      BuildRecoveryPath(s,c,out);
+  if (out.path.size() < 3 && !recovered) {
     out.reason = "no_verified_prefix";
     out.elapsed_ms = elapsed(start);
     return out;
   }
   out.search_ms = elapsed(start);
-  return TimeParameterize(s, c, std::move(out));
-}
-
-Result TimeParameterize(const Scene &s, const Config &c, Result out,
-                       const std::vector<double>& speed_limits) {
-  const auto start = std::chrono::steady_clock::now();
-  if (out.path.size() < 3) { out.reason = "no_verified_prefix"; return out; }
-  if (!speed_limits.empty() && (speed_limits.size() != out.path.size() ||
-      std::any_of(speed_limits.begin(), speed_limits.end(), [](double v) {
-        return !std::isfinite(v) || v < 0.;
-      }))) { out.reason = "invalid_native_speed_limits"; return out; }
-  size_t native_stop_begin = speed_limits.size();
-  while (native_stop_begin > 0 && speed_limits[native_stop_begin - 1] < .03)
-    --native_stop_begin;
-  double maxk = 0;
-  for (auto &p : out.path)
-    maxk = std::max(maxk, std::abs(p.k));
-  out.raw_cap = c.speed_cap;
-  out.curve_cap = std::sqrt(c.lateral_accel * .95 / std::max(1e-4, maxk));
-  // Path s is already rear-axle travel after a full-body collision check; do
-  // not subtract the front overhang a second time. Reserve jerk ramp +
-  // execution lag.
-  double distance = out.path.back().s;
-  double lag = c.delay + s.age + c.decel / c.jerk;
-  out.space_cap =
-      std::max(0., std::sqrt(c.decel * c.decel * lag * lag +
-                             2 * c.decel * std::max(0., distance - .1)) -
-                       c.decel * lag);
-  out.chosen_cap = std::min({out.raw_cap, out.curve_cap, out.space_cap});
-  out.speed_reason = out.chosen_cap == out.space_cap ? "verified_stopping_space"
-                     : out.chosen_cap == out.curve_cap ? "curvature"
-                                                       : "requested_cap";
-  if (out.assisted && !out.recovery && out.chosen_cap > 5. / 3.6) {
-    out.chosen_cap = 5. / 3.6;
-    out.speed_reason = "experimental_near_blind_assist";
-  }
-  if (out.recovery) {
-    out.chosen_cap = std::min(3. / 3.6, out.chosen_cap);
-    out.speed_reason = "near_field_recovery_3kph";
-  }
-  if (!out.recovery &&
-      s.speed * lag + s.speed * s.speed / (2 * c.decel) > distance) {
-    out.reason = "insufficient_stopping_space";
-    out.elapsed_ms = out.search_ms + elapsed(start);
+  if (!BuildSpeedProfile(s, c, out)) {
+    const auto failure=out.reason;
+    // Geometric ranking precedes actual-state speed/slew validation. A single
+    // failed winner must not suppress a currently measured, fully swept crawl
+    // alternative. Do not hold the old command or weaken freshness/collision
+    // checks; recovery constructs and profiles a new candidate from this scene.
+    if(c.recovery && !recovery_attempted && (failure=="initial_steering_slew_infeasible" ||
+                      failure=="insufficient_stopping_space") &&
+        BuildRecoveryPath(s,c,out) && BuildSpeedProfile(s,c,out)) {
+      ++out.rejected["speed_replan_"+failure];
+      out.valid=true;
+      out.reason="near_field_recovery";
+      out.path_source="speed_feasible_recovery";
+    }
+    out.elapsed_ms=elapsed(start);
+    out.speed_ms=out.elapsed_ms-out.search_ms;
     return out;
-  }
-  SpeedProfiler profiler;
-  double travelled = 0, v = s.speed,
-         a = std::clamp(s.acceleration, -c.decel, c.accel);
-  size_t index = 1;
-  for (int i = 0; i < 400; ++i) {
-    while (index < out.path.size() - 1 && out.path[index].s < travelled)
-      ++index;
-    const auto &left = out.path[index - 1], &right = out.path[index];
-    double q = std::clamp(
-        (travelled - left.s) / std::max(1e-6, right.s - left.s), 0., 1.);
-    out.trajectory.push_back({left.x + q * (right.x - left.x),
-                              left.y + q * (right.y - left.y),
-                              left.yaw + q * (right.yaw - left.yaw),
-                              left.k + q * (right.k - left.k), v, a, i * .05});
-    double remaining = std::max(0., distance - travelled);
-    double cap = std::min(out.chosen_cap,
-                          std::max(0., std::sqrt(c.decel * c.decel * lag * lag +
-                                                 2 * c.decel * remaining) -
-                                           c.decel * lag));
-    // Optional, caller-verified native profile. Retiming must not turn a
-    // planned yield into cruise by replacing all samples with max(path.v).
-    // Empty keeps the independent LOCAL caller's original timing policy.
-    if (!speed_limits.empty()) cap = std::min(cap,
-        speed_limits[index - 1] + q * (speed_limits[index] - speed_limits[index - 1]));
-    auto step = profiler.Update({cap, v, a, .05}, {c.accel, c.decel, c.jerk});
-    double new_v = step.target_speed; // Profiler's downward cap is not
-                                      // instantaneous physical braking.
-    a = std::clamp((new_v - v) / .05, std::max(-c.decel, a - c.jerk * .05),
-                   std::min(c.accel, a + c.jerk * .05));
-    new_v = std::max(0., v + a * .05);
-    travelled += .5 * (v + new_v) * .05;
-    v = new_v;
-    if (travelled > distance + .05) {
-      out.reason = "terminal_braking_violation";
-      out.trajectory.clear();
-      out.elapsed_ms = out.search_ms + elapsed(start);
-      return out;
-    }
-    const bool native_stop = !speed_limits.empty() && index - 1 >= native_stop_begin;
-    if (i > 40 && v < .03 && (remaining < .4 || native_stop)) {
-      out.trajectory.back()[4] = 0;
-      break;
-    }
   }
   out.valid = true;
   out.reason = out.recovery ? "near_field_recovery" : "ok";
-  out.elapsed_ms = out.search_ms + elapsed(start);
+  out.elapsed_ms = elapsed(start);
   out.speed_ms = out.elapsed_ms - out.search_ms;
   return out;
 }
