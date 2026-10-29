@@ -588,7 +588,7 @@ TEST(RuntimeConfig, LoadsShippedConfigWithLocalGroundFitAndMainValues) {
   EXPECT_EQ(p.ground.seed_max_z_m, -0.65);
   EXPECT_EQ(p.ground.maximum_iterations, 80);
   EXPECT_EQ(p.ground.minimum_seed_points, 30);
-  EXPECT_FALSE(p.tunnel.enabled);
+  EXPECT_TRUE(p.tunnel.enabled);  // Main release keeps wall/ceiling handling enabled.
   EXPECT_TRUE(c.pose.imu_yaw_is_true_enu);
   EXPECT_EQ(c.pose.gps_max_age_s, 0.30);
   EXPECT_EQ(c.pose.imu_max_age_s, 0.12);

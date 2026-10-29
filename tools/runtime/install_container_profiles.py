@@ -71,6 +71,10 @@ def main():
                       ASMC_EXTRA_SETUP=profile.get('extra_setup', ''),
                       ASMC_VALIDATION_LEASE_DIR=profile['lease_directory'],
                       ASMC_RUNTIME_LABEL=container)
+        if profile.get('data_root'):
+            if not str(profile['data_root']).startswith('/'):
+                raise ValueError('data_root must be an absolute container path')
+            values['ASMC_DATA']=profile['data_root']
         config = ''.join('export %s=%s\n' % (key, shlex.quote(str(value))) for key, value in values.items()).encode()
         bashrc = read_file(container, '/root/.bashrc')
         if bashrc is None:

@@ -5,6 +5,7 @@
   "runtime_container":"asmc-jamming-compare",
   "build_container":"asmc-jamming-compare-build",
   "build":"/build","devel":"/devel","workspace":"/root/ws",
+  "data_root":"/workspace/data",
   "interactive_master":"http://127.0.0.1:11373",
   "automatic_master":"http://127.0.0.1:11374",
   "network":"host","gpu":"all","shm_bytes":2147483648,

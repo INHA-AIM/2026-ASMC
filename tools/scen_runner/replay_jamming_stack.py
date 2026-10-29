@@ -134,6 +134,8 @@ def main():
                 pubs=dict(graph[0]);nodes={n for _,ns in graph[0]+graph[1] for n in ns}
                 if pubs.get('/ctrl_cmd')!=['/asmc_control_selector'] or expected not in nodes:
                     raise RuntimeError('unexpected selected control graph')
+                if not pubs.get('/planning/mode') or '/asmc_planner' not in nodes:
+                    raise RuntimeError('normal planner/mode source failed; inspect assets and startup log')
                 unwanted={'/camera_bbox_lane_change','/local_controller','/localization_controller'}-{expected}
                 if unwanted.intersection(nodes):raise RuntimeError('unselected jamming controller is running')
                 reporter.phase('running','fixed recorded ego motion; no physical bridge')
@@ -144,6 +146,8 @@ def main():
                     if any(child.poll() is not None for child in (camera,lidar,autonomy)):
                         raise RuntimeError('replay production child exited')
                     if time.monotonic()>deadline:raise RuntimeError('bounded raw replay deadline')
+                    if not dict(master.getSystemState()[0]).get('/planning/mode'):
+                        raise RuntimeError('normal planner/mode source disappeared during replay')
                     time.sleep(.2)
                 if player.returncode:raise RuntimeError('raw bag player failed')
                 reporter.phase('completed','replay ended; closed-loop driving remains untested')
