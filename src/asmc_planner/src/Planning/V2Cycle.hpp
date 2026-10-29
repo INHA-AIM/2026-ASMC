@@ -469,6 +469,11 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             failed.execution_state = port.command_manager_.execution_state();
             failed.result_code = terminal ? Feedback::INVALID_COMMAND : Feedback::TRANSIENT_GENERATION_FAILURE;
             failed.detail = terminal ? "unsupported roundabout zone/type or gap preference" : "roundabout candidate/maintenance blocked";
+            if(!port.planner().roundabout_merge_committed()) {
+                const auto reason=ok?RoundaboutEntryStatus::PATH_CONVERSION_FAILED:result.entry_status;
+                failed.detail += std::string("; entry_reason=")+RoundaboutEntryStatusName(reason);
+                failed.detail += "; blocking_id="+std::to_string(result.blocking_object_id);
+            }
             const auto stop = MakeStopTrajectory(port.stopReferenceVehicle(snapshot), port.trajectoryDt(), asmc_msgs::Trajectory::FAILURE_GENERATION);
             port.trajectory_pub_.publish(stop);
             port.publishFeedbackV2(feedback_command_id, failed, &stop, Feedback::TRAJECTORY_SAFE_STOP, false, ego_s_valid, ego_s);
@@ -509,6 +514,10 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 (port.planner().roundabout_merge_committed() ? (result.progress_stopping ? "roundabout progress with certified stop" :
                     (result.candidate_valid ? "roundabout committed" : "roundabout collision braking")) :
                  (result.ready ? "roundabout ready after full traversal recheck" : "roundabout waiting/approaching stopline"));
+        if(!port.planner().roundabout_merge_committed()) {
+            succeeded.detail += std::string("; entry_reason=")+RoundaboutEntryStatusName(result.entry_status);
+            succeeded.detail += "; blocking_id="+std::to_string(result.blocking_object_id);
+        }
         port.publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
             port.planner().roundabout_merge_committed() ?
                 (result.candidate_valid || result.progress_stopping || result.maneuver_completed ? Feedback::TRAJECTORY_LOCKED : Feedback::TRAJECTORY_SAFE_STOP) : Feedback::TRAJECTORY_NEW,
