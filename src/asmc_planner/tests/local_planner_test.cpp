@@ -34,6 +34,23 @@ Scene empty() {
 }
 int main() {
   {
+    expect(StagedGuideOffset(3.5,1.75)==1.75 &&
+           StagedGuideOffset(2.5,1.75)==1.75 && StagedGuideOffset(1.8,1.75)==0.,
+           "return advances one guide only after physically reaching the intermediate guide");
+    auto s=empty();Config c;c.budget_ms=1000;c.selection_trial=2;
+    auto guide=Plan(s,c);expect(guide.valid && guide.path_source=="five_guide_staged",
+      "five guides still use the actual native sweep and speed profile");
+    Obstacle o;o.id=999;o.polygon={{2.,-8.},{3.,-8.},{3.,8.},{2.,8.}};s.obstacles.push_back(o);
+    auto blocked=Plan(s,c);expect(!blocked.valid,"guide priority cannot bypass a measured full-width OBB");
+    s=empty();c.selection_trial=1;auto first=Plan(s,c);s.previous=first.path;
+    auto held=Plan(s,c);expect(held.valid && held.path_source=="committed_revalidated",
+      "long currently executable path can be retained across a small ranking change");
+    s.obstacles.push_back(o);auto released=Plan(s,c);
+    expect(!released.valid && released.path_source!="committed_revalidated",
+      "a new obstacle immediately invalidates commitment");
+  }
+
+  {
     auto s=empty();Config c;c.recovery=true;c.recovery_target=6.;
     Result r;
     expect(BuildRecoveryPath(s,c,r) && r.path.back().s>5.9,

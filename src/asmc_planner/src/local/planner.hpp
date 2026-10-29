@@ -42,6 +42,7 @@ struct Config {
   bool blind_assist = false, recovery = false;
   bool recovery_geometry = false; // Internal near-field policy; never a launch switch.
   int beam = 40;
+  int selection_trial = 0; //0 current;1 revalidated long-path commitment;2 five-guide primary.
 };
 struct Grid {
   int rows = 0, cols = 0;
@@ -123,6 +124,15 @@ inline double InitialCurvature(const Scene &s,const Config &c) {
      std::abs(s.measured_steering_rad)<=.698131701)
     return std::clamp(c.gain*std::tan(s.measured_steering_rad)/c.wheelbase,-c.max_k,c.max_k);
   return s.speed>.1?std::clamp(s.yaw_rate/s.speed,-c.max_k,c.max_k):0.;
+}
+// One guide toward home only after reaching the current guide; paint remains
+// a preference, never a collision boundary. Signed offset is relative to home.
+inline double StagedGuideOffset(double current_offset,double half_lane) {
+  const int index=std::clamp(int(std::lround(current_offset/half_lane)),-2,2);
+  int next=index;
+  if(index && std::abs(current_offset-index*half_lane)<=.3)
+    next-=index>0?1:-1;
+  return next*half_lane;
 }
 double ReferenceAt(const Scene &, double x); // Soft home cue, never a collision boundary.
 // Distance-normalized final score; does not certify collision validity.
