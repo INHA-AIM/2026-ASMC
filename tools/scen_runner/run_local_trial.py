@@ -250,6 +250,7 @@ def main():
     latest = {}
     collision_events = []
     preexisting_contacts=set()
+    udp_quarantine=set()
     native_evidence_limited=False
     control_rows = (root / "control.jsonl").open("x")
     handles.append(control_rows)
@@ -269,10 +270,10 @@ def main():
 
     def collision(message):
         objects=collision_objects(message)
+        now=time.monotonic()
+        collision_events.append((now,objects))
+        del collision_events[:-100]
         if objects:
-            now=time.monotonic()
-            collision_events.append((now,objects))
-            del collision_events[:-100]
             emit(dict(event='udp_collision',objects=objects,
                       source_stamp=message.header.stamp.to_sec()))
 
@@ -559,6 +560,20 @@ def main():
             # never dismiss a physically nearby startup contact as stale.
             if any(e['verdict']!='rejected' for e in evidence):
                 raise RuntimeError('near/unknown owned actor contact before trial release')
+        if collision_events:
+            udp_quarantine={(o['type'],o['id']) for o in collision_events[-1][1]}
+        if udp_quarantine:
+            from scen_runner.runtime.contact_evidence import inspect_contacts
+            evidence=inspect_contacts(dict(contacts={str(i) for _,i in udp_quarantine},
+                owned_ids=set(section.owned()),actor_states=before_states,query_s=0.),
+                set(section.owned()),link.ego_id)
+            emit(dict(event='startup_udp_contact_geometry',raw=sorted(udp_quarantine),evidence=evidence))
+            if any(e['verdict']!='rejected' for e in evidence):
+                raise RuntimeError('near/unknown owned UDP contact before trial release')
+            native_evidence_limited=True
+        # Independent native boxes are an evaluation guard for recycled,
+        # continuously published collision IDs. They never enter the planner.
+        from scen_runner.records.local_margin_audit import footprint
         link.release()
         started = time.monotonic()
         # The earlier LOCAL fixture runner only prepared saved actors. Without
@@ -598,8 +613,13 @@ def main():
             current_contacts=set(state.get('native_contacts',[]))-{link.ego_id,''}
             preexisting_contacts.intersection_update(current_contacts)
             native=sorted(current_contacts-preexisting_contacts)
-            udp = [f"udp:{o['type']}:{o['id']}" for received,objects in collision_events
-                   if received>=started for o in objects]
+            current_udp={(o['type'],o['id']) for _,objects in collision_events[-1:] for o in objects}
+            udp_quarantine.intersection_update(current_udp)
+            udp=[f'udp:{t}:{i}' for t,i in current_udp-udp_quarantine]
+            own_box=footprint(state)
+            boxes=[(x.actor_info.id.value,footprint(actor_state(x))) for x in snapshot
+                   if x.actor_info.id.value in section.owned()]
+            overlaps=[aid for aid,box in boxes if own_box.intersection(box).area>1e-5]
             point = (state["pose"]["x"], state["pose"]["y"])
             if last is not None:
                 travel += math.dist(point, last)
@@ -617,11 +637,17 @@ def main():
                     owned=section.owned(),
                     actor_states=[actor_state(x) for x in snapshot
                                   if x.actor_info.id.value in section.owned()],
+                    minimum_native_box_gap_m=min((own_box.distance(box) for _,box in boxes),default=None),
                 )
             )
             if native or udp:
                 contacts += native+udp
                 reason = "native_contact" if native else "udp_contact"
+                break
+            if overlaps:
+                emit(dict(event='native_box_overlap',actors=overlaps,
+                          scope='conservative SDK hull reference, not a mesh collision claim'))
+                reason='native_box_overlap'
                 break
             if state["speed_kmh"] > 0.36:
                 stationary = time.monotonic()
