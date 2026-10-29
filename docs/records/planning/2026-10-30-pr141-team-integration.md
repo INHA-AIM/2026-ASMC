@@ -22,3 +22,56 @@ Run: `jamming-pr141-sync-20261030-r01`. Build/test logs and final identity belon
 ## Rollback and activation
 
 Rollback source is `9f711282` and `freeze/jamming-20261030-0130-r2`; preserve the old container profile/overlay. Do not reset a dirty checkout. After the user stops the old autonomy/perception, activate the new checkout/overlay as one identity and restart camera, lidar, views and exactly one autonomy. Keep master11373 and current console ports for this local deployment; repository operational defaults remain11311/8088/8091. Port occupancy is never resolved by killing a foreign owner.
+
+## 06:20 integration plan update — camera point extraction scope
+
+Remote integration HEAD was rechecked at 06:05 KST on 2026-10-30:
+`cf2168465bb33099e5a75da6d1d1605d336e48b2` includes Jaeho's
+`fix(lidar): restrict camera point extraction to tunnel approach window`.
+This is an incoming integration requirement, not a declaration of deployment:
+the active compare checkout was still `47d9d2d2` when inspected. The current
+execution location is `2026-ASMC-jamming-compare` / `asmc-jamming-compare`; the
+earlier staged-build paragraph above describes the previous integration stage.
+
+The next integration uses the newest remote integration tip (including this
+commit and Yuntae's roundabout settings), followed by Seojun's
+`fix/merge-response-consistency-20261029` tip, currently `25f26f3b`. Preserve
+local localization/LOCAL recovery commits as well. Recheck tips immediately
+before merging; do not replace the remote branch with the older local history.
+
+Jaeho's ownership boundary must remain explicit:
+- Camera-owned point extraction, residual splitting, steel fragment extraction,
+  vehicle measurement history and related wall cleanup are restricted by the
+  existing verified tunnel-route window when `tunnel_only_updates: true`.
+- The window retains its existing 30m lead, 10m exit buffer and exit hysteresis.
+  GPS loss carries an already verified window; GPS loss elsewhere never arms it.
+- Outside the window both `refinement.enabled` and `steel_fragment_merge` are
+  forced OFF in the frame-local configuration. Refinement reports disabled and
+  projects zero points. Do not merely disable history while extraction remains ON.
+- Ordinary three-view camera class matching and HD-map delivery protection stay
+  global. A missing YOLO box does not partition an ordinary-road cloud through
+  the tunnel-specific extraction path. General camera classification is not
+  being removed from the roundabout.
+- Preserve the versioned runtime/config identity
+  `tunnel-only-updates-v2-camera-geometry-scope`; an old running LiDAR binary is
+  not accepted as evidence for the new scoped behavior.
+
+Integration order: snapshot current failure and source identities; merge the
+latest team integration and Seojun changes; run build/contract checks; deploy the
+new LiDAR/planner identity to the compare stack; then test early planner
+preparation and test2. Planner preparation begins at tollgate A451, while the
+LiDAR extraction window remains its reviewed 30m lead. Do not widen LiDAR
+geometry processing to the tollgate just because planner preparation starts there.
+
+Required checks: camera-present ordinary-road/roundabout scans have disabled
+refinement and zero projected points; exact 30m approach enables extraction;
+GPS loss inside retains it; exit clears it; startup/GPS loss outside cannot
+rearm it. Reuse Jaeho's early-object replay to check that one object does not
+split into two tracks. His reported 144 related tests and 782-scan replay
+(100 early-target scans, previously 9 split scans) are contributor evidence;
+report our post-integration checks separately. Preserve Yuntae's roundabout
+front gap and Seojun's ordinary/localization avoidance separation.
+
+This plan update does not restart a live node, change LiDAR thresholds, or claim
+full-course acceptance. The 06:20 closeout must name the integrated source SHA,
+actual running configuration identity, tests completed and any remaining gap.
