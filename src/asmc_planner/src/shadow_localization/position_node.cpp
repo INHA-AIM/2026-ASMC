@@ -294,9 +294,8 @@ class PositionNode {
       std::ostringstream d;d<<std::setprecision(15)<<"{\"frame\":\"map\",\"stamp\":"<<t
        <<",\"run_id\":"<<std::quoted(run)<<",\"motion_frame\":"<<std::quoted(frame)
        <<",\"trial_id\":"<<std::quoted(trial_id)
-       <<",\"plan_sequence\":"<<sequence<<",\"valid\":"<<(output.valid?"true":"false")
-       <<",\"mode_selected\":"<<(selected?"true":"false")<<",\"reason\":"<<std::quoted(output.reason)
-       <<",\"native_valid\":"<<(r.valid?"true":"false")<<",\"native_reason\":"<<std::quoted(r.reason)
+       <<",\"plan_sequence\":"<<sequence<<",\"valid\":"<<(r.valid?"true":"false")
+       <<",\"mode_selected\":"<<(selected?"true":"false")<<",\"reason\":"<<std::quoted(r.reason)
        <<",\"selected_source\":"<<std::quoted(selected_local?"local_recovery":"localization")
        <<",\"selected_valid\":"<<(output.valid?"true":"false")<<",\"recovery_policy\":"<<std::quoted(local_recovery.reason)
        <<",\"escape_requested\":"<<(r.escape_requested?"true":"false")<<",\"stationary_windows\":"<<r.stationary_windows
@@ -374,9 +373,8 @@ class PositionNode {
       }
     }
     std::ostringstream s;s<<std::setprecision(17)<<"{\"run_id\":"<<std::quoted(run)
-      <<",\"stamp\":"<<t<<",\"valid\":"<<(output.valid?"true":"false")<<",\"reason\":"<<std::quoted(output.reason)
-      <<",\"native_valid\":"<<(r.valid?"true":"false")<<",\"native_reason\":"<<std::quoted(r.reason)
-       <<",\"selected_source\":"<<std::quoted(selected_local?"local_recovery":"localization")
+      <<",\"stamp\":"<<t<<",\"valid\":"<<(r.valid?"true":"false")<<",\"reason\":"<<std::quoted(r.reason)
+      <<",\"selected_source\":"<<std::quoted(selected_local?"local_recovery":"localization")
       <<",\"selected_valid\":"<<(output.valid?"true":"false")<<",\"selected_reason\":"<<std::quoted(output.reason)
       <<",\"selected_scene_stamp\":"<<output.scene_stamp.toSec()<<",\"recovery_policy\":"<<std::quoted(local_recovery.reason)
       <<",\"source\":"<<std::quoted(transform.source)<<",\"map_x\":"<<xy[0]<<",\"map_y\":"<<xy[1]
