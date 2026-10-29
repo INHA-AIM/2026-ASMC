@@ -9,6 +9,7 @@
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
 #include "local/semantic_reference.hpp"
+#include "local/semantic_noise.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include <cmath>
 #include <cstdio>
@@ -33,6 +34,23 @@ Scene empty() {
   return s;
 }
 int main() {
+  {
+    auto s=empty();Config c;c.semantic_speckle_guard=true;RoadMemory memory;
+    memory.observe(s.grid,Pose{},1.);s.grid.probability[100*160+80]=0;
+    memory.apply(s.grid,Pose{},1.1,true);
+    expect(BuildSemanticNoiseMask(s.grid,c,{})==1,"one far isolated speckle has preceding current-road evidence");
+    expect(s.grid.probability[100*160+80]==0,"speckle evidence never edits raw probability");
+    memory.observe(s.grid,Pose{},1.1);memory.apply(s.grid,Pose{},1.2,true);
+    expect(BuildSemanticNoiseMask(s.grid,c,{})==0,"persistent nonroad immediately vetoes old free evidence");
+    s.grid.recent_road_age.assign(40000,.2);Obstacle o;o.id=1;o.polygon={{9.8,-.2},{10.2,-.2},{10.2,.2},{9.8,.2}};
+    expect(BuildSemanticNoiseMask(s.grid,c,{o})==0,"LiDAR always vetoes semantic speckle suppression");
+    s.grid.recent_road_age[100*160+80]=.351;
+    expect(BuildSemanticNoiseMask(s.grid,c,{})==0,"expired road cannot justify speckle guard");
+    s.grid.recent_road_age.assign(40000,.2);
+    s.grid.coverage[100*160+79]=0;
+    expect(BuildSemanticNoiseMask(s.grid,c,{})==0,"unknown-edge holes cannot be declared speckles");
+  }
+
   {
     expect(StagedGuideOffset(3.5,1.75)==1.75 &&
            StagedGuideOffset(2.5,1.75)==1.75 && StagedGuideOffset(1.8,1.75)==0.,

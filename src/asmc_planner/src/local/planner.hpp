@@ -40,6 +40,7 @@ struct Config {
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;
+  bool semantic_speckle_guard = false; // Experimental, bounded, past-evidence-only transient holes.
   bool recovery_geometry = false; // Internal near-field policy; never a launch switch.
   int beam = 40;
   double guide_offset = 1e9; // Current semantic component centre cue; not a collision raster.
@@ -50,6 +51,7 @@ struct Grid {
   double resolution = .1, xmax = 20., ymax = 8.;
   std::vector<uint8_t> probability, coverage;
   std::vector<std::vector<int>> blocked_columns;
+  std::vector<uint8_t> transient_nonroad; // Optional evidence mask, not edited raw semantic data.
   std::vector<uint8_t> exterior_nonroad; // Current row exterior, not interior occlusion holes.
   std::vector<float>
       recent_road_age; // Original observation age;0 means no evidence.
@@ -83,7 +85,7 @@ struct Result {
   std::vector<Pose> path;
   std::vector<std::array<double, 7>> trajectory; // x y yaw k v a t
   std::map<std::string, unsigned> rejected;
-  unsigned expanded = 0;
+  unsigned expanded = 0, semantic_noise_cells = 0;
   int blocking_id = -1;
   double blocked_x = 0, blocked_y = 0, minimum_clearance = 1e9, elapsed_ms = 0;
   double raw_cap = 0, curve_cap = 0, steering_cap = 0, space_cap = 0, chosen_cap = 0;

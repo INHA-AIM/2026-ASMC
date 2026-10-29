@@ -5,7 +5,8 @@
 
 namespace local_planning {
 // Causal, bounded road evidence for the calibrated near-ego blind region only.
-// Never fills observed nonroad or extrapolates paint/wall width into free road.
+// Never edits observed nonroad or extrapolates paint/wall width into free road.
+// Optional speckle evidence is only metadata; newer nonroad vetoes old freedom.
 // Fresh LiDAR hulls still veto every footprint. This is not object tracking.
 class RoadMemory {
   struct Frame {
@@ -18,7 +19,7 @@ class RoadMemory {
 
 public:
   void clear() { frames.clear(); }
-  void apply(Grid &grid, const Pose &plan, double stamp) const {
+  void apply(Grid &grid, const Pose &plan, double stamp, bool speckle=false) const {
     grid.recent_road_age.assign(grid.rows * grid.cols, 0.);
     struct Lookup {
       const Frame *frame;
@@ -50,11 +51,12 @@ public:
     for (int r = 0; r < grid.rows; ++r)
       for (int c = 0; c < grid.cols; ++c) {
         const int i = r * grid.cols + c;
-        if (grid.coverage[i] == 255)
-          continue;
+        const bool nonroad_candidate=speckle && grid.coverage[i]==255 && grid.probability[i]<153 &&
+          grid.xmax-r*grid.resolution>=8. && grid.xmax-r*grid.resolution<=16.;
+        if(grid.coverage[i]==255 && !nonroad_candidate)continue;
         const double bx = grid.xmax - r * grid.resolution,
                      by = grid.ymax - c * grid.resolution;
-        if (bx < -1.2 || bx > 6.5 || std::abs(by) > 2.5)
+        if (!nonroad_candidate && (bx < -1.2 || bx > 6.5 || std::abs(by) > 2.5))
           continue;
         auto p = GridToPlan(grid, bx, by);
         for (const auto &l : lookups) {

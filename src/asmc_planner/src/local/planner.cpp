@@ -1,6 +1,7 @@
 #include "local/planner.hpp"
 #include "local/speed_profile.hpp"
 #include "local/recovery.hpp"
+#include "local/semantic_noise.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Frenet/Math/Polynomial.hpp"
 #include <algorithm>
@@ -188,6 +189,8 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
         return fail(r, cover == 128 ? "ego_occlusion" : "unobserved", x, y);
       }
       if (g.probability[index] < 153) {
+        if(c.semantic_speckle_guard && g.transient_nonroad.size()==g.coverage.size() &&
+           g.transient_nonroad[index]) {++r.soft_margin_cells;continue;}
         if(c.recovery_geometry) {
           if(g.exterior_nonroad.size()!=g.coverage.size())
             return fail(r,"recovery_boundary_unavailable",x,y);
@@ -292,6 +295,7 @@ Result Plan(Scene indexed, const Config &c) {
     return out;
   }
   BuildGridIndex(grid);
+  const auto noise_cells=BuildSemanticNoiseMask(grid,c,indexed.obstacles);
   const double index_ms = elapsed(started);
   auto out_prepared = PlanPrepared(indexed, c);
   if(out_prepared.valid) {
@@ -305,6 +309,7 @@ Result Plan(Scene indexed, const Config &c) {
     }
     out_prepared.minimum_clearance=measured.minimum_clearance;
   }
+  out_prepared.semantic_noise_cells=noise_cells;
   out_prepared.index_ms = index_ms;
   out_prepared.elapsed_ms = elapsed(started);
   return out_prepared;

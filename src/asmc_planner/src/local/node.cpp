@@ -284,6 +284,7 @@ class Node {
       << ",\"selected_length_m\":" << (r.path.empty() ? 0 : r.path.back().s)
       << ",\"path_source\":" << std::quoted(r.path_source)
       << ",\"soft_semantic_margin_visits\":" << r.soft_margin_cells
+        << ",\"semantic_noise_cells\":" << r.semantic_noise_cells
       << ",\"search_ms\":" << r.search_ms << ",\"speed_ms\":" << r.speed_ms
       << ",\"alignment_ms\":" << r.alignment_ms
       << ",\"critical_path_ms\":" << r.alignment_ms + r.elapsed_ms + snapshot_ms
@@ -906,7 +907,7 @@ class Node {
     const auto memory_start = ros::SteadyTime::now();
     if (use_road_memory) {
       road_memory.apply(g, Pose{origin->x, origin->y, origin->yaw},
-                        plan_stamp.toSec());
+                        plan_stamp.toSec(),config.semantic_speckle_guard);
       road_memory.observe(
           g, Pose{camera_origin->x, camera_origin->y, camera_origin->yaw}, t);
     } else {
@@ -1192,6 +1193,7 @@ public:
     p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
     p.param("recovery_verified_target_m", config.recovery_target, 4.);
     p.param("path_selection_trial", config.selection_trial, 0);
+    p.param("semantic_speckle_guard", config.semantic_speckle_guard, false);
     double maneuver_cap_kph=0.;p.param("maneuver_speed_cap_kph", maneuver_cap_kph, 0.);
     config.maneuver_speed_cap=maneuver_cap_kph/3.6;
     p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
