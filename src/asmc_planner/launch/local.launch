@@ -7,7 +7,6 @@
        control uses one MPC instance, not the old jamming follower. -->
   <arg name="smooth_handoff" default="false"/>
   <arg name="enable_control" default="false"/>
-  <arg name="start_controller" default="true"/>
   <arg name="run_id" default="local-preview"/>
   <arg name="journal_path" default=""/>
   <arg name="planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
@@ -35,7 +34,7 @@
     <param name="near_blind_assist" value="$(arg near_blind_assist)"/>
     <param name="active_in_jamming_only" value="$(arg active_in_jamming_only)"/>
   </node>
-  <node if="$(arg start_controller)" pkg="asmc_controller" type="asmc_local_controller_node" name="local_controller" output="screen" required="true">
+  <node pkg="asmc_controller" type="asmc_local_controller_node" name="local_controller" output="screen" required="true">
     <rosparam command="load" file="$(find asmc_controller)/config/local_controller.yaml"/>
     <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
     <param name="smooth_handoff" value="$(arg smooth_handoff)"/>

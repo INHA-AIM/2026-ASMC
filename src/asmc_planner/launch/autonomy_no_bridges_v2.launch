@@ -5,7 +5,6 @@
   <arg name="jamming_planner" default="camera" doc="camera: main follower, local: observed local road, localization: map localization"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="jamming_speed_kph" default="$(eval {'camera':20.0,'local':20.0,'localization':20.0}[arg('jamming_planner')])"/>
-  <arg name="localization_local_recovery" default="false" doc="Experimental validated LOCAL path fallback; localization retains the single MPC"/>
   <arg name="local_semantic_input" default="true"/>
   <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
   <arg name="local_forward_warning_weight" default=""/>
@@ -159,19 +158,7 @@
     <arg name="planner_config" value="$(arg local_planner_config)"/>
     <arg name="forward_warning_weight" value="$(arg local_forward_warning_weight)"/>
   </include>
-  <!-- Recovery planner has no controller and cannot publish control proposals. -->
-  <include if="$(eval arg('jamming_planner') == 'localization' and arg('localization_local_recovery'))" file="$(find asmc_planner)/launch/local.launch">
-    <arg name="start_controller" value="false"/>
-    <arg name="enable_control" value="false"/>
-    <arg name="active_in_jamming_only" value="true"/>
-    <arg name="semantic_input" value="$(arg local_semantic_input)"/>
-    <arg name="speed_cap_kph" value="5"/>
-    <arg name="run_id" value="$(arg shadow_run_id)"/>
-    <arg name="planner_config" value="$(arg local_planner_config)"/>
-    <arg name="forward_warning_weight" value="$(arg local_forward_warning_weight)"/>
-  </include>
   <include if="$(eval arg('jamming_planner') == 'localization')" file="$(find asmc_planner)/launch/shadow_localization.launch">
-    <arg name="local_recovery" value="$(arg localization_local_recovery)"/>
     <arg name="run_id" value="$(arg shadow_run_id)"/>
     <arg name="speed_cap_kph" value="$(arg shadow_speed_cap_kph)"/>
     <arg name="journal_path" value="$(arg shadow_journal_path)"/>

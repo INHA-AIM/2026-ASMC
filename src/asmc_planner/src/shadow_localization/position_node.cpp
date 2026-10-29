@@ -1,6 +1,4 @@
 #include "shadow_localization/static_planner.hpp"
-#include "shadow_localization/local_recovery.hpp"
-#include <set>
 #include "shadow_localization/paint_window.hpp"
 #include "Planning/JammingDetector.hpp"
 #include "shadow_localization/input_alignment.hpp"
@@ -26,27 +24,7 @@ namespace shadow_localization {
 using namespace local_planning;
 class PositionNode {
   ros::NodeHandle nh,p{"~"};
-  ros::Subscriber state_sub,gps_sub,imu_sub,objects_sub,mode_sub,prepare_sub,local_recovery_sub;
-  bool local_recovery_enabled=false;
-  LocalRecoveryPolicy local_recovery;
-  asmc_msgs::LocalTrajectory::ConstPtr local_candidate;
-  std::set<std::string> retired_local_frames;
-  std::string local_candidate_frame;
-  uint64_t local_candidate_sequence=0;
-  double local_candidate_received=0;
-  void on_local_recovery(const asmc_msgs::LocalTrajectory::ConstPtr& m){
-    if(m->run_id!=run||retired_local_frames.count(m->header.frame_id))return;
-    if(m->header.frame_id!=local_candidate_frame){
-      if(!local_candidate_frame.empty())retired_local_frames.insert(local_candidate_frame);
-      // Bound restart tracking by refusing new sources until this node restarts.
-      if(retired_local_frames.size()>64)return;
-      local_candidate_frame=m->header.frame_id;local_candidate_sequence=0;
-      local_candidate.reset();local_recovery.reset();
-    }
-    if(m->plan_sequence<=local_candidate_sequence)return;
-    local_candidate_sequence=m->plan_sequence;local_candidate=m;
-    local_candidate_received=ros::SteadyTime::now().toSec();
-  }
+  ros::Subscriber state_sub,gps_sub,imu_sub,objects_sub,mode_sub,prepare_sub;
   ros::Publisher trajectory_pub,path_pub,trace_pub,recovery_ready_pub,anchor_ready_pub,debug_pub;
   double last_debug_=-1;
   std::string trial_id;
@@ -75,7 +53,6 @@ class PositionNode {
   void epoch_changed() {
     paint_window.reset();paint_exempt=false;
     if(alignment_epoch==alignment.epoch)return;
-    local_candidate.reset();local_recovery.reset();
     const bool previous=alignment_epoch!=0;alignment_epoch=alignment.epoch;
     if(previous)anchor.invalidate("motion_epoch_changed");else anchor.reset();
     gps.clear();pending_objects.reset();world_objects.clear();objects_valid=false;
@@ -262,29 +239,6 @@ class PositionNode {
       p.pose.position.x=point.x;p.pose.position.y=point.y;
       p.pose.orientation.z=std::sin(.5*point.yaw);p.pose.orientation.w=std::cos(.5*point.yaw);
       path.poses.push_back(p);}
-    bool selected_local=false;
-    if(local_recovery_enabled){
-      std::optional<asmc_msgs::LocalTrajectory> candidate;
-      if(local_candidate){
-        auto paired=alignment.pose_at(local_candidate->header.stamp.toSec());
-        if(paired)candidate=ReframeLocalRecovery(*local_candidate,*paired,frame,run,now,steady-local_candidate_received);
-      }
-      const bool risk=(computed&&(planner->moving_objects()||planner->pending_motion_objects()))||
-          r.reason.find("dynamic")!=std::string::npos||r.reason.find("motion_pending")!=std::string::npos;
-      const bool allowed=selected&&fresh&&attitude_valid&&steady-imu_received<=.15&&transform.valid&&
-          objects_valid&&steady-objects_received<=.3&&t-object_stamp>=-.05&&t-object_stamp<=.3;
-      const bool progress=r.valid&&r.chosen_cap>.8&&r.path.size()>2;
-      const bool recoverable=RecoverableLocalFailure(r.reason)||r.valid;
-      selected_local=local_recovery.update(steady,allowed,progress,recoverable,bool(candidate),std::abs(origin->v)<.5,risk);
-      if(selected_local){
-        output=std::move(*candidate);output.plan_sequence=sequence;
-        output.reason="local_recovery:"+local_candidate->reason;
-        path.header=output.header;path.poses.clear();
-        for(const auto& point:output.points){geometry_msgs::PoseStamped pose;pose.header=output.header;
-          pose.pose.position.x=point.x;pose.pose.position.y=point.y;
-          pose.pose.orientation.z=std::sin(point.yaw*.5);pose.pose.orientation.w=std::cos(point.yaw*.5);path.poses.push_back(pose);}
-      }
-    }
     trajectory_pub.publish(output);path_pub.publish(path);
     double observer_ms=0;size_t observer_bytes=0;
     if(debug_pub.getNumSubscribers()&&steady-last_debug_>=.2){
@@ -296,8 +250,6 @@ class PositionNode {
        <<",\"trial_id\":"<<std::quoted(trial_id)
        <<",\"plan_sequence\":"<<sequence<<",\"valid\":"<<(r.valid?"true":"false")
        <<",\"mode_selected\":"<<(selected?"true":"false")<<",\"reason\":"<<std::quoted(r.reason)
-       <<",\"selected_source\":"<<std::quoted(selected_local?"local_recovery":"localization")
-       <<",\"selected_valid\":"<<(output.valid?"true":"false")<<",\"recovery_policy\":"<<std::quoted(local_recovery.reason)
        <<",\"escape_requested\":"<<(r.escape_requested?"true":"false")<<",\"stationary_windows\":"<<r.stationary_windows
        <<",\"phase\":"<<std::quoted(computed?planner->phase():"not_computed")<<",\"source\":"<<std::quoted(transform.source)
        <<",\"anchor_ready\":"<<(transform.valid?"true":"false")<<",\"anchor_samples\":"<<anchor.samples()
@@ -346,7 +298,7 @@ class PositionNode {
       d<<"],\"candidate_limit\":24,\"selected\":[";
       bool first=true;
       const size_t selected_step=std::max(size_t(2),(output.points.size()+1023)/1024);
-      if(output.valid&&transform.valid)for(size_t i=0;i<output.points.size();i+=selected_step){const auto& point=output.points[i];
+      if(r.valid&&transform.valid)for(size_t i=0;i<output.points.size();i+=selected_step){const auto& point=output.points[i];
         const auto q=transform.apply(point.x,point.y);if(!first)d<<',';first=false;d<<'['<<q[0]<<','<<q[1]<<']';}
       d<<"],\"obstacles\":[";first=true;
       size_t shown_objects=0;
@@ -358,7 +310,7 @@ class PositionNode {
       observer_bytes=debug.data.size();observer_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-observer_start).count();
     }
     std_msgs::Bool ready;
-    ready.data=!selected_local&&r.valid&&fresh&&transform.valid&&transform.source=="gps_anchored"&&anchor.state=="gps_anchored";
+    ready.data=r.valid&&fresh&&transform.valid&&transform.source=="gps_anchored"&&anchor.state=="gps_anchored";
     if(shadow_lane_rules&&static_avoidance&&planner->maneuver_active())ready.data=false;
     recovery_ready_pub.publish(ready);
     std_msgs::Bool anchored;anchored.data=fresh&&attitude_valid&&steady-imu_received<=.15&&
@@ -374,9 +326,6 @@ class PositionNode {
     }
     std::ostringstream s;s<<std::setprecision(17)<<"{\"run_id\":"<<std::quoted(run)
       <<",\"stamp\":"<<t<<",\"valid\":"<<(r.valid?"true":"false")<<",\"reason\":"<<std::quoted(r.reason)
-      <<",\"selected_source\":"<<std::quoted(selected_local?"local_recovery":"localization")
-      <<",\"selected_valid\":"<<(output.valid?"true":"false")<<",\"selected_reason\":"<<std::quoted(output.reason)
-      <<",\"selected_scene_stamp\":"<<output.scene_stamp.toSec()<<",\"recovery_policy\":"<<std::quoted(local_recovery.reason)
       <<",\"source\":"<<std::quoted(transform.source)<<",\"map_x\":"<<xy[0]<<",\"map_y\":"<<xy[1]
       <<",\"map_yaw\":"<<origin->yaw+transform.yaw<<",\"anchor_stamp\":"<<transform.stamp
       <<",\"speed_kph\":"<<origin->v*3.6<<",\"selected_kph\":"<<r.chosen_cap*3.6
@@ -423,8 +372,6 @@ class PositionNode {
     if(parameters.empty()||run.empty())throw std::runtime_error("position parameters/run_id required");
     p.param<std::string>("state_topic",state_topic,"/planning/local/odometry");
     p.param("mode_gated",mode_gated,false);
-    p.param("local_recovery_enabled",local_recovery_enabled,false);
-    if(local_recovery_enabled)local_recovery_sub=nh.subscribe("/planning/local/trajectory",1,&PositionNode::on_local_recovery,this);
     p.param("static_avoidance",static_avoidance,false);
     p.param("shadow_lane_rules",shadow_lane_rules,false);
     p.param("dynamic_obstacles",dynamic_obstacles,false);
@@ -444,7 +391,7 @@ class PositionNode {
       throw std::runtime_error("invalid bounded source reorder tolerance");
     if(mode_gated) {
       mode_sub=nh.subscribe<std_msgs::UInt8>("/planning/mode",1,
-        [this](const std_msgs::UInt8::ConstPtr& m){selected=m->data==1;if(!selected){local_recovery.reset();local_candidate.reset();}});
+        [this](const std_msgs::UInt8::ConstPtr& m){selected=m->data==1;});
       prepare_sub=nh.subscribe<std_msgs::Bool>("/planning/jamming/prepare",1,
         [this](const std_msgs::Bool::ConstPtr& m){preparing=m->data;});
     }

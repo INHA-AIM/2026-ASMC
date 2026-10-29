@@ -5,7 +5,6 @@
   <arg name="journal_path" default=""/>
   <arg name="speed_cap_kph" default="20"/>
   <arg name="enable_control" default="false"/>
-  <arg name="local_recovery" default="false"/>
   <arg name="static_avoidance" default="false"/>
   <arg name="dynamic_obstacles" default="false"/>
   <arg name="shadow_lane_rules" default="false"/>
@@ -37,7 +36,6 @@
     <param name="journal_path" value="$(arg journal_path)"/>
     <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
     <param name="state_topic" value="$(arg state_topic)"/>
-    <param name="local_recovery_enabled" value="$(arg local_recovery)"/>
     <param name="static_avoidance" value="$(arg static_avoidance)"/>
     <param name="dynamic_obstacles" value="$(arg dynamic_obstacles)"/>
     <param name="shadow_lane_rules" value="$(arg shadow_lane_rules)"/>

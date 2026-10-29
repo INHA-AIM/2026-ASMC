@@ -23,8 +23,6 @@ def main():
     parser.add_argument('root', type=Path)
     parser.add_argument('--trial', required=True)
     parser.add_argument('--jamming-planner',choices=['camera','local','localization'],default='localization')
-    parser.add_argument('--recording-profile',choices=['full','decision'],default='full', help='decision omits raw clouds/JPEG; retains planner inputs and controls, not raw perception replay')
-    parser.add_argument('--local-recovery', action='store_true', help='experimental localization to validated LOCAL trajectory recovery; one MPC')
     parser.add_argument('--gps-outage', action='store_true')
     parser.add_argument('--own-perception', action='store_true')
     parser.add_argument('--lidar-debug', action='store_true',
@@ -57,8 +55,6 @@ def main():
     parser.add_argument('--main-view-size',nargs=2,type=int,metavar=('WIDTH','HEIGHT'))
     parser.add_argument('--restore-view-size',nargs=2,type=int,metavar=('WIDTH','HEIGHT'))
     args = parser.parse_args()
-    if args.local_recovery and args.jamming_planner!='localization':
-        raise ValueError('LOCAL recovery requires localization planner')
     if args.preserve_scene_label and (len(args.preserve_scene_label)>80 or args.fixture!='none' or
                                      args.park_corridor or args.park_prop):
         raise ValueError('preserved scenes cannot be combined with actor placement/parking')
@@ -120,7 +116,7 @@ def main():
     monitoring=ensure_dashboard(args.root,args.dashboard_port,os.environ['ROS_MASTER_URI'])
     reporter=ExperimentReporter(output,registration['run_id'],args.trial,
         'physical_observer_diagnostic_not_driving_acceptance' if args.observer_contact_baseline else 'physical_trial',monitoring,
-        conditions=dict(weather='Foggy',hour=13,planner=args.jamming_planner,local_recovery=args.local_recovery,recording_profile=args.recording_profile,
+        conditions=dict(weather='Foggy',hour=13,planner=args.jamming_planner,
                         scene_label=args.preserve_scene_label,policy='user_pinned_foggy_20261029'))
     # Check ownership by ROS API PID and the current container's /proc. The
     # private master must not silently supply perception from another worktree.
@@ -378,7 +374,6 @@ def main():
             wrapper.write_text('''<launch>
   <include file="$(find asmc_planner)/launch/autonomy_no_bridges_v2.launch">
     <arg name="jamming_planner" value="%s"/>
-    <arg name="localization_local_recovery" value="%s"/>
     <arg name="dashboard" value="false"/>
     <arg name="shadow_run_id" value="%s"/>
     <arg name="jamming_speed_kph" value="%s"/>
@@ -394,7 +389,7 @@ def main():
   <param name="/mpc_controller/validation_speed_cap_kph" value="%s"/>
   <param name="/localization/trial_id" value="%s"/>
   <param name="/localization_motion/speed_callerid" value="/morai_udp_bridge"/>
-</launch>\n''' % (args.jamming_planner,str(args.local_recovery).lower(),escape(registration['run_id']), args.cap, str(args.static_avoidance).lower(), str(args.dynamic_obstacles).lower(), str(args.shadow_lane_rules).lower(), args.yaw_source, args.motion_reference_offset, args.motion_turn_gain, escape(str(output/'decisions.jsonl')), normal_ceiling,normal_cap,escape(args.trial)))
+</launch>\n''' % (args.jamming_planner,escape(registration['run_id']), args.cap, str(args.static_avoidance).lower(), str(args.dynamic_obstacles).lower(), str(args.shadow_lane_rules).lower(), args.yaw_source, args.motion_reference_offset, args.motion_turn_gain, escape(str(output/'decisions.jsonl')), normal_ceiling,normal_cap,escape(args.trial)))
             bag_topics = [t for t, k in (
                 ('/gps', None), ('/simulation/raw/gps', None), ('/simulation/gps_fault', None), ('/imu', None), ('/Ego_topic', None),
                 ('/planning/localization/motion', None),
@@ -421,7 +416,7 @@ def main():
                 ('/perception/camera/lane/status', None), ('/perception/camera/traffic_light/status', None),
                 ('/morai_sensor_bridge/frame_timing', None),
                 ('/ctrl_cmd', None), ('/ctrl_cmd/normal', None), ('/ctrl_cmd/jamming', None),('/CollisionData',None))]
-            if args.recording_profile=='full' and (args.static_avoidance or args.own_perception):
+            if args.static_avoidance or args.own_perception:
                 # Raw sensor evidence is retained for later reproduction.
                 bag_topics+=['/velodyne_points','/perception/camera/objects','/perception/lidar/trace',
                     '/perception/camera/objects/observations',
@@ -609,7 +604,7 @@ def main():
                 static_avoidance=args.static_avoidance,fixture=args.fixture,yaw_source=args.yaw_source,perception_lifecycle="lease_owned" if args.own_perception else "reused")
     result['dynamic_obstacles']=args.dynamic_obstacles
     result['shadow_lane_rules']=args.shadow_lane_rules
-    result['recording_policy']=dict(buffer_mib=1024,chunk_kib=4096,compression='lz4_lossless',raw_topics_retained=args.recording_profile=='full',profile=args.recording_profile)
+    result['recording_policy']=dict(buffer_mib=1024,chunk_kib=4096,compression='lz4_lossless',raw_topics_retained=True)
     result['conditions']=dict(weather='Foggy',hour=13,after_cleanup_weather='Foggy',policy='user_pinned_foggy_20261029')
     result['motion_reference_offset_m']=args.motion_reference_offset
     result['normal_validation_speed_cap_kph']=normal_cap

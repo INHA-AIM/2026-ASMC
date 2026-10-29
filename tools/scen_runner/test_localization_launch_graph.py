@@ -84,14 +84,3 @@ assert 'shadow_planner' not in arguments
 assert [(n.package,n.type,n.name) for n in graph(None).nodes]==[(n.package,n.type,n.name) for n in graph('camera').nodes]
 assert 'local_planner' in [n.name for n in graph('local').nodes]
 print('PASS one selector and A448 entry for camera/local/localization; camera default')
-
-c=graph('localization',['localization_local_recovery:=true'])
-names=[n.name for n in c.nodes]
-assert all(names.count(n)==1 for n in ('local_planner','localization','localization_controller','semantic_space_trial','asmc_control_selector'))
-assert 'local_controller' not in names and 'camera_bbox_lane_change' not in names
-assert c.params['/localization/local_recovery_enabled'].value is True
-assert c.params['/local_planner/speed_cap_kph'].value==5.
-assert c.params['/local_planner/active_in_jamming_only'].value is True
-assert c.params['/asmc_control_selector/jamming_controller'].value=='/localization_controller'
-assert graph('localization').params['/localization/local_recovery_enabled'].value is False
-print('PASS optional LOCAL recovery is planner-only; one jamming MPC; baseline unchanged')
