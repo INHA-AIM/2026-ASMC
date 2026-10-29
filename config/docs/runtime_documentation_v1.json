@@ -50,6 +50,11 @@
       "internal_args": []
     },
     {
+      "title": "Single-container complete driving stack",
+      "path": "src/asmc_planner/launch/autonomy.launch",
+      "internal_args": []
+    },
+    {
       "title": "Integrated planning/control",
       "path": "src/asmc_planner/launch/autonomy_no_bridges_v2.launch",
       "internal_args": []

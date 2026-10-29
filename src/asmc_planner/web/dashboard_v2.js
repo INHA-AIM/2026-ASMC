@@ -49,7 +49,7 @@
     if(monitorInstance!==meta.instance_id || !meta.data_available)clearTrialObservations();
     monitorInstance=meta.instance_id;
     const phases={preparing:'준비 중',driving:'실험 주행 중',finishing:'종료 정리 중',ended:'실험 종료',
-      interrupted:'실험 프로세스 종료',stale:'실험 heartbeat 지연',idle:'실험 대기'};
+      interrupted:'실험 프로세스 종료',stale:'실험 heartbeat 지연',idle:'실험 대기',running:'전체 스택 실행 중'};
     if(node) {
       node.hidden=false;
       node.textContent=[phases[meta.phase]||meta.phase,meta.run_id||'대기',
@@ -968,7 +968,10 @@
       let snapshot;
       try { snapshot = await fetch('../api/snapshot', {cache: 'no-store', signal: abort.signal}).then(response => response.json()); }
       finally { clearTimeout(timer); }
-      applyTrialMonitor(snapshot.trial_monitor);
+      const runtime=snapshot.runtime_session;
+      applyTrialMonitor(snapshot.trial_monitor || (runtime && {...runtime,
+        instance_id:runtime.session_id,data_available:true,
+        local_receive_age_s:snapshot.local_receive_age_s}));
       data.localExperiment=snapshot.local_experiment||null;
       data.localControl=snapshot.local_control||null;
       data.localReceived=performance.now();

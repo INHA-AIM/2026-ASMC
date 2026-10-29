@@ -216,6 +216,26 @@
 | `diagnostics_topic` | `diagnostics` | — |
 | `trace_topic` | `trace` | — |
 
+## Single-container complete driving stack
+
+[소스](../../src/asmc_planner/launch/autonomy.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `jamming_planner` | `camera` | — |
+| `transport_profile` | `local` | — |
+| `cmd_ip` | `$(optenv MORAI_CMD_IP 127.0.0.1)` | — |
+| `cmd_port` | `9093` | — |
+| `invert_steer` | `false` | — |
+| `dashboard_port` | `8088` | — |
+| `lidar_dashboard_port` | `8091` | — |
+| `lidar_view` | `true` | — |
+| `lidar_debug` | `false` | — |
+| `local_speed_cap_kph` | `10` | — |
+| `local_run_id` | `$(optenv ASMC_RUNTIME_SESSION_ID standalone)` | — |
+| `local_journal_path` | `(빈 문자열)` | — |
+| `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
+
 ## Integrated planning/control
 
 [소스](../../src/asmc_planner/launch/autonomy_no_bridges_v2.launch)

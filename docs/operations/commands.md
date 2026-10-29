@@ -475,7 +475,10 @@ rosservice call /test/lidar/lidar_pipeline/reset "{}"
 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 따릅니다.
 
 
-## 공유 master에서 LOCAL 음영 주행 선택
+## 구성 요소별 LOCAL 음영 주행 선택
+
+2026-10-29 후속 요청의 현재 권장은 아래 [단일 컨테이너 실행](#local-배포-선택과-기본-방식-복귀--2026-10-29)이다.
+공유 master는 이전 운용의 선택 사례이며 자동으로 다른 컨테이너의 master/bridge에 연결하지 않는다.
 
 여러 host-network 컨테이너가 브릿지를 공유할 때 master는 기본 컨테이너 한 곳에서만 실행한다.
 각 컨테이너는 **자기 `/root/ws/devel/setup.bash`**를 source한다. 다른 worktree의 setup을
@@ -488,7 +491,8 @@ roscore -p 11311
 
 LOCAL worktree를 연결한 컨테이너에서 아래 환경과 실행 명령을 사용한다.
 새 대화형 Bash에 같은 설정이 적용돼 있으면 export는 생략할 수 있다.
-`/root/local-env.sh`는 bag/회귀용 독립 master11348이므로 공유 주행 터미널에서는 사용하지 않는다.
+현재 LOCAL 컨테이너의 대화형 셸과 `/root/local-env.sh` 모두11311이다.
+bag/회귀 실행기는 자식 프로세스에 시험용 master를 명시하며 사용자 셸을 바꾸지 않는다.
 
 ```bash
 cd /root/ws
@@ -614,35 +618,50 @@ RGB/semantic source·선택/탈락 경로를 연결한다. 실시간 화면에�
 
 ## LOCAL 배포 선택과 기본 방식 복귀 · 2026-10-29
 
-원격 main fad73f82의 기본은 팀의 기존 카메라 재밍 방식이다. 기본 실행:
+현재 권장은 **한 컨테이너가 ROS master·bridge·카메라·LiDAR·판제·두 웹을 모두 소유**하는 방식이다.
+main 포트 ROS11311·판제8088·LiDAR8091과 기존 bridge UDP를 그대로 쓴다. host network는
+컨테이너별로 포트를 분리하지 않으므로 다른 브랜치의 전체 실행은 종료한 뒤 교대한다.
+다른 실행이 있으면 시작을 거부하며 임의로 종료하거나 다른 master에 붙지 않는다.
+
+컨테이너 내부 `/root/ws`에서 기본 카메라 재밍 방식:
+
+```bash
+./scripts/drive.sh
+```
+
+LOCAL 방식:
+
+```bash
+./scripts/drive.sh jamming_planner:=local
+```
+
+실행기는 설정을 펼쳐 중복 노드·TCP/UDP 수신 포트를 확인하고, 공유 simulator lease와11311을
+소유한 뒤 `asmc_planner/autonomy.launch`를 시작한다. 센서 포트 목록을 별도로 복제하지 않는다.
+종료는 Ctrl+C다. 자기 ROS 노드가 종료된 뒤 자기 master와 lease를 반납한다.
+기본으로 복귀할 때 현재 실행을 종료하고 옵션 없는 명령을 쓴다. roscore·bridge·인지·웹을
+별도로 추가 실행하지 않는다. 시작 전 확인만 하려면 `./scripts/drive.sh --check`를 사용한다.
+
+기존 구성 요소별 실행도 유지한다. 이때 같은 컨테이너에11311 master와 bridge를 한 번 실행하고,
+다음 명령은 각각 별도 터미널에서 실행한다. 전체 실행기와 구성 요소 실행을 겹치지 않는다.
 
 ```bash
 roslaunch asmc_camera camera.launch
 roslaunch asmc_lidar lidar.launch
-roslaunch asmc_planner autonomy_no_bridges_v2.launch
-```
-
-LOCAL을 선택할 때 마지막 명령만 다음으로 바꾼다. 위 인지 두 런치는 같은 컨테이너에 한 세트다.
-공유11311의 bridge/roscore는 기존 실행을 사용하며 autonomy가 중복 시작하지 않는다.
-
-```bash
 roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 ```
 
-LOCAL 목표 상한10km/h, 저속 회복 목표5km/h다.5는 강제 최저속도가 아니며 실제 정지거리·조향·
-충돌 검증은 더 낮은 속도 또는 정지를 요구할 수 있다. 기본 방식으로 복귀할 때 현재 autonomy를
-종료한 다음 위 옵션 없는 autonomy 명령을 실행한다. 두 autonomy를 동시에 실행하지 않는다.
+LOCAL 목표 상한10km/h, 저속 회복 목표5km/h다. 정지하지 않으려면 검증 가능한 대체 경로가
+필요하며 입력 무효·실제 충돌·물리적으로 불가능한 곡률에 속도만5로 덮어쓰지 않는다.
+기본 재밍 방식은 camera로 유지한다. LOCAL에서만 새 planner/MPC/노면 입력을 시작한다.
 
 판제: <http://localhost:8088/web/index_v2.html>. 자동 보기 또는 `LOCAL 경로·노면·fusion`.
-LiDAR 상세 확인은 일반 lidar 실행 대신 `roslaunch asmc_lidar lidar.launch debug:=true`,
-이후 `roslaunch asmc_lidar view.launch`; 주소는 <http://localhost:8091/>.
-8088과8091은 별도 HTTP 포트다. 다른 컨테이너의 같은 포트가 이미 있으면 그 실행을 종료하지
-않고 빈 포트를 명시하거나 실행 컨테이너를 교대한다. 자동 시험의8088 입구는 종료된 경우에만
-수동 dashboard에 반환하며, 진행 중인 실험 입구를 반환하지 않는다.
+LiDAR: <http://localhost:8091/>. 전체 실행에는 두 웹이 포함되고 GUI를 자동으로 열지 않는다.
+LiDAR 단계별 상세 점군이 필요할 때만 전체 실행에 `lidar_debug:=true`를 추가한다.
+기본 debug OFF에서도 판제 객체 입력과 웹 객체 표시는 유지된다.
+전체 실행의 branch·revision·session/master를 판제 웹 상단에 표시한다. 관측 연결이 끊기면
+과거 경로를 비우며, 상세 유효성·노면 age·MPC 실패 사유는 기존 패널에서 확인한다.
 
 `jamming_planner`는 현재 camera/local만 허용한다. localization 구현은 이번에 추가하지 않았다.
-향후 새 선택은 같은 launch의 상호 배타 include와 selector 슬롯에 연결하고, GPS 무효를
-정상 map 상태로 꾸미지 않으며 명령 소유권·watchdog·모드 인계 검사를 재사용한다.
-노면 잡음·5개 가이드·6m 확장 후보는 배포 C++에서 제외하고 원본 연구 branch/실험 자료에 보존했다.
-[이번 비교·남은 실패](../records/planning/2026-10-29-local-first-comparison.md)와
+향후 같은 상호 배타 include와 selector 슬롯에 연결해 명령 소유권·watchdog·모드 인계를 재사용한다.
+[비교·남은 실패](../records/planning/2026-10-29-local-first-comparison.md)와
 [배포 검증](../records/planning/2026-10-29-local-deployment.md)을 함께 확인한다.

@@ -49,6 +49,22 @@ def check_launches():
         pass
     else:
         raise AssertionError('unknown mode was accepted')
+    full_path = rospkg.RosPack().get_path('asmc_planner') + '/launch/autonomy.launch'
+    for args in ([], ['jamming_planner:=local']):
+        full = roslaunch.config.load_config_default([(full_path,args)],None)
+        names = [n.namespace+n.name for n in full.nodes]
+        assert len(names) == len(set(names)), names
+        for name in ('/morai_udp_bridge','/morai_sensor_bridge','/camera_objects',
+                     '/camera_lane','/perception/lidar/lidar_pipeline',
+                     '/perception/lidar/lidar_monitor','/behavior_dashboard_server',
+                     '/asmc_control_selector','/planning_gps_imu_state_adapter'):
+            assert names.count(name) == 1, (name,names)
+        assert '/gps_imu_vehicle_state_adapter' not in names
+        assert full.params['/behavior_dashboard_server/port'].value == 8088
+        assert full.params['/perception/lidar/lidar_monitor/port'].value == 8091
+        assert ('/local_controller' in names) == bool(args)
+        assert any(n.package == 'lane_boundary_adapter' for n in full.nodes) == (not args)
+    print('Full single-container composition: canonical ports and exactly one stack PASS')
     print('Expanded autonomy: exclusive follower/LOCAL, semantic input, defaults and typo rejection PASS')
 
 

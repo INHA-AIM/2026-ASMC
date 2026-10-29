@@ -99,7 +99,7 @@ LOCAL 전용 컨테이너는 `asmc-local2c-20261028`, `/root/ws`는
 지연 master200ms 검사가 통과했다. 추가 후보와 최종 설정에 대한 검사·반복 주행은
 완료 표에 연결하며, hosted CI 성공으로 표현하지 않는다.
 
-일반 실행은 [명령 안내](../../operations/commands.md#공유-master에서-local-음영-주행-선택)를 따른다.
+일반 실행은 [명령 안내](../../operations/commands.md#구성-요소별-local-음영-주행-선택)를 따른다.
 기본 `jamming_planner:=camera`와 별도 LOCAL 선택을 혼동하지 않는다.
 
 ## 최종 경계 보완

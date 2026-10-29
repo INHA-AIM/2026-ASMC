@@ -51,13 +51,21 @@ def descendant(pid, parent):
 
 
 class PrivateMaster:
-    def __init__(self, output, preferred=11348):
+    def __init__(self, output, preferred=11348, strict_port=False):
         self.output, self.preferred = Path(output), preferred
+        self.strict_port = strict_port
         self.child = self.log = None
         self.previous = {}
 
     def __enter__(self):
-        self.port = available_port(self.preferred)
+        if self.strict_port:
+            with socket.socket() as probe:
+                try: probe.bind(('127.0.0.1',self.preferred))
+                except OSError as exc:
+                    raise RuntimeError('Requested master port is already owned: %d; no existing master was reused' % self.preferred) from exc
+            self.port=self.preferred
+        else:
+            self.port = available_port(self.preferred)
         self.previous = {k: os.environ.get(k) for k in ('ROS_MASTER_URI', 'ROS_HOSTNAME', 'ROS_IP')}
         os.environ['ROS_MASTER_URI'] = 'http://127.0.0.1:%d' % self.port
         os.environ['ROS_HOSTNAME'] = '127.0.0.1'
@@ -83,7 +91,8 @@ class PrivateMaster:
                 raise RuntimeError('private master startup timeout')
             (self.output / 'private-runtime.json').write_text(json.dumps(dict(
                 master_uri=os.environ['ROS_MASTER_URI'], master_pid=pid,
-                launcher_pid=self.child.pid, shared_master_untouched=True), indent=2))
+                launcher_pid=self.child.pid, shared_master_untouched=True,
+                strict_port=self.strict_port), indent=2))
             return self
         except BaseException:
             self.__exit__(None, None, None)

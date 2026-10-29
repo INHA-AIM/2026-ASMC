@@ -136,7 +136,7 @@ include하고 구 BBox 경로를 제외한다. 기본 `camera`는 이전 행동�
 지정 selector 외 wire 생산자를 허용하지 않는다. 기존 selector의250ms watchdog은 유지한다.
 노면 투영 입력은 `asmc_camera/launch/semantic_space.launch`가 소유하며 시나리오 launch도
 이를 include한다. 추가 추론이나 구 제어 루프를 실행하지 않는다.
-실행·공유 master 설정은 [명령 안내](../operations/commands.md#공유-master에서-local-음영-주행-선택)를 따른다.
+실행·공유 master 설정은 [명령 안내](../operations/commands.md#구성-요소별-local-음영-주행-선택)를 따른다.
 
 사용자가 확정한 새 local의 탐색 규약은 다음과 같다.
 

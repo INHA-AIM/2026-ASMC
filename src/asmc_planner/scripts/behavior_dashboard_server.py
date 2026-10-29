@@ -356,6 +356,9 @@ def run_dashboard(server=None, reserved_port=None):
     package_path = rospy.get_param("~package_path")
     interface_version = rospy.get_param("~interface_version", "v1")
     DashboardHandler.snapshot["interface_version"] = interface_version
+    # Set by the container-owned launcher before starting any ROS nodes.
+    # Read once; no master/Git polling is added to control or HTTP callbacks.
+    DashboardHandler.snapshot["runtime_session"] = rospy.get_param("/runtime/session", None)
     if interface_version == "v2":
         # Diagnostics only: no control publishers, inference or duplicate fits.
         rospy.Subscriber("/planning/mode", UInt8,

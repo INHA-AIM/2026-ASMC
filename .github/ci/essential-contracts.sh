@@ -23,6 +23,7 @@ python3 src/planning_inputs/test/object_filter_contract_test.py
 python3 -m unittest tools/audit/test_git_history_assets.py
 python3 -m unittest tools/perception/test_object_engine_selection.py
 python3 src/asmc_planner/tests/behavior/dashboard_startup_test.py
+python3 tools/runtime/test_standalone.py
 node src/asmc_planner/tests/behavior/dashboard_motion_test.js
 node src/asmc_planner/tests/behavior/dashboard_shadow_test.js
 python3 -m compileall -q src tools/ci tools/scen_runner/scen_runner

@@ -11,6 +11,8 @@ services:
       dockerfile: Dockerfile
     image: asmc/ros-noetic:dev
     container_name: asmc-ros-noetic
+    # Reap orphaned recorder/ROS children when repeated sessions end.
+    init: true
     gpus: all
     # Docker Desktop의 개별 UDP 포워딩을 사용하지 않는다. 특히 브릿지를
     # 재시작해도 runtime LiDAR 9299와 optional Instance GT 9311 포워딩이
@@ -34,6 +36,7 @@ services:
       # Use the image-owned 0700 directory to avoid Qt/rqt/RViz startup faults.
       - XDG_RUNTIME_DIR=/tmp/asmc-xdg-runtime
       - ROS_MASTER_URI=http://127.0.0.1:11311
+      - ASMC_MASTER_PORT=11311
       - ROS_HOSTNAME=localhost
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw

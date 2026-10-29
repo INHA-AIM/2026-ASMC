@@ -166,7 +166,7 @@ semantic 설정은 `asmc_camera/launch/semantic_space.launch`에 두고 기존 �
   계약 시험에 빠져 있던 backend 진단용 stub을 보완했으며 geometry SHA는 변경하지 않았다.
 
 공유 주행에서는 `/root/local-env.sh`를 source하지 않는다. 그 파일은 여전히 독립
-bag/회귀용11348이다. [현재 실행 명령](../../operations/commands.md#공유-master에서-local-음영-주행-선택)을
+bag/회귀용11348이다. [현재 실행 명령](../../operations/commands.md#구성-요소별-local-음영-주행-선택)을
 따른다. 위 검사는 연결 수락이며, 앞서 기록한282.88ms 공백이나 실제 회피·복귀 미수락을
 해결한 결과로 해석하지 않는다. push·병합은 하지 않았다.
 
