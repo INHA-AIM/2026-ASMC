@@ -115,7 +115,7 @@ def main():
             sequence = 0
 
             prepare_mode = False
-            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0, family_valid=True, blocked=False):
+            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0, family_valid=True, blocked=False, family_present=True, plane_valid=True):
                 nonlocal sequence
                 rows.clear()
                 plans.clear()
@@ -142,7 +142,7 @@ def main():
                         ctx.producer_session_id = session
                         ctx.projection_session_id = "projection"
                         ctx.config_id = "fixture"
-                        ctx.imu_corrected = True
+                        ctx.imu_corrected = plane_valid
                         ctx.views = ["front", "left", "right"]
                         ctx.plane_coefficients = [0.0, 0.0, -0.36] * 3
                         family = LaneBoundaryFamily()
@@ -179,7 +179,8 @@ def main():
                         raster.encoding = "mono8"
                         raster.data = bytes([0 if blocked else 255]) * 40000
                         pub["context"].publish(ctx)
-                        pub["family"].publish(family)
+                        if family_present:
+                            pub["family"].publish(family)
                         pub["probability"].publish(raster)
                         pub["coverage"].publish(raster)
                         lidar = LidarTrackingObservation()
@@ -289,6 +290,26 @@ def main():
             assert any(r.get('phase') == 'active' and r['frame'] in before_frames for r in result if r.get('scene_valid'))
             assert any(r.get("scene_valid") for r in result)
             print("NORMAL idle / bounded preparation / same-frame ACTIVE entry PASS")
+            os.killpg(node.pid, signal.SIGINT)
+            node.wait(timeout=8)
+            node = start(["rosrun", "asmc_planner", "asmc_local_planner_node",
+                "__name:=local_alignment_planner", "_speed_callerid:=/local_alignment_test",
+                "_run_id:=unit-local2h", "_semantic_reference_fallback:=true"], "semantic.log")
+            time.sleep(.8)
+            result, messages = feed(2., .5, status=empty, family_present=False)
+            semantic = [r for r in result if r.get('valid')]
+            assert semantic and all(not r['input_join']['family_received'] for r in semantic)
+            assert all(r['input_join']['reference_source']=='semantic_right_offset_trial' and
+                       r['selected_kph']<=5.00001 for r in semantic)
+            assert messages and all(m.scene_stamp<=m.header.stamp for m in messages)
+            print('Missing fit with exact current semantic/plane produces bounded navigation PASS')
+            for kwargs in [dict(blocked=True),dict(plane_valid=False),dict(camera_age=.36),dict(status=invalid)]:
+                options=dict(status=empty,family_present=False);options.update(kwargs)
+                result, _=feed(.8,.5,**options)
+                assert not any(r.get('valid') for r in result[-3:]), result[-3:]
+            result, _=feed(1.,.5,status=empty,family_present=True)
+            assert any(r.get('valid') and r['input_join']['reference_source']=='family' for r in result)
+            print('Semantic fallback preserves blocked/stale/invalid gates and returns to real family PASS')
             assert node.poll() is None
             assert not dict(master.getSystemState()[0]).get("/ctrl_cmd")
             assert not dict(master.getSystemState()[0]).get("/ctrl_cmd/jamming")

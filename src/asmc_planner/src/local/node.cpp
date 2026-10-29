@@ -489,7 +489,7 @@ class Node {
     uint64_t selected = 0;
     for (auto it = contexts.rbegin(); it != contexts.rend(); ++it) {
       if (!probs.count(it->first) || !covers.count(it->first) ||
-          !families.count(it->first))
+          (!families.count(it->first) && !semantic_reference_fallback))
         continue;
       // Camera bundle identity stays exact; LiDAR selects its own latest scan.
       // A newer explicit invalid bundle is not hidden by an older valid one.
@@ -561,7 +561,16 @@ class Node {
       return;
     }
     const auto ctx = contexts.at(selected);
-    const auto family = families.at(selected);
+    const auto found_family = families.find(selected);
+    const bool family_received = found_family != families.end();
+    // A current IMU plane + probability/coverage bundle is independently
+    // usable navigation evidence. A missing fit must not force reuse of an
+    // older bundle. This private empty value is never published as a family;
+    // the semantic cue stays capped at5km/h and passes the current body/OBB
+    // sweep. Its scene stamp remains the exact camera context stamp.
+    asmc_msgs::LaneBoundaryFamily missing_family;
+    missing_family.header = ctx->header;
+    const auto *family = family_received ? found_family->second.get() : &missing_family;
     if (!ctx->imu_corrected ||
         ctx->plane_coefficients.size() != 3 * ctx->views.size() ||
         ctx->views.empty() || (!family->valid && !semantic_reference_fallback)) {
@@ -570,14 +579,14 @@ class Node {
     }
     // deployment_allowed is a producer promotion flag, not geometric validity.
     // This explicitly selected experiment owns its separate control gate.
-    if (family->header.frame_id != "base_link" ||
+    if (ctx->config_id.empty() || (family_received && (family->header.frame_id != "base_link" ||
         family->operating_domain != "shadow_two_way_v1" ||
         (family->valid && family->boundaries.size() != 3) || family->config_sha256.empty() ||
         family->config_sha256 != ctx->config_id ||
         family->algorithm_id !=
             "twinlite_v6_shadow_boundary_family_candidate_v3" ||
         family->representation !=
-            "shared_parametric_bspline_normal_offsets_v2") {
+            "shared_parametric_bspline_normal_offsets_v2"))) {
       invalid("family_contract");
       return;
     }
@@ -701,6 +710,7 @@ class Node {
     bool semantic_reference = !family->valid;
     std::map<int, std::vector<std::array<double, 2>>> bounds;
     for (const auto &bound : family->boundaries) {
+      if (!family->valid) break; // Rejected fitted points are not navigation evidence.
       // Only centre/right define LOCAL's home reference. A folded inferred
       // opposite outer line is not evidence that the semantic road is blocked.
       // Do not sort/repair a required boundary or bridge its support gaps.
@@ -793,6 +803,7 @@ class Node {
     if (detail) join_debug.insert(join_debug.size()-1,
         std::string(",\"reference_source\":\"")+(semantic_reference?"semantic_right_offset_trial":"family")+
         "\",\"family_input_valid\":"+(family->valid?"true":"false")+
+        ",\"family_received\":"+(family_received?"true":"false")+
         ",\"reference_prior_used\":"+(semantic_reference&&!reference_hint.empty()?"true":"false")+
         ",\"reference_prior_age_s\":"+std::to_string(reference_prior.age(plan_stamp.toSec())));
     for (const auto &o : array.objects) {

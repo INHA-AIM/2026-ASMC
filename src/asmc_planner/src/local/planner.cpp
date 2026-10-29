@@ -709,7 +709,8 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   // Try the separately labelled3km/h near-field recovery before turning a
   // short prefix into full STOP. Its actual-OBB veto above is unconditional;
   // terminal speed integration below must still fit the new path length.
-  const bool recovered=(out.path.size()<3 || short_for_current_speed || no_crawl_progress) &&
+  const bool recovery_attempted=out.path.size()<3 || short_for_current_speed || no_crawl_progress;
+  const bool recovered=recovery_attempted &&
       BuildRecoveryPath(s,c,out);
   if (out.path.size() < 3 && !recovered) {
     out.reason = "no_verified_prefix";
@@ -723,7 +724,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
     // failed winner must not suppress a currently measured, fully swept crawl
     // alternative. Do not hold the old command or weaken freshness/collision
     // checks; recovery constructs and profiles a new candidate from this scene.
-    if(c.recovery && (failure=="initial_steering_slew_infeasible" ||
+    if(c.recovery && !recovery_attempted && (failure=="initial_steering_slew_infeasible" ||
                       failure=="insufficient_stopping_space") &&
         BuildRecoveryPath(s,c,out) && BuildSpeedProfile(s,c,out)) {
       ++out.rejected["speed_replan_"+failure];
