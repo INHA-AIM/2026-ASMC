@@ -9,9 +9,12 @@ import urllib.request
 import urllib.error
 
 
-def release_idle_trial_monitor(port):
+def release_idle_trial_monitor(port, workspace=None):
     """Reclaim only this worktree's ended observer, never active/foreign UI."""
-    workspace=str(Path(__file__).resolve().parents[3])
+    # A COPYONLY devel helper can live under an older build-directory alias.
+    # The ROS entry script supplies its actual source workspace before init.
+    workspace=str(Path(workspace).resolve() if workspace is not None
+                  else Path(__file__).resolve().parents[3])
     try:
         base='http://127.0.0.1:%d'%port
         with urllib.request.urlopen(base+'/api/monitor-health',timeout=.2) as r:info=json.load(r)
@@ -24,13 +27,13 @@ def release_idle_trial_monitor(port):
         return False
 
 
-def run_on_port(port, handler, start_ros, host='0.0.0.0'):
+def run_on_port(port, handler, start_ros, host='0.0.0.0', workspace=None):
     try:
         server = http.server.ThreadingHTTPServer((host, port), handler)
     except OSError as error:
         if error.errno != errno.EADDRINUSE:
             raise
-        if release_idle_trial_monitor(port):
+        if release_idle_trial_monitor(port, workspace):
             # Reserve before ROS registration, as in the ordinary startup.
             for _ in range(20):
                 try:

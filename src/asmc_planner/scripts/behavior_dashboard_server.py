@@ -9,6 +9,7 @@ import json
 import os
 import threading
 import time
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from sensor_msgs.msg import Image
 from asmc_msgs.msg import CameraObjectObservation
@@ -452,7 +453,8 @@ def main():
     if not 1 <= args.port <= 65535:
         parser.error('--port must be between 1 and 65535')
     return run_on_port(args.port, DashboardHandler,
-                       lambda server: run_dashboard(server, args.port))
+                       lambda server: run_dashboard(server, args.port),
+                       workspace=Path(__file__).resolve().parents[3])
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 import urllib.error
 import urllib.request
 from scen_runner.runtime.trial_monitor import (FrontDoor, atomic_json, active_state,
@@ -90,7 +91,12 @@ class ManualHandoffTest(unittest.TestCase):
         endpoint=ensure_frontend(workspace,state_dir,self.backend.server_port)
         child=next(p for p in _FRONTENDS if p.pid==endpoint['pid'])
         try:
-            self.assertEqual(17,run_on_port(endpoint['port'],http.server.BaseHTTPRequestHandler,lambda _:17,'127.0.0.1'))
+            # Reproduce a helper copied into a reused devel directory. Its
+            # location must not override the entry script's source identity.
+            copied=self.root/'old-build/devel/lib/asmc_planner/dashboard_startup.py'
+            with patch('dashboard_startup.__file__',str(copied)):
+                self.assertEqual(17,run_on_port(endpoint['port'],http.server.BaseHTTPRequestHandler,
+                    lambda _:17,'127.0.0.1',workspace=workspace))
             child.wait(timeout=3)
         finally:
             if child.poll() is None:child.terminate();child.wait(timeout=2)
@@ -102,8 +108,21 @@ class ManualHandoffTest(unittest.TestCase):
         self.front.workspace=workspace
         called=[]
         self.assertEqual(2,run_on_port(self.front.server_port,http.server.BaseHTTPRequestHandler,
-                                      lambda _:called.append(True),'127.0.0.1'))
+                                      lambda _:called.append(True),'127.0.0.1',workspace=workspace))
         self.assertEqual(called,[]);self.assertTrue(self.get()['trial_monitor']['data_available'])
+
+
+    def test_ended_other_worktree_frontend_is_not_reclaimed(self):
+        import sys
+        workspace=Path(__file__).resolve().parents[4]
+        sys.path.insert(0,str(workspace/'src/asmc_planner/scripts'))
+        from dashboard_startup import run_on_port
+        self.meta.update(phase='ended');self.write()
+        called=[]
+        self.assertEqual(2,run_on_port(self.front.server_port,http.server.BaseHTTPRequestHandler,
+            lambda _:called.append(True),'127.0.0.1',workspace=self.root/'different-worktree'))
+        self.assertEqual(called,[])
+        self.assertEqual(self.get()['trial_monitor']['phase'],'ended')
 
 
 if __name__=='__main__':unittest.main()
