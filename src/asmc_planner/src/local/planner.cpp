@@ -718,8 +718,21 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   }
   out.search_ms = elapsed(start);
   if (!BuildSpeedProfile(s, c, out)) {
-    out.elapsed_ms = elapsed(start);
-    out.speed_ms = out.elapsed_ms - out.search_ms;
+    const auto failure=out.reason;
+    // Geometric ranking precedes actual-state speed/slew validation. A single
+    // failed winner must not suppress a currently measured, fully swept crawl
+    // alternative. Do not hold the old command or weaken freshness/collision
+    // checks; recovery constructs and profiles a new candidate from this scene.
+    if(c.recovery && (failure=="initial_steering_slew_infeasible" ||
+                      failure=="insufficient_stopping_space") &&
+        BuildRecoveryPath(s,c,out) && BuildSpeedProfile(s,c,out)) {
+      ++out.rejected["speed_replan_"+failure];
+      out.valid=true;
+      out.reason="near_field_recovery";
+      out.path_source="speed_feasible_recovery";
+    }
+    out.elapsed_ms=elapsed(start);
+    out.speed_ms=out.elapsed_ms-out.search_ms;
     return out;
   }
   out.valid = true;

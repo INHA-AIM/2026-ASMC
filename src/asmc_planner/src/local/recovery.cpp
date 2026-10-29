@@ -186,7 +186,14 @@ bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
   // An already rechecked recovery is current geometry, not stale control.
   // A shorter newly sampled arc must not overwrite a longer feasible one.
   if(out.path_source=="rechecked_recovery" && !out.path.empty() &&
-      out.path.back().s>=best.back().s)return false;
+      out.path.back().s>=best.back().s) {
+    // Length alone does not make yesterday's rechecked geometry executable.
+    // A changed initial curvature/acceleration can fail its speed/slew profile
+    // while today's shorter arc is feasible. Retain the old preference only
+    // after the same actual-state speed checks, with no relaxed bounds.
+    Result existing=out;
+    if(BuildSpeedProfile(s,c,existing))return false;
+  }
   out.path = std::move(best);
   out.goals = std::move(goals);
   out.assisted = true;

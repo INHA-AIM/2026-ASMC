@@ -5,6 +5,7 @@
 #include "local/object_prediction.hpp"
 #include "local/planner.hpp"
 #include "local/speed_profile.hpp"
+#include "local/recovery.hpp"
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
 #include "local/semantic_reference.hpp"
@@ -32,6 +33,21 @@ Scene empty() {
   return s;
 }
 int main() {
+  {
+    auto s=empty();s.speed=1.;s.acceleration=1.;
+    Config c;c.recovery=true;c.low_speed_rate_floor=.1;c.speed_cap=10./3.6;
+    Result old;old.path_source="rechecked_recovery";
+    old.path={{0,0,0,0,0},{.1,0,0,.20,.1},{10,0,0,.20,10}};
+    auto invalid=old;
+    expect(!BuildSpeedProfile(s,c,invalid) && invalid.reason=="initial_steering_slew_infeasible",
+           "fixture's long previous path is physically infeasible at the measured state");
+    expect(BuildRecoveryPath(s,c,old) && BuildSpeedProfile(s,c,old),
+           "an infeasible long rechecked path cannot veto today's feasible swept recovery");
+    expect(old.path.back().s<10.,"replacement uses its measured shorter horizon, not the old free range");
+    s.grid.probability.assign(40000,0);
+    Result blocked;
+    expect(!BuildRecoveryPath(s,c,blocked),"speed retry cannot create an opening in a blocked current raster");
+  }
   {
     auto s=empty();Config c;
     s.measured_steering_valid=true;s.measured_steering_rad=.5;s.steering_source_age=.02;
