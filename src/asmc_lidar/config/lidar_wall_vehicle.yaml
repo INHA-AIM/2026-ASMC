@@ -27,7 +27,10 @@ experimental:
     integrated_motion: true
     low_obstacle_evidence: true
     original_parameters:
-      cluster_min_points: 3
+      cluster_min_points: 10
+      sparse_cluster_enable: true
+      sparse_cluster_min_points: 2
+      sparse_cluster_wall_clearance_m: 1.5
       cluster_tolerance_m: 1.0
       obb_remove_ground_residual: true
       pre_gps_ceiling_filter_enable: false

@@ -1667,6 +1667,46 @@ void TunnelPipeline::RemoveResidualWalls(
     r.timings.wall_remove_ms+=ElapsedMs(start);
 }
 
+bool SparseClusterWallClear(const pcl::PointCloud<pcl::PointXYZI>& cloud,
+    const pcl::PointIndices& component, const std::array<WallSideResult, 2>& walls,
+    const Params& params) {
+    if (!params.sparse_cluster_enable || params.sparse_cluster_min_points < 2 ||
+        component.indices.size() < static_cast<std::size_t>(params.sparse_cluster_min_points) ||
+        component.indices.size() >= static_cast<std::size_t>(params.cluster_min_points) ||
+        !std::isfinite(params.sparse_cluster_wall_clearance_m) ||
+        params.sparse_cluster_wall_clearance_m < 0 ||
+        !walls[0].removal_allowed || !walls[1].removal_allowed) return false;
+    for (const int i : component.indices) {
+        if (i < 0 || static_cast<std::size_t>(i) >= cloud.size()) return false;
+        const auto& q = cloud[i];
+        if (!std::isfinite(q.x) || !std::isfinite(q.y) || !std::isfinite(q.z)) return false;
+        for (const auto& side : walls) {
+            bool supported = false;
+            double nearest = std::numeric_limits<double>::infinity();
+            for (const auto& segment : side.segments) {
+                if (!segment.valid) continue;
+                if (!segment.plane.Finite() || !std::isfinite(segment.tangent_x) ||
+                    !std::isfinite(segment.tangent_y)) return false;
+                const double norm = std::sqrt(double(segment.plane.a)*segment.plane.a +
+                    double(segment.plane.b)*segment.plane.b + double(segment.plane.c)*segment.plane.c);
+                // Producers fit unit normals; reject corrupt planes, normalize roundoff.
+                if (!std::isfinite(norm) || std::abs(norm-1.0) > 1e-3) return false;
+                const float along = segment.AlongWall(q.x, q.y);
+                if (!std::isfinite(along)) return false;
+                for (const auto& interval : segment.intervals)
+                    if (!std::isfinite(interval.first) || !std::isfinite(interval.second) ||
+                        interval.first > interval.second) return false;
+                if (!segment.InIntervals(along, 0.0f)) continue;
+                const double distance = segment.plane.SignedDistance(q.x,q.y,q.z)/norm;
+                if (!std::isfinite(distance)) return false;
+                supported = true; nearest = std::min(nearest, distance);
+            }
+            if (!supported || nearest < params.sparse_cluster_wall_clearance_m) return false;
+        }
+    }
+    return true;
+}
+
 void TunnelPipeline::ClusterAndFilter(
     const std::vector<std::uint8_t>* protect_class) {
     FrameResult& r = result_;
@@ -1678,11 +1718,22 @@ void TunnelPipeline::ClusterAndFilter(
 
     auto stage_start = Clock::now();
     r.cluster_id.assign(n, -1);
+    // Residual-wall components omit small support; recompute complete kept set.
+    if (params_.sparse_cluster_enable) residual_reusable_ = false;
     if (residual_reusable_) {
         r.clusters=std::move(residual_clusters_);r.residual_clusters_reused=true;
     } else if (!r.kept_indices.empty()) {
         r.clusters = asmc::lidar::pipeline::EuclideanComponents(*r.leveled,r.kept_indices,
-            params_.cluster_tolerance_m,std::max(1,params_.cluster_min_points),std::max(1,params_.cluster_max_points));
+            params_.cluster_tolerance_m,
+            params_.sparse_cluster_enable ? std::max(2,params_.sparse_cluster_min_points) : std::max(1,params_.cluster_min_points),
+            std::max(1,params_.cluster_max_points));
+        if (params_.sparse_cluster_enable) {
+            r.clusters.erase(std::remove_if(r.clusters.begin(), r.clusters.end(),
+                [&](const pcl::PointIndices& component) {
+                    return component.indices.size() < static_cast<std::size_t>(params_.cluster_min_points) &&
+                        !SparseClusterWallClear(*r.leveled, component, r.walls, params_);
+                }), r.clusters.end());
+        }
     }
     for (std::size_t c = 0; c < r.clusters.size(); ++c) {
         for (const int index : r.clusters[c].indices) {
@@ -1697,6 +1748,23 @@ void TunnelPipeline::ClusterAndFilter(
     else if (!r.clusters.empty()) obb_function_(r.leveled, r.clusters, &obbs);
     residual_reusable_=false;
     obbs.resize(r.clusters.size());
+    // The tracker fitter pads degenerate widths to 5cm. New sparse candidates
+    // use the same fitted yaw but strictly measured extents (no invented size).
+    if (params_.sparse_cluster_enable) for (std::size_t k=0;k<r.clusters.size();++k) {
+        if (r.clusters[k].indices.size() >= static_cast<std::size_t>(params_.cluster_min_points)) continue;
+        auto& b=obbs[k];if(!std::isfinite(b.yaw))b.yaw=0;
+        const float cs=std::cos(b.yaw),sn=std::sin(b.yaw);
+        float u0=INFINITY,u1=-INFINITY,v0=INFINITY,v1=-INFINITY,z0=INFINITY,z1=-INFINITY;
+        for(int i:r.clusters[k].indices) {const auto& q=(*r.leveled)[i];
+            const float u=cs*q.x+sn*q.y,v=-sn*q.x+cs*q.y;
+            u0=std::min(u0,u);u1=std::max(u1,u);v0=std::min(v0,v);v1=std::max(v1,v);
+            z0=std::min(z0,q.z);z1=std::max(z1,q.z);
+        }
+        b.cx=cs*(u0+u1)*.5f-sn*(v0+v1)*.5f;b.cy=sn*(u0+u1)*.5f+cs*(v0+v1)*.5f;
+        b.cz=(z0+z1)*.5f;b.length=u1-u0;b.width=v1-v0;b.z_min=z0;b.z_max=z1;
+        const float us[4]={u0,u1,u1,u0},vs[4]={v0,v0,v1,v1};
+        for(int j=0;j<8;++j)b.corners[j]=pcl::PointXYZ(cs*us[j%4]-sn*vs[j%4],sn*us[j%4]+cs*vs[j%4],j<4?z0:z1);
+    }
     r.timings.obb_ms = ElapsedMs(stage_start);
 
     stage_start = Clock::now();

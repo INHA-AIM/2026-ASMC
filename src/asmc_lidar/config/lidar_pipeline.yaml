@@ -204,7 +204,10 @@ experimental:
       wall_remove_distance_m: 0.25
       wall_track_max_offset_m: 0.6
       cluster_tolerance_m: 1.0
-      cluster_min_points: 3
+      cluster_min_points: 10
+      sparse_cluster_enable: true
+      sparse_cluster_min_points: 2
+      sparse_cluster_wall_clearance_m: 1.5
       pre_gps_ceiling_filter_enable: false
       pre_gps_structural_obb_filter_enable: false
     protection:

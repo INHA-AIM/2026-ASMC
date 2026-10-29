@@ -349,6 +349,9 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
     if(original["wall_remove_margin_m"])p.tunnel_route.params.wall_remove_margin_m=original["wall_remove_margin_m"].as<float>();
     if(original["wall_remove_min_height_m"])p.tunnel_route.params.wall_remove_min_height_m=original["wall_remove_min_height_m"].as<float>();
     if(original["cluster_tolerance_m"])p.tunnel_route.params.cluster_tolerance_m=original["cluster_tolerance_m"].as<float>();
+    if(original["sparse_cluster_enable"])p.tunnel_route.params.sparse_cluster_enable=original["sparse_cluster_enable"].as<bool>();
+    if(original["sparse_cluster_min_points"])p.tunnel_route.params.sparse_cluster_min_points=original["sparse_cluster_min_points"].as<int>();
+    if(original["sparse_cluster_wall_clearance_m"])p.tunnel_route.params.sparse_cluster_wall_clearance_m=original["sparse_cluster_wall_clearance_m"].as<float>();
     if(original["cluster_min_points"])p.tunnel_route.params.cluster_min_points=original["cluster_min_points"].as<int>();
     if(original["cluster_max_points"])p.tunnel_route.params.cluster_max_points=original["cluster_max_points"].as<int>();
     if(original["obb_filter_enable"])p.tunnel_route.params.obb_filter_enable=original["obb_filter_enable"].as<bool>();
@@ -645,6 +648,9 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << ',' << config.pipeline.tunnel_route.params.wall_remove_min_height_m;
   effective << ',' << config.pipeline.tunnel_route.params.cluster_tolerance_m;
   effective << ',' << config.pipeline.tunnel_route.params.cluster_min_points;
+  effective << ',' << config.pipeline.tunnel_route.params.sparse_cluster_enable;
+  effective << ',' << config.pipeline.tunnel_route.params.sparse_cluster_min_points;
+  effective << ',' << config.pipeline.tunnel_route.params.sparse_cluster_wall_clearance_m;
   effective << ',' << config.pipeline.tunnel_route.params.cluster_max_points;
   effective << ',' << config.pipeline.tunnel_route.params.obb_filter_enable;
   effective << ',' << config.pipeline.tunnel_route.params.obb_ceiling_min_z_road_m;

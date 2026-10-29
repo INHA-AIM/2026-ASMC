@@ -204,6 +204,10 @@ TunnelRoute::TunnelRoute(const TunnelRouteConfig& config):config_(config),core_(
      !std::isfinite(c.depth_front_margin_m) ||
      !std::isfinite(c.depth_ref_percentile) ||
      !std::isfinite(c.ambiguous_max_range_m))throw std::invalid_argument("non-finite tunnel parameter");
+  if(p.sparse_cluster_min_points<2 || !std::isfinite(p.sparse_cluster_wall_clearance_m) ||
+     p.sparse_cluster_wall_clearance_m<0 ||
+     (p.sparse_cluster_enable && p.sparse_cluster_min_points>=p.cluster_min_points))
+    throw std::invalid_argument("invalid sparse cluster parameters");
   if(p.roi_min_x_m>=p.roi_max_x_m||p.roi_min_y_m>=p.roi_max_y_m||p.roi_min_z_m>=p.roi_max_z_m||
      p.cluster_tolerance_m<=0||p.cluster_min_points<1||p.cluster_max_points<p.cluster_min_points||
      p.wall_bin_size_m<=0||p.ground_mode_bin_m<=0||p.wall_min_persist_frames<1||

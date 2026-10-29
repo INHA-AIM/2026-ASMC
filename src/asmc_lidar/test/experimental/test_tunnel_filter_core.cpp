@@ -1108,3 +1108,86 @@ TEST(TunnelResidualReuse, SameScanOnlyAndDifferentClusterMinimumNeverShares) {
     EXPECT_FALSE(core.Process(empty,0,0,nullptr,nullptr,true).residual_clusters_reused);
   }
 }
+
+namespace {
+std::array<WallSideResult,2> SparseWalls() {
+  std::array<WallSideResult,2> walls;
+  for(int side=0;side<2;++side) {
+    walls[side].removal_allowed=true;WallSegment wall;
+    wall.valid=true;wall.plane={0.f,side==0?-1.f:1.f,0.f,3.f};
+    wall.intervals={{0,20}};walls[side].segments.push_back(wall);
+  }
+  return walls;
+}
+}
+TEST(TunnelSparse, EveryPointSignedSupportAndDegenerateEvidence) {
+  Params p;p.sparse_cluster_enable=true;
+  pcl::PointCloud<pcl::PointXYZI> cloud;
+  pcl::PointIndices ids;
+  for(int n=1;n<=10;++n) {
+    cloud.push_back(MakePoint(5+.01f*n,1.5f,0));ids.indices.push_back(n-1);
+    EXPECT_EQ(n>=2&&n<10,SparseClusterWallClear(cloud,ids,SparseWalls(),p));
+  }
+  ids.indices={0,1};cloud[0].y=1.5001f;
+  EXPECT_FALSE(SparseClusterWallClear(cloud,ids,SparseWalls(),p));
+  cloud[0].y=5;EXPECT_FALSE(SparseClusterWallClear(cloud,ids,SparseWalls(),p));
+  cloud[0].y=0;cloud[1].y=0;
+  auto walls=SparseWalls();walls[0].removal_allowed=false;
+  EXPECT_FALSE(SparseClusterWallClear(cloud,ids,walls,p));
+  walls=SparseWalls();walls[1].segments.clear();
+  EXPECT_FALSE(SparseClusterWallClear(cloud,ids,walls,p));
+  walls=SparseWalls();walls[1].segments[0].intervals={{8,10}};
+  EXPECT_FALSE(SparseClusterWallClear(cloud,ids,walls,p));
+  walls=SparseWalls();walls[0].segments.push_back(walls[0].segments[0]);
+  walls[0].segments.back().plane.d=1.49f;
+  EXPECT_FALSE(SparseClusterWallClear(cloud,ids,walls,p));
+  walls=SparseWalls();walls[0].segments[0].plane.b=-2;
+  EXPECT_FALSE(SparseClusterWallClear(cloud,ids,walls,p));
+  walls=SparseWalls();walls[0].segments[0].plane.d=NAN;
+  EXPECT_FALSE(SparseClusterWallClear(cloud,ids,walls,p));
+  walls=SparseWalls();walls[0].segments[0].valid=false;
+  EXPECT_FALSE(SparseClusterWallClear(cloud,ids,walls,p));
+  // Rotate points, wall normals and tangents together (90 degrees).
+  walls=SparseWalls();for(auto& side:walls)for(auto& wall:side.segments){
+    wall.plane.a=-wall.plane.b;wall.plane.b=0;wall.tangent_x=0;wall.tangent_y=1;
+  }
+  for(auto& q:cloud){float x=q.x;q.x=-q.y;q.y=x;}
+  EXPECT_TRUE(SparseClusterWallClear(cloud,ids,walls,p));
+  p.sparse_cluster_enable=false;EXPECT_FALSE(SparseClusterWallClear(cloud,ids,walls,p));
+}
+TEST(TunnelSparse, PipelineCompleteComponentsCacheAndFiniteObb) {
+  for(bool residual:{false,true})for(int count:{1,2,9,10}) {
+    auto p=TestParams();p.sparse_cluster_enable=true;p.residual_wall_surface_enable=residual;
+    pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);
+    AddWall(&cloud,6,-10,40);AddWall(&cloud,-5,-10,40);
+    const int first=cloud.size();
+    for(int i=0;i<count;++i)cloud.push_back(MakePoint(10+.03f*i,0,0));
+    TunnelPipeline core(p);for(int frame=0;frame<4;++frame)core.Process(cloud,0,0,nullptr,nullptr,true);
+    const auto& r=core.LastResult();ASSERT_TRUE(r.walls[0].removal_allowed);ASSERT_TRUE(r.walls[1].removal_allowed);
+    int found=0;for(const auto& component:r.clusters){
+      bool target=false;for(int i:component.indices){EXPECT_EQ(kKept,r.labels.at(i));if(i>=first)target=true;}
+      if(target){++found;EXPECT_EQ(count,component.indices.size());}
+    }
+    EXPECT_EQ(count>=2?1:0,found);EXPECT_FALSE(r.residual_clusters_reused);
+    for(const auto& object:r.objects){EXPECT_TRUE(std::isfinite(object.obb.cx));EXPECT_TRUE(std::isfinite(object.obb.length));}
+    p.sparse_cluster_enable=false;TunnelPipeline legacy(p);
+    for(int frame=0;frame<4;++frame)legacy.Process(cloud,0,0,nullptr,nullptr,true);
+    found=0;for(const auto& component:legacy.LastResult().clusters)for(int i:component.indices)if(i>=first)++found;
+    EXPECT_EQ(count>=10?count:0,found);
+  }
+}
+
+TEST(TunnelSparse, ConnectedNearWallPointRejectsWholeComponentAndRemovedPointsStayRemoved) {
+  auto p=TestParams();p.sparse_cluster_enable=true;
+  pcl::PointCloud<pcl::PointXYZI> cloud;AddGround(&cloud);
+  AddWall(&cloud,6,-10,40);AddWall(&cloud,-5,-10,40);
+  const int first=cloud.size();cloud.push_back(MakePoint(10,3.8f,0));cloud.push_back(MakePoint(10,4.6f,0));
+  const int ceiling=cloud.size();cloud.push_back(MakePoint(10,0,8));
+  TunnelPipeline core(p);for(int frame=0;frame<4;++frame)core.Process(cloud,0,0,nullptr,nullptr,true);
+  const auto& r=core.LastResult();ASSERT_TRUE(r.walls[0].removal_allowed);ASSERT_TRUE(r.walls[1].removal_allowed);
+  ASSERT_EQ(kKept,r.labels[first]);ASSERT_EQ(kKept,r.labels[first+1]);
+  EXPECT_EQ(kCeiling,r.labels[ceiling]);
+  for(const auto& component:r.clusters)for(int i:component.indices) {
+    EXPECT_NE(first,i);EXPECT_NE(first+1,i);EXPECT_NE(ceiling,i);EXPECT_EQ(kKept,r.labels[i]);
+  }
+}

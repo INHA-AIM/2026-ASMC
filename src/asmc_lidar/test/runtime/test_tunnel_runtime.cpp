@@ -162,3 +162,21 @@ TEST(TunnelRuntime, ZeroCoordinatesImmediatelyInvalidatePreviouslyGoodGps) {
 }
 } // namespace
 int main(int argc,char**argv){testing::InitGoogleTest(&argc,argv);return RUN_ALL_TESTS();}
+
+TEST(TunnelSparseConfig, ShippedValuesValidationAndIdentity) {
+  auto cfg=Config();auto& p=cfg.pipeline.tunnel_route.params;
+  EXPECT_EQ(10,p.cluster_min_points);EXPECT_TRUE(p.sparse_cluster_enable);
+  EXPECT_EQ(2,p.sparse_cluster_min_points);EXPECT_FLOAT_EQ(1.5f,p.sparse_cluster_wall_clearance_m);
+  sh::FinalizeRuntimeIdentity(cfg,"camera");const auto original=cfg.config_id;
+  p.sparse_cluster_enable=false;sh::FinalizeRuntimeIdentity(cfg,"camera");EXPECT_NE(original,cfg.config_id);
+  p.sparse_cluster_enable=true;p.sparse_cluster_wall_clearance_m=1.6f;
+  sh::FinalizeRuntimeIdentity(cfg,"camera");EXPECT_NE(original,cfg.config_id);
+  p.sparse_cluster_wall_clearance_m=1.5f;p.sparse_cluster_min_points=3;
+  sh::FinalizeRuntimeIdentity(cfg,"camera");EXPECT_NE(original,cfg.config_id);
+  p.sparse_cluster_min_points=10;EXPECT_THROW(pl::TunnelRoute route(cfg.pipeline.tunnel_route),std::invalid_argument);
+  p.sparse_cluster_enable=false;p.cluster_min_points=3;
+  EXPECT_NO_THROW(pl::TunnelRoute route(cfg.pipeline.tunnel_route));
+  p.sparse_cluster_min_points=1;EXPECT_THROW(pl::TunnelRoute route(cfg.pipeline.tunnel_route),std::invalid_argument);
+  p.sparse_cluster_min_points=2;p.sparse_cluster_wall_clearance_m=NAN;
+  EXPECT_THROW(pl::TunnelRoute route(cfg.pipeline.tunnel_route),std::invalid_argument);
+}

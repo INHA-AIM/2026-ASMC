@@ -169,3 +169,33 @@ LOCAL의 기존 관측 근거리 복구도 대안으로 사용한다. 속도는 
 camera의 운영 목표는20km/h, 회피10, creep3이다. 통합 launch의 `avoid_clearance=.05`, `obstacle_lateral_margin=.05`, `avoid_line_extra=1`, `avoid_line_overrun=1.5m`, `avoid_max_shoulder=2m`를 사용한다. standalone camera launch의 값과 통합 override를 구분한다. 이 여유·정지 정책은 LOCAL/localization에 전파하지 않는다.
 
 LiDAR 표준 profile은 `lidar_wall_vehicle.yaml`; sensor Z 하한-1.55m, 근거리 지면 제거 .23m, 일반/터널 최소 점수3, 진입30m 전·출구10m 후 window를 사용한다. `RearOverhang`은 물리 정본 .790m로 맞춰 기존 .700m 자기차 마스크의 뒤쪽만9cm 늘어난다. sensor mount나 지면 좌표는 바꾸지 않는다. 현재 프로필·window SHA는 최종 통합 manifest에 기록한다.
+
+
+### Tunnel sparse components — 2026-10-30
+
+Selected `lidar_wall_vehicle.yaml` and explicit generic `lidar_pipeline.yaml` now
+use tunnel `original_parameters.cluster_min_points: 10` (previous PR #144: 3).
+NORMAL `clustering.MinPoints` stays 3. Sparse runtime profile: enable=true,
+min_points=2, wall_clearance_m=1.5. `Params` alone defaults OFF for legacy callers.
+
+After ground/wall/residual-wall removal, form complete components from kKept using
+unchanged tolerance/max. Components below 10 need every point supported by valid
+segments on both removal_allowed walls, with interval margin zero and minimum
+same-side inward signed distance >=1.5m. PCL planes are normalized by ToPlane;
+the gate verifies unit normals and normalizes numerical roundoff. Missing,
+nonfinite or malformed evidence rejects the exception. No fabs/outside allowance.
+Enabled mode bypasses residual component reuse, not residual wall removal. OFF
+retains the old cache and component rule. Min>=2 and finite clearance>=0 are
+always validated; min<ordinary minimum is required only when enabled.
+
+Candidate acceptance still passes existing OBB/ground/wall/ceiling, raw sensor-Z,
+confirmation, tracking and delivery filters. The existing tracker fitter pads degenerate widths to 5cm. Newly admitted sparse
+boxes retain its yaw but reconstruct strictly measured extents and corners, with
+zero width/height allowed rather than invented dimensions. **A two-point
+candidate does not guarantee a delivered object.** Boundary rescue remains its
+separate 5–9-point policy; its used-index exclusion prevents duplicate output,
+and a sparse rejection does not disable that policy.
+
+All three fields enter parsing and effective config identity. No frozen baseline
+hash is rewritten. Tests cover the predicate, real Process path/cache, route
+index uniqueness and legacy rescue with sparse ON/OFF, runtime parsing/identity.

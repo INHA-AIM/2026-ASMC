@@ -199,6 +199,10 @@ struct Params {
     bool wall_geometry_precedence = false;
     float cluster_tolerance_m = 1.0f;
     int cluster_min_points = 10;
+    // Explicit runtime opt-in; legacy callers retain their prior clustering.
+    bool sparse_cluster_enable = false;
+    int sparse_cluster_min_points = 2;
+    float sparse_cluster_wall_clearance_m = 1.5f;
     int cluster_max_points = 30000;
 
     // --- OBB 후단 안전 필터 ---
@@ -414,6 +418,11 @@ struct WallSideResult {
     int ambiguous_skipped = 0;
     bool gap_reanchored = false;
 };
+
+// Complete-component predicate in the leveled frame. No point removal here.
+bool SparseClusterWallClear(const pcl::PointCloud<pcl::PointXYZI>& cloud,
+    const pcl::PointIndices& component, const std::array<WallSideResult, 2>& walls,
+    const Params& params);
 
 struct Obb {
     float cx = 0.0f;
