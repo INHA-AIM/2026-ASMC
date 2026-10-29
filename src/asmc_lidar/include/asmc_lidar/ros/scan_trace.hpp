@@ -355,6 +355,7 @@ inline void Tunnel(std::ostream& out,const pipeline::TunnelFilterStageReport& t)
     out << "],\"temporary_class\":";Str(out,t.low_obstacle_decisions[i].second);out << '}';
   }
   out << ']';
+  out << ",\"updates_active\":";Bool(out,t.updates_active);
   out << ",\"ground_removed\":" << t.ground_labeled << ",\"wall_removed\":" << t.wall_labeled
       << ",\"removed\":" << t.removed_points
       << ",\"left_allowed\":";Bool(out,t.wall_left_removal_allowed);

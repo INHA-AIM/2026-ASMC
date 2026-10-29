@@ -718,3 +718,35 @@ TEST(PipelineSemantic, FinalizeOnceAfterFusionAndMapLossInvalidatesAllTracks) {
     }
   }
 }
+
+TEST(Pipeline, ScopedTunnelUpdatesDoNotChangeNormalRoadGeometry) {
+  auto baseline=Config(true,true),scoped=baseline;
+  baseline.clustering.s32_MinPoints=scoped.clustering.s32_MinPoints=5;
+  baseline.ground.near_threshold_m=scoped.ground.near_threshold_m=.30;
+  scoped.tunnel_only_updates=true;scoped.shadow_wall.enabled=true;
+  scoped.shadow_wall.entry_m=1800;scoped.shadow_wall.exit_m=2000;
+  scoped.shadow_wall.route={{{1700,0,0}},{{2100,400,0}}};
+  scoped.camera_point_refinement.vehicle_history_enabled=true;
+  scoped.camera_point_refinement.detached_wall_cleanup=true;
+  Pipeline a(baseline),b(scoped);
+  for(int k=0;k<6;++k){
+    const auto stamp=kT0+k*kPeriod;auto pose=MapPose(true,stamp);
+    auto x=a.Process(Scan(stamp,SequenceScene(k),k+1),WithGps(Local(k),true),pose);
+    auto y=b.Process(Scan(stamp,SequenceScene(k),k+1),WithGps(Local(k),true),pose);
+    EXPECT_FALSE(y.tunnel.updates_active);
+    ExpectSameLocalResult(x,y,"normal road scoped update equivalence");
+  }
+}
+TEST(Pipeline, TunnelScopeRequiresMapWindowBeforeGpsLossAndClearsOnExit) {
+  auto c=Config(true,true);c.tunnel_only_updates=true;c.shadow_wall.enabled=true;
+  c.shadow_wall.entry_m=100;c.shadow_wall.exit_m=200;
+  c.shadow_wall.route={{{0,0,0}},{{300,300,0}}};
+  Pipeline p(c);
+  for(int k=0;k<6;++k){
+    const auto stamp=kT0+k*kPeriod;auto pose=MapPose(true,stamp);
+    pose.map_from_base.setIdentity();pose.map_from_base.translation().x()=k>=4?250:100;
+    pose.valid=(k==1||k>=4);
+    const auto r=p.Process(Scan(stamp,Scene({}),k+1),WithGps(Local(k),pose.valid),pose);
+    EXPECT_EQ(k>=1&&k<4,r.tunnel.updates_active);
+  }
+}

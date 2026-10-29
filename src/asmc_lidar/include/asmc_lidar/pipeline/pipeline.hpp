@@ -29,6 +29,7 @@ namespace lidar {
 namespace pipeline {
 
 struct PipelineConfig {
+  bool tunnel_only_updates=false;
   ShadowWallConfig shadow_wall;
   CameraPointRefinementConfig camera_point_refinement;
   RangeConfig range;
@@ -164,6 +165,7 @@ class Pipeline {
   std::unique_ptr<TunnelFilterStage> tunnel_;
   std::unique_ptr<TunnelRoute> tunnel_route_;
   std::unique_ptr<tunnel_filter::TunnelPipeline> entrance_wall_core_;
+  bool tunnel_updates_armed_=false;
   bool entrance_wall_active_=false;
   bool previous_original_tunnel_=false;
   std::int64_t last_raw_ns_ = 0;

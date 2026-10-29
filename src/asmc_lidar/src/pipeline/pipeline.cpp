@@ -142,6 +142,17 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   // cloud is read directly (Roi does not modify it).
   auto begin = Clock::now();
   const auto wall_gate=ShadowWallGate(config_.shadow_wall,map_pose,entrance_wall_active_);
+  // Only a verified route window can arm tuning. GPS loss alone at another
+  // junction never arms it; GPS recovery outside the window clears it.
+  if(map_pose.valid)tunnel_updates_armed_=wall_gate.active;
+  const bool updates_active=!config_.tunnel_only_updates||tunnel_updates_armed_;
+  auto refinement_config=config_.camera_point_refinement;
+  if(!updates_active) {
+    refinement_config.vehicle_history_enabled=false;
+    refinement_config.detached_wall_cleanup=false;
+    vehicle_history_.clear();
+  }
+  if(tunnel_route_)tunnel_route_->SetUpdatesAllowed(updates_active);
   if(wall_gate.active&&previous_original_tunnel_&&entrance_wall_core_&&tunnel_route_)
     entrance_wall_core_->CopyWallHistoryFrom(tunnel_route_->wall_core());
   const bool seed_entry=!map_pose.valid&&entrance_wall_active_&&entrance_wall_core_&&tunnel_route_;
@@ -183,14 +194,14 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   GroundPlaneSnapshot effective_ground_plane;
   std::vector<MeasuredVehicleHistory> predicted_vehicles;
   CloudPtr vehicle_support_sensor(new Cloud);
-  if(config_.camera_point_refinement.enabled&&config_.camera_point_refinement.vehicle_history_enabled&&scan.current_sensor_from_past_sensor) {
+  if(refinement_config.enabled&&refinement_config.vehicle_history_enabled&&scan.current_sensor_from_past_sensor) {
     for(const auto& entry:vehicle_history_) {
       const auto& old=entry.second;
       const auto* previous_tracks=tracker_.LastFrame();
       if(!previous_tracks||std::none_of(previous_tracks->begin(),previous_tracks->end(),[&](const auto& o){
           return o.tracking.s32_Id==old.track_id&&o.tracking.s32_MissCount==0&&o.camera.str_ObjectClass=="vehicle";}))continue;
       if(old.confirmations<5||!old.points||raw<=old.stamp_ns||raw-old.stamp_ns>200000000LL||
-          raw-old.camera_stamp_ns>static_cast<std::int64_t>(config_.camera_point_refinement.vehicle_history_max_camera_age_s*1e9))continue;
+          raw-old.camera_stamp_ns>static_cast<std::int64_t>(refinement_config.vehicle_history_max_camera_age_s*1e9))continue;
       const auto transform=scan.current_sensor_from_past_sensor(old.stamp_ns);if(!transform||!pose_valid(*transform))continue;
       auto predicted=old;predicted.points.reset(new Cloud);
       for(const auto& p:*old.points) {
@@ -202,7 +213,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   }
   if(original_tunnel) {
     begin=Clock::now();
-    auto migrated=tunnel_route_->Process(voxeled_cloud,local,raw,config_.vehicle,scan.tunnel_camera.get(),scan.tunnel_motion.get(),vehicle_support_sensor,config_.camera_point_refinement.vehicle_history_match_m);
+    auto migrated=tunnel_route_->Process(voxeled_cloud,local,raw,config_.vehicle,scan.tunnel_camera.get(),scan.tunnel_motion.get(),vehicle_support_sensor,refinement_config.vehicle_history_match_m);
     leveled_cloud=migrated.leveled;
     frame_.StoreLeveling(migrated.leveling);
     ground_cloud=migrated.filtered;
@@ -305,6 +316,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     effective_ground_plane=ground_.CurrentPlane();
   }
 
+  result.tunnel.updates_active=updates_active;
   result.tunnel.wall_gate_reason=original_tunnel?"gps_denied_tunnel":wall_gate.reason;
   result.tunnel.route_station_m=wall_gate.station_m;
   result.tunnel.entry_distance_m=wall_gate.distance_to_entry_m;
@@ -313,12 +325,12 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   // Keep unclassified residuals; delete only confirmed wall support belonging
   // to a cluster from which an object was successfully extracted.
   auto refinement=RefineCameraPoints(ground_cloud,all_cluster_indices,frame_.Current(),
-      scan.tunnel_camera.get(),result.tunnel.wall_evidence,config_.camera_point_refinement);
+      scan.tunnel_camera.get(),result.tunnel.wall_evidence,refinement_config);
   // A brief missing camera result must not repeatedly split the measured
   // object and reset fragment acquisition. Continue ONLY current LiDAR pairs
   // matching the previous measured support; never republish predicted geometry.
   const double steel_dt=SourceDeltaSeconds(raw,previous_stamp_ns_);
-  if(config_.camera_point_refinement.steel_fragment_merge&&steel_dt>0&&steel_dt<=.2&&
+  if(refinement_config.steel_fragment_merge&&steel_dt>0&&steel_dt<=.2&&
       std::isfinite(local.st_CAN.f32_CurrentVel_MPS)&&std::abs(local.st_CAN.f32_CurrentVel_MPS)<=.1f) {
     const auto base=base_from_input(frame_.Current());
     if(base) {
@@ -339,7 +351,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
         }
         const bool had_refinement=refinement.report.applied;
         auto continued=ContinueMeasuredSteelFragments(ground_cloud,had_refinement?refinement.clusters:all_cluster_indices,history,
-            frame_.Current(),scan.tunnel_camera.get(),result.tunnel.wall_evidence,config_.camera_point_refinement,
+            frame_.Current(),scan.tunnel_camera.get(),result.tunnel.wall_evidence,refinement_config,
             had_refinement?&refinement.support:nullptr);
         if(continued.report.applied) {
           if(had_refinement) {
@@ -368,7 +380,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
       }
       const bool had=refinement.report.applied;
       auto continued=ContinueMeasuredVehicles(ground_cloud,had?refinement.clusters:all_cluster_indices,
-          predicted_vehicles,result.tunnel.wall_evidence,config_.camera_point_refinement,
+          predicted_vehicles,result.tunnel.wall_evidence,refinement_config,
           had?&refinement.support:nullptr,&refinement.wall_veto_indices,&measured_vehicle_ids);
       if(continued.report.applied) {
         if(had)for(std::size_t i=0;i<continued.parent_clusters.size();++i) {
@@ -465,7 +477,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   const double dt_s = SourceDeltaSeconds(raw, previous_stamp_ns_);
   begin = Clock::now();
   tracker_.Update(object, dt_s, local, frame_);
-  if(config_.camera_point_refinement.enabled&&config_.camera_point_refinement.vehicle_history_enabled) {
+  if(refinement_config.enabled&&refinement_config.vehicle_history_enabled) {
     std::map<int,MeasuredVehicleHistory> next;
     const auto base=base_from_input(frame_.Current());
     if(base)for(const auto& o:object) {
@@ -476,7 +488,7 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
       const bool fresh=cs.box_index>=0&&(cs.source_class=="car"||cs.source_class=="truck"||cs.source_class=="bus")&&
         cs.stamp_ns>0&&raw>=cs.stamp_ns&&raw-cs.stamp_ns<=150000000LL&&o.camera.str_ObjectClass=="vehicle";
       const bool continued=o.detection.measured_vehicle_track_id==id&&h.confirmations>=5&&
-        raw-h.camera_stamp_ns<=static_cast<std::int64_t>(config_.camera_point_refinement.vehicle_history_max_camera_age_s*1e9);
+        raw-h.camera_stamp_ns<=static_cast<std::int64_t>(refinement_config.vehicle_history_max_camera_age_s*1e9);
       if(!fresh&&!continued)continue;
       if(fresh&&cs.identity!=h.camera_identity) {++h.confirmations;h.camera_stamp_ns=cs.stamp_ns;h.camera_identity=cs.identity;}
       h.stamp_ns=raw;h.points.reset(new Cloud);

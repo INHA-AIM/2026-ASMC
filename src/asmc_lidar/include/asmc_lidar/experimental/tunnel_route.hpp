@@ -91,6 +91,11 @@ class TunnelRoute {
   // Called once per accepted scan. Bounded, causal GPS map validity already
   // includes invalid/stale GPS and the existing three-sample recovery latch.
   bool Select(bool map_pose_valid);
+  void SetUpdatesAllowed(bool allowed) {
+    updates_allowed_=allowed;
+    core_.SetScopedUpdates(allowed&&config_.params.sparse_cluster_enable,
+                          allowed&&config_.params.wall_geometry_precedence);
+  }
   void SetClusterZConfig(const TunnelClusterZConfig& config) {
     ValidateTunnelClusterZ(config); config_.cluster_z = config;
   }
@@ -112,6 +117,7 @@ class TunnelRoute {
  private:
   TunnelRouteConfig config_;
   tunnel_filter::TunnelPipeline core_;
+  bool updates_allowed_=true;
   bool active_ = false, anchor_valid_ = false;
   std::int64_t anchor_stamp_ = 0;
   float anchor_yaw_ = 0, anchor_speed_ = 0;

@@ -75,7 +75,7 @@ lidar:
   Clustering:
     Enabled: true
     Eps: 0.5
-    MinPoints: 3
+    MinPoints: 5
     Adaptive:
       Enabled: true
       NearRange: 10.0
@@ -97,7 +97,7 @@ lidar:
 
 # Main ~ground_* (main.launch values = code defaults).
 ground:
-  ground_distance_threshold_near_m: 0.23
+  ground_distance_threshold_near_m: 0.30
   ground_distance_threshold_far_m: 0.40
   ground_threshold_far_range_m: 50.0
   ground_max_tilt_deg: 25.0

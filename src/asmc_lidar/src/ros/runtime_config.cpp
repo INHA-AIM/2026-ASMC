@@ -229,6 +229,7 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   p.tunnel.suppress_ceiling = r.Get<bool>("experimental.tunnel_filter.suppress_ceiling");
   p.tunnel.suppress_wall = r.Get<bool>("experimental.tunnel_filter.suppress_wall");
   const auto tunnel=root["experimental"]["tunnel_filter"];
+  if(root["tunnel_only_updates"])p.tunnel_only_updates=root["tunnel_only_updates"].as<bool>();
   const auto entry_wall=root["pre_entry_wall"];
   if(entry_wall&&entry_wall["enabled"]&&entry_wall["enabled"].as<bool>()) {
     auto& c=p.shadow_wall;c.enabled=true;
@@ -241,6 +242,7 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
     for(const auto& row:profile["route"])c.route.push_back(row.as<std::array<double,3>>());
     pipeline::ValidateShadowWall(c);
   }
+  if(p.tunnel_only_updates&&!p.shadow_wall.enabled)Fail(file,"tunnel_only_updates requires pre_entry_wall route");
   if(tunnel["original_pipeline"])p.tunnel_route.original_pipeline=tunnel["original_pipeline"].as<bool>();
   const auto cluster_z=tunnel["cluster_z"];
   if(tunnel["low_obstacle_evidence"])p.tunnel_route.low_obstacle_evidence=tunnel["low_obstacle_evidence"].as<bool>();
@@ -689,6 +691,7 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << ',' << cr.vehicle_scanline_grouping << ',' << cr.independent_wall_cleanup
     << ',' << cr.scanline_gap_slope << ',' << cr.scanline_max_gap_m
     << ',' << cr.detached_wall_cleanup << ',' << config.pipeline.tunnel_route.protection.motion_compensated_fallback;
+  effective << ",tunnel-only-updates-v1," << config.pipeline.tunnel_only_updates;
   const auto& entry_wall=config.pipeline.shadow_wall;
   effective<<",hdmap-pre-entry-wall-v1,"<<entry_wall.enabled<<','<<entry_wall.profile_sha256
            <<','<<entry_wall.lead_m<<','<<entry_wall.exit_buffer_m<<','<<entry_wall.lateral_m;

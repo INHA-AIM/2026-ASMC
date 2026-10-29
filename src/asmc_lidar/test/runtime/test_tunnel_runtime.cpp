@@ -180,3 +180,20 @@ TEST(TunnelSparseConfig, ShippedValuesValidationAndIdentity) {
   p.sparse_cluster_min_points=2;p.sparse_cluster_wall_clearance_m=NAN;
   EXPECT_THROW(pl::TunnelRoute route(cfg.pipeline.tunnel_route),std::invalid_argument);
 }
+
+TEST(TunnelScopedConfig, SelectedProfileRestoresNormalAndBindsScopeIdentity) {
+  auto cfg=Config();std::string root=__FILE__;for(int i=0;i<3;++i)root=root.substr(0,root.find_last_of('/'));
+  auto scoped=sh::LoadRuntimeConfig(root+"/config/lidar_wall_vehicle.yaml",root);
+  EXPECT_TRUE(scoped.pipeline.tunnel_only_updates);
+  EXPECT_EQ(5,scoped.pipeline.clustering.s32_MinPoints);
+  EXPECT_DOUBLE_EQ(.30,scoped.pipeline.ground.near_threshold_m);
+  EXPECT_TRUE(scoped.pipeline.tunnel_route.params.sparse_cluster_enable);
+  EXPECT_EQ(10,scoped.pipeline.tunnel_route.params.cluster_min_points);
+  sh::FinalizeRuntimeIdentity(scoped,"camera");const auto id=scoped.config_id;
+  scoped.pipeline.tunnel_only_updates=false;sh::FinalizeRuntimeIdentity(scoped,"camera");EXPECT_NE(id,scoped.config_id);
+  auto config=cfg.pipeline.tunnel_route;config.params.sparse_cluster_enable=true;config.params.wall_geometry_precedence=true;
+  pl::TunnelRoute route(config);route.SetUpdatesAllowed(false);
+  EXPECT_FALSE(route.wall_core().GetParams().sparse_cluster_enable);
+  EXPECT_FALSE(route.wall_core().GetParams().wall_geometry_precedence);
+  route.SetUpdatesAllowed(true);EXPECT_TRUE(route.wall_core().GetParams().sparse_cluster_enable);
+}

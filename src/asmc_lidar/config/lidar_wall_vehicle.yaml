@@ -1,3 +1,4 @@
+tunnel_only_updates: true
 camera_point_refinement:
   detached_wall_cleanup: true
   enabled: true
@@ -81,7 +82,7 @@ gps_sanity:
   gps_sanity_reanchor_after_s: 2.0
 ground:
   ground_distance_threshold_far_m: 0.4
-  ground_distance_threshold_near_m: 0.23
+  ground_distance_threshold_near_m: 0.30
   ground_max_tilt_deg: 25.0
   ground_minimum_seed_points: 30
   ground_ransac_maximum_iterations: 80
@@ -116,7 +117,7 @@ lidar:
       RearNearEps: 1.6
     Enabled: true
     Eps: 0.5
-    MinPoints: 3
+    MinPoints: 5
   ROI:
     MaxX: 50.0
     MaxY: 20.0
