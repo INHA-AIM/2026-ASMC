@@ -2,10 +2,10 @@
   <arg name="highway_merge" default="true"/>
   <arg name="dashboard" default="true"/>
   <arg name="open_dashboard" default="false"/>
-  <arg name="jamming_planner" default="camera" doc="camera: main follower, local: observed local road, localization: map localization"/>
+  <arg name="jamming_planner" default="localization" doc="camera: main follower, local: observed local road, localization: map localization"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="jamming_speed_kph" default="$(eval {'camera':20.0,'local':20.0,'localization':15.0}[arg('jamming_planner')])"/>
-  <arg name="localization_local_recovery" default="false" doc="Experimental validated LOCAL path fallback; localization retains the single MPC"/>
+  <arg name="localization_local_recovery" default="true" doc="Experimental validated LOCAL path fallback; localization retains the single MPC"/>
   <arg name="local_semantic_input" default="true"/>
   <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
   <arg name="local_forward_warning_weight" default=""/>

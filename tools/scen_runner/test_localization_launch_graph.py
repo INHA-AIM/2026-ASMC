@@ -12,7 +12,7 @@ def graph(choice, extra=None):
 params_file=path.parents[1]/'config/frenet/params.yaml'
 assert yaml.safe_load(params_file.read_text())['planner']['vehicle_shape']['width']==1.892
 for choice in ('camera','local','localization'):
-    c=graph(choice);names=[n.name for n in c.nodes]
+    c=graph(choice,['localization_local_recovery:=false']);names=[n.name for n in c.nodes]
     assert len(names)==len(set(names)),names
     assert names.count('asmc_control_selector')==1 and names.count('asmc_planner')==1
     assert all(n.package!='asmc_bridge' for n in c.nodes)
@@ -79,11 +79,11 @@ else:raise AssertionError('unknown yaw source accepted')
 # Default selection and the single public selector must stay unambiguous.
 import xml.etree.ElementTree as ET
 arguments={a.get('name'):a.get('default') for a in ET.parse(path).findall('arg')}
-assert arguments['jamming_planner']=='camera'
+assert arguments['jamming_planner']=='localization'
 assert 'shadow_planner' not in arguments
-assert [(n.package,n.type,n.name) for n in graph(None).nodes]==[(n.package,n.type,n.name) for n in graph('camera').nodes]
+assert [(n.package,n.type,n.name) for n in graph(None).nodes]==[(n.package,n.type,n.name) for n in graph('localization').nodes]
 assert 'local_planner' in [n.name for n in graph('local').nodes]
-print('PASS one selector and A448 entry for camera/local/localization; camera default')
+print('PASS one selector and A448 entry for camera/local/localization; localization+LOCAL default')
 
 c=graph('localization',['localization_local_recovery:=true'])
 names=[n.name for n in c.nodes]
@@ -93,10 +93,10 @@ assert c.params['/localization/local_recovery_enabled'].value is True
 assert c.params['/local_planner/speed_cap_kph'].value==5.
 assert c.params['/local_planner/active_in_jamming_only'].value is True
 assert c.params['/asmc_control_selector/jamming_controller'].value=='/localization_controller'
-assert graph('localization').params['/localization/local_recovery_enabled'].value is False
+assert graph('localization',['localization_local_recovery:=false']).params['/localization/local_recovery_enabled'].value is False
 print('PASS optional LOCAL recovery is planner-only; one jamming MPC; baseline unchanged')
 
 recovery_graph=graph('localization',['localization_local_recovery:=true'])
 assert recovery_graph.params['/asmc_control_selector/initial_ready_topic'].value=='/planning/localization/control_ready'
-assert graph('localization').params['/asmc_control_selector/initial_ready_topic'].value=='/planning/localization/anchor_ready'
+assert graph('localization',['localization_local_recovery:=false']).params['/asmc_control_selector/initial_ready_topic'].value=='/planning/localization/anchor_ready'
 print('PASS independent local readiness never fabricates map anchor readiness')
