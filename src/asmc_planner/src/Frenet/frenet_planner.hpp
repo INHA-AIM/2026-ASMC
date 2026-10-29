@@ -518,6 +518,7 @@ public:
         bool static_progress_fresh=false;
         std::string static_recovery_rejection;
         bool static_speed_recovery_active=false;
+        bool static_speed_retry=false;
         double static_execution_speed_cap=0;
         double static_next_speed_cap=0;
         unsigned static_speed_proof_frames=0;

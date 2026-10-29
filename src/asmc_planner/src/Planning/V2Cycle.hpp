@@ -1130,6 +1130,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             executing.detail+="; static speed_cap="+std::to_string(committed.static_execution_speed_cap)+
                 " next_speed_cap="+std::to_string(committed.static_next_speed_cap)+
                 " proof_frames="+std::to_string(committed.static_speed_proof_frames);
+        if(committed.static_speed_retry)executing.detail+=" speed_retry=1";
         port.trajectory_pub_.publish(trajectory);
         port.publishDebugMarkersV2(trajectory, command);
         port.publishFeedbackV2(feedback_command_id, executing, &trajectory,

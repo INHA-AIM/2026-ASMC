@@ -154,19 +154,27 @@ one second of successful nominal checks and 0.5 m of measured forward progress
 per step. Replanning one observation, waiting at rest, backward time/progress,
 or a sensor gap over 0.25 s cannot accumulate this permission. A failed plan or
 input/conversion failure resets the proof; a reduced-margin/contact selection
-also resets it and chooses its own cap. Each successful step raises only the
-NEXT candidate's cap by 0.5 m/s, up to 2 m/s and within the command and bypass
-limits. That higher-speed candidate must pass current collision, road, lateral
+also resets it and chooses its own cap. Successful confirmation reopens only the
+NEXT candidate's ordinary bypass target, up to 4.2 m/s and within the command and
+bypass limits. This is permission to accelerate, never an instantaneous change
+to the measured initial speed. The retimer still bounds acceleration and jerk.
+That higher-speed candidate must pass current collision, road, lateral
 acceleration, steering slew, longitudinal acceleration/jerk and stop-tail checks
 before execution. Accepted profile history records its actual requested cap;
-the zero-speed stopping endpoint cannot be used to infer cap continuity.
+the zero-speed stopping endpoint cannot be used to infer cap continuity. If an
+upgrade of the retained nominal corridor fails, the same connected geometry is
+retimed at its previous accepted cap and fully rechecked against current objects
+and road/actuation limits. A successful retry resets confirmation and reports
+`speed_retry=1`; it does not reuse an unchecked old trajectory. If both speeds
+fail, the ordinary recovery/failure handling remains active.
 The current full road exterior must be inside the drivable area and the body
 must already have nominal clearance from every perceived object. Initial-margin
 escape and ongoing road-boundary recovery do not accumulate nominal speed proof.
 
 The optional `planner/avoid/static_normal_resume_speed_cap`,
 `static_speed_confirm_time`, `static_speed_confirm_distance` and
-`static_speed_step` keys configure 2.0 m/s, 1.0 s, 0.5 m and 0.5 m/s defaults.
+`static_speed_step` keys configure 4.2 m/s, 1.0 s, 0.5 m and 4.2 m/s defaults.
+The step can still be reduced to request several separate confirmation windows.
 These govern recovery inside the active AVOID maneuver. Ordinary AVOID without
 a preceding recovery retains its existing bypass cap; completion hands back
 to normal KEEP speed planning. Complete observation dropout and finite ghost

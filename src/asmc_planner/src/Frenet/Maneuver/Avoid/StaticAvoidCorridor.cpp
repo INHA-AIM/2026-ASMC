@@ -107,29 +107,51 @@ bool FrenetPlanner::PlanStaticAvoidCorridor(const CartesianState& ego,double s,d
         CartesianPath candidate;
         auto executable_limits=limits_;
         executable_limits.max_forward_accel=std::min(executable_limits.max_forward_accel,avoid_cfg_.bypass_accel_cap);
-        std::string rejection;
-        if(!RetimeStaticAvoidGeometry(geometry,ego.v,initial_a,cap,dt,wheelbase_,executable_limits,candidate,&rejection)) {
-            result.rejection_stage="actuation."+rejection;return false;
-        }
-        const auto road=avoid_road_map_.EvaluateRecoveryPath(candidate,road_shape,dt,
-            recovery_budget,context.map_recovery_overlap_limit_m,context.map_recovery_active,
-            context.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_);
-        int blocker=-1;bool recovery=false;
-        const bool clear=road.drivable&&StaticAvoidTrajectoryClear(candidate,objects,
-            vehicle_shape_,collision_cfg_,dt,policy,&blocker,&recovery,&context.margin_recovery_ids);
-        last_candidate_paths_.push_back(candidate);last_candidate_validity_.push_back(clear);
-        if(!clear) {
-            result.rejection_stage=road.drivable?"collision":"road";
-            if(blocker>=0)result.blocking_object_id=blocker;
-            return false;
+        AvoidRoadMap::PathEvaluation road;
+        bool recovery=false;
+        const auto execute=[&](double target) {
+            std::string rejection;
+            if(!RetimeStaticAvoidGeometry(geometry,ego.v,initial_a,target,dt,wheelbase_,executable_limits,candidate,&rejection)) {
+                result.rejection_stage="actuation."+rejection;return false;
+            }
+            road=avoid_road_map_.EvaluateRecoveryPath(candidate,road_shape,dt,
+                recovery_budget,context.map_recovery_overlap_limit_m,context.map_recovery_active,
+                context.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_);
+            int blocker=-1;recovery=false;
+            const bool clear=road.drivable&&StaticAvoidTrajectoryClear(candidate,objects,
+                vehicle_shape_,collision_cfg_,dt,policy,&blocker,&recovery,&context.margin_recovery_ids);
+            last_candidate_paths_.push_back(candidate);last_candidate_validity_.push_back(clear);
+            if(!clear) {
+                result.rejection_stage=road.drivable?"collision":"road";
+                if(blocker>=0)result.blocking_object_id=blocker;
+            }
+            return clear;
+        };
+        double accepted_cap=cap;
+        if(!execute(cap)) {
+            // An optional speed upgrade must not discard a still executable
+            // incumbent. Rebuild its timing from the measured state and check
+            // every current object/road/actuation constraint at the old cap.
+            const double previous=context.map_speed_profile_cap;
+            if(!retained||!context.static_recovery_engaged||context.static_progress_level!=0||
+               (policy&&policy->mode!=StaticAvoidPolicy::NORMAL)||!context.map_speed_profile_valid||
+               previous<=.05||previous>=cap-1e-6)return false;
+            ++result.generated_candidate_count;
+            if(!execute(previous))return false;
+            accepted_cap=previous;
         }
         if(command.recovery_clear) {
             double end_s=0;
             if(!ProjectPointToS(candidate.x.back(),candidate.y.back(),command.recovery_min_end_s,end_s)||
                end_s<command.recovery_min_end_s)return false;
         }
+        if(accepted_cap<cap-1e-6) {
+            context.static_speed.Enter(accepted_cap);
+            result.static_speed_retry=true;
+        }
         ++result.valid_candidate_count;result.blocking_object_id=-1;
         result.candidate_valid=result.spatial_candidate_selected=true;
+        result.static_execution_speed_cap=accepted_cap;
         result.selected_cost=AvoidRoadMap::PaintCost(road);
         result.escape_recovery_required=recovery;result.retained_geometry=retained;
         result.spatial_geometry=full_geometry;result.candidate_path=std::move(candidate);

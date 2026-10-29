@@ -56,7 +56,7 @@ void BagGeometry(const std::string& config) {
     auto limits=p.kinematic_limits();limits.max_forward_accel=2;
     auto road_shape=p.vehicle_shape();road_shape.width=std::max(road_shape.width,road_shape.road_outer_width);
     const auto data=YAML::LoadFile(std::string(FRENET_PACKAGE_SRC_DIR)+"/../tests/fixtures/static_speed_recovery_bag.json");
-    int normal=0,raised=0,margin=0,instant_cruise_rejected=0;
+    int normal=0,raised=0,resumed=0,margin=0,instant_cruise_rejected=0;
     for(const auto& frame:data["frames"]) {
         CartesianPath geometry;
         for(const auto& q:frame["path"]) {
@@ -66,12 +66,14 @@ void BagGeometry(const std::string& config) {
         const auto objects=Objects(frame["objects"]);
         if(frame["policy"].as<int>()==0) {
             ++normal;
-            for(double cap:{1.0,1.5,2.0}) {
+            for(double cap:{1.0,1.5,2.0,4.2}) {
                 CartesianPath candidate;
                 if(RetimeStaticAvoidGeometry(geometry,frame["ego"]["v"].as<double>(),frame["ego"]["a"].as<double>(),cap,.1,3,limits,candidate)&&
                    p.road_map().PathClear(candidate,road_shape)&&
                    CartesianAvoidTrajectoryClear(geometry,objects,p.vehicle_shape(),p.collision_config(),0)&&
-                   CartesianAvoidTrajectoryClear(candidate,objects,p.vehicle_shape(),p.collision_config(),.1))++raised;
+                   CartesianAvoidTrajectoryClear(candidate,objects,p.vehicle_shape(),p.collision_config(),.1)) {
+                    if(cap>2)++resumed;else ++raised;
+                }
             }
             CartesianPath instantaneous;
             if(!RetimeStaticAvoidGeometry(geometry,4.2,0,4.2,.1,3,limits,instantaneous))++instant_cruise_rejected;
@@ -87,6 +89,7 @@ void BagGeometry(const std::string& config) {
     }
     std::cout<<"BAG SPEED AUDIT nominal="<<normal<<" raised="<<raised<<" margin="<<margin<<" instant_cruise_rejected="<<instant_cruise_rejected<<'\n';
     Expect(normal==10&&raised==30,"all ten nominal bag paths pass 1.0/1.5/2.0 m/s retiming, road and collision checks");
+    Expect(resumed==10,"all ten nominal bag paths can rebuild a checked acceleration profile toward 4.2 m/s");
     Expect(margin==2,"body-clear reduced-margin bag paths pass at 1.0 m/s independently of past contact");
     Expect(instant_cruise_rejected>0,"a collision-clear geometry alone cannot authorize an instantaneous 4.2 m/s entry");
 }
@@ -97,8 +100,8 @@ TrackedObject Wall(double y,double width) {
     for(int i=0;i<8;++i){const double x[]={-.5,.5,.5,-.5},dy[]={-.5,-.5,.5,.5};o.corners[i]={o.x+x[i%4],y+width*dy[i%4],double(i/4)};}
     return o;
 }
-struct Run {bool valid=true,complete=false,consumer=true,road=true,raised=false,demoted=false;int ticks=0;};
-Run NominalRecovery(const std::string& config,bool inject_blocker) {
+struct Run {bool valid=true,complete=false,consumer=true,road=true,raised=false,demoted=false,retried=false;double maximum_cap=0;int ticks=0;};
+Run NominalRecovery(const std::string& config,bool inject_blocker,bool crossing=false) {
     FrenetPlanner p;Run run;run.valid=p.Init(config);p.ConfigureStaticAvoidRecovery(true,true);
     CartesianState ego{};ego.x=50;
     PlannerCommand c{};c.mode=AVOID;c.target_object_id=7;c.has_target_speed=true;c.target_speed=4.2;
@@ -111,6 +114,15 @@ Run NominalRecovery(const std::string& config,bool inject_blocker) {
         const double stamp=2+i*.1;p.SetObjectObservationTime(stamp,stamp);
         std::vector<TrackedObject> objects{i<12?Wall(0,20):Wall(3.2,1)};
         if(injected&&!restored)objects.push_back(new_blocker);
+        bool crossing_now=false;
+        if(crossing&&!injected&&r.static_next_speed_cap>r.static_execution_speed_cap+1e-6&&
+           r.static_next_speed_cap>4) {
+            new_blocker=Wall(-6.9,1);new_blocker.id=19;new_blocker.type=1;
+            new_blocker.motion_state=ObjectMotionState::DYNAMIC;new_blocker.vy=3;
+            const double dx=ego.x+8-new_blocker.x;new_blocker.x+=dx;
+            for(auto& corner:new_blocker.corners)corner.x+=dx;
+            objects.push_back(new_blocker);injected=restored=crossing_now=true;
+        }
         run.valid=p.PlanCommittedAvoid(ego,objects,c,path,r)&&path.v.size()>1;
         if(!run.valid){std::cout<<"SPEED RUN failure tick="<<i<<" stage="<<r.rejection_stage<<" recovery="<<r.static_recovery_rejection<<'\n';break;}
         if(p.avoid_completed()){run.complete=true;run.ticks=i;break;}
@@ -118,6 +130,9 @@ Run NominalRecovery(const std::string& config,bool inject_blocker) {
         auto shape=p.vehicle_shape();shape.width=std::max(shape.width,shape.road_outer_width);
         run.road&=p.road_map().PathClear(path,shape);
         run.raised|=r.static_progress_mode==StaticAvoidPolicy::NORMAL&&r.static_execution_speed_cap>=1.5;
+        run.maximum_cap=std::max(run.maximum_cap,r.static_execution_speed_cap);
+        if(crossing_now)run.retried=r.static_speed_retry&&r.static_progress_mode==StaticAvoidPolicy::NORMAL&&
+            r.static_execution_speed_cap<=1;
         if(inject_blocker&&run.raised&&!injected){
             injected=true;new_blocker=Wall(0,20);new_blocker.id=9;
             const double dx=ego.x+5-new_blocker.x;new_blocker.x+=dx;
@@ -160,5 +175,14 @@ int main() {
         "a renewed blockage lowers the cap before the newly checked contact path executes");
     Expect(raised.consumer&&raised.road&&blocked.consumer&&blocked.road,
         "speed recovery and fallback preserve Controller policy gates and road containment");
+    cfg["planner"]["avoid"]["static_normal_resume_speed_cap"]=4.2;
+    cfg["planner"]["avoid"]["static_speed_step"]=4.2;
+    {std::ofstream f(root/"resumed.yaml");f<<cfg;}
+    const auto resumed=NominalRecovery((root/"resumed.yaml").string(),false);
+    Expect(resumed.valid&&resumed.complete&&resumed.consumer&&resumed.road&&resumed.maximum_cap>4,
+        "stable nominal recovery restores the ordinary bypass target with checked acceleration");
+    const auto crossing=NominalRecovery((root/"resumed.yaml").string(),false,true);
+    Expect(crossing.valid&&crossing.complete&&crossing.consumer&&crossing.road&&crossing.retried,
+        "a crossing actor that rejects an upgrade retains the freshly rechecked lower-speed corridor");
     std::filesystem::remove_all(root);return failures?1:0;
 }

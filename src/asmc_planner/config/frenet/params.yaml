@@ -154,12 +154,13 @@ planner:
     static_contact_progress_enabled: false
     static_recovery_speed_cap: 1.0
     static_contact_speed_cap: 0.5
-    # Nominal corridors may regain speed only after fresh scans AND forward
-    # progress; each higher-speed candidate is checked before publication.
-    static_normal_resume_speed_cap: 2.0
+    # After fresh nominal checks AND forward progress, reopen the ordinary
+    # bypass target. The retimer still limits actual acceleration/jerk/slew;
+    # a rejected upgrade retries the current corridor at its previous cap.
+    static_normal_resume_speed_cap: 4.2
     static_speed_confirm_time: 1.0
     static_speed_confirm_distance: 0.5
-    static_speed_step: 0.5
+    static_speed_step: 4.2
     detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
     # [m] legacy geometry 기반(target pose 없음) target_d 계산에서 자차/장애물
