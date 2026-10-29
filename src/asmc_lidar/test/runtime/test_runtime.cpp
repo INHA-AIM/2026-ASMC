@@ -570,7 +570,7 @@ TEST(RuntimeConfig, LoadsShippedConfigWithCurrentOperatingValues) {
   EXPECT_EQ(p.roi.f32_MinZ, -2.f);
   EXPECT_EQ(p.roi.f32_MaxZ, 2.f);  // Integrated live ROI requested by the user.
   EXPECT_EQ(p.clustering.f32_Eps, 0.5f);
-  EXPECT_EQ(p.clustering.s32_MinPoints, 3);
+  EXPECT_EQ(p.clustering.s32_MinPoints, 5);
   EXPECT_TRUE(p.clustering.b_Adaptive);
   EXPECT_EQ(p.clustering.f32_AdaptiveNearEps, 1.30f);
   EXPECT_EQ(p.clustering.f32_AdaptiveFarEps, 1.32f);
@@ -582,7 +582,7 @@ TEST(RuntimeConfig, LoadsShippedConfigWithCurrentOperatingValues) {
   EXPECT_TRUE(p.use_roll);
   EXPECT_EQ(p.voxel_leaf_m, 0.1f);
   // Integrated operating profile preserves low-object tuning and refinement.
-  EXPECT_EQ(p.ground.near_threshold_m, 0.23);
+  EXPECT_EQ(p.ground.near_threshold_m, 0.30);
   EXPECT_TRUE(p.camera_point_refinement.enabled);
   EXPECT_EQ(p.ground.far_threshold_m, 0.40);
   EXPECT_DOUBLE_EQ(p.ground.fit_threshold_m, 0.);  // Main far-band fit; explicit override stays opt-in.
@@ -679,7 +679,7 @@ TEST(RuntimeConfig, RemovingLocalGroundFitRestoresLegacyConsensus) {
   n["ground"].remove("fit_distance_threshold_m");
   const auto c = sh::LoadRuntimeConfig(dir.Write("ground-rollback.yaml", n), PackageDir());
   EXPECT_DOUBLE_EQ(c.pipeline.ground.fit_threshold_m, 0.);
-  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .23);
+  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .30);
   EXPECT_DOUBLE_EQ(c.pipeline.ground.far_threshold_m, .40);
 }
 
@@ -689,7 +689,7 @@ TEST(RuntimeConfig, GroundFitAuditIsExplicitAndDoesNotChangeRemovalBands) {
   n["ground"]["fit_distance_threshold_m"] = .08;
   const auto c = sh::LoadRuntimeConfig(dir.Write("ground-fit.yaml", n), PackageDir());
   EXPECT_DOUBLE_EQ(c.pipeline.ground.fit_threshold_m, .08);
-  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .23);
+  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .30);
   EXPECT_DOUBLE_EQ(c.pipeline.ground.far_threshold_m, .40);
   EXPECT_NE(c.config_sha256, ShippedRuntimeConfig().config_sha256);
   for (double value : {0., -.1, .41, std::numeric_limits<double>::infinity()})

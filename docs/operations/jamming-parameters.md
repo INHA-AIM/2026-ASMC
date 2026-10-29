@@ -175,7 +175,7 @@ LiDAR 표준 profile은 `lidar_wall_vehicle.yaml`; sensor Z 하한-1.55m, 근거
 
 Selected `lidar_wall_vehicle.yaml` and explicit generic `lidar_pipeline.yaml` now
 use tunnel `original_parameters.cluster_min_points: 10` (previous PR #144: 3).
-NORMAL `clustering.MinPoints` stays 3. Sparse runtime profile: enable=true,
+NORMAL `clustering.MinPoints` is restored to 5 by the tunnel-only scope fix. Sparse runtime profile: enable=true,
 min_points=2, wall_clearance_m=1.5. `Params` alone defaults OFF for legacy callers.
 
 After ground/wall/residual-wall removal, form complete components from kKept using
@@ -199,3 +199,24 @@ and a sparse rejection does not disable that policy.
 All three fields enter parsing and effective config identity. No frozen baseline
 hash is rewritten. Tests cover the predicate, real Process path/cache, route
 index uniqueness and legacy rescue with sparse ON/OFF, runtime parsing/identity.
+
+
+### Tunnel-only update scope / rotary regression containment
+
+The selected wall profile sets `tunnel_only_updates: true`. NORMAL uses the
+pre-#144 common values: MinPoints=5, ground near band=.30m. The global .23m/3
+changes are withdrawn; the GPS-denied core has its own ground model and final
+10-point/sparse rules. Physical RearOverhang=.790m remains canonical.
+
+New sparse/geometry-precedence, lowered tunnel Z/low-object rescue, detached
+wall cleanup and vehicle-history extensions require the reviewed map route
+window. A confirmed approach window arms them, GPS loss retains that state,
+and a valid fix outside the window clears it. GPS loss at an unrelated rotary
+or starting without a map anchor cannot arm the new tuning. Existing base
+camera point refinement remains enabled on normal roads. Scope state is
+reported in LiDAR trace `tunnel.updates_active`; it enters config identity.
+
+This contains the global configuration changes that could alter rotary
+observations. It does not establish that a reported rear-end collision is
+resolved: entry/execution braking still requires a recorded closed-loop check.
+Rollback checkpoint before this scope change is commit99c3ae25 (runtime f8f7dd09).

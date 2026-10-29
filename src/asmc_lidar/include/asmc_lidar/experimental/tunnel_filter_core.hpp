@@ -566,6 +566,9 @@ public:
         const std::vector<int>& kept, bool ground_valid, const Plane& ground,
         const EgoMotion* motion=nullptr);
     const Params& GetParams() const { return params_; }
+    void SetScopedUpdates(bool sparse, bool wall_precedence) {
+        params_.sparse_cluster_enable=sparse;params_.wall_geometry_precedence=wall_precedence;
+    }
     void CopyWallHistoryFrom(const TunnelPipeline& other) { wall_tracks_=other.wall_tracks_; }
     const FrameResult& LastResult() const { return result_; }
 

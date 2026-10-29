@@ -32,6 +32,7 @@ struct TunnelWallEvidence {
   std::string reason;
 };
 struct TunnelFilterStageReport {
+  bool updates_active=false;
   bool pre_entry_wall=false;
   double route_station_m=-1,entry_distance_m=-1,route_lateral_m=-1;
   std::string wall_gate_reason="disabled";
