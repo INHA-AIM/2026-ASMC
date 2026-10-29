@@ -750,3 +750,32 @@ TEST(Pipeline, TunnelScopeRequiresMapWindowBeforeGpsLossAndClearsOnExit) {
     EXPECT_EQ(k>=1&&k<4,r.tunnel.updates_active);
   }
 }
+
+// Offline sensitivity experiment: PR144's GENERAL-road defaults can change
+// candidates even where the mapped tunnel gate is inactive. Not a contact test.
+TEST(Pipeline, GlobalTunnelTuningChangesNormalRoadCandidateAdmission) {
+  auto base=Config(true,true),global=base;
+  base.clustering.s32_MinPoints=5;global.clustering.s32_MinPoints=3;
+  base.ground.near_threshold_m=.30;global.ground.near_threshold_m=.23;
+  for(int scene=0;scene<2;++scene) {
+    auto cloud=Scene({});
+    const int points=scene==0?3:6;
+    const float z=scene==0?-.50f:kGroundZ+.27f;
+    for(int j=0;j<points;++j)
+      cloud->points.push_back(Point(10.f+.2f*j,3.f,z,50.f));
+    cloud->width=cloud->points.size();
+    Pipeline a(base),b(global);
+    const auto x=a.Process(Scan(kT0,cloud,1),WithGps(Local(0,0,0),true),MapPose(true,kT0));
+    const auto y=b.Process(Scan(kT0,cloud,1),WithGps(Local(0,0,0),true),MapPose(true,kT0));
+    ASSERT_TRUE(x.processed&&y.processed);
+    EXPECT_FALSE(x.tunnel.ran||y.tunnel.ran);
+    std::cout << "NORMAL_SCOPE_AB scene=" << scene
+      << " baseline_ground=" << x.counts.ground_kept_points
+      << " global_ground=" << y.counts.ground_kept_points
+      << " baseline_clusters=" << x.counts.clusters
+      << " global_clusters=" << y.counts.clusters << std::endl;
+    EXPECT_EQ(0,x.counts.clusters);
+    EXPECT_EQ(1,y.counts.clusters);
+    if(scene==1)EXPECT_GT(y.counts.ground_kept_points,x.counts.ground_kept_points);
+  }
+}
