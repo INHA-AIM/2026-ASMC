@@ -471,8 +471,18 @@ def main():
         link.pause_ego(False)
         time.sleep(0.5)
         link.hold()
-        environment=raw.get("trial_environment",dict(weather="Sunny",hour=13))
+        environment=raw.get("trial_environment",dict(weather="Foggy",hour=13))
         link.set_environment(environment["weather"],environment["hour"])
+        from proto.morai.environment import environment_enum_pb2 as environment_enum
+        def verify_environment():
+            stub=link._require()._environment_stub
+            current=stub.GetWeather(Empty(),timeout=3);clock=stub.GetTime(Empty(),timeout=3)
+            emit(dict(event='environment_readback',requested=environment,
+                      actual_weather=MessageToDict(current),actual_time=MessageToDict(clock)))
+            expected={'Sunny':environment_enum.WEATHER_TYPE_SUNNY,'Foggy':environment_enum.WEATHER_TYPE_FOGGY}
+            if current.type!=expected[environment['weather']] or clock.hour!=environment['hour']:
+                raise RuntimeError('trial weather/time changed; refusing mixed-condition comparison')
+        verify_environment()
         emit(dict(event="environment_applied",**environment))
         section = ReplaySection(
             "tunnel",
@@ -650,6 +660,7 @@ def main():
         from scen_runner.records.local_margin_audit import footprint
         snapshot=link.states()
         initial=actor_state(next(x for x in snapshot if x.actor_info.id.value==link.ego_id))
+        verify_environment()
         if not link.held_at(definition['start_pose']):
             emit(dict(event='trial_start_pose_or_speed_invalid',actual=initial,expected=definition['start_pose']))
             raise RuntimeError('trial moved before release; fixed start condition not met')
@@ -679,7 +690,10 @@ def main():
         emit(dict(event='actors_resumed'))
         reason = "time_limit"
         stationary = started
+        last_environment_check=time.monotonic()
         while time.monotonic() - started < args.seconds:
+            if time.monotonic()-last_environment_check>=10.:
+                verify_environment();last_environment_check=time.monotonic()
             section.tick()
             elapsed=time.monotonic()-started
             for action in list(actions):
