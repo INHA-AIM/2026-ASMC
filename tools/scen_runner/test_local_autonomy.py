@@ -63,8 +63,8 @@ def check_launches():
                      '/asmc_control_selector','/planning_gps_imu_state_adapter'):
             assert names.count(name) == 1, (name,names)
         assert '/gps_imu_vehicle_state_adapter' not in names
-        assert full.params['/behavior_dashboard_server/port'].value == 8089
-        assert full.params['/perception/lidar/lidar_monitor/port'].value == 8097
+        assert full.params['/behavior_dashboard_server/port'].value == 8088
+        assert full.params['/perception/lidar/lidar_monitor/port'].value == 8091
         assert ('/local_controller' in names) == bool(args)
         assert any(n.package == 'lane_boundary_adapter' for n in full.nodes) == (not args)
     print('Full single-container composition: canonical ports and exactly one stack PASS')

@@ -71,7 +71,7 @@ def identity(workspace,session,port,ports):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--master-port',type=int,default=int(os.environ.get('ASMC_ROS_MASTER_PORT',os.environ.get('ASMC_MASTER_PORT','11373'))))
+    parser.add_argument('--master-port',type=int,default=int(os.environ.get('ASMC_ROS_MASTER_PORT',os.environ.get('ASMC_MASTER_PORT','11311'))))
     parser.add_argument('--check',action='store_true',help='Expand launch and check ports without starting nodes')
     args,launch_args=parser.parse_known_args()
     if any(':=' not in a for a in launch_args):parser.error('Pass launch arguments as name:=value')

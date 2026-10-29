@@ -6,8 +6,8 @@
   <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
   <arg name="cmd_port" default="9093"/>
   <arg name="invert_steer" default="false"/>
-  <arg name="dashboard_port" default="8089"/>
-  <arg name="lidar_dashboard_port" default="8097"/>
+  <arg name="dashboard_port" default="8088"/>
+  <arg name="lidar_dashboard_port" default="8091"/>
   <arg name="lidar_view" default="true"/>
   <arg name="lidar_debug" default="false"/>
   <arg name="jamming_speed_kph" default="$(eval {'camera':10.,'local':20.,'localization':20.}[arg('jamming_planner')])"/>
