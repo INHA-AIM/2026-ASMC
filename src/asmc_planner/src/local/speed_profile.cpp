@@ -1,4 +1,5 @@
 #include "local/speed_profile.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -33,6 +34,33 @@ double SpaceSpeed(double distance, double acceleration, double delay,
 
 bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
   if (out.path.size() < 2) { out.reason="no_speed_geometry"; return false; }
+  if(c.maneuver_reserve>0.) {
+    const auto &p=out.path.back();
+    const auto body=MakeEgoFootprint(CartesianState{p.x,p.y,p.yaw,0,0,0},VehicleShape{c.width,c.length,c.rear},0.);
+    bool approaching=false;
+    for(const auto &o:s.obstacles) {
+      const auto &poly=o.motion_sweep.empty()?o.polygon:o.motion_sweep;
+      double front=-1e9;
+      for(auto q:poly)front=std::max(front,q.x);
+      if(p.x-c.rear>front)continue; // A verified path beyond the object is a bypass.
+      if(geometry::ConvexPolygonDistance(body,poly)<=c.margin+o.extra_clearance+o.uncertainty+.25)
+        approaching=true;
+    }
+    // Do not consume all turn room by repeatedly selecting a straight prefix
+    // ending just before an obstacle. A genuinely turning bounded recovery can
+    // still reposition within today's hard body/OBB/exterior checks.
+    const double nose_shift=std::abs(p.y+(c.length-c.rear)*std::sin(p.yaw));
+    if(approaching && !(out.recovery && nose_shift>.5)) {
+      const double keep=std::max(.1,p.s-c.maneuver_reserve),old=p.s;
+      auto it=std::lower_bound(out.path.begin(),out.path.end(),keep,[](const Pose& p,double s){return p.s<s;});
+      if(it!=out.path.end() && it!=out.path.begin()) {
+        auto b=*it,a=*(it-1);double t=(keep-a.s)/std::max(1e-8,b.s-a.s);
+        Pose end{a.x+t*(b.x-a.x),a.y+t*(b.y-a.y),a.yaw+t*(b.yaw-a.yaw),a.k+t*(b.k-a.k),keep};
+        out.path.erase(it,out.path.end());out.path.push_back(end);
+        out.maneuver_reserve_m=old-keep;
+      }
+    }
+  }
   out.trajectory.clear();
   double maxk = 0;
   for (auto &p : out.path)
@@ -84,6 +112,7 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
     return false;
   }
   if(braking.decel>c.decel)out.speed_reason="controlled_braking";
+  if(out.maneuver_reserve_m>0.)out.speed_reason=out.chosen_cap<.15?"waiting_for_bypass_space":"maneuver_space_reserve";
   double travelled = 0, v = s.speed, a = std::max(-braking.decel, s.acceleration);
   size_t index = 1;
   for (int i = 0; i < 400; ++i) {

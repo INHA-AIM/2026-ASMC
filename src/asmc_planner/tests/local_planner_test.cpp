@@ -33,6 +33,17 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty();Obstacle o;o.id=3;o.polygon={{8.,-.5},{9.,-.5},{9.,.5},{8.,.5}};s.obstacles={o};
+    Config c;c.maneuver_reserve=1.2;
+    Result prefix;prefix.path={{0,0,0,0,0},{4,0,0,0,4}};
+    expect(BuildSpeedProfile(s,c,prefix) && std::abs(prefix.path.back().s-2.8)<1e-8 &&
+           std::abs(prefix.maneuver_reserve_m-1.2)<1e-8,
+           "an uncompleted approach preserves turn room rather than creeping to the obstacle");
+    Result bypass;bypass.path={{0,0,0,0,0},{11,2.,0,0,11.2}};
+    expect(BuildSpeedProfile(s,c,bypass) && bypass.maneuver_reserve_m==0.,
+           "a verified bypass beyond the object is not shortened by approach reserve");
+  }
+  {
     auto s=empty();s.speed=.2;
     Pose a;s.previous.push_back(a);
     for(int i=0;i<90;++i) {

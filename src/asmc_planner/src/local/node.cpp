@@ -302,6 +302,7 @@ class Node {
       << ",\"braking_limit_mps2\":" << r.braking_limit
       << ",\"available_stopping_m\":" << r.available_stopping_m
       << ",\"recovery_extension_m\":" << r.recovery_extension_m
+      << ",\"maneuver_reserve_m\":" << r.maneuver_reserve_m
       << ",\"minimum_object_clearance_m\":" << r.minimum_clearance
       << ",\"comfort_decel_mps2\":" << config.decel
       << ",\"selected_kph\":" << r.chosen_cap * 3.6 << ",\"speed_reason\":\""
@@ -1101,6 +1102,7 @@ public:
     p.param("comfort_deceleration_mps2", config.decel, 1.5);
     p.param("preferred_clearance", config.preferred_clearance, .40);
     p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
+    p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
     p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
     if (run.empty() || run.size() > 128 ||
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
@@ -1108,7 +1110,8 @@ public:
         !std::isfinite(config.width + config.length + config.rear +
                        config.margin + config.budget_ms + config.speed_cap +
                        config.accel + config.controlled_decel + config.decel +
-                       config.preferred_clearance + config.low_speed_rate_floor) ||
+                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve) ||
+        config.maneuver_reserve<0. || config.maneuver_reserve>2. ||
         config.decel<1.5 || config.decel>3. ||
         config.preferred_clearance<config.margin || config.preferred_clearance>1. ||
         config.low_speed_rate_floor<.5 || config.low_speed_rate_floor>1. ||

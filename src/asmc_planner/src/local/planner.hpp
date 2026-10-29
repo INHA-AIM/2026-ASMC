@@ -30,6 +30,7 @@ struct Config {
   double controlled_decel = 1.5; // Candidate actual-state brake; cruise stays at decel.
   double preferred_clearance = .40;
   double low_speed_rate_floor = 1.;
+  double maneuver_reserve = 0.; // Keep turn room if a verified prefix ends at an obstacle.
   double wheelbase = 3., gain = .844, max_k = .23, max_steer_rate = 1.;
   double lateral_accel = 2.6, delay = .5, max_range = 20., budget_ms = 40.;
   bool blind_assist = false, recovery = false;
@@ -80,6 +81,7 @@ struct Result {
   double required_stopping_m = 0, available_stopping_m = 0;
   double comfort_stopping_m = 0, braking_limit = 1.5;
   double recovery_extension_m = 0;
+  double maneuver_reserve_m = 0;
   bool budget_exhausted = false;
   double reference_end = 0, search_horizon = 0;
   std::string path_source = "new_search";
