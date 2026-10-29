@@ -17,7 +17,7 @@
 ```
 
 선택 인자는 `jamming_planner:=camera|local|localization`이다. 공통 A448 접근 목표는25km/h,
-camera 기본 목표는10km/h다. LOCAL/localization은 순항15·상한20km/h를 공유한다.
+camera 기본 목표는20km/h다. LOCAL/localization은 순항15·상한20km/h를 공유한다.
 상한20은 항상20으로 주행한다는 뜻이 아니다. 순항 목표·곡률·조향 속도·관측 거리·제동
 가능 거리·native 후보의 속도 상한 중 작은 값이 실제 계획 속도를 결정한다.
 별도 동일 속도 비교는 `jamming_speed_kph:=10`으로 낮출 수 있다.
@@ -77,10 +77,10 @@ Frenet/LOCAL 시간 매개화도 검증 이력이 달라 공통 모듈 안에서
 | `vehicle_shape.road_outer_width` | 일부 도로·실선·출발·정지선 검사에서 사용하는 보수적인 총 폭 |2.161m. 전 범용 footprint가 아니라 해당 호출에서만 사용 |
 | `boundary_reserve_each_side_m` | 위 외형 proxy를 실제 폭과 구분한 편측 차이 |13.45cm. 총 폭과 함께 있으면 `width+2*reserve=road_outer_width`를 검증 |
 | `wall_reserve_m` | 터널 확장 자산에 기록된 벽 여유의 선언·최소 검증값 |최소65cm. 로더가 폴리곤을 다시65cm 깎지는 않음. 작성 근거의 재확인은 별도 |
-| `jamming_avoid_clearance` | camera 회피선의 차체-장애물 횡간격 |통합20cm. LOCAL 작업트리에 남은5cm는 camera 전용 설정 |
-| `jamming_obstacle_lateral_margin` | camera 차체 모서리·도로 경계·일부 장애물 검사 |통합20cm. LOCAL 작업트리의5cm도 LOCAL 경로 알고리즘 값이 아님 |
+| `jamming_avoid_clearance` | camera 회피선의 차체-장애물 횡간격 |통합5cm. #142 camera 전용 설정 |
+| `jamming_obstacle_lateral_margin` | camera 차체 모서리·도로 경계·일부 장애물 검사 |통합5cm. LOCAL 경로 알고리즘 값이 아님 |
 | `avoid_plan_margin` | camera 후보 선택 때 추가하는 계획 여유 |`반차폭 + avoid_clearance + avoid_plan_margin`으로 사용 |
-| `jamming_avoid_line_overrun` | camera 회피 corridor의 외곽 기준선 바깥 허용 |통합0m. LOCAL 작업트리의1.5m는 camera 외곽 영역 확장 허용이며 충돌 여유가 아님 |
+| `jamming_avoid_line_overrun` | camera 회피 corridor의 외곽 기준선 바깥 허용 |통합1.5m. camera 외곽 영역 확장 허용이며 충돌 여유가 아님 |
 | `jamming_line_edge_expand` | camera의5개 기준선 중 바깥1·5번 가이드 이동 |30cm. 벽/노면 확인이나 차체 통과 보장이 아님 |
 | `jamming_avoid_line_extra` | camera가 통과 가능한 회피선에서 더 바깥으로 미는 선 단위 값 |통합0.0. LOCAL 작업트리의1.0은1m라는 뜻이 아님 |
 | `avoid_max_shoulder`, `avoid_wall_margin` | camera가 LiDAR 벽을 확인한 쪽의 확장 한계/벽 여유 |통합 shoulder2m. overrun 및 localization 지도 확장과 별개 |
