@@ -7,7 +7,7 @@ namespace local_planning {
 // Experimental navigation cue only. Never fills semantic cells, replaces
 // collision checks, marks an invalid family valid, or invents wall positions.
 inline std::vector<std::array<double,2>> SemanticReference(const Grid& grid,
-    const Config& c, const std::vector<std::array<double,2>>& prior = {}) {
+    const Config& c, const std::vector<std::array<double,2>>& prior = {}, bool centroid=false) {
   std::vector<std::array<double,2>> out;
   if (grid.rows <= 0 || grid.cols <= 0 || grid.probability.size()!=size_t(grid.rows*grid.cols) ||
       grid.coverage.size()!=grid.probability.size()) return out;
@@ -48,7 +48,7 @@ inline std::vector<std::array<double,2>> SemanticReference(const Grid& grid,
       // A missing family must not move the home reference by a lane merely
       // because the portal/obstacle mask changes the visible road centroid.
       // The aged, ego-aligned preference never changes this current interval.
-      const double preferred=preference(x,right+1.75);
+      const double preferred=preference(x,centroid?.5*(right+left):right+1.75);
       const double y=std::clamp(preferred,right+half,left-half);
       const double cost=std::abs(y-preferred)+.25*std::abs(y-previous_y);
       if (cost<best) { best=cost;chosen=y;found=true; }

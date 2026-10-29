@@ -420,6 +420,8 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       width=std::clamp(.5*std::abs(q[1]-q[2]),2.4,4.6);
     }
     staged_guide=StagedGuideOffset(-ReferenceAt(s,3.),.5*width);
+    if(std::abs(c.guide_offset)<20.)
+      staged_guide=std::clamp(std::round(c.guide_offset/(.5*width)),-2.,2.)*(.5*width);
     lateral_targets={staged_guide,0.,.5*width,width,-.5*width,-width};
     std::vector<double> unique;for(double y:lateral_targets)
       if(std::find(unique.begin(),unique.end(),y)==unique.end())unique.push_back(y);

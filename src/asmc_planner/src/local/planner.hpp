@@ -42,6 +42,7 @@ struct Config {
   bool blind_assist = false, recovery = false;
   bool recovery_geometry = false; // Internal near-field policy; never a launch switch.
   int beam = 40;
+  double guide_offset = 1e9; // Current semantic component centre cue; not a collision raster.
   int selection_trial = 0; //0 current;1 revalidated long-path commitment;2 five-guide primary.
 };
 struct Grid {

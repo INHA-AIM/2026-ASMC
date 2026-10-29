@@ -557,6 +557,8 @@ def main():
             "/morai_sensor_bridge/frame_timing",
             prefix + "context",
             prefix + "coverage",
+            prefix + "navigation_front_probability",
+            prefix + "navigation_front_coverage",
             prefix + "drivable_probability",
             "/planning/local/odometry",
             "/planning/local/trajectory",

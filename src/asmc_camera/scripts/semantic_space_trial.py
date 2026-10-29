@@ -43,7 +43,7 @@ class SemanticSpaceTrial:
         self.sequence = 0
         self.counts = dict(outputs=0, rejected=0, stale=0, m0=0)
         self.publishers = {k: rospy.Publisher('~'+k, Image, queue_size=1)
-                           for k in ('drivable_probability','coverage')}
+                           for k in ('drivable_probability','coverage','navigation_front_probability','navigation_front_coverage')}
         self.context_pub = rospy.Publisher('~context', CameraGroundProjection, queue_size=1)
         # Semantic computation consumes each newest complete bundle. The same
         # bounded latest-work scheduler is reused without a display-rate cap;
@@ -104,14 +104,20 @@ class SemanticSpaceTrial:
                 raise ValueError('wrong original semantic image shape/encoding')
             arrays[view]=np.frombuffer(msg.data,np.uint8).reshape(msg.height,msg.step)[:,:msg.width]
         planes={v:context.plane_coefficients[3*i:3*i+3] for i,v in enumerate(context.views)}
-        layers=self.renderer.drivable(planes,arrays,self.masks,self.visibility_margin_px)
+        front_requested=any(self.publishers[k].get_num_connections() for k in
+            ('navigation_front_probability','navigation_front_coverage'))
+        layers=self.renderer.drivable(planes,arrays,self.masks,self.visibility_margin_px,
+                                      include_front=front_requested)
         with self.gate.lock:
             if epoch!=self.gate.context() or not self.gate.allows(context.header.stamp):return False
             if (rospy.Time.now()-context.header.stamp).to_sec()>.35:self.counts['stale']+=1;return False
             self.sequence+=1
             context=copy.deepcopy(context);context.header.seq=self.sequence
             self.context_pub.publish(context)
-            for topic,key in [('drivable_probability','drivable'),('coverage','coverage')]:
+            outputs=[('drivable_probability','drivable'),('coverage','coverage')]
+            if front_requested:outputs += [('navigation_front_probability','front_drivable'),
+                                           ('navigation_front_coverage','front_coverage')]
+            for topic,key in outputs:
                 arr=layers[key]
                 m=Image(header=context.header,height=arr.shape[0],width=arr.shape[1],encoding='mono8',step=arr.shape[1],data=arr.tobytes())
                 self.publishers[topic].publish(m)
