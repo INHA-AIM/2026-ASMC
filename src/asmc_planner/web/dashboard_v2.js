@@ -54,7 +54,7 @@
       node.hidden=false;
       node.textContent=[phases[meta.phase]||meta.phase,meta.run_id||'대기',
         (meta.branch||'')+' @ '+(meta.revision||'').slice(0,8)+(meta.dirty?' +미커밋':''),
-        meta.master_uri||'',meta.data_available?'관측 서버 연결 · LOCAL 수신 '+(Number.isFinite(meta.local_receive_age_s)?Math.round(meta.local_receive_age_s*1000)+'ms':'대기'):'현재 관측 없음 · 과거 경로 숨김',meta.reason||''].filter(Boolean).join(' | ');
+        meta.master_uri||'',meta.actuation_hold?'준비 중 · 시뮬 제동 유지':'',meta.data_available?'관측 서버 연결 · LOCAL 수신 '+(Number.isFinite(meta.local_receive_age_s)?Math.round(meta.local_receive_age_s*1000)+'ms':'대기'):'현재 관측 없음 · 과거 경로 숨김',meta.reason||''].filter(Boolean).join(' | ');
       node.className='trial-monitor '+(meta.data_available?'live':'waiting');
     }
   }

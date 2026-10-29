@@ -408,6 +408,7 @@ def main():
             return command
         actuator=rospy.Publisher('/local_trial/actuator_cmd',CtrlCmd,queue_size=1)
         transport_gate=TrialCommandGate(actuator.publish,held_command)
+        if monitor:monitor.update(actuation_hold=True)
         transport_timer=rospy.Timer(rospy.Duration(.05),lambda _:transport_gate.tick())
         subscriptions.append(commands('/local_trial/actuator_cmd','actuator.jsonl'))
         import xml.etree.ElementTree as ET
@@ -654,7 +655,6 @@ def main():
             raise RuntimeError('trial moved before release; fixed start condition not met')
         last=(initial['pose']['x'],initial['pose']['y'])
         started = time.monotonic()
-        if monitor: monitor.update(phase='driving')
         last_udp_evaluation=started
         emit(dict(event='driving_started'))
         emit(dict(event='native_sample',phase='pre_release',ego=initial,travel_m=0.,
@@ -668,6 +668,7 @@ def main():
         link.check(link._require()._actor_stub.SetVehicleControlMode(r, timeout=3),"enable native auto control")
         link.release()
         transport_gate.release()
+        if monitor:monitor.update(phase='driving',actuation_hold=False)
         emit(dict(event='actuation_gate_released',held_commands=transport_gate.held,
                   actual_pre_release_speed_kph=initial['speed_kmh'],topic='/local_trial/actuator_cmd'))
         emit(dict(event='ego_released'))
