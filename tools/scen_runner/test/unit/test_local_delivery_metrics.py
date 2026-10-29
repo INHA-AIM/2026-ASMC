@@ -28,6 +28,16 @@ def check_delivery_clock_and_marked_drive_window(tmp_path):
 
 
 class DeliveryMetricsTest(unittest.TestCase):
+    def test_dynamic_replay_actions_remain_owned_and_bounded(self):
+        from run_local_trial import validate_trial_definition
+        raw={'replay':{'tunnel':{'baseline':[{'record':{'key':'ped','definition':{'type':'crossing'}}}]}},
+             'trial_actions':[{'key':'ped','action':'pause','time_s':3.}]}
+        self.assertEqual(len(validate_trial_definition(raw,30)),1)
+        raw['trial_actions'][0]['key']='someone_else'
+        with self.assertRaises(ValueError):validate_trial_definition(raw,30)
+        raw['trial_actions'][0].update(key='ped',time_s=31.)
+        with self.assertRaises(ValueError):validate_trial_definition(raw,30)
+
     def test_trial_readiness_waits_for_selected_fresh_wire_command(self):
         from types import SimpleNamespace
         from run_local_trial import selected_command_ready

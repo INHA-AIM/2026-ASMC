@@ -103,9 +103,9 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
     r.minimum_clearance = std::min(r.minimum_clearance, distance);
     // Recovery also retains the configured physical clearance and source-age
     // uncertainty. A crawl label cannot mean zero centimetres of clearance.
-    if (distance <= (c.recovery_geometry?c.margin:clearance_margin) + o.uncertainty)
+    if (distance <= (c.recovery_geometry?c.margin:clearance_margin) + o.uncertainty+o.extra_clearance)
       return fail(r, "local_obb", p.x, p.y, o.id);
-    if(!o.motion_sweep.empty() && geometry::ConvexPolygonDistance(physical,o.motion_sweep)<=clearance_margin+o.uncertainty)
+    if(!o.motion_sweep.empty() && geometry::ConvexPolygonDistance(physical,o.motion_sweep)<=clearance_margin+o.uncertainty+o.extra_clearance)
       return fail(r,"predicted_object_sweep",p.x,p.y,o.id);
   }
   const auto &g = s.grid;
@@ -383,6 +383,26 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   // lattice.
   Node analytic_best = best;
   std::vector<double> lateral_targets;
+  // Full-body goal probes can all fail across an object's semantic occlusion
+  // before a usable bypass is even tried. Add measured OBB-face guidance;
+  // these are search seeds only, and every connecting body sweep is unchanged.
+  for(const auto &o:s.obstacles) {
+    double minx=1e9,lo=1e9,hi=-1e9;
+    for(auto p:o.polygon) {minx=std::min(minx,p.x);lo=std::min(lo,p.y);hi=std::max(hi,p.y);}
+    if(minx<4. || minx>18.)continue;
+    double gx=std::min(minx,horizon),pad=c.width*.5+c.margin+o.uncertainty+o.extra_clearance+.25;
+    if(gx<4.)continue;
+    for(double side:{hi+pad,lo-pad}) {
+      if(std::abs(side)>6.)continue;
+      auto q=PlanToGrid(s.grid,gx,side);
+      int row=std::lround((s.grid.xmax-q[0])/s.grid.resolution),col=std::lround((s.grid.ymax-q[1])/s.grid.resolution);
+      if(row<0 || row>=s.grid.rows || col<0 || col>=s.grid.cols)continue;
+      auto i=row*s.grid.cols+col;
+      if(s.grid.coverage[i]==255 && s.grid.probability[i]>=166)
+        lateral_targets.push_back(side-ReferenceAt(s,gx));
+    }
+    if(lateral_targets.size()>=4)break;
+  }
   for (auto &goal : out.goals)
     if (std::none_of(
             lateral_targets.begin(), lateral_targets.end(), [&](double y) {
@@ -394,7 +414,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   // before either bypass side was tried. Geometry/collision/ranking stay the
   // same; no extra search budget or rollout is added.
   for (double transition :
-       {3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 14., 16.})
+       {6., 8., 10., 4., 12., 5., 3., 7., 9., 11., 14., 16.})
     for (double lateral : lateral_targets) {
       if (elapsed(start) > c.budget_ms * .6)
         break;
@@ -421,10 +441,11 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
         double steering_change =
             std::abs(std::atan(c.wheelbase * b.k / c.gain) -
                      std::atan(c.wheelbase * a.k / c.gain));
-        if (std::abs(b.k) > c.max_k || std::abs(b.yaw) > .65 ||
-            steering_change >
-                c.max_steer_rate * distance / std::max(c.low_speed_rate_floor, s.speed))
-          break;
+        if(std::abs(b.k)>c.max_k) {++out.rejected["curvature_limit"];break;}
+        if(std::abs(b.yaw)>.65) {++out.rejected["heading_limit"];break;}
+        if(steering_change>c.max_steer_rate*distance/std::max(c.low_speed_rate_floor,s.speed)) {
+          ++out.rejected["steering_rate"];break;
+        }
         ++out.expanded;
         const auto soft_before = check.soft_margin_cells;
         if (!CheckSweep(s, c, a, b, check))

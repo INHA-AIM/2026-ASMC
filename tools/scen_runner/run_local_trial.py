@@ -249,6 +249,8 @@ def main():
     mode = None
     latest = {}
     collision_events = []
+    preexisting_contacts=set()
+    native_evidence_limited=False
     control_rows = (root / "control.jsonl").open("x")
     handles.append(control_rows)
 
@@ -538,6 +540,17 @@ def main():
             link._require()._actor_stub.SetVehicleControlMode(r, timeout=3),
             "enable native auto control",
         )
+        # MORAI can retain the native unknown-contact marker after a removed
+        # actor (observed after drive06). Preserve/quarantine startup records;
+        # they are not a new contact. UDP events remain independently active.
+        before_drive=actor_state(link.ego())
+        preexisting_contacts=set(before_drive['native_contacts'])-{link.ego_id,''}
+        if preexisting_contacts:
+            native_evidence_limited=True
+            emit(dict(event='preexisting_native_contact',contacts=sorted(preexisting_contacts),
+                      limitation='Persistent startup IDs cannot certify later contact release; raw samples and UDP evidence retained.'))
+            if any(not aid.startswith('-') for aid in preexisting_contacts):
+                raise RuntimeError('known actor contact before trial release')
         link.release()
         started = time.monotonic()
         # The earlier LOCAL fixture runner only prepared saved actors. Without
@@ -571,11 +584,12 @@ def main():
             if (root / "stop-request.json").exists():
                 reason = "external_stop_request"
                 break
-            state = actor_state(link.ego())
+            snapshot=link.states()
+            state = actor_state(next(x for x in snapshot if x.actor_info.id.value==link.ego_id))
             resources.sample()
-            native = [
-                x for x in state.get("native_contacts", []) if x and x != link.ego_id
-            ]
+            current_contacts=set(state.get('native_contacts',[]))-{link.ego_id,''}
+            preexisting_contacts.intersection_update(current_contacts)
+            native=sorted(current_contacts-preexisting_contacts)
             udp = [f"udp:{o['type']}:{o['id']}" for received,objects in collision_events
                    if received>=started for o in objects]
             point = (state["pose"]["x"], state["pose"]["y"])
@@ -593,7 +607,7 @@ def main():
                     plan_reason=plan.reason if plan else "missing",
                     plan_sequence=plan.plan_sequence if plan else 0,
                     owned=section.owned(),
-                    actor_states=[actor_state(x) for x in section.link.states()
+                    actor_states=[actor_state(x) for x in snapshot
                                   if x.actor_info.id.value in section.owned()],
                 )
             )
@@ -686,6 +700,7 @@ def main():
             run_id=run_id,
             reason=reason,
             native_contacts=contacts,
+            native_evidence_limited=native_evidence_limited,
             travel_m=travel,
             maximum_speed_kph=speedmax,
             seconds=time.monotonic() - started if started else 0,

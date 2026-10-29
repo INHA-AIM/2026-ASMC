@@ -788,6 +788,12 @@ class Node {
       ob.id = o.track_id;
       ob.camera_class = o.camera_class;
       ob.classification = o.classification;
+      // Space around vulnerable bodies is independent of whether they move.
+      // A stationary person/dog/bicycle is still a real obstacle, not an
+      // instruction to wait forever or to assign a nonzero velocity.
+      if(ob.camera_class=="person" || ob.camera_class=="dog" ||
+         ob.camera_class=="deer" || ob.camera_class=="bicycle" || ob.camera_class=="stroller")
+        ob.extra_clearance=.25;
       ob.source_age = object_age;
       // Ego alignment does not move the object itself. Reserve an explicit
       // experimental motion envelope, including when velocity is UNKNOWN.

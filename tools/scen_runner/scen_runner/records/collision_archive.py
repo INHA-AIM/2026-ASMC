@@ -51,6 +51,7 @@ def actor_state(state):
         speed_kmh=float(math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z)),velocity=[v.x,v.y,v.z],
         box_center=[box.location.x,box.location.y,box.location.z],
         box_extents=[box.extent.x,box.extent.y,box.extent.z],
+        box_rotation=[box.rotation.x,box.rotation.y,box.rotation.z],
         throttle=vs.throttle,brake=vs.brake,steer=vs.steer,
         link=vs.current_link_info.id.value,remaining_distance=vs.remaining_distance,
         native_contacts=list(vs.collision_objects))
