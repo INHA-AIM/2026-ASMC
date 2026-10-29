@@ -13,6 +13,7 @@ from pathlib import Path
 import signal
 import socket
 import subprocess
+import threading
 import time
 
 RAW_TOPICS=('/gps','/imu','/Ego_topic','/velodyne_points',
@@ -105,7 +106,8 @@ def main():
                 'raw_bag_fixed_motion_not_driving',monitoring,
                 conditions=dict(planner=strategy,input_bag=str(args.bag),rate=args.rate))
             rows=(trial/'observations.jsonl').open('x');counts=Counter();modes=[];reasons=Counter()
-            def observe(topic,message):
+            record_lock=threading.Lock()
+            def record(topic,message,rows=rows,counts=counts,modes=modes,reasons=reasons):
                 counts[topic]+=1
                 if isinstance(message,CtrlCmd):value=dict(accel=message.accel,brake=message.brake,steering=message.steering)
                 elif isinstance(message,DiagnosticArray):
@@ -123,7 +125,10 @@ def main():
                     except (ValueError,AttributeError):value={}
                     if isinstance(value,dict) and 'reason' in value:reasons[str(value['reason'])]+=1
                 rows.write(json.dumps(dict(topic=topic,ros_time=rospy.Time.now().to_sec(),monotonic=time.monotonic(),value=value))+'\n')
-            subscribers=[rospy.Subscriber(t,k,lambda m,t=t:observe(t,m),queue_size=50) for t,k in
+            def observe(topic,message,record=record,lock=record_lock,rows=rows):
+                with lock:
+                    if not rows.closed:record(topic,message)
+            subscribers=[rospy.Subscriber(t,k,lambda m,t=t,callback=observe:callback(t,m),queue_size=50) for t,k in
                 (('/ctrl_cmd',CtrlCmd),('/planning/mode',UInt8),('/planning/mode/status',String),
                  ('/planning/jamming/handoff_trace',String),('/planning/local/trace',String),
                  ('/planning/local/control_trace',String),('/planning/localization/trace',String),
@@ -195,7 +200,7 @@ def main():
                 for child in (player,autonomy,lidar,camera):
                     if child is not None:stop(child)
                 for subscriber in subscribers:subscriber.unregister()
-                rows.close()
+                with record_lock:rows.close()
                 reporter.finish('stopped','replay processes ended');reporter=None
             summary=dict(strategy=strategy,counts=dict(counts),modes=modes,reasons=dict(reasons),
                          input_sha256=provenance['input_sha256'],closed_loop_acceptance=False)
