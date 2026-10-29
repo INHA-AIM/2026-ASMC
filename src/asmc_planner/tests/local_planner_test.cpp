@@ -33,6 +33,16 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty();Config c;
+    s.measured_steering_valid=true;s.measured_steering_rad=.5;s.steering_source_age=.02;
+    expect(std::abs(InitialCurvature(s,c)-c.gain*std::tan(.5)/c.wheelbase)<1e-10,
+           "a stopped car with measured wheel angle does not seed every path at zero curvature");
+    s.steering_source_age=.101;expect(InitialCurvature(s,c)==0.,"stale measured steering cannot seed a crawl");
+    s.steering_source_age=-.01;expect(InitialCurvature(s,c)==0.,"future measured steering is rejected");
+    s.steering_source_age=.02;s.speed=2.;s.yaw_rate=.08;
+    expect(std::abs(InitialCurvature(s,c)-.04)<1e-10,"normal-speed curvature continues using observed yaw/speed");
+  }
+  {
     auto s=empty(); Config c; c.low_speed_rate_floor=.1;
     Result r; r.path={{0,0,0,0,0},{.1,0,.01,.19,.1},{4,.4,.3,.19,4}};
     expect(BuildSpeedProfile(s,c,r) && r.steering_cap>.1 && r.steering_cap<.16 &&

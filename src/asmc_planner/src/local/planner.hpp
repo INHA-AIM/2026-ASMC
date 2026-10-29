@@ -3,6 +3,8 @@
 #include "Frenet/Speed/SpeedProfiler.hpp"
 #include <array>
 #include <cstdint>
+#include <algorithm>
+#include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -64,6 +66,8 @@ struct Scene {
       home; // soft right-home reference, not a discrete lane/target selection
   double speed = 0, yaw_rate = 0, age = 0, acceleration = 0;
   bool aligned_to_plan = false;
+  bool measured_steering_valid = false;
+  double measured_steering_rad = 0, steering_source_age = 0;
   std::vector<Pose> previous;
   bool previous_recovery = false;
 };
@@ -105,6 +109,16 @@ struct Result {
   double recovery_cost = 0;
   unsigned recovery_obb_overlap = 0;
 };
+// Yaw/speed is unobservable at rest. A fresh measured CAN front-wheel angle
+// can seed a crawl path without pretending wheel angle equals zero each frame.
+inline double InitialCurvature(const Scene &s,const Config &c) {
+  if(s.measured_steering_valid && s.speed<=.5 &&
+     std::isfinite(s.measured_steering_rad+s.steering_source_age) &&
+     s.steering_source_age>=0. && s.steering_source_age<=.1 &&
+     std::abs(s.measured_steering_rad)<=.698131701)
+    return std::clamp(c.gain*std::tan(s.measured_steering_rad)/c.wheelbase,-c.max_k,c.max_k);
+  return s.speed>.1?std::clamp(s.yaw_rate/s.speed,-c.max_k,c.max_k):0.;
+}
 double ReferenceAt(const Scene &, double x); // Soft home cue, never a collision boundary.
 // Distance-normalized final score; does not certify collision validity.
 double SegmentQualityCost(const Scene &, const Config &, const Pose &, const Pose &, unsigned soft_cells);

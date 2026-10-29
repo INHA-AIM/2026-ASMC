@@ -50,7 +50,7 @@ class Node {
   RoadMemory road_memory;
   ObstacleMemory obstacle_memory;
   ObjectPrediction object_motion;
-  bool local_motion_prediction = false;
+  bool local_motion_prediction = false, measured_steering_seed = false;
   bool retain_static_observations = false;
   ReferencePrior reference_prior;
   bool use_road_memory = true;
@@ -98,7 +98,7 @@ class Node {
     store(families, message);
   }
   struct Speed {
-    double stamp, value, received;
+    double stamp, value, received, steering;
   };
   std::deque<Speed> speeds;
   double imu_received = 0, next_plan_due = 0;
@@ -166,7 +166,10 @@ class Node {
       } else
         return;
     }
-    speeds.push_back({t, v, ros::SteadyTime::now().toSec()});
+    // Bridge preserves MORAI front_steer in degrees; ROS control is left positive.
+    // LOCAL-2G bag75 verifies the opposite raw sign. No GPS/GT is used here.
+    double steering=std::abs(m->wheel_angle)<=40.0001 ? -m->wheel_angle*M_PI/180. : NAN;
+    speeds.push_back({t, v, ros::SteadyTime::now().toSec(), steering});
     while (speeds.size() > 64)
       speeds.pop_front();
   }
@@ -442,6 +445,7 @@ class Node {
     const auto locked = ros::SteadyTime::now();
     // Bounded pointer/history snapshot. No raster copy or JSON under this lock.
     const auto motion = this->motion;
+    const auto speeds = this->speeds;
     const auto contexts = this->contexts;
     const auto probs = this->probs, covers = this->covers;
     const auto families = this->families;
@@ -663,6 +667,14 @@ class Node {
     scene.speed = std::abs(origin->v) <= .05 ? 0. : origin->v;
     scene.yaw_rate = origin->w;
     scene.acceleration = origin->a;
+    if(measured_steering_seed) {
+      auto speed=std::find_if(speeds.rbegin(),speeds.rend(),[&](const Speed &v){return v.stamp<=plan_stamp.toSec();});
+      if(speed!=speeds.rend() && std::isfinite(speed->steering) &&
+         plan_stamp.toSec()-speed->stamp<=.1 && locked.toSec()-speed->received<=.30) {
+        scene.measured_steering_valid=true;scene.measured_steering_rad=speed->steering;
+        scene.steering_source_age=plan_stamp.toSec()-speed->stamp;
+      }
+    }
     auto &g = scene.grid;
     g.rows = 250;
     g.cols = 160;
@@ -873,6 +885,10 @@ class Node {
     }
     debug << "],\"previous_candidate_points\":" << scene.previous.size()
           << ",\"previous_recovery\":" << (scene.previous_recovery?"true":"false")
+          << ",\"measured_steering_valid\":" << (scene.measured_steering_valid?"true":"false")
+          << ",\"measured_steering_rad\":" << scene.measured_steering_rad
+          << ",\"steering_source_age_s\":" << scene.steering_source_age
+          << ",\"initial_curvature\":" << InitialCurvature(scene,config)
           << ",\"speed_mps\":" << scene.speed
           << ",\"yaw_rate_rad_s\":" << scene.yaw_rate
           << ",\"acceleration_mps2\":" << scene.acceleration
@@ -1093,6 +1109,7 @@ public:
     p.param("semantic_reference_fallback", semantic_reference_fallback, false);
     p.param("retain_static_observations", retain_static_observations, false);
     p.param("local_motion_prediction", local_motion_prediction, false);
+    p.param("measured_steering_seed", measured_steering_seed, false);
     p.param("active_in_jamming_only", active_in_jamming_only, false);
     p.param("recovery", config.recovery, true);
     p.param("vehicle_width", config.width, 2.160835);

@@ -327,7 +327,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   };
   Pose origin;
   origin.k =
-      s.speed > .1 ? std::clamp(s.yaw_rate / s.speed, -c.max_k, c.max_k) : 0.;
+      InitialCurvature(s,c);
   // Paint is a rear-axle navigation reference, not the end of free road.
   // The full-body grid/OBB check independently limits physical progress.
   const double margin = c.margin + std::min(.25, .015 * s.speed * s.speed) +
