@@ -120,3 +120,9 @@ src/link_node/out/*
 # Source for the workspace build wrapper (not generated build output)
 !tools/build/
 !tools/build/*.py
+
+# Local integration checkouts may expose existing build/runtime directories as symlinks.
+/build
+/devel
+/install
+/tools/scen_runner/.runtime

@@ -610,3 +610,39 @@ RGB/semantic source·선택/탈락 경로를 연결한다. 실시간 화면에�
 
 실험 목록 일부만 갱신할 때는 `build_experiment_gallery_hub.py --artifacts <root> --group <run-id>`를
 사용한다. 지정하지 않은 실험과 기존 번호를 보존한다. 전체 재탐색은 `--group` 없이 실행한다.
+
+
+## LOCAL 배포 선택과 기본 방식 복귀 · 2026-10-29
+
+원격 main fad73f82의 기본은 팀의 기존 카메라 재밍 방식이다. 기본 실행:
+
+```bash
+roslaunch asmc_camera camera.launch
+roslaunch asmc_lidar lidar.launch
+roslaunch asmc_planner autonomy_no_bridges_v2.launch
+```
+
+LOCAL을 선택할 때 마지막 명령만 다음으로 바꾼다. 위 인지 두 런치는 같은 컨테이너에 한 세트다.
+공유11311의 bridge/roscore는 기존 실행을 사용하며 autonomy가 중복 시작하지 않는다.
+
+```bash
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
+```
+
+LOCAL 목표 상한10km/h, 저속 회복 목표5km/h다.5는 강제 최저속도가 아니며 실제 정지거리·조향·
+충돌 검증은 더 낮은 속도 또는 정지를 요구할 수 있다. 기본 방식으로 복귀할 때 현재 autonomy를
+종료한 다음 위 옵션 없는 autonomy 명령을 실행한다. 두 autonomy를 동시에 실행하지 않는다.
+
+판제: <http://localhost:8088/web/index_v2.html>. 자동 보기 또는 `LOCAL 경로·노면·fusion`.
+LiDAR 상세 확인은 일반 lidar 실행 대신 `roslaunch asmc_lidar lidar.launch debug:=true`,
+이후 `roslaunch asmc_lidar view.launch`; 주소는 <http://localhost:8091/>.
+8088과8091은 별도 HTTP 포트다. 다른 컨테이너의 같은 포트가 이미 있으면 그 실행을 종료하지
+않고 빈 포트를 명시하거나 실행 컨테이너를 교대한다. 자동 시험의8088 입구는 종료된 경우에만
+수동 dashboard에 반환하며, 진행 중인 실험 입구를 반환하지 않는다.
+
+`jamming_planner`는 현재 camera/local만 허용한다. localization 구현은 이번에 추가하지 않았다.
+향후 새 선택은 같은 launch의 상호 배타 include와 selector 슬롯에 연결하고, GPS 무효를
+정상 map 상태로 꾸미지 않으며 명령 소유권·watchdog·모드 인계 검사를 재사용한다.
+노면 잡음·5개 가이드·6m 확장 후보는 배포 C++에서 제외하고 원본 연구 branch/실험 자료에 보존했다.
+[이번 비교·남은 실패](../records/planning/2026-10-29-local-first-comparison.md)와
+[배포 검증](../records/planning/2026-10-29-local-deployment.md)을 함께 확인한다.
