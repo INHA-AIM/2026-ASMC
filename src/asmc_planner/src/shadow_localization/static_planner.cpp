@@ -13,6 +13,7 @@ void StaticPlanner::reset(){
   previous_path_.clear();motion_evidence_.clear();stall_escape_.reset();
   core_=std::make_unique<FrenetPlanner>();tracks_.clear();phase_="unavailable";retargets_=0;
   if(!core_->Init(parameters_))throw std::runtime_error("localization core init failed");
+  core_->SetShadowAvoidanceProfile(true);
   if(!core_->LimitAvoidSearchBudget(.025))
     throw std::runtime_error("localization cooperative search budget unavailable");
   const Config physical;

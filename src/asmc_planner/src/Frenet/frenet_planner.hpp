@@ -430,6 +430,10 @@ public:
     // Private localization instance only, during a verified lane-exempt zone.
     // Predictions and physical road/body checks remain enabled.
     void SetShadowDynamicBypass(bool value) { shadow_dynamic_bypass_=value; }
+    // Localization supplies its own physical envelope and verifies the final
+    // trajectory independently. Preserve its map search and road-body model;
+    // ordinary MORAI static recovery keeps its separate corridor proposals.
+    void SetShadowAvoidanceProfile(bool value) { shadow_avoidance_profile_=value; }
     bool follow_release_pending() const { return v2_following_.release_pending; }
     const std::vector<CartesianPath>& last_candidate_paths() const {
         return last_candidate_paths_;
@@ -762,6 +766,7 @@ public:
 
 private:
     bool shadow_dynamic_bypass_ = false;
+    bool shadow_avoidance_profile_ = false;
     bool PlanInternal(const CartesianState& ego,
                       const std::vector<TrackedObject>& obstacles,
                       const PlannerCommand* external_command,

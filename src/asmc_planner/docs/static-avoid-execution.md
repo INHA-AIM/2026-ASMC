@@ -11,9 +11,10 @@ static corridor generation project these corners into the reference frame;
 fitted length/width/yaw do not replace valid corners. Legacy synthetic Behavior
 inputs without corners retain their scalar projection.
 
-The production body width is 1.9 m and the object clearance is 0.45 m in both
+The production body width is 1.892 m and the object clearance is 0.45 m in both
 Behavior and Frenet configuration. The 2.161 m road exterior remains a separate
-containment shape. Overlap ratios affect immediate confirmation; a smaller
+containment shape, including 0.1345 m reserve per side. Overlap ratios affect
+immediate confirmation; a smaller
 intrusion into the collision corridor cannot permanently exclude a target.
 The rear axle is the vehicle reference, so an alongside footprint can remain
 actionable even when its center is behind the axle.
@@ -135,6 +136,12 @@ does not establish PASS, RETURN or completion merely by reaching its scalar
 endpoint. A complete replacement adopts target, entry and return metadata
 together. Feedback includes `avoid_phase`, `geometry_time`, `connector_m` and
 `return_m` for diagnosing the selected shape and its execution state.
+
+Localization opts its private Frenet instance into `SetShadowAvoidanceProfile`.
+That caller retains its existing physical road footprint and map search before
+its independent swept-body and timing checks. The ordinary MORAI corridor and
+early reconnection proposals do not preempt that search. Both profiles retain
+the steering-rate checks; the ordinary road-boundary reserve is unchanged.
 
 The interval proposal includes side objects outside the original reference
 corridor. It does not replace dense spatial, timed collision, road-exterior,

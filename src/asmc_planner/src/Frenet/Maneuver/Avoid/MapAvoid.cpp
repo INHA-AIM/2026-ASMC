@@ -29,7 +29,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     } diagnostic;
     const double requested_speed=speed;
     auto& speed_context=v2_avoidance_;
-    if(avoid_cfg_.static_margin_recovery_enabled&&!speed_context.dynamic_target&&
+    if(!shadow_avoidance_profile_&&avoid_cfg_.static_margin_recovery_enabled&&!speed_context.dynamic_target&&
        !speed_context.static_recovery_engaged) {
         const auto initial_body=MakeEgoFootprint(ego,vehicle_shape_,0);
         for(const auto& object:obstacles)if(geometry::ConvexPolygonDistance(
@@ -163,7 +163,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     const double crawl=std::min(speed,avoid_cfg_.bypass_speed_cap);
     const double dt=path_cfg_.dt;
     VehicleShape map_shape=vehicle_shape_;
-    map_shape.width=std::max(map_shape.width,map_shape.road_outer_width);
+    if(!shadow_avoidance_profile_)
+        map_shape.width=std::max(map_shape.width,map_shape.road_outer_width);
     const bool initial_inside=avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,map_shape);
     VehicleShape settled_shape=map_shape;
     settled_shape.width+=.10;settled_shape.length+=.10;settled_shape.rear_overhang+=.05;
@@ -320,12 +321,12 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         return false;
     };
 
-    const bool priority_search=avoid_cfg_.static_margin_recovery_enabled&&
+    const bool priority_search=!shadow_avoidance_profile_&&avoid_cfg_.static_margin_recovery_enabled&&
         !v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
         !result.direction_conflict&&!result.target_behind_ego;
     if(priority_search)
         PlanStaticAvoidRecovery(ego,s,d,speed,initial_a,obstacles,command,committed,result,recovery_deadline);
-    if(!priority_search&&!result.candidate_valid&&!v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
+    if(!shadow_avoidance_profile_&&!priority_search&&!result.candidate_valid&&!v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
        !result.direction_conflict&&!result.target_behind_ego) {
         const bool reconnect_turn=v2_avoidance_.map_search_turn%2==1&&v2_avoidance_.map_corridor_cursor==0;
         const auto corridor_deadline=reconnect_turn?search_started:search_deadline;
@@ -411,7 +412,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     bool selected_direct_return=returning;
     const bool pending_corridor=priority_search||
         (result.search_pending&&!v2_avoidance_.static_search_cursors[0].center_done);
-    if(!pending_corridor&&!result.candidate_valid&&!v2_avoidance_.dynamic_target&&
+    if(!shadow_avoidance_profile_&&!pending_corridor&&!result.candidate_valid&&!v2_avoidance_.dynamic_target&&
        v2_avoidance_.map_search_turn%2==1) {
         CartesianPath connected;
         if(PlanAvoidReconnection(ego,s,d,speed,initial_a,obstacles,committed,connected,result,reconnection_deadline)) {
@@ -662,7 +663,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         }
     }
     if(result.candidate_valid && !lane_clear(result.candidate_path)) result.candidate_valid=false;
-    if(!priority_search&&!result.candidate_valid)
+    if(!shadow_avoidance_profile_&&!priority_search&&!result.candidate_valid)
         PlanStaticAvoidRecovery(ego,s,d,speed,initial_a,obstacles,command,committed,result,recovery_deadline);
     if(!priority_search&&!result.candidate_valid&&
        v2_avoidance_.static_search_cursors[0].corridor_exhausted&&

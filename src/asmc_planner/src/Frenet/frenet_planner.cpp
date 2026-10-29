@@ -102,6 +102,7 @@ bool FrenetPlanner::InitFromPrepared(const std::string& yaml_path,
 
 bool FrenetPlanner::InitImpl(const std::string& yaml_path,
                             std::shared_ptr<const PreparedStaticInputs> prepared) {
+    shadow_avoidance_profile_=false;
     if (prepared && (prepared->config_path != yaml_path || !prepared->Unchanged()))
         prepared.reset();
     prepared_static_inputs_.reset();

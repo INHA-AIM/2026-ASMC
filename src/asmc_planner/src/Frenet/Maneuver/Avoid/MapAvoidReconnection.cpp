@@ -95,7 +95,7 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
                 // Keep the same passage/side and compare only its return lengths.
                 // A short curve that is executable only at crawl must not preempt
                 // a smoother checked member of this same bounded family.
-                const bool compare_shape=avoid_cfg_.static_margin_recovery_enabled&&!v2_avoidance_.dynamic_target&&
+                const bool compare_shape=!shadow_avoidance_profile_&&avoid_cfg_.static_margin_recovery_enabled&&!v2_avoidance_.dynamic_target&&
                     (!policy||policy->mode!=StaticAvoidPolicy::CONTACT_PROGRESS);
                 const std::array<double,3> returns=compare_shape?std::array<double,3>{16,12,8}:
                     std::array<double,3>{8,12,16};
