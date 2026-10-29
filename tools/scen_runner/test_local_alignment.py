@@ -115,12 +115,13 @@ def main():
             sequence = 0
 
             prepare_mode = False
-            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0, family_valid=True, blocked=False, family_present=True, plane_valid=True):
+            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0, family_valid=True, blocked=False, family_present=True, plane_valid=True, family_delay=0.):
                 nonlocal sequence
                 rows.clear()
                 plans.clear()
                 begin = time.monotonic()
                 next_scene = 0
+                pending_families=[]
                 while time.monotonic() - begin < seconds:
                     if prepare_mode:
                         preparation.publish(Bool(True))
@@ -180,7 +181,7 @@ def main():
                         raster.data = bytes([0 if blocked else 255]) * 40000
                         pub["context"].publish(ctx)
                         if family_present:
-                            pub["family"].publish(family)
+                            pending_families.append((time.monotonic()+family_delay,family))
                         pub["probability"].publish(raster)
                         pub["coverage"].publish(raster)
                         lidar = LidarTrackingObservation()
@@ -195,6 +196,8 @@ def main():
                         pub["lidar"].publish(lidar)
                         if duplicate:
                             pub["lidar"].publish(lidar)
+                    while pending_families and pending_families[0][0]<=time.monotonic():
+                        pub['family'].publish(pending_families.pop(0)[1])
                     time.sleep(0.02)
                 return list(rows), list(plans)
 
@@ -310,6 +313,12 @@ def main():
             result, _=feed(1.,.5,status=empty,family_present=True)
             assert any(r.get('valid') and r['input_join']['reference_source']=='family' for r in result)
             print('Semantic fallback preserves blocked/stale/invalid gates and returns to real family PASS')
+            result, messages=feed(2.5,.5,status=empty,camera_age=.08,family_delay=.08)
+            settled=[r for r in result[-8:] if r.get('valid')]
+            assert settled and all(r['input_join']['reference_source']=='family' for r in settled),result[-8:]
+            stamps=[m.scene_stamp.to_nsec() for m in messages if m.valid]
+            assert stamps==sorted(set(stamps)),stamps
+            print('Asynchronous fit receipt avoids false semantic speed caps and source reversal PASS')
             assert node.poll() is None
             assert not dict(master.getSystemState()[0]).get("/ctrl_cmd")
             assert not dict(master.getSystemState()[0]).get("/ctrl_cmd/jamming")

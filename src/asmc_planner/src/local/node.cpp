@@ -486,15 +486,32 @@ class Node {
       invalid("motion_unavailable");
       return;
     }
-    uint64_t selected = 0;
+    uint64_t selected = 0, newest_semantic = 0;
     for (auto it = contexts.rbegin(); it != contexts.rend(); ++it) {
-      if (!probs.count(it->first) || !covers.count(it->first) ||
-          (!families.count(it->first) && !semantic_reference_fallback))
+      if (!probs.count(it->first) || !covers.count(it->first))
         continue;
+      if (!newest_semantic) newest_semantic=it->first;
+      if (!families.count(it->first)) continue;
       // Camera bundle identity stays exact; LiDAR selects its own latest scan.
       // A newer explicit invalid bundle is not hidden by an older valid one.
       selected = it->first;
       break;
+    }
+    if(semantic_reference_fallback && newest_semantic>selected) {
+      // Probability can precede the same-stamp family fit. Prefer a NEW
+      // complete fit instead of repeatedly braking for an asynchronous topic.
+      // If it stops advancing, switch to fresh semantic input before the
+      // existing350ms hard deadline. No different-stamp geometry is combined.
+      const double now=ros::Time::now().toSec();
+      const double fit_age=selected ? now-selected*1e-9 : 1e9;
+      const bool fit_arriving=!family_arrivals.empty() &&
+          now-family_arrivals.rbegin()->second.received>=0. &&
+          now-family_arrivals.rbegin()->second.received<=.15;
+      // Receipt cadence matters too: after one semantic fallback, regularly
+      // arriving slightly older fits must be allowed to catch up. Otherwise
+      // choosing the next raster perpetually outruns every delayed fit.
+      if(!selected || (!fit_arriving && selected<=last_scene && fit_age>.25) || fit_age>.35)
+        selected=newest_semantic;
     }
     if (detail) {
     std::ostringstream join;
@@ -530,7 +547,7 @@ class Node {
       invalid("scene_stale");
       return;
     }
-    if (selected == last_scene ||
+    if (selected <= last_scene ||
         ros::SteadyTime::now().toSec() < next_plan_due)
       return;
     // Preserve350ms source freshness and reserve one20Hz control period.
