@@ -42,6 +42,15 @@ bool FrenetPlanner::PlanCollisionBrakingPath(
     const std::vector<TrackedObject>& obstacles, CartesianPath& out_path,
     double service_decel, double target_d, double lateral_distance,
     bool recover_initial_state) const {
+    return PlanCollisionBrakingPathWithSafety(ego,s,d,obstacles,out_path,service_decel,
+        target_d,lateral_distance,recover_initial_state,{});
+}
+
+bool FrenetPlanner::PlanCollisionBrakingPathWithSafety(
+    const CartesianState& ego,double s,double d,
+    const std::vector<TrackedObject>& obstacles,CartesianPath& out_path,
+    double service_decel,double target_d,double lateral_distance,bool recover_initial_state,
+    const std::function<bool(const CartesianPath&)>& safety) const {
     const double dt = path_cfg_.dt;
     const double accel = std::max(limits_.max_longitudinal_accel, service_decel);
     const double jerk = limits_.max_longitudinal_jerk;
@@ -113,13 +122,13 @@ bool FrenetPlanner::PlanCollisionBrakingPath(
     }
     const bool road_clear =
         avoid_road_map_.EvaluateRecoveryPath(path,vehicle_shape_,dt).drivable;
-    const auto collision = EvaluateCartesianTrajectorySafety(
-        path, obstacles, vehicle_shape_, collision_cfg_, dt);
-    if (!road_clear || !collision.clear) {
-        if (service_decel > 0.0)
+    CartesianCollisionCheckResult collision;
+    if(!safety)collision=EvaluateCartesianTrajectorySafety(path,obstacles,vehicle_shape_,collision_cfg_,dt);
+    const bool collision_clear=safety?(road_clear&&safety(path)):collision.clear;
+    if(!road_clear||!collision_clear) {
+        if(service_decel>0.0)
             std::printf("[FrenetPlanner-STOP] braking rejected: road=%d blocker=%d time=%.2f\n",
-                        road_clear ? 1 : 0, collision.blocking_object_id,
-                        collision.blocking_sample_index * dt);
+                road_clear?1:0,collision.blocking_object_id,collision.blocking_sample_index*dt);
         return false;
     }
     out_path=std::move(path);
@@ -368,7 +377,8 @@ void FrenetPlanner::AppendExternalStopSpatialCandidates(
             ? GenerateSpatialStoppingCandidates(start, request.stop.stop_s,
                 request.stop.cruise_speed, request.stop.comfortable_decel,
                 generator, limits, request.stop.acceleration_limit,
-                SpatialStopOptions{request.stop.braking_only,request.stop.allow_partial_horizons})
+                SpatialStopOptions{request.stop.braking_only,request.stop.allow_partial_horizons,
+                                   request.stop.complete_profile})
             : GenerateStoppingCandidates(start, request.stop.stop_s, generator);
     } else {
         longitudinal = GenerateVelocityKeepingCandidates(start, request.target_speed, generator);
@@ -391,6 +401,8 @@ void FrenetPlanner::AppendExternalStopSpatialCandidates(
             const auto& lateral = geometry.polynomial;
             const double distance = geometry.distance;
             FrenetPath path = lon;
+            if(departure_road_recovery_.active)
+                path.spatial_lateral={true,start.s,distance,lateral};
             path.d.clear(); path.d_d.clear(); path.d_dd.clear();
             path.jerk_cost_lat = 0.0;
             for (std::size_t i = 0; i < lon.s.size(); ++i) {

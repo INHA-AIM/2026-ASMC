@@ -221,6 +221,8 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
              avoid_release_grace_cycles);
   pnh_.param("vehicle/width", avoid_target.ego_width,
              avoid_target.ego_width);
+  pnh_.param("vehicle/length", avoid_target.ego_length, avoid_target.ego_length);
+  pnh_.param("vehicle/rear_overhang", avoid_target.rear_overhang, avoid_target.rear_overhang);
   pnh_.param("publish_topics/feature_debug", debug_topic, debug_topic);
   pnh_.param("publish_topics/marker", marker_topic, marker_topic);
   pnh_.param("map/link_set_path", link_path, std::string());
@@ -325,7 +327,11 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
   }
   if (avoid_target.max_distance <= 0.0 ||
       avoid_target.max_lateral_offset <= 0.0 ||
-      avoid_target.ego_width <= 0.0 || avoid_target.path_margin_m < 0.0 ||
+      !std::isfinite(avoid_target.ego_width) || avoid_target.ego_width <= 0.0 ||
+      !std::isfinite(avoid_target.path_margin_m) || avoid_target.path_margin_m < 0.0 ||
+      !std::isfinite(avoid_target.ego_length) || avoid_target.ego_length <= 0.0 ||
+      !std::isfinite(avoid_target.rear_overhang) || avoid_target.rear_overhang < 0.0 ||
+      avoid_target.rear_overhang >= avoid_target.ego_length ||
       avoid_target.min_physical_overlap_m <= 0.0 ||
       avoid_target.min_margin_overlap_m <= 0.0 ||
       avoid_target.min_overlap_ratio < 0.0 ||
@@ -345,13 +351,15 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
       avoid_target.reconnect_max_lateral_delta_m <= 0.0 ||
       avoid_target.reconnect_max_size_delta_m < 0.0) {
     ROS_WARN("Invalid AVOID corridor/overlap policy; using 120.0 m / 1.75 m "
-             "ceiling, 1.892 m ego width, 0.40 m margin, "
+             "legacy ceiling, 1.9 m ego width, 0.45 m margin, "
              "0.10/0.20 m overlap, margin ratio 0.20, "
              "blocking ratio 0.70/0.35/0.15, confirm/release 2/3 cycles");
     avoid_target.max_distance = 120.0;
     avoid_target.max_lateral_offset = 1.75;
-    avoid_target.ego_width = 1.892;
-    avoid_target.path_margin_m = 0.4;
+    avoid_target.ego_width = 1.9;
+    avoid_target.path_margin_m = 0.45;
+    avoid_target.ego_length = 4.635;
+    avoid_target.rear_overhang = 0.79;
     avoid_target.min_physical_overlap_m = 0.10;
     avoid_target.min_margin_overlap_m = 0.20;
     avoid_target.min_overlap_ratio = 0.20;
@@ -456,16 +464,14 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
            follow_target.max_distance, follow_target.max_lateral_offset,
            follow_release_delay_s, objects_stale_seconds_);
   ROS_INFO("Behavior AVOID corridor: distance=%.2f m half_width=%.2f m "
-           "(ego_width=%.3f + margin=%.2f, ceiling=%.2f), "
+           "(ego_width=%.3f + margin=%.2f, legacy_ceiling=%.2f), "
            "overlap physical=%.2f m margin=%.2f m margin_ratio=%.2f, "
            "blocking_ratio immediate/enter/exit=%.2f/%.2f/%.2f "
            "confirm/release=%d/%d, "
            "reconnect grace=%d ds/dd/size=%.2f/%.2f/%.2f m, "
            "release grace=%d cycles",
            avoid_target.max_distance,
-           std::min(avoid_target.max_lateral_offset,
-                    0.5 * avoid_target.ego_width +
-                        avoid_target.path_margin_m),
+           0.5 * avoid_target.ego_width + avoid_target.path_margin_m,
            avoid_target.ego_width, avoid_target.path_margin_m,
            avoid_target.max_lateral_offset,
            avoid_target.min_physical_overlap_m,

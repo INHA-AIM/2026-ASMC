@@ -374,17 +374,75 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
         points.insert(points.end(),end.begin(),end.end());
         return source_following_region->coversPolygon(geometry::ComputeConvexHull(points));
     };
+    // Reject already strict leading-actor collisions before building rear
+    // response sweeps. This is an object-separable early failure, not a smaller
+    // horizon or a broad-phase overlap rejection. Only exact occupancies at
+    // original samples are tested, strictly BEFORE any swept body touches the
+    // target (hence before this evaluator could truncate at completion).
+    // All successful candidates still receive the original dense full check.
+    if(!entering&&reference_transition) {
+        std::vector<std::size_t> strict_leaders;
+        for(std::size_t j=0;j<objects.size();++j) {
+            if(followers[j]||source_followers[j])continue;
+            auto nominal=objects[j];nominal.prediction_min_speed=nominal.prediction_max_speed=NAN;
+            const auto polygon=PredictObstacleFootprint(nominal,object_time_offset_s);
+            const double front=shape.length-rear+collision.safety_margin;
+            if(!std::all_of(polygon.begin(),polygon.end(),[&](auto p){
+                return (p.x-initial.x)*std::cos(initial.yaw)+(p.y-initial.y)*std::sin(initial.yaw)>front;
+            }))continue;
+            if(objects[j].prediction_lane) {
+                const auto& lane=*objects[j].prediction_lane;
+                auto bounds=[&](const geometry::Polygon2D& body,double hint) {
+                    std::pair<double,double> value{INFINITY,-INFINITY};
+                    for(auto p:body){const double at=FindClosestS(lane,p.x,p.y,&hint,15);
+                        value.first=std::min(value.first,at);value.second=std::max(value.second,at);}
+                    return value;
+                };
+                const auto actor_pose=PredictTrackedObjectPose(nominal,object_time_offset_s);
+                if(bounds(initial_body,FindClosestS(lane,initial.x,initial.y,nullptr,100)).first-
+                   bounds(polygon,FindClosestS(lane,actor_pose.x,actor_pose.y,nullptr,100)).second>collision.safety_margin)continue;
+            }
+            strict_leaders.push_back(j);
+        }
+        if(!strict_leaders.empty())for(std::size_t i=0;i<n;++i) {
+            if(i%16==0&&std::chrono::steady_clock::now()>=deadline){result.reason="planning_time_budget";return result;}
+            const CartesianState pose{path.x[i],path.y[i],path.yaw[i],0,0,0};
+            const auto body=MakeEgoFootprint(pose,shape,0);
+            auto swept=body;
+            if(i) {
+                const double angle=std::remainder(path.yaw[i]-path.yaw[i-1],2*M_PI);
+                const double guard=ego_radius*angle*angle/8+1e-9;
+                swept=MakeEgoFootprint(pose,shape,guard);
+                const auto previous=MakeEgoFootprint({path.x[i-1],path.y[i-1],path.yaw[i-1],0,0,0},shape,guard);
+                swept.insert(swept.end(),previous.begin(),previous.end());
+                swept=geometry::ComputeConvexHull(swept);
+            }
+            if(zone.target_region->intersectsPolygon(swept))break;
+            const double time=i*dt+object_time_offset_s;
+            for(const auto j:strict_leaders) {
+                const auto obstacle=PredictHighwayObstacleFootprint(objects[j],time,speed_errors[j],cfg);
+                const double growth=objects[j].motion_state==ObjectMotionState::LOW_THREAT?0:
+                    collision.margin_growth_rate*std::fabs(time);
+                if(obstacle.size()>=3&&geometry::ConvexPolygonDistance(body,obstacle)<=collision.safety_margin+growth) {
+                    result.reason="candidate_collision";result.blocking_object_id=objects[j].id;return result;
+                }
+            }
+        }
+    }
     // A committed join may straddle source and target while both ego and its
     // already mapped rear traffic are still upstream of target_region. That
     // region is a HANDOVER condition, not the beginning of following traffic.
-    // Match the exact prepared prediction lane; never grant this role to an
-    // unresolved/crossing actor, a pedestrian, or a newly requested entry.
+    // Match the prepared traffic corridor. A new rear fragment may support
+    // only a local response after strict provisional motion; it never gains
+    // entry approval, and crossing actors/pedestrians retain their checks.
     std::vector<const HighwayMergeRoute::Zone::FollowingLane*> joining_followers(objects.size(),nullptr);
     std::vector<highway_rear_response::State> joining_responses(objects.size());
     std::vector<TrackedObject> joining_response_origins(objects.size());
     std::vector<double> joining_origin_offsets(objects.size(),0);
     std::vector<std::size_t> joining_response_segments(objects.size(),n);
     std::vector<geometry::Polygon2D> joining_response_sweeps(objects.size());
+    std::vector<bool> joining_response_supported(objects.size(),false);
+    std::vector<bool> joining_unverified(objects.size(),false);
     std::vector<std::size_t> joining_ordinary_segments(objects.size(),n);
     std::vector<geometry::Polygon2D> joining_ordinary_sweeps(objects.size());
     bool joining_departed=false;
@@ -428,7 +486,7 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             if(!zone.following_road_footprint(x+c*along-s*lateral,y+s*along+c*lateral,yaw))return false;
         return true;
     };
-    if(!entering&&reference_transition&&object_time_offset_s>=0&&zone.following_region&&
+    if(!entering&&reference_transition&&zone.following_region&&
        std::isfinite(cfg.max_rear_decel_mps2)&&cfg.max_rear_decel_mps2>0&&
        std::isfinite(cfg.min_heading_alignment)&&cfg.min_heading_alignment>=0&&cfg.min_heading_alignment<=1&&
        joining_footprint_clear(initial.x,initial.y,initial.yaw,joining_body)) {
@@ -437,17 +495,48 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             const auto& original=obj.prediction_origin?*obj.prediction_origin:obj;
             if(original.prediction_origin||original.prediction_lane.get()!=obj.prediction_lane.get()||
                (obj.prediction_origin&&obj.prediction_origin_offset_s<0))continue;
-            if(!obj.prediction_lane||InspectPredictionVelocity(obj)!=PredictionInputStatus::MEASURED||
+            if(InspectPredictionVelocity(obj)!=PredictionInputStatus::MEASURED||
                (obj.type!=static_cast<int>(asmc_planner::ObjectType::VEHICLE)&&
                 obj.type!=static_cast<int>(asmc_planner::ObjectType::UNKNOWN))||
                obj.motion_state==ObjectMotionState::LOW_THREAT||std::fabs(obj.yaw_rate)>1e-3)continue;
-            const auto found=std::find_if(zone.following_lanes.begin(),zone.following_lanes.end(),
-                [&](const auto& lane){return lane.reference.get()==obj.prediction_lane.get()&&lane.region&&
-                    lane.reference->points.size()>=3&&std::isfinite(lane.reference->length)&&lane.reference->length>0;});
-            if(found==zone.following_lanes.end()||!found->region->intersectsPolygon(initial_body))continue;
             auto nominal=obj;nominal.prediction_min_speed=nominal.prediction_max_speed=NAN;
             const auto pose=PredictTrackedObjectPose(nominal,object_time_offset_s);
             const auto polygon=PredictObstacleFootprint(nominal,object_time_offset_s);
+            // A fresh rear fragment has no motion-fit certificate yet. Unique
+            // prepared lane membership may support a RESPONSE hypothesis, not
+            // entry approval or mutation of the ordinary measured prediction.
+            auto found=zone.following_lanes.end();
+            for(auto it=zone.following_lanes.begin();it!=zone.following_lanes.end();++it) {
+                if(!it->reference||!it->region||it->reference->points.size()<3)continue;
+                if(obj.prediction_lane) {
+                    if(it->reference.get()==obj.prediction_lane.get()){found=it;break;}
+                    continue;
+                }
+                if(!it->region->coversPolygon(polygon))continue;
+                const auto at=Interpolate(*it->reference,FindClosestS(*it->reference,pose.x,pose.y,nullptr,100));
+                const double speed=std::hypot(obj.vx,obj.vy);
+                if(speed<1||std::cos(std::atan2(obj.vy,obj.vx)-at.theta)<
+                   std::cos(cfg.completion_heading_rad))continue;
+                if(found!=zone.following_lanes.end()){found=zone.following_lanes.end();break;}
+                found=it;
+            }
+            if(found==zone.following_lanes.end())continue;
+            const bool converging=!found->region->intersectsPolygon(initial_body);
+            if(converging) {
+                // A mapped predecessor can converge into this same target.
+                // Execution is already committed, so the same following
+                // response may start after the normal one-second allowance.
+                // Current contact and the whole reaction interval stay strict.
+                bool common=true;
+                for(double s:{0.0,shape.length,2*shape.length}) {
+                    if(s>zone.target_reference.length){common=false;break;}
+                    const auto target=Interpolate(zone.target_reference,s);
+                    const auto point=Interpolate(*found->reference,FindClosestS(*found->reference,target.x,target.y,nullptr,100));
+                    if(std::hypot(target.x-point.x,target.y-point.y)>cfg.completion_lateral_m||
+                       std::cos(target.theta-point.theta)<cfg.min_heading_alignment){common=false;break;}
+                }
+                if(!common)continue;
+            }
             if(!following_lane_contains(*found,pose.x,pose.y)||
                geometry::ConvexPolygonDistance(initial_body,polygon)<=collision.safety_margin)continue;
             const auto& lane=*found->reference;
@@ -456,9 +545,11 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             const auto velocity=PredictTrackedObjectVelocity(nominal,object_time_offset_s);
             const double tx=std::cos(frame.theta),ty=std::sin(frame.theta);
             const double along=velocity.first*tx+velocity.second*ty;
-            if(along<=0||std::fabs(-velocity.first*ty+velocity.second*tx)>cfg.provisional_lateral_speed_mps||
-               std::fabs(-obj.vx*ty+obj.vy*tx)>cfg.provisional_lateral_speed_mps||
-               std::cos(initial.yaw-frame.theta)<cfg.min_heading_alignment)continue;
+            if(along<=0||std::cos(initial.yaw-frame.theta)<cfg.min_heading_alignment)continue;
+            const double lateral_limit=obj.prediction_lane?cfg.provisional_lateral_speed_mps:
+                std::hypot(velocity.first,velocity.second)*std::sin(cfg.completion_heading_rad);
+            if(std::fabs(-velocity.first*ty+velocity.second*tx)>lateral_limit||
+               (obj.prediction_lane&&std::fabs(-obj.vx*ty+obj.vy*tx)>cfg.provisional_lateral_speed_mps))continue;
             auto extent=[&](const geometry::Polygon2D& body,double hint) {
                 std::pair<double,double> value{INFINITY,-INFINITY};
                 for(const auto& p:body) {
@@ -469,11 +560,20 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             };
             const auto own=extent(initial_body,FindClosestS(lane,initial.x,initial.y,nullptr,100));
             const double gap=own.first-extent(polygon,station).second;
-            const double closing=std::max(0.0,along+speed_errors[j]-
-                initial.v*std::cos(initial.yaw-frame.theta));
-            const double available=gap-collision.safety_margin-closing*highway_rear_response::reaction_s;
-            const double braking=closing<1e-3?0:(available>0?closing*closing/(2*available):INFINITY);
-            if(gap<=collision.safety_margin||braking>cfg.max_rear_decel_mps2)continue;
+            // Check the candidate's actual schedule below. A scalar test
+            // against constant CURRENT ego speed wrongly rejects acceleration.
+            if(gap<=collision.safety_margin)continue;
+            if(converging) {
+                // Confirm this candidate actually joins that prepared lane;
+                // parallel traffic on a route we never enter gets no response.
+                bool joins=false;
+                for(std::size_t i=1;i<n;++i) {
+                    if(i%16==0&&std::chrono::steady_clock::now()>=deadline){result.reason="planning_time_budget";return result;}
+                    if(found->region->intersectsPolygon(MakeEgoFootprint(
+                        {path.x[i],path.y[i],path.yaw[i],0,0,0},shape,0))){joins=true;break;}
+                }
+                if(!joins)continue;
+            }
             joining_followers[j]=&*found;
             // Alignment preserves the original observation for ordinary
             // prediction. A candidate-specific response must instead modify
@@ -484,7 +584,22 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             joining_response_origins[j].prediction_origin.reset();
             joining_origin_offsets[j]=obj.prediction_origin?obj.prediction_origin_offset_s:0;
             auto& response=joining_responses[j];response.enabled=true;
-            response.start=joining_origin_offsets[j]+std::max(0.0,object_time_offset_s)+highway_rear_response::reaction_s;
+            const double provisional=obj.prediction_lane?0:
+                std::max(0.0,std::isfinite(obj.turn_prediction_duration)?obj.turn_prediction_duration:cfg.speed_error_correlation_s);
+            response.start=joining_origin_offsets[j]+std::max(0.0,object_time_offset_s)+
+                std::max(found->reaction_remaining_s,provisional);
+            if(!obj.prediction_lane) {
+                auto& mapped=joining_response_origins[j];
+                const double at_s=FindClosestS(lane,mapped.x,mapped.y,nullptr,100);
+                const auto at=Interpolate(lane,at_s);
+                mapped.prediction_lane=found->reference;mapped.prediction_lane_s=at_s;
+                mapped.prediction_lane_d=-(mapped.x-at.x)*std::sin(at.theta)+(mapped.y-at.y)*std::cos(at.theta);
+                mapped.prediction_lane_anchor_x=mapped.x;mapped.prediction_lane_anchor_y=mapped.y;
+                mapped.prediction_lane_heading=at.theta;mapped.prediction_lane_curvature=0;
+                for(const auto& p:lane.points)mapped.prediction_lane_curvature=std::max(mapped.prediction_lane_curvature,std::fabs(p.kappa));
+                mapped.prediction_lane_end_s=std::max(at_s,
+                    std::min(lane.length,found->response_lane_end_s));
+            }
             const auto& origin=joining_response_origins[j];
             const double speed=std::hypot(origin.vx,origin.vy);
             response.low=std::max(0.0,speed-speed_errors[j]);response.high=speed+speed_errors[j];
@@ -616,6 +731,73 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             }
         }
     }
+    // 0: no applicable role, 1: separated, 2: unresolved rear risk,
+    // 3: rear forecast beyond supported traffic coverage, -1: budget exhausted. Caches are shared by the early accept and fallback.
+    const auto joining_check=[&](std::size_t j,std::size_t lo,double t,
+        const geometry::Polygon2D& ego_polygon,double margin) {
+        if(!joining_followers[j]||joining_departed||
+           t+object_time_offset_s+joining_origin_offsets[j]<=joining_responses[j].start)return 0;
+        while(!joining_departed&&joining_certified_segments<=lo) {
+            if(std::chrono::steady_clock::now()>=deadline)return -1;
+            joining_departed=!joining_segment_inside(joining_certified_segments++);
+        }
+        if(joining_departed)return 0;
+        if(joining_response_segments[j]!=lo) {
+            // Cache a CONSERVATIVE occupancy for this whole
+            // original segment. Braking travel is monotone;
+            // the earliest low station and latest high station
+            // contain every dense sample, including lane knots.
+            // Dense ego/obstacle checks and margins stay intact.
+            const double begin=std::max(0.0,lo*dt+object_time_offset_s+joining_origin_offsets[j]);
+            const double end=std::max(begin,(lo+1)*dt+object_time_offset_s+joining_origin_offsets[j]);
+            const auto low=joining_responses[j].distances(begin).first;
+            const auto high=joining_responses[j].distances(end).second;
+            auto bounded=joining_response_origins[j];bounded.vx=(low+high)*.5;bounded.vy=0;
+            bounded.prediction_min_speed=low;bounded.prediction_max_speed=high;
+            joining_response_sweeps[j]=PredictObstacleFootprint(bounded,1.0);
+            const double map_end=std::min(bounded.prediction_lane->length,bounded.prediction_lane_end_s);
+            joining_response_supported[j]=bounded.prediction_lane_s+high<=map_end;
+            if(!joining_response_supported[j]) {
+                // Beyond an unresolved successor use ONLY the
+                // incoming tangent already used by prediction.
+                // Its rigid straight sweep must fit the known
+                // traffic corridor. Never require the convex
+                // hull of a CURVED speed interval to fit a lane:
+                // empty chord space is not an actor trajectory.
+                auto endpoint=bounded;endpoint.prediction_min_speed=endpoint.prediction_max_speed=NAN;
+                endpoint.vx=std::max(0.0,map_end-endpoint.prediction_lane_s);endpoint.vy=0;
+                // Membership is a traffic-role query, not an
+                // ego road certificate. The measured body is
+                // retained in collision sweeps; use the tangent
+                // center segment to avoid treating its interval
+                // hull as one vehicle straddling curved lanes.
+                const auto begin_pose=PredictTrackedObjectPose(endpoint,1.0);
+                endpoint.vx=high;
+                const auto end_pose=PredictTrackedObjectPose(endpoint,1.0);
+                const double dx=end_pose.x-begin_pose.x,dy=end_pose.y-begin_pose.y;
+                const double len=std::hypot(dx,dy),nx=len>1e-9?-dy/len*1e-7:1e-7,
+                    ny=len>1e-9?dx/len*1e-7:1e-7;
+                joining_response_supported[j]=zone.following_region->coversPolygon({
+                    {begin_pose.x+nx,begin_pose.y+ny},{end_pose.x+nx,end_pose.y+ny},
+                    {end_pose.x-nx,end_pose.y-ny},{begin_pose.x-nx,begin_pose.y-ny}});
+
+            }
+            joining_response_segments[j]=lo;
+        }
+        if(!joining_response_supported[j])return 3;
+        // Once both original and response occupancies have exposed a rear
+        // collision, repeating that same distance calculation cannot certify
+        // this actor. Continue checking its role/corridor and every other
+        // actor; do not spend the remaining budget rediscovering the risk.
+        if(joining_unverified[j])return 2;
+        const auto& broad=joining_response_sweeps[j];
+        if(broad.size()<3)return 0;
+        if(geometry::ConvexPolygonDistance(ego_polygon,broad)>margin)return 1;
+        const auto exact=joining_responses[j].footprint(joining_response_origins[j],
+            t+object_time_offset_s+joining_origin_offsets[j]);
+        if(exact.size()<3)return 0;
+        return geometry::ConvexPolygonDistance(ego_polygon,exact)>margin?1:2;
+    };
     for(std::size_t k=0;;++k) {
         if(k>=cfg.max_collision_samples) {
             result.reason="collision_sample_budget";return result;
@@ -672,6 +854,11 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
             const auto& response=responses[&obj-objects.data()];
             const bool reacting=response.enabled&&t+object_time_offset_s>response.start;
             if(!reacting&&std::hypot(predicted.x-ego.x,predicted.y-ego.y)>reach)continue;
+            if(joining_unverified[j]) {
+                const int status=joining_check(j,lo,t,ego_polygon,0);
+                if(status<0){result.reason="planning_time_budget";return result;}
+                if(status>0)continue;
+            }
             const auto& original=obj.prediction_origin?*obj.prediction_origin:obj;
             const double original_speed=std::hypot(original.vx,original.vy);
             const bool valid_interval=(!std::isfinite(original.prediction_min_speed)&&
@@ -707,6 +894,12 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
                     collision.margin_growth_rate*std::fabs(t+object_time_offset_s)+between_samples_guard;
                 if(broad.size()>=3&&geometry::ConvexPolygonDistance(ego_polygon,broad)>margin)continue;
             }
+            const double response_margin=collision.safety_margin+
+                (obj.motion_state==ObjectMotionState::LOW_THREAT?0:
+                    collision.margin_growth_rate*std::fabs(t+object_time_offset_s))+between_samples_guard;
+            const int joining_status=joining_check(j,lo,t,ego_polygon,response_margin);
+            if(joining_status<0){result.reason="planning_time_budget";return result;}
+            if(joining_status==1)continue;
             const auto footprint=reacting?response.footprint(obj,t+object_time_offset_s):
                 PredictHighwayObstacleFootprint(obj,t+object_time_offset_s,speed_errors[j],cfg);
             if(footprint.size()<3) {
@@ -727,54 +920,16 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
                     if(zone.target_region->coversPolygon(PredictObstacleFootprint(nominal,t+object_time_offset_s)))
                         continue;
                 }
-                if(joining_followers[j]&&t>highway_rear_response::reaction_s&&!joining_departed) {
-                    // Certify ORIGINAL segments lazily, at most once each.
-                    // Current contact and the entire reaction interval above
-                    // remain strict; departure permanently revokes this role.
-                    while(!joining_departed&&joining_certified_segments<=lo) {
-                        if(std::chrono::steady_clock::now()>=deadline) {
-                            result.reason="planning_time_budget";return result;
-                        }
-                        joining_departed=!joining_segment_inside(joining_certified_segments++);
-                    }
-                    auto nominal=obj;nominal.prediction_min_speed=nominal.prediction_max_speed=NAN;
-                    const auto pose=PredictTrackedObjectPose(nominal,t+object_time_offset_s);
-                    const double station=obj.prediction_lane_s+std::hypot(obj.vx,obj.vy)*
-                        std::max(0.0,t+object_time_offset_s);
-                    if(!joining_departed&&station+radii[j]<=std::min(obj.prediction_lane->length,obj.prediction_lane_end_s)&&
-                       following_lane_contains(*joining_followers[j],pose.x,pose.y)) {
-                        // Following responsibility is not a promise that ANY
-                        // ego schedule can be saved. The full original speed
-                        // interval must still have a collision-free bounded
-                        // braking response to THIS path, after the reaction
-                        // allowance. Excessive ego braking remains rejected.
-                        if(joining_response_segments[j]!=lo) {
-                            // Cache a CONSERVATIVE occupancy for this whole
-                            // original segment. Braking travel is monotone;
-                            // the earliest low station and latest high station
-                            // contain every dense sample, including lane knots.
-                            // Dense ego/obstacle checks and margins stay intact.
-                            const double begin=std::max(0.0,lo*dt+object_time_offset_s+joining_origin_offsets[j]);
-                            const double end=std::max(begin,(lo+1)*dt+object_time_offset_s+joining_origin_offsets[j]);
-                            const auto low=joining_responses[j].distances(begin).first;
-                            const auto high=joining_responses[j].distances(end).second;
-                            auto bounded=joining_response_origins[j];bounded.vx=(low+high)*.5;bounded.vy=0;
-                            bounded.prediction_min_speed=low;bounded.prediction_max_speed=high;
-                            joining_response_sweeps[j]=PredictObstacleFootprint(bounded,1.0);
-                            joining_response_segments[j]=lo;
-                        }
-                        const auto& broad=joining_response_sweeps[j];
-                        if(broad.size()>=3) {
-                            const double margin=collision.safety_margin+uncertainty+between_samples_guard;
-                            if(geometry::ConvexPolygonDistance(ego_polygon,broad)>margin)continue;
-                            // The cached sweep can only accept separation. Refine
-                            // overlapping broad phases at the actual dense time;
-                            // temporal enclosure must not create a false collision.
-                            const auto exact=joining_responses[j].footprint(joining_response_origins[j],
-                                t+object_time_offset_s+joining_origin_offsets[j]);
-                            if(exact.size()>=3&&geometry::ConvexPolygonDistance(ego_polygon,exact)>margin)continue;
-                        }
-                    }
+                if(joining_status>=2&&joining_followers[j]->region->intersectsPolygon(initial_body)) {
+                    // Unsupported future lane coverage is not a new observed
+                    // crossing actor. Neither it nor an infeasible response is
+                    // SAFE/READY. Preserve a rear-risk forward alternative
+                    // only after the entire remaining front/side
+                    // scan succeeds; execution must also check road/kinematics.
+                    result.rear_response_unverified=true;
+                    result.unverified_rear_id=obj.id;
+                    joining_unverified[j]=true;
+                    continue;
                 }
                 result.reason="candidate_collision";result.blocking_object_id=obj.id;return result;
             }
@@ -902,6 +1057,6 @@ HighwayCandidateCheck EvaluateHighwayMergeCandidate(
         result.reason="planning_time_budget";return result;
     }
     result.certified_path_samples=end_sample+1;
-    result.safe=true;result.reason="safe_candidate";return result;
+    result.safe=!result.rear_response_unverified;
+    result.reason=result.safe?"safe_candidate":"rear_response_unverified";return result;
 }
-

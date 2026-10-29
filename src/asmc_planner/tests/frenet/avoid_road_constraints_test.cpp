@@ -153,7 +153,7 @@ int main(){
  }
  Expect(found_paint,"public map contains paint inside drivable pavement");
  if(found_paint){
-  const auto brief=map.EvaluatePath(painted,shape,.1);
+  const auto brief=map.EvaluatePath(painted,shape,.1,true);
   Expect(!map.PoseClear(painted.x[0],painted.y[0],painted.yaw[0],shape),"strict diagnostic detects initial paint contact");
   Expect(map.EvaluatePath(painted,shape,.1,true).drivable,
          "brief solid-paint contact remains available to AVOID");
@@ -161,25 +161,33 @@ int main(){
   short_contact.x.assign(24,painted.x[0]);short_contact.y.assign(24,painted.y[0]);
   short_contact.yaw.assign(24,painted.yaw[0]);
   Expect(map.EvaluatePath(short_contact,shape,.1,true).drivable,
-         "predicted continuous contact below the 2.5 s planning reserve is allowed");
-  Expect(!map.EvaluatePath(short_contact,shape,.1,true,.3).drivable,
-         "elapsed contact from earlier replans consumes the same episode budget");
+         "solid-paint contact remains a scored road-safe candidate");
+  const auto aged=map.EvaluatePath(short_contact,shape,.1,true,.3);
+  Expect(aged.drivable&&AvoidRoadMap::PaintCost(aged)>AvoidRoadMap::PaintCost(brief),
+         "elapsed contact raises cost instead of rejecting the same road-safe path");
   CartesianPath long_contact=painted;
-  long_contact.x.assign(41,painted.x[0]);long_contact.y.assign(41,painted.y[0]);long_contact.yaw.assign(41,painted.yaw[0]);
+  long_contact.x.assign(71,painted.x[0]);long_contact.y.assign(71,painted.y[0]);long_contact.yaw.assign(71,painted.yaw[0]);
   const auto prolonged=map.EvaluatePath(long_contact,shape,.1,true);
-  Expect(!prolonged.drivable&&prolonged.longest_paint_contact_seconds>3,
-         "prolonged solid-paint contact cannot become a planned route");
+  Expect(prolonged.drivable&&prolonged.longest_paint_contact_seconds>3,
+         "long contact no longer removes an otherwise road-safe candidate");
   map.SetPaintExemption(true);
-  Expect(map.EvaluatePath(long_contact,shape,.1,true).drivable,
-         "scoped shadow policy exempts paint on verified physical pavement");
+  const auto exempt=map.EvaluatePath(long_contact,shape,.1,true);
+  Expect(exempt.drivable&&AvoidRoadMap::PaintCost(exempt)==0,
+         "scoped shadow policy exempts paint cost on verified physical pavement");
   Expect(!map.PoseClear(1e9,1e9,0,shape),"paint exemption never admits unknown/outside physical road");
   map.SetPaintExemption(false);
-  Expect(!map.EvaluatePath(long_contact,shape,.1,true).drivable,
-         "clearing shadow scope restores the original paint contract");
-  Expect(!map.EvaluatePath(long_contact,shape,.1,true,.3).drivable,
-         "an over-budget stationary path cannot keep the body on paint");
+  const auto restored=map.EvaluatePath(long_contact,shape,.1,true);
+  Expect(restored.drivable&&AvoidRoadMap::PaintCost(restored)==AvoidRoadMap::PaintCost(prolonged),
+         "clearing shadow scope restores the normal paint scoring contract");
+  Expect(map.EvaluatePath(long_contact,shape,.1,true,.3).drivable,
+         "observed contact age does not impose a hidden fixed-duration cutoff");
   Expect(AvoidRoadMap::PaintCost(prolonged)>AvoidRoadMap::PaintCost(brief)+200,
-         "diagnostics still distinguish prolonged from brief contact");
+         "longer continuous contact receives progressively higher cost");
+  auto single=painted;single.x.resize(1);single.y.resize(1);single.yaw.resize(1);
+  const auto hold=map.EvaluatePath(single,shape,.1,true);
+  Expect(hold.drivable&&hold.paint_contact_seconds>=5.0-1e-6&&
+         std::fabs(AvoidRoadMap::PaintCost(hold)-AvoidRoadMap::PaintCost(brief))<1e-6,
+         "one-point and short stopped paths pay the same minimum paint-hold cost");
   VehicleShape tiny{};tiny.width=.10;tiny.length=.10;tiny.rear_overhang=.05;
   bool safe_exit_found=false;
   for(double side:{-1.0,1.0})for(int step=2;step<=20&&!safe_exit_found;++step){
@@ -191,10 +199,11 @@ int main(){
    exit_path.y.push_back(painted.y[0]+std::cos(painted.yaw[0])*offset);
    exit_path.yaw.push_back(painted.yaw[0]);
    const auto exit=map.EvaluatePath(exit_path,tiny,.1,true,.3);
+   const auto remaining=map.EvaluatePath(painted,tiny,.1,true,.3);
    safe_exit_found=exit.drivable&&exit.best_effort_paint_exit&&
-       AvoidRoadMap::PaintCost(exit)>1e6;
+       AvoidRoadMap::PaintCost(exit)<AvoidRoadMap::PaintCost(remaining);
   }
-  Expect(safe_exit_found,"an already over-budget body can still take a safe paint exit");
+  Expect(safe_exit_found,"leaving existing paint contact costs less than remaining stopped on it");
   bool width_edge_rejected=false;
   for(double side:{-1.0,1.0}){
    CartesianPath near_paint;

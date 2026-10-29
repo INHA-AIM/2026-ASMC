@@ -421,6 +421,7 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
 void FrenetPlanner::ResetRoundaboutMerge(bool preserve_exit_prediction) {
     execution_.resetMerge();
     roundabout_preferred_d_=0;
+    roundabout_physical_entry_time_=-1;
     roundabout_acceleration_memory_.Reset();
     if(!preserve_exit_prediction||!roundabout_exit_prediction_active_) {
         roundabout_prediction_.Reset();
@@ -480,6 +481,14 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     last_profiled_acceleration_=0.0;
     const double evaluation_time=ego_observation_time>=0?ego_observation_time:planning_time;
     if(!std::isfinite(evaluation_time))return false;
+    if(evaluation_time<roundabout_physical_entry_time_)roundabout_physical_entry_time_=-1;
+    if(execution_->merge.committed&&roundabout_physical_entry_time_<0&&roundabout_zone_.Overlaps(ego,vehicle_shape_,0))
+        roundabout_physical_entry_time_=evaluation_time;
+    const double entry_age=roundabout_physical_entry_time_<0?-1:evaluation_time-roundabout_physical_entry_time_;
+    const auto execution_safety=[&](const CartesianPath& p,const std::vector<TrackedObject>& os) {
+        return EvaluateRoundaboutExecutionSafety(p,roundabout_zone_,os,vehicle_shape_,collision_cfg_,
+            path_cfg_.dt,roundabout_prediction_,roundabout_merge_cfg_,entry_age);
+    };
     SetObjectObservationTime(observation_stamp,observation_stamp);
     auto ctx=PreparePlanningContext(ego,obstacles,command);
     roundabout_prediction_.Observe(obstacles,observation_stamp,
@@ -670,11 +679,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                     object=roundabout_prediction_.MappedMotion(object,roundabout_zone_.circulating_references,horizon);
                     object=AdvanceObjectObservation(object,observation_age);
                 }
-                auto safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
-                    vehicle_shape_,collision_cfg_,path_cfg_.dt);
-                if(!safety.clear&&safety.blocking_sample_index==0)
-                    safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
-                        vehicle_shape_,collision_cfg_,path_cfg_.dt,safety.blocking_object_id);
+                const auto safety=execution_safety(certified,progress_obstacles);
                 if(safety.clear) {
                     progress_certificate=std::move(certified);selected_d=alternative.offset;break;
                 }
@@ -725,6 +730,10 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             check=CheckRoundaboutCandidate(path,roundabout_zone_,ctx.predicted_obstacles,
                 vehicle_shape_,collision_cfg_,path_cfg_.dt,roundabout_merge_cfg_.min_front_time_gap,
                 merge_cfg_.min_rear_time_gap,!execution_->merge.committed);
+            if(!check.safe&&check.covers_exit&&execution_->merge.committed) {
+                const auto continued=execution_safety(path,ctx.predicted_obstacles);
+                check.safe=continued.clear;check.blocking_object_id=continued.blocking_object_id;
+            }
             valid=check.safe;
             if(check.blocking_object_id>=0)result.blocking_object_id=check.blocking_object_id;
             // Keep only the existing four speed schedules of the first
@@ -834,11 +843,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                         roundabout_bridge_active_?5.0-(planning_time-roundabout_bridge_start_time_):5.0,
                         roundabout_bridge_settled_);
                 if(!road.drivable)continue;
-                auto safety=EvaluateCartesianTrajectorySafety(stop,ctx.predicted_obstacles,
-                    vehicle_shape_,collision_cfg_,path_cfg_.dt);
-                if(!safety.clear&&safety.blocking_sample_index==0)
-                    safety=EvaluateCartesianTrajectorySafety(stop,ctx.predicted_obstacles,
-                        vehicle_shape_,collision_cfg_,path_cfg_.dt,safety.blocking_object_id);
+                const auto safety=execution_safety(stop,ctx.predicted_obstacles);
                 if(!safety.clear)continue;
                 out_path=std::move(stop);braking=true;break;
             }

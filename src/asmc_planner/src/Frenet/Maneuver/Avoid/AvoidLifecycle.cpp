@@ -17,6 +17,65 @@
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
 #include "Frenet/Math/Utils.hpp"
 
+void FrenetPlanner::UpdateMapAvoidEntry(const CartesianState& ego, double s,
+                                      double d, bool committed) {
+    auto& context = v2_avoidance_;
+    const auto reference = Interpolate(ref_, s);
+    const double heading = std::remainder(ego.yaw-reference.theta, 2*M_PI);
+    context.map_lateral_slope = std::tan(heading)*(1-reference.kappa*d);
+    if (committed) {
+        const bool displaced = std::fabs(d-context.map_lateral_origin_d) >= .20;
+        const bool turning = std::fabs(context.map_lateral_slope) > .10 &&
+            std::fabs(ego.v*std::sin(heading)) > .10;
+        // Keep the dynamic entry policy unchanged. For a static bypass, an
+        // observed turn must remain locked even if heading later settles.
+        context.map_lateral_started |= displaced || (!context.dynamic_target && turning);
+        if (!context.dynamic_target && context.map_lateral_started && context.map_entry_side == 0)
+            context.map_entry_side = context.target_d >= context.obstacle_d ? 1 : -1;
+    }
+    if (!context.dynamic_target) {
+        const unsigned mask = (MapAvoidSideAllowed(context.obstacle_d+1, committed) ? 1u : 0u) |
+            (MapAvoidSideAllowed(context.obstacle_d-1, committed) ? 2u : 0u);
+        if (context.map_search_side_mask != mask) {
+            context.map_search_side_mask = mask;
+            context.map_search_cursor = context.map_reconnection_cursor = context.map_corridor_cursor = 0;
+            context.static_search_cursors = {};
+        }
+    }
+}
+
+bool FrenetPlanner::MapAvoidSideLocked(bool committed) const {
+    const auto& context = v2_avoidance_;
+    return committed && (context.map_lateral_started ||
+        std::fabs(context.map_lateral_slope) > .10 ||
+        (context.dynamic_target && context.map_side_reselected));
+}
+
+bool FrenetPlanner::MapAvoidSideAllowed(double passage_d, bool committed) const {
+    if (!std::isfinite(passage_d)) return false;
+    const auto& context = v2_avoidance_;
+    const auto direction = execution_->avoid.requested_direction;
+    if ((direction == LateralDirection::LEFT && passage_d <= context.obstacle_d) ||
+        (direction == LateralDirection::RIGHT && passage_d >= context.obstacle_d)) return false;
+    const int side = passage_d >= context.obstacle_d ? 1 : -1;
+    const int locked = context.map_entry_side != 0 ? context.map_entry_side :
+        (context.target_d >= context.obstacle_d ? 1 : -1);
+    return !MapAvoidSideLocked(committed) || side == locked;
+}
+
+bool FrenetPlanner::CanReselectMapAvoidSide(bool committed) const {
+    return !MapAvoidSideLocked(committed) && !v2_avoidance_.has_requested_target_d &&
+        execution_->avoid.requested_direction == LateralDirection::NONE;
+}
+
+const char* FrenetPlanner::avoid_side_policy_name() const {
+    if (v2_avoidance_.has_requested_target_d ||
+        execution_->avoid.requested_direction != LateralDirection::NONE) return "requested";
+    if (v2_avoidance_.dynamic_target && v2_avoidance_.map_side_reselected) return "dynamic_locked";
+    if (execution_->avoid.committed && v2_avoidance_.map_lateral_started) return "entered";
+    return MapAvoidSideLocked(execution_->avoid.committed) ? "heading_guard" : "pre_entry";
+}
+
 bool FrenetPlanner::CanCommitAvoid(const AvoidPrepareResult& result) const {
     // 확보하지 않은 목표를 잠그지 않는다. 호출자가 candidate_valid를 먼저
     // 확인해야 하지만, 여기서도 막는다.
@@ -50,10 +109,7 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     // AVOID를 멀리서 확보/COMMIT해도 곧바로 옆으로 흐르지 않는다.
     // TRACKING에서 global path를 유지하다 장애물 기준 진입거리에 도달하면
     // SHIFT로 넘어간다.
-    const double track_length =
-        ref_.points.empty() ? 0.0 : ref_.points.back().s;
-    const double initial_gap = ForwardArcDistance(
-        last_s_, v2_avoidance_.obstacle_s, track_length);
+    const double initial_gap = ReferenceArcDistance(ref_, last_s_, v2_avoidance_.obstacle_s);
     // 이후 lifecycle과 동일하게 실제 ego 속도를 사용한다. 과거에는 planner
     // target speed를 써서 저속 차량도 고속 기준으로 너무 일찍 SHIFT했다.
     const double shift_distance = EffectiveAvoidShiftStartDistance(
@@ -63,11 +119,41 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.map_return_schedule_valid = result.map_return_schedule_valid;
     v2_avoidance_.map_return_start_s = result.map_return_start_s;
     v2_avoidance_.map_return_end_s = result.map_return_end_s;
-    const double entry_gap = ForwardArcDistance(last_s_, result.map_entry_s, track_length);
+    v2_avoidance_.map_group_valid=result.map_group_valid;
+    v2_avoidance_.map_group_end_s=result.map_group_end_s;
+    v2_avoidance_.static_progress_level=result.static_progress_level;
+    v2_avoidance_.static_recovery_engaged|=result.static_progress_mode!=StaticAvoidPolicy::NORMAL;
+    v2_avoidance_.static_contact_used|=result.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS;
+    v2_avoidance_.static_progress_fresh=result.static_progress_fresh;
+    v2_avoidance_.static_group_recovery|=result.static_progress_fresh;
+    v2_avoidance_.static_speed.ResetProof();
+    v2_avoidance_.static_speed_last_s=last_s_;
+    v2_avoidance_.static_speed_travel=0;
+    if(v2_avoidance_.static_recovery_engaged&&v2_avoidance_.static_speed.cap<=0)
+        v2_avoidance_.static_speed.Enter(result.static_progress_mode==StaticAvoidPolicy::CONTACT_PROGRESS?
+            avoid_cfg_.static_contact_speed_cap:avoid_cfg_.static_recovery_speed_cap);
+    if(result.static_progress_level==0&&!result.static_progress_fresh) {
+        v2_avoidance_.last_nominal=result;
+        v2_avoidance_.last_nominal.static_progress_mode=StaticAvoidPolicy::NORMAL;
+        if(result.retain_spatial_reference&&!v2_avoidance_.map_spatial_geometry.x.empty())
+            v2_avoidance_.last_nominal.spatial_geometry=v2_avoidance_.map_spatial_geometry;
+        else if(v2_avoidance_.last_nominal.spatial_geometry.x.empty())
+            v2_avoidance_.last_nominal.spatial_geometry=result.candidate_path;
+    }
+    if(!result.retain_spatial_reference||v2_avoidance_.map_spatial_geometry.x.empty())
+        v2_avoidance_.map_spatial_geometry=result.spatial_geometry;
+    v2_avoidance_.map_recovery_path=result.candidate_path;
+    v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
+    v2_avoidance_.map_speed_profile_valid=!result.candidate_path.x.empty();
+    v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
+    v2_avoidance_.map_speed_profile_cap=result.static_execution_speed_cap;
+    const double entry_gap = ReferenceArcDistance(ref_, last_s_, result.map_entry_s);
     v2_avoidance_.shift_entry_distance = avoid_road_map_.enabled()
         ? initial_gap - std::max(0.0, entry_gap) : shift_distance;
     execution_.initializeAvoidEntry({std::isfinite(initial_gap) &&
         initial_gap <= v2_avoidance_.shift_entry_distance});
+    if(v2_avoidance_.static_recovery_engaged&&result.static_progress_mode!=StaticAvoidPolicy::NORMAL)
+        execution_.beginAvoidShiftProbe();
     // PREPARE에서 복구 후보로만 READY가 된 transaction은 COMMIT 직후에도
     // 같은 거리 기반 정책을 이어가야 한다. TRACKING이면 아직 복구가 필요할
     // 단계가 아니므로 latch하지 않는다.
@@ -141,11 +227,10 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
 
     constexpr double kProgressEpsilon = 1e-6;
     bool entered_pass_this_cycle = false;
-    const double track_length =
-        ref_.points.empty() ? 0.0 : ref_.points.back().s;
+    const bool rolling_prefix=avoid_road_map_.enabled()&&!v2_avoidance_.dynamic_target&&
+        v2_avoidance_.static_progress_fresh;
     // Resolver가 저장한 장애물 s와 ego s 사이의 signed arc 거리.
-    const double gap = ForwardArcDistance(
-        ego_s, v2_avoidance_.obstacle_s, track_length);
+    const double gap = ReferenceArcDistance(ref_, ego_s, v2_avoidance_.obstacle_s);
 
     if (execution_->avoid.phase == AvoidPhase::TRACKING && !avoid_road_map_.enabled()) {
         v2_avoidance_.shift_entry_distance = std::max(
@@ -154,7 +239,7 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     }
     if (execution_.observeAvoidEntry({std::isfinite(gap) &&
         (avoid_road_map_.enabled()
-             ? ForwardArcDistance(ego_s,v2_avoidance_.map_entry_s,track_length)<=0.0
+             ? ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_entry_s)<=0.0
              : gap <= v2_avoidance_.shift_entry_distance)})) {
         // 실제 SHIFT가 시작되는 횡위치를 진행률 기준으로 사용한다.
         if (std::isfinite(ego_d)) v2_avoidance_.start_d = ego_d;
@@ -166,15 +251,25 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     const double clear_distance =
         rear_overhang + v2_avoidance_.obstacle_longitudinal_half_extent +
         avoid_cfg_.pass_clearance;
-    const bool longitudinally_cleared =
-        std::isfinite(gap) && std::isfinite(clear_distance) &&
-        clear_distance > kProgressEpsilon && gap < -clear_distance;
+    const bool group_owned=v2_avoidance_.static_group_recovery&&v2_avoidance_.map_group_valid;
+    const bool longitudinally_cleared = group_owned?
+        ReferenceArcDistance(ref_,ego_s,v2_avoidance_.map_group_end_s)<=0:
+        (std::isfinite(gap) && std::isfinite(clear_distance) &&
+        clear_distance > kProgressEpsilon && gap < -clear_distance &&
+        (!v2_avoidance_.map_group_valid ||
+         ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_group_end_s)<=0.0));
+    const bool prefix_handoff=rolling_prefix&&group_owned&&longitudinally_cleared&&
+        std::isfinite(ego_d)&&std::fabs(ego_d)<=avoid_cfg_.lateral_tolerance&&keep_handoff_safe;
+    if(rolling_prefix&&execution_->avoid.phase==AvoidPhase::RETURN&&!prefix_handoff)
+        execution_.beginAvoidShiftProbe();
+    if(prefix_handoff)execution_.observeEarlyReturnCandidate(true);
 
     // Follow the accepted spatial maneuver, not a newly observed obstacle rear
     // edge. A return is committed only after complete road/body validation.
-    if (avoid_road_map_.enabled() && v2_avoidance_.map_return_schedule_valid &&
+    if (!rolling_prefix && avoid_road_map_.enabled() && v2_avoidance_.map_return_schedule_valid &&
+        (!v2_avoidance_.map_group_valid||ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_group_end_s)<=0) &&
         (execution_->avoid.phase == AvoidPhase::SHIFT || execution_->avoid.phase == AvoidPhase::PASS) &&
-        ForwardArcDistance(ego_s,v2_avoidance_.map_return_start_s,track_length)<=0.0) {
+        ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_return_start_s)<=0.0) {
         execution_.observeEarlyReturnCandidate(true);
     }
 
@@ -184,17 +279,17 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     // 정지했다. 종방향으로 차체와 target OBB가 완전히 분리된 경우에는
     // target_d 미도달과 무관하게 RETURN을 시작한다. RETURN 궤적 자체는
     // 이후 동일한 전체 OBB 충돌 검사를 거치므로 안전 검사를 우회하지 않는다.
-    entered_pass_this_cycle = execution_.observeAvoidShift({longitudinally_cleared,
-        std::isfinite(ego_d) && std::isfinite(v2_avoidance_.target_d) &&
+    entered_pass_this_cycle = execution_.observeAvoidShift({!rolling_prefix&&longitudinally_cleared,
+        !rolling_prefix&&std::isfinite(ego_d) && std::isfinite(v2_avoidance_.target_d) &&
         std::fabs(ego_d - v2_avoidance_.target_d) <= avoid_cfg_.lateral_tolerance});
     // Resolver는 seam 너머 전방 target을 ego_s + forward gap의 unwrapped
     // obstacle_s로 저장한다. raw subtraction은 ego가 seam을 지난 순간 거의
     // 한 바퀴 양수가 되므로, 기존 signed arc helper로 앞/뒤 의미를 보존한다.
     // 장애물을 완전히 지난 뒤에도 바로 COMPLETED하지 않는다. RETURN에서
     // d=0 복귀가 끝나야 Behavior가 KEEP으로 transaction을 넘길 수 있다.
-    execution_.observeAvoidPass(longitudinally_cleared, entered_pass_this_cycle);
+    execution_.observeAvoidPass(!rolling_prefix&&longitudinally_cleared, entered_pass_this_cycle);
     // Geometry and KEEP feasibility are facts; Execution owns completion.
-    execution_.observeAvoidReturn({longitudinally_cleared &&
+    execution_.observeAvoidReturn({(!rolling_prefix||prefix_handoff)&&longitudinally_cleared &&
         std::isfinite(ego_d) && std::fabs(ego_d) <= avoid_cfg_.lateral_tolerance &&
         keep_handoff_safe});
 
@@ -212,6 +307,10 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     double progress = 0.0;
     if (execution_->avoid.completed) {
         progress = 1.0;
+    } else if (rolling_prefix) {
+        // A prefix endpoint near current d is progress permission, not proof
+        // that the primary obstacle has already been bypassed and returned.
+        progress = .2;
     } else if (execution_->avoid.phase == AvoidPhase::TRACKING) {
         const double start_distance = v2_avoidance_.shift_entry_distance;
         const double approach_ratio = std::isfinite(gap)

@@ -180,7 +180,7 @@ bool PlanningPort::runHighwayMerge(const asmc_msgs::BehaviorCommand& command,uin
     last_v2_trajectory_command_id_=command.command_id;v2_plan_fail_streak_=0;
     trajectory_pub_.publish(trajectory);publishDebugMarkersV2(trajectory,command);
     publishFeedbackV2(feedback_id,reply,&trajectory,(committed_now||merge_core.highway_merge_committed())?
-        (result.candidate_valid?Feedback::TRAJECTORY_LOCKED:Feedback::TRAJECTORY_SAFE_STOP):Feedback::TRAJECTORY_NEW,
+        ((result.candidate_valid||result.forward_mitigation)?Feedback::TRAJECTORY_LOCKED:Feedback::TRAJECTORY_SAFE_STOP):Feedback::TRAJECTORY_NEW,
         (!recovered_now&&result.candidate_valid)||completed_now,projected,ego_s);return true;
 }
 

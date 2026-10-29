@@ -40,6 +40,30 @@ int main(){
  Expect(!map.EvaluateRecoveryPath(Line(2,-1.10,4,0,201),shape,1.0).drivable,"slow recovery exceeds predicted five-second budget");
  recovery.x[0]=std::numeric_limits<double>::quiet_NaN();Expect(!map.EvaluateRecoveryPath(recovery,shape,.1).drivable,"nonfinite initial pose rejected");
 
+ // Departure is an explicit opt-in; the AVOID/MERGE policy above is unchanged.
+ const auto broad=Line(2,-1.65,10,0,151);
+ const auto departure=map.EvaluateDepartureRecoveryPath(broad,shape,.1);
+ Expect(departure.drivable&&departure.initial_overlap_m>.35&&departure.recovery_seconds>5,
+        "partial departure can return beyond old depth, fraction, distance and time cutoffs");
+ Expect(!map.EvaluateRecoveryPath(broad,shape,.1).drivable,
+        "the same path still obeys the original bounded maneuver policy");
+ const auto slower=map.EvaluateDepartureRecoveryPath(broad,shape,.2);
+ Expect(slower.drivable&&AvoidRoadMap::DepartureRecoveryCost(slower)>
+        AvoidRoadMap::DepartureRecoveryCost(departure),
+        "longer outside exposure increases cost instead of invalidating recovery");
+ Expect(!map.EvaluateDepartureRecoveryPath(Line(2,-3.2,10,0),shape,.1).drivable,
+        "a completely separated initial body does not receive departure permission");
+ Expect(!map.EvaluateDepartureRecoveryPath(Line(2,-1.65,6,-3.2),shape,.1).drivable,
+        "departure permission cannot cross fully outside the original road");
+ Expect(!map.EvaluateDepartureRecoveryPath(near_edge,shape,.1).drivable,
+        "an initially inside body cannot opt into a new excursion");
+ Expect(map.EvaluateDepartureRecoveryPath(near_edge,shape,.1,true).drivable,
+        "an existing partial departure survives an unsettled raster reentry");
+ Expect(!map.EvaluateDepartureRecoveryPath(leave_again,shape,.1).drivable,
+        "a completed return cannot leave the road again");
+ Expect(!map.EvaluateDepartureRecoveryPath(Line(2,-1.65,5,-1.65),shape,.1).drivable,
+        "outside hold does not establish a complete return");
+
 
  std::filesystem::remove_all(dir);return failures?1:0;
 }

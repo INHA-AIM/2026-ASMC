@@ -2,6 +2,7 @@
 #include "Frenet/Maneuver/Merge/HighwayVelocityRecovery.hpp"
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/SpatialStop.hpp"
+#include "Frenet/Maneuver/Merge/ExecutionResponse.hpp"
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Generator/LateralGenerator.hpp"
 #include "Frenet/Generator/CartesianRetimer.hpp"
@@ -45,6 +46,7 @@ bool FrenetPlanner::EnableHighwayMerge(std::string& error) {
 }
 void FrenetPlanner::ResetHighwayMerge() {
     highway_committed_=false;highway_zone_index_=-1;highway_readiness_.Reset();
+    highway_lane_entry_times_.clear();
     highway_returning_to_source_=false;
     highway_unresolved_return_object_=-1;highway_unresolved_return_stamp_=-1;
     highway_preferred_target_=-1;
@@ -158,6 +160,31 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
         RevokeHighwayMergeReadiness();highway_preferred_target_=-1;
         result.detail="highway_source_or_target_mismatch";return false;
     }
+    auto execution_zone=zone;
+    for(auto& lane:execution_zone.following_lanes) {
+        const auto prepared=std::find_if(highway_traffic_lanes_.begin(),highway_traffic_lanes_.end(),
+            [&](const auto& p){return p&&lane.reference.get()==&p->line();});
+        if(prepared==highway_traffic_lanes_.end())continue;
+        lane.response_lane_end_s=(*prepared)->line().length;
+        for(const auto& id:(*prepared)->lanes()) {
+            const auto* road=(*prepared)->map()->lane(id);
+            if(road&&road->successors.size()>1) {
+                const auto& end=road->centerline.back();
+                lane.response_lane_end_s=FindClosestS((*prepared)->line(),end.x,end.y,nullptr,100);
+                break;
+            }
+        }
+    }
+    if(highway_committed_)for(auto& lane:execution_zone.following_lanes) {
+        if(!lane.reference||!lane.region)continue;
+        const auto body=MakeEgoFootprint(ego,vehicle_shape_,0);
+        if(lane.region->intersectsPolygon(body))
+            highway_lane_entry_times_.emplace(lane.reference.get(),now);
+        const auto entered=highway_lane_entry_times_.find(lane.reference.get());
+        if(entered!=highway_lane_entry_times_.end())
+            lane.reaction_remaining_s=std::max(0.0,highway_rear_response::reaction_s-
+                std::max(0.0,now-entered->second));
+    }
     auto candidate_obstacles=ctx.predicted_obstacles;
     std::unordered_set<int> missing_velocity_ids;
     for(auto& object:candidate_obstacles) {
@@ -247,6 +274,31 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
                 std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                     std::chrono::duration<double,std::milli>(cfg.planning_budget_ms));
         return recovery_deadline;
+    };
+    const auto maintenance_safety=[&](const CartesianPath& path) {
+        if(!highway_committed_)return CartesianTrajectoryClear(path,ctx.predicted_obstacles,
+            vehicle_shape_,collision_cfg_,path_cfg_.dt);
+        // Keep the ordinary maintenance certificate for every non-blocking
+        // actor. Only a blocker is reconsidered under the SAME execution rear
+        // policy as moving schedules; do this before the generator rejects it.
+        auto remaining=ctx.predicted_obstacles;
+        for(std::size_t attempt=0;attempt<=ctx.predicted_obstacles.size();++attempt) {
+            const auto ordinary=EvaluateCartesianTrajectorySafety(path,remaining,
+                vehicle_shape_,collision_cfg_,path_cfg_.dt);
+            if(ordinary.clear)return true;
+            const auto actor=std::find_if(candidate_obstacles.begin(),candidate_obstacles.end(),
+                [&](const auto& o){return o.id==ordinary.blocking_object_id;});
+            if(actor==candidate_obstacles.end())return false;
+            const auto check=EvaluateHighwayMergeCandidate(path,execution_zone,ref_,{*actor},
+                cfg,vehicle_shape_,collision_cfg_,path_cfg_.dt,false,ego_stamp-observation,
+                recovery_budget(),transition_target!=nullptr);
+            if(!check.safe)return false; // mitigation never certifies a STOP
+            const auto before=remaining.size();
+            remaining.erase(std::remove_if(remaining.begin(),remaining.end(),
+                [&](const auto& o){return o.id==actor->id;}),remaining.end());
+            if(remaining.size()+1!=before)return false;
+        }
+        return false;
     };
     const auto build_maintenance=[&]() {
         // Maintenance must remain available when the transition certificate
@@ -389,11 +441,13 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
             }
             maintenance_ok=(highway_committed_||source_clear(maintenance_path))&&
                 avoid_road_map_.EvaluatePath(maintenance_path,vehicle_shape_,path_cfg_.dt).drivable&&
-                CartesianTrajectoryClear(maintenance_path,ctx.predicted_obstacles,
-                    vehicle_shape_,collision_cfg_,path_cfg_.dt);
+                maintenance_safety(maintenance_path);
         }
         if(!maintenance_ok) {
-            maintenance_ok=PlanCollisionBrakingPath(ego,ctx.s,ctx.d,ctx.predicted_obstacles,maintenance_path);
+            maintenance_ok=PlanCollisionBrakingPathWithSafety(ego,ctx.s,ctx.d,
+                ctx.predicted_obstacles,maintenance_path,0.0,0.0,0.0,false,
+                highway_committed_?std::function<bool(const CartesianPath&)>(maintenance_safety):
+                    std::function<bool(const CartesianPath&)>{});
             if(!maintenance_ok&&!highway_committed_)
                 maintenance_ok=PlanCollisionBrakingPath(ego,ctx.s,ctx.d,
                     ctx.predicted_obstacles,maintenance_path,0.0,ctx.d,0.0,true);
@@ -404,6 +458,8 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
     // deadline. EXECUTE can publish a newly certified path in this same tick.
     result.detail="no_kinematically_valid_candidate";
     double best=INFINITY;
+    HighwayMergeResult mitigation;
+    double mitigation_cost=INFINITY,mitigation_progress=-1;
     // Inspect faster admissible schedules before a slow current-speed hold.
     // Every schedule still receives the complete safety certificate.
     bool rejected_candidate=false;
@@ -447,6 +503,7 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
     bool primary_blocked=false;auto search_deadline=deadline;
     for(int family=0;family<(abort_allowed?2:1)&&!result.candidate_valid&&!approaching_transition;++family) {
       if(family>0) {
+          if(mitigation.forward_mitigation&&!primary_blocked)break;
           if(result.detail=="planning_time_budget"&&!primary_blocked&&!reconsider_target)break;
           // Share the existing maintenance budget with recovery. A known
           // collision must not starve a safe return just because inspecting
@@ -456,7 +513,7 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
       }
       const bool returning=abort_allowed&&(family==0?was_returning:!was_returning);
       const auto* destination=returning?&source:transition_target;
-      auto check_zone=zone;
+      auto check_zone=execution_zone;
       if(returning) {
           check_zone.target_reference=source;check_zone.target_region=zone.source_region;
           check_zone.config.completion_s=source_stop_s;
@@ -575,7 +632,9 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
                   const auto check=EvaluateHighwayMergeCandidate(candidate,check_zone,ref_,candidate_obstacles,
                       cfg,body,collision_cfg_,path_cfg_.dt,!highway_committed_,ego_stamp-observation,search_deadline,
                       destination!=nullptr);
-                  if(!check.safe) {
+                  const bool rear_mitigation=highway_committed_&&check.rear_response_unverified&&
+                      check.certified_path_samples>1;
+                  if(!check.safe&&!rear_mitigation) {
                       if(family==0&&check.reason=="candidate_collision") {
                           primary_blocked=true;
                           const auto blocked=std::find_if(objects.begin(),objects.end(),[&](const auto& o){
@@ -622,10 +681,29 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
                     result.detail=road.drivable?"transition_crosses_protected_paint":"candidate_outside_drivable_map";continue;
                   }
                   if(std::chrono::steady_clock::now()>=search_deadline) {result.detail="planning_time_budget";break;}
-                  ++result.valid;
                   const double cost=(check.covers_completion?check.clear_time_s:
                       2*cfg.max_horizon_s+(check.entry_time_s<0?cfg.max_horizon_s:check.entry_time_s))+
                       .1*(cap-target);
+                  if(rear_mitigation) {
+                      // Reuse this fully front/side/road/kinematic-checked
+                      // schedule only if no fully certified forward candidate
+                      // is found. It cannot issue READY or complete handover.
+                      double travel=0;
+                      for(std::size_t i=1;i<candidate.x.size();++i)
+                          travel+=std::hypot(candidate.x[i]-candidate.x[i-1],candidate.y[i]-candidate.y[i-1]);
+                      const double progress=travel/((candidate.x.size()-1)*path_cfg_.dt);
+                      if(!returning&&travel>1e-6&&(progress>mitigation_progress+1e-6||
+                          (std::fabs(progress-mitigation_progress)<=1e-6&&cost<mitigation_cost))) {
+                          mitigation_cost=cost;mitigation_progress=progress;mitigation.forward_mitigation=true;
+                          mitigation.candidate_path=std::move(candidate);mitigation.check=check;
+                          mitigation.transition_terminal_s=destination?terminal:0;
+                          mitigation.transition_geometry=geometry;
+                          mitigation.transition_reused=reuse;mitigation.transition_recovered=recover;
+                          mitigation.following_object_id=schedule.leader_id;
+                      }
+                      continue;
+                  }
+                  ++result.valid;
                   if(cost>=best)continue;
                   best=cost;result.candidate_valid=true;result.candidate_path=std::move(candidate);result.check=check;
                   if(!highway_committed_)highway_preferred_target_=target;
@@ -638,6 +716,13 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
           if(result.candidate_valid&&result.check.covers_completion)break;
         }
       }
+    }
+    if(!result.candidate_valid&&mitigation.forward_mitigation) {
+        const auto generated=result.generated,valid=result.valid;
+        mitigation.epoch=result.epoch;result=std::move(mitigation);
+        result.generated=generated;result.valid=valid;
+        result.detail="highway_forward_mitigation; rear_response_unverified="+
+            std::to_string(result.check.unverified_rear_id);
     }
     if(result.candidate_valid) {
         if(result.returning_to_source&&!was_returning&&unresolved_forward_blocker>=0&&
@@ -658,7 +743,8 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
     }
     result.progress=std::clamp((ctx.s-zone.config.start_s)/
         (zone.config.completion_s-zone.config.start_s),0.0,1.0);
-    if(highway_committed_&&result.candidate_valid) {
+    if(highway_committed_&&(result.candidate_valid||result.forward_mitigation)) {
+        highway_returning_to_source_=result.returning_to_source;
         const auto road_body=asmc_planner::lane_reference::FootprintShape{
             vehicle_shape_.length-vehicle_shape_.rear_overhang,vehicle_shape_.rear_overhang,vehicle_shape_.width*.5};
         const bool aligned=result.returning_to_source?source_aligned(ego):
@@ -668,10 +754,11 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
             zone.target_region->coversFootprint(ego.x,ego.y,ego.yaw,road_body,0);
         if(!aligned)highway_settled_since_=-1;
         else if(highway_settled_since_<0)highway_settled_since_=now;
-        result.source_return_completed=result.returning_to_source&&aligned&&
+        result.source_return_completed=result.candidate_valid&&result.returning_to_source&&aligned&&
             now-highway_settled_since_>=cfg.completion_settle_s;
-        result.maneuver_completed=!result.returning_to_source&&aligned&&now-highway_settled_since_>=cfg.completion_settle_s;
-        result.detail=result.maneuver_completed?"highway_completed_on_existing_target_reference":"highway_executing";
+        result.maneuver_completed=result.candidate_valid&&!result.returning_to_source&&aligned&&now-highway_settled_since_>=cfg.completion_settle_s;
+        if(!result.forward_mitigation)
+            result.detail=result.maneuver_completed?"highway_completed_on_existing_target_reference":"highway_executing";
         if(result.returning_to_source)result.detail=result.source_return_completed?
             "optional_change_source_lane_recovered":"optional_change_returning_to_source";
         if(highway_unresolved_return_object_>=0)
@@ -701,7 +788,7 @@ bool FrenetPlanner::PlanHighwayTransitionImpl(const CartesianState& ego,
             result.ready=false;highway_readiness_.Reset();
             if(result.check.blocking_object_id>=0)
                 last_failure_reason_=PlanFailureReason::COLLISION_BLOCKED;
-            result.detail+="; no_safe_corridor_maintenance";highway_last_result_=result;return false;
+            result.detail+="; no_safe_corridor_maintenance; emergency_command_not_certified_stop";highway_last_result_=result;return false;
         }
         if(highway_committed_)result.detail="highway_braking: "+result.detail;
         output=std::move(maintenance_path);

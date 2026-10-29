@@ -10,6 +10,10 @@ timeouts:
   trajectory: 0.25
   vehicle_state: 0.20
 
+static_recovery:
+  speed_cap: 1.0
+  contact_speed_cap: 0.5
+
 # Must match asmc_bridge network node max_steer_deg and the physical vehicle limit.
 vehicle:
   max_steer_deg: 40.0

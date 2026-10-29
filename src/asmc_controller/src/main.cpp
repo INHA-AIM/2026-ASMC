@@ -72,6 +72,9 @@ int main(int argc, char** argv) {
     g_control.control_pub = control_pub;
     g_control.trajectory_timeout = trajectory_timeout;
     g_control.vehicle_state_timeout = vehicle_state_timeout;
+    private_nh.param("static_recovery/allow_contact_progress",g_control.allow_static_contact_progress,false);
+    private_nh.param("static_recovery/speed_cap",g_control.static_recovery_speed_cap,1.0);
+    private_nh.param("static_recovery/contact_speed_cap",g_control.static_contact_speed_cap,.5);
     nh.param("/control_binding/enabled",g_control.binding_enabled,false);
     ros::Publisher binding_epoch_pub;
     ros::Subscriber control_request_sub,control_plan_sub;

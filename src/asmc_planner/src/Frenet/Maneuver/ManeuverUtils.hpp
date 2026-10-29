@@ -34,6 +34,8 @@ int SynchronizeFollowLeaderFragments(
 // 계산, Maneuver/Stop.cpp)과 AVOID(post-COMMIT gap, Maneuver/Avoid/Avoid.cpp
 // 및 Maneuver/Avoid/AvoidLifecycle.cpp)가 쓴다.
 double ForwardArcDistance(double current_s, double target_s, double s_max);
+// Signed distance on the actual reference topology; open routes never wrap.
+double ReferenceArcDistance(const RefLine& ref, double current_s, double target_s);
 
 // fresh Cartesian collision recheck. AVOID(저속 crawl/PREPARE,
 // Maneuver/Avoid/Avoid.cpp)와 MERGE(M2: locked replay/commit_pending
@@ -45,7 +47,8 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id = nullptr,
                               int margin_recovery_object_id = -1,
-                              bool* margin_recovery_used = nullptr);
+                              bool* margin_recovery_used = nullptr,
+                              const std::vector<int>* static_margin_recovery_ids = nullptr);
 
 // AVOID must not depend on unconfirmed motion vacating current occupancy.
 // Confirmed DYNAMIC objects retain their normal moving prediction.
@@ -55,7 +58,8 @@ bool CartesianAvoidTrajectoryClear(const CartesianPath& path,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id = nullptr,
                               int margin_recovery_object_id = -1,
-                              bool* margin_recovery_used = nullptr);
+                              bool* margin_recovery_used = nullptr,
+                              const std::vector<int>* static_margin_recovery_ids = nullptr);
 
 #endif  // FRENET_MANEUVER_MANEUVER_UTILS_HPP
 

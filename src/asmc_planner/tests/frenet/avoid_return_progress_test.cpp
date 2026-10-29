@@ -1,5 +1,6 @@
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
+#include "avoid_test_braking.hpp"
 #include <yaml-cpp/yaml.h>
 #include <iostream>
 #include <fstream>
@@ -54,7 +55,13 @@ int main(){
  FrenetPlanner planner;CartesianState ego{};std::vector<TrackedObject> objects;
  prepare_pass(planner,ego,objects);
  CartesianPath p;FrenetPlanner::AvoidPrepareResult r;
- planner.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ bool braking_safe=true;
+ for(int i=0;i<100&&!r.candidate_valid;++i) {
+  planner.PlanCommittedAvoid(ego,objects,cmd,p,r);
+  if(!r.candidate_valid)braking_safe=braking_safe&&BrakeAvoidTestVehicle(ego,planner,objects);
+ }
+ Expect(braking_safe,"new blocker permits safe braking before a different return");
+ if(!r.candidate_valid)std::cout<<"return stalled: x="<<ego.x<<" y="<<ego.y<<" yaw="<<ego.yaw<<" k="<<ego.kappa<<" v="<<ego.v<<" a="<<ego.a<<" stage="<<r.rejection_stage<<" blocker="<<r.blocking_object_id<<'\n';
  Expect(r.candidate_valid,"measured-pose return reconnects around the new downstream blocker");
  Expect(std::string(planner.avoid_phase_name())=="RETURN","a validated direct return enters RETURN immediately");
  double clearance=1e9;

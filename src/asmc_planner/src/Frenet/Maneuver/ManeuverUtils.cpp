@@ -108,17 +108,22 @@ double ForwardArcDistance(double current_s, double target_s, double s_max) {
     return ds;
 }
 
+double ReferenceArcDistance(const RefLine& ref,double current_s,double target_s) {
+    return ForwardArcDistance(current_s,target_s,ref.closed_loop?ref.length:0.0);
+}
+
 bool CartesianTrajectoryClear(const CartesianPath& path,
                               const std::vector<TrackedObject>& obstacles,
                               const VehicleShape& ego_shape,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id,
                               int margin_recovery_object_id,
-                              bool* margin_recovery_used) {
+                              bool* margin_recovery_used,
+                              const std::vector<int>* static_margin_recovery_ids) {
     const CartesianCollisionCheckResult result =
         EvaluateCartesianTrajectorySafety(
             path, obstacles, ego_shape, collision_cfg, dt,
-            margin_recovery_object_id);
+            margin_recovery_object_id,static_margin_recovery_ids);
     if (blocking_id) *blocking_id = result.blocking_object_id;
     if (margin_recovery_used) {
         *margin_recovery_used = result.margin_recovery_used;
@@ -132,10 +137,11 @@ bool CartesianAvoidTrajectoryClear(const CartesianPath& path,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id,
                               int margin_recovery_object_id,
-                              bool* margin_recovery_used) {
+                              bool* margin_recovery_used,
+                              const std::vector<int>* static_margin_recovery_ids) {
     bool moving_recovery = false;
     if (!CartesianTrajectoryClear(path, obstacles, ego_shape, collision_cfg,
-            dt, blocking_id, margin_recovery_object_id, &moving_recovery)) {
+            dt, blocking_id, margin_recovery_object_id, &moving_recovery,static_margin_recovery_ids)) {
         if (margin_recovery_used) *margin_recovery_used = moving_recovery;
         return false;
     }
@@ -149,7 +155,7 @@ bool CartesianAvoidTrajectoryClear(const CartesianPath& path,
     }
     bool stationary_recovery = false;
     const bool clear = CartesianTrajectoryClear(path, stationary, ego_shape,
-        collision_cfg, dt, blocking_id, margin_recovery_object_id, &stationary_recovery);
+        collision_cfg, dt, blocking_id, margin_recovery_object_id, &stationary_recovery,static_margin_recovery_ids);
     if (margin_recovery_used) *margin_recovery_used = moving_recovery || stationary_recovery;
     return clear;
 }

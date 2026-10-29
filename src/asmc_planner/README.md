@@ -27,6 +27,10 @@ Do not rename them as part of ownership cleanup.
 
 ## Regression assets
 
+- [Static avoidance execution and MORAI acceptance](docs/static-avoid-execution.md):
+  retained paths, multiple blockers, gentle S corridors, standstill recovery and
+  collision-stop release.
+
 - `tests/behavior`: six registered Behavior tests and dashboard test.
 - `tests/frenet`: 36 registered Frenet tests, fixtures and explicit v2 ROS test.
 - `tests/equivalence`: frozen lifecycle/request/FSM comparisons and maneuver gate.
@@ -136,8 +140,9 @@ KEEP의 저속·정지 후 출발 경로도 같은 공용 충돌 검사를 통�
 도로 밖으로 나가는 후보를 제외한다. 남은 후보에는 기존 곡률·충돌 검사를 그대로
 적용한다. 도로에 맞는 경로가 없으면 `ROAD_BOUNDARY_BLOCKED`로 과거 경로 재사용을
 금지한다. 회전교차로의 생성·대기·충돌 정책은 이 변경 대상이 아니다.
-필수 설정 `planner/vehicle_shape/road_outer_width`는 MORAI SDK에서 관측한 외곽 폭
-2.161m이며, 기존 객체 충돌 모델의 폭 1.9m와 0.45m 여유를 바꾸지 않는다.
+객체 충돌 모델과 Behavior의 차폭은 1.892m, 객체 여유는 0.45m로 일치시킨다.
+필수 설정 `planner/vehicle_shape/road_outer_width`는 도로 경계 검사 폭 2.161m이며,
+차폭에 양쪽 0.1345m의 경계 여유를 더한 별도 모델이다.
 Config가 크기·유한성·누락을 검증하며, 원본 지도와 시나리오는 유지한다.
 이 검사는 계획된 경로에 대한 조건이다. 실제 차체의 도로 포함은 MORAI 기록으로
 별도 검증해야 하며, 이 조건만으로 주행 성공을 선언하지 않는다.
@@ -247,3 +252,5 @@ KEEP/STOP/FOLLOW/곡선 속도 시험. 이전 사용자 정의 Frenet YAML에도
 탈락했으므로 제외했다. 현재 프로필은 회전교차로 이후 2개와 재밍 이후 5개
 도로만 지정하며, 나머지 도로는 기본 한계를 사용한다. 도로 ID는 기존
 외부 명령의 source_link_id를 사용하고 지도 파일을 바꾸지 않는다.
+
+합류 실행 중 후행 차량 처리와 조건부 NPC 반응 가정은 [merge-response-execution.md](docs/merge-response-execution.md)를 참고하세요. 완전한 후방 안전 인증과 `highway_forward_mitigation` 전진 유지 출력을 진단에서 구분하며, 후자는 새 진입 승인이나 참조선 인계에 사용하지 않습니다.

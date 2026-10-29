@@ -91,6 +91,7 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Generator/BoundaryConditionPolicy.cpp
   src/Frenet/Generator/CartesianRetimer.cpp
   src/Frenet/Generator/SpatialStop.cpp
+  src/Frenet/Generator/StaticAvoidPath.cpp
   src/Frenet/Generator/CandidateCombiner.cpp
   src/Frenet/Generator/LateralGenerator.cpp
   src/Frenet/Generator/LongitudinalGenerator.cpp
@@ -102,6 +103,10 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Maneuver/Avoid/AvoidCompletion.cpp
   src/Frenet/Maneuver/Avoid/MapAvoidReconnection.cpp
   src/Frenet/Maneuver/Avoid/MapAvoid.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidCorridor.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidPolicy.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidRecovery.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidCreep.cpp
   src/Frenet/Maneuver/Follow.cpp
   src/Frenet/Maneuver/Keep.cpp
   src/Frenet/Maneuver/LaneChange/LaneChange.cpp
@@ -957,7 +962,9 @@ endif()
 
 
 if(CATKIN_ENABLE_TESTING)
-  foreach(regression avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
+  add_test(NAME static_avoid_launch_margin_test
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/static_avoid_launch_margin_test.py)
+  foreach(regression static_avoid_smoothness_test static_avoid_priority_test static_avoid_speed_recovery_test static_avoid_progress_test static_avoid_corridor_test avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
     add_executable(${regression} tests/frenet/${regression}.cpp)
     target_link_libraries(${regression} asmc_planner_frenet_core yaml-cpp)
     target_compile_definitions(${regression} PRIVATE
@@ -965,6 +972,13 @@ if(CATKIN_ENABLE_TESTING)
       FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt")
     add_test(NAME ${regression} COMMAND ${regression})
   endforeach()
+  # Check real recovery profiles against the independent Controller consumer.
+  target_include_directories(static_avoid_progress_test PRIVATE
+    ${catkin_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../asmc_controller/src)
+  add_dependencies(static_avoid_progress_test ${catkin_EXPORTED_TARGETS})
+  target_include_directories(static_avoid_speed_recovery_test PRIVATE
+    ${catkin_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../asmc_controller/src)
+  add_dependencies(static_avoid_speed_recovery_test ${catkin_EXPORTED_TARGETS})
 endif()
 
 if(CATKIN_ENABLE_TESTING)

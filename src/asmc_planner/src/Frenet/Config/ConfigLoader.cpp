@@ -184,6 +184,26 @@ bool LoadParams(const std::string& yaml_path,
     if (root["planner"]["avoid"]["map_search_budget_s"]) {
         REQUIRE("planner/avoid/map_search_budget_s", avoid_cfg.map_search_budget_s);
     }
+    if(root["planner"]["avoid"]["static_search_lateral_limit"])
+        REQUIRE("planner/avoid/static_search_lateral_limit",avoid_cfg.static_search_lateral_limit);
+    if(root["planner"]["avoid"]["bypass_accel_cap"])
+        REQUIRE("planner/avoid/bypass_accel_cap",avoid_cfg.bypass_accel_cap);
+    if(root["planner"]["avoid"]["static_margin_recovery_enabled"])
+        REQUIRE("planner/avoid/static_margin_recovery_enabled",avoid_cfg.static_margin_recovery_enabled);
+    if(root["planner"]["avoid"]["static_contact_progress_enabled"])
+        REQUIRE("planner/avoid/static_contact_progress_enabled",avoid_cfg.static_contact_progress_enabled);
+    if(root["planner"]["avoid"]["static_recovery_speed_cap"])
+        REQUIRE("planner/avoid/static_recovery_speed_cap",avoid_cfg.static_recovery_speed_cap);
+    if(root["planner"]["avoid"]["static_contact_speed_cap"])
+        REQUIRE("planner/avoid/static_contact_speed_cap",avoid_cfg.static_contact_speed_cap);
+    if(root["planner"]["avoid"]["static_normal_resume_speed_cap"])
+        REQUIRE("planner/avoid/static_normal_resume_speed_cap",avoid_cfg.static_normal_resume_speed_cap);
+    if(root["planner"]["avoid"]["static_speed_confirm_time"])
+        REQUIRE("planner/avoid/static_speed_confirm_time",avoid_cfg.static_speed_confirm_time);
+    if(root["planner"]["avoid"]["static_speed_confirm_distance"])
+        REQUIRE("planner/avoid/static_speed_confirm_distance",avoid_cfg.static_speed_confirm_distance);
+    if(root["planner"]["avoid"]["static_speed_step"])
+        REQUIRE("planner/avoid/static_speed_step",avoid_cfg.static_speed_step);
     REQUIRE("planner/avoid/detection_distance",         avoid_cfg.detection_distance);
     if (root["planner"]["avoid"]["bypass_speed_cap"]) {
         REQUIRE("planner/avoid/bypass_speed_cap", avoid_cfg.bypass_speed_cap);

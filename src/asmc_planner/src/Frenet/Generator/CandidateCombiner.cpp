@@ -331,7 +331,8 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
                     request.stop.allow_partial_horizons?
                         request.stop.acceleration_limit*limits.boundary_condition_accel_fraction:
                         request.stop.acceleration_limit,
-                    SpatialStopOptions{request.stop.braking_only,request.stop.allow_partial_horizons})
+                    SpatialStopOptions{request.stop.braking_only,request.stop.allow_partial_horizons,
+                                       request.stop.complete_profile})
                 : GenerateStoppingCandidates(start, request.stop.stop_s, stop_delta_cfg);
             break;
         }

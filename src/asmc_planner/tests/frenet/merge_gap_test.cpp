@@ -2,6 +2,7 @@
 #include "Frenet/Maneuver/Merge/HighwayMerge.hpp"
 #include "Frenet/Maneuver/Merge/HighwayPrediction.hpp"
 #include "Frenet/Maneuver/Merge/HighwayRearResponse.hpp"
+#include "Frenet/Maneuver/Merge/ExecutionResponse.hpp"
 
 #include "Frenet/Geometry/PolygonUtils.hpp"
 
@@ -608,8 +609,8 @@ void TestJoiningFollowerContinuity() {
         if(!continued.safe)std::cerr<<"joining side="<<side<<" reason="<<continued.reason<<" blocker="<<continued.blocking_object_id<<'\n';
         Expect(continued.safe,"left/right committed straddling retains following before the common successor");
         const auto initial_y=f.path.y.front();f.path.y.front()=0;
-        Expect(!check({rear}).safe,
-            "commitment alone cannot assume a parallel rear vehicle reacts before actual lane occupancy");
+        Expect(check({rear}).safe,
+            "committed shared-target predecessor can respond after the full reaction allowance");
         f.path.y.front()=initial_y;
         const auto aligned=AdvanceObjectObservation(rear,.08);
         Expect(check({aligned}).safe,
@@ -644,7 +645,28 @@ void TestJoiningFollowerContinuity() {
         contact.prediction_lane=traffic;contact.prediction_lane_s=70;contact.prediction_lane_end_s=400;
         Expect(!check({contact}).safe,"current physical contact is never exempted after commitment");
         auto fork=rear;fork.prediction_lane_end_s=60;
-        Expect(!check({fork}).safe,"a rear role cannot extrapolate beyond an unresolved map successor");
+        Expect(check({fork}).safe,"known straight incoming-tangent traffic does not invent a successor or lose its following role");
+        auto fresh=MakeVehicleAt(805,43,side*3.5,0,20);
+        fresh.type=0;fresh.motion_state=ObjectMotionState::UNKNOWN;
+        fresh.turn_prediction_duration=.2;fresh.continuation_vx=20;fresh.continuation_vy=0;
+        const auto saved_decel=f.cfg.max_rear_decel_mps2;f.cfg.max_rear_decel_mps2=5;
+        Expect(!check({fresh}).safe,"a fresh fragment retains the full reaction interval before observed entry ages");
+        f.zone.following_lanes.front().reaction_remaining_s=0;
+        Expect(check({fresh}).safe,"fresh UNKNOWN rear traffic can respond after aged physical lane entry without waiting for classification");
+        Expect(!check({fresh},true).safe,"a provisional rear response never grants new entry approval");
+        auto crossing_fresh=fresh;crossing_fresh.vy=-side*6;
+        Expect(!check({crossing_fresh}).safe,"new real lateral approach cannot be replaced by a lane-following response");
+        Expect(fresh.prediction_lane==nullptr&&fresh.vx==20&&fresh.vy==0,
+            "candidate-local provisional response preserves the sensor prediction");
+        f.cfg.max_rear_decel_mps2=1;
+        const auto risk=check({fresh});
+        Expect(!risk.safe&&risk.rear_response_unverified&&risk.certified_path_samples>1,
+            "an infeasible rear response preserves a fully scanned mitigation outcome without calling it safe");
+        const auto blocked_risk=check({fresh,MakeVehicleAt(806,90,side*3.5,0,0)});
+        Expect(!blocked_risk.safe&&blocked_risk.certified_path_samples==0,
+            "rear-only mitigation cannot hide a simultaneous forward obstacle");
+        f.zone.following_lanes.front().reaction_remaining_s=1;
+        f.cfg.max_rear_decel_mps2=saved_decel;
         const auto path=f.path;f.path.y[20]=side*7;
         Expect(!check({rear}).safe,"leaving then reentering the joining corridor cannot restore the role");
         f.path=path;f.path.x[20]=f.path.x[19]-1;
@@ -693,6 +715,28 @@ void TestObservedFastUnknownFragment() {
         "admission envelope never changes authoritative source geometry");
 }
 
+void TestExecutionResponseCertificate() {
+    auto line=std::make_shared<const RefLine>(MakeStraightRefLine(100));
+    auto object=MakeVehicleAt(1001,0,0,0,10);
+    object.motion_state=ObjectMotionState::DYNAMIC;object.prediction_lane=line;
+    object.prediction_lane_s=0;object.prediction_lane_end_s=100;
+    CartesianPath path;
+    for(int i=0;i<=40;++i){path.x.push_back(20+5*i*.1);path.y.push_back(0);path.yaw.push_back(0);}
+    const auto shape=MakeEgoShape();const auto collision=MakeCollisionCfg();
+    Expect(merge_response::Clear(path,object,shape,collision,.1,1,5,path.x.size()),
+        "bounded response can certify an existing forward path without adding candidates");
+    Expect(!merge_response::Clear(path,object,shape,collision,.1,10,5,path.x.size()),
+        "rear collision before reaction remains rejected");
+    Expect(!merge_response::Clear(path,object,shape,collision,.1,1,5,path.x.size(),
+        std::chrono::steady_clock::time_point::max(),2),
+        "observation age and existing uncertainty are retained at the current pose");
+    Expect(!merge_response::Clear(path,object,shape,collision,.1,1,5,path.x.size(),
+        std::chrono::steady_clock::now()),"response certificate respects the caller's deadline");
+    object.prediction_lane_end_s=10;
+    Expect(!merge_response::Clear(path,object,shape,collision,.1,1,5,path.x.size()),
+        "bounded braking cannot be certified beyond a supplied map end");
+}
+
 int main() {
     TestRoundaboutGapSafeWhenNoTraffic();
     TestRoundaboutGapBlockedByPrecedingVehicle();
@@ -706,5 +750,6 @@ int main() {
     TestHighwayBoundedRearResponse();
     TestJoiningFollowerContinuity();
     TestObservedFastUnknownFragment();
+    TestExecutionResponseCertificate();
     std::cout<<g_failures<<" failures\n";return g_failures?1:0;
 }

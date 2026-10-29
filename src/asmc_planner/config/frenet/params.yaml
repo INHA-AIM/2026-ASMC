@@ -146,7 +146,24 @@ planner:
 
   # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
+    # Static intermediate targets; full road/body/actuation checks still apply.
+    # External target-pose validation remains a separate input constraint.
+    static_search_lateral_limit: 6.0
     bypass_speed_cap: 4.2     # [m/s] C091: five recorded passes; higher caps need a new return-safety proof
+    bypass_accel_cap: 2.0    # [m/s^2] asmc_controller accel_max; braking remains independent
+    # The MORAI autonomy launch explicitly enables these policies. Core/offline
+    # callers retain strict defaults unless they opt in.
+    static_margin_recovery_enabled: false
+    static_contact_progress_enabled: false
+    static_recovery_speed_cap: 1.0
+    static_contact_speed_cap: 0.5
+    # After fresh nominal checks AND forward progress, reopen the ordinary
+    # bypass target. The retimer still limits actual acceleration/jerk/slew;
+    # a rejected upgrade retries the current corridor at its previous cap.
+    static_normal_resume_speed_cap: 4.2
+    static_speed_confirm_time: 1.0
+    static_speed_confirm_distance: 0.5
+    static_speed_step: 4.2
     detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
     # [m] legacy geometry 기반(target pose 없음) target_d 계산에서 자차/장애물
@@ -357,7 +374,7 @@ planner:
     speed_error_correlation_s: 0.3
     motion_fit_min_span_s: 0.2
     provisional_lateral_speed_mps: 0.25 # only small position-contradicted lateral observations
-    max_rear_decel_mps2: 3.0
+    max_rear_decel_mps2: 5.0 # competition rear response; ego limits unchanged
     completion_settle_s: 0.5
     completion_heading_rad: 0.12
     completion_lateral_m: 0.5
@@ -511,6 +528,8 @@ roundabout_merge:
   speed_cap_mps: 6.944444444444445
   preview_distance_m: 45.0
   max_horizon_s: 10.0
+  execution_reaction_time_s: 0.3 # 11 fixed-input bag sequences; NPC response assumption
+  execution_max_rear_decel_mps2: 3.0
   # 진입 전 선행차 시간 여유. planner.merge.min_front_time_gap보다 우선한다.
   # 후행차 여유는 planner.merge.min_rear_time_gap(1.0초)을 유지한다.
   # 고속도로 합류와 회전교차로 진입 후 주행에는 적용하지 않는다.

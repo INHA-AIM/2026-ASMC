@@ -22,16 +22,18 @@ struct FollowTargetConfig {
 };
 struct AvoidTargetConfig {
   double max_distance = 120.0;
-  // Legacy acquisition ceiling. The actual AVOID corridor is narrower and is
-  // derived from ego half width + path_margin_m.
+  // Legacy parameter compatibility. Acquisition must include the full ego
+  // half width + path_margin_m even if this old ceiling is configured smaller.
   double max_lateral_offset = 1.75;
-  double ego_width = 1.892;
-  double path_margin_m = 0.4;
-  // OBB가 실제 차체 swept corridor를 이 이상 침범하면 즉시 AVOID한다.
-  // 10 cm voxel보다 작은 경계 접촉은 측정 잡음으로 취급한다.
+  double ego_width = 1.9;
+  double path_margin_m = 0.45;
+  double ego_length = 4.635;
+  double rear_overhang = 0.79;
+  // Absolute overlap required for immediate confirmation. Smaller physical
+  // or margin intrusion remains actionable after overlap_confirm_cycles.
   double min_physical_overlap_m = 0.10;
-  // 실제 차체에는 닿지 않고 안전 margin에만 들어온 객체는 충분한 침범량과
-  // 객체 폭 대비 비율이 연속 확인된 경우에만 AVOID한다.
+  // Legacy parameter compatibility; these thresholds no longer exclude an
+  // intrusion into the collision corridor.
   double min_margin_overlap_m = 0.20;
   double min_overlap_ratio = 0.20;
   // 실제 차체 주행 폭을 가리는 비율. 분모는 OBB 투영 폭과 ego 폭 중
