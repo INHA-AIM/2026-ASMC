@@ -1,5 +1,8 @@
 # Shared LOCAL/localization vehicle and speed policy (m, km/h).
-# Algorithm-specific margins, road evidence, yaw and braking profiles stay separate.
+# Fixed collision clearance is shared; road evidence, yaw and braking stay separate.
+# Applies only to LOCAL/localization, never NORMAL or roundabout planning.
+clearance_margin: 0.0
+road_clearance_margin: 0.0
 vehicle_width: 1.892
 vehicle_length: 4.635
 rear_axle_to_bumper: 0.790

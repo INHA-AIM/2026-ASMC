@@ -34,6 +34,16 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty();s.speed=4.;Config c;c.margin=0.;c.road_margin=0.;
+    Obstacle o;o.id=99;o.polygon={{5.,1.2},{6.,1.2},{6.,1.4},{5.,1.4}};
+    s.obstacles={o};Result clear;
+    expect(CheckFootprint(s,c,Pose{4.,0.},clear),"zero fixed clearance permits separated body");
+    s.obstacles[0].polygon={{5.,.1},{6.,.1},{6.,.4},{5.,.4}};
+    Result collision;
+    expect(!CheckFootprint(s,c,Pose{4.,0.},collision),"zero fixed clearance still rejects physical overlap");
+  }
+
+  {
     auto s=empty();Config legacy;legacy.margin=.30;
     // A known nonroad cell lies just outside the physical body.
     s.grid.probability[150*160+67]=0;

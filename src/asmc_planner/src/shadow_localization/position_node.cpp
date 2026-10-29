@@ -476,6 +476,10 @@ class PositionNode {
     p.param<std::string>("objects_topic",objects_topic,"/perception/lidar/tracks_local");
     p.param<std::string>("journal_path",log,"");journal=std::make_unique<Journal>(log);
     p.param("speed_cap_kph",config.speed_cap,20.);config.speed_cap/=3.6;
+    p.param("clearance_margin",config.margin,0.10);
+    p.param("road_clearance_margin",config.road_margin,config.margin);
+    if(!std::isfinite(config.margin+config.road_margin)||config.margin<0||config.road_margin<0)
+      throw std::runtime_error("invalid shadow collision clearance");
     p.param("vehicle_width",config.width,1.892);
     p.param("vehicle_length",config.length,4.635);
     p.param("rear_axle_to_bumper",config.rear,.790);

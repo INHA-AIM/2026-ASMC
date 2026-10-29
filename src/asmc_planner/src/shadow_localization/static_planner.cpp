@@ -214,6 +214,8 @@ Result StaticPlanner::verify(const CartesianPath& path,const Scene& scene,
 }
 Result StaticPlanner::plan(const Scene& scene,const Config& cfg,const Motion& origin,const Transform& map){
   struct Scope {bool& flag;Scope(bool& f):flag(f){flag=true;}~Scope(){flag=false;}} scope(in_plan_);
+  // Explicit zero-margin shadow experiment; preserve other profiles verbatim.
+  if(cfg.margin==0.) core_->SetShadowCollisionClearance(0.);
   const auto start=std::chrono::steady_clock::now();
   native_calls_=speed_profiles_=0;
   confirmed_rest_=generated_=feasible_=0;candidate_reason_="not_requested";

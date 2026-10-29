@@ -65,14 +65,14 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   VehicleShape shape{c.width, c.length, c.rear};
   const auto physical = MakeEgoFootprint(state, shape, 0.);
   const double clearance_margin =
-      c.margin + std::min(.25, .015 * s.speed * s.speed);
+      c.margin + (c.margin>0. ? std::min(.25, .015 * s.speed * s.speed) : 0.);
   const double road_margin = c.road_margin >= 0. ? c.road_margin : c.margin;
-  const double road_clearance = road_margin + std::min(.25, .015 * s.speed * s.speed);
+  const double road_clearance = road_margin + (road_margin>0. ? std::min(.25, .015 * s.speed * s.speed) : 0.);
   for (const auto &o : s.obstacles) {
     double distance = geometry::ConvexPolygonDistance(physical, o.polygon);
     r.minimum_clearance = std::min(r.minimum_clearance, distance);
     // Recovery also retains the configured physical clearance and source-age
-    // uncertainty. A crawl label cannot mean zero centimetres of clearance.
+    // uncertainty. Zero configured clearance still rejects physical overlap.
     if (distance <= (c.recovery_geometry?c.margin:clearance_margin) + o.uncertainty+o.extra_clearance)
       return fail(r, "local_obb", p.x, p.y, o.id);
     if(!o.motion_sweep.empty() && geometry::ConvexPolygonDistance(physical,o.motion_sweep)<=clearance_margin+o.uncertainty+o.extra_clearance)

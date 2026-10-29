@@ -434,6 +434,14 @@ public:
     // trajectory independently. Preserve its map search and road-body model;
     // ordinary MORAI static recovery keeps its separate corridor proposals.
     void SetShadowAvoidanceProfile(bool value) { shadow_avoidance_profile_=value; }
+    // Private shadow instance: align native search with final local sweep.
+    // NORMAL instances cannot use this override. Motion prediction stays active.
+    void SetShadowCollisionClearance(double margin) {
+        if(shadow_avoidance_profile_ && std::isfinite(margin) && margin>=0.) {
+            collision_cfg_.safety_margin=margin;
+            if(margin==0.) collision_cfg_.margin_growth_rate=0.;
+        }
+    }
     bool follow_release_pending() const { return v2_following_.release_pending; }
     const std::vector<CartesianPath>& last_candidate_paths() const {
         return last_candidate_paths_;

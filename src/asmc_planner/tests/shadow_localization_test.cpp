@@ -57,6 +57,16 @@ int main(int argc,char** argv){
   {std::ofstream f(dir/"params.yaml");f<<params;}
   FrenetPlanner native_geometry;
   check(native_geometry.Init((dir/"params.yaml").string()),"native defaults initialize independently");
+  const double normal_margin=native_geometry.collision_config().safety_margin;
+  native_geometry.SetShadowCollisionClearance(0.);
+  check(native_geometry.collision_config().safety_margin==normal_margin,
+        "shadow clearance cannot change NORMAL instance");
+  native_geometry.SetShadowAvoidanceProfile(true);
+  native_geometry.SetShadowCollisionClearance(0.);
+  check(native_geometry.collision_config().safety_margin==0.,
+        "private shadow native search accepts zero fixed clearance");
+  native_geometry.SetShadowCollisionClearance(-1.);
+  check(native_geometry.collision_config().safety_margin==0.,"negative clearance rejected");
   const auto original_shape=native_geometry.vehicle_shape();
   auto smaller=original_shape;smaller.width-=.01;
   check(!native_geometry.SetConservativeVehicleEnvelope(smaller)&&

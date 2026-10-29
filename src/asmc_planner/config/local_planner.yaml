@@ -1,9 +1,10 @@
 # GPS-independent LOCAL runtime. NORMAL and the camera jamming selector remain separate.
 # LOCAL-2G: geometric motion forecasts, turn-room reserve and measured-gap checks.
 # Vehicle dimensions and cruise/ceiling/recovery policy: jamming_motion.yaml + launch.
-# The user-selected1.892m body model does not remove the margins below.
-clearance_margin: 0.30
-road_clearance_margin: 0.30
+# Shadow-only experiment: no fixed clearance beyond the physical footprint.
+# Observation uncertainty and moving-object predictions remain independent.
+clearance_margin: 0.0
+road_clearance_margin: 0.0
 planning_budget_ms: 40.0
 # Fresh near-field recovery uses a5km/h ceiling; physical constraints may lower it. Internal semantic occlusion can
 # be a soft cost, but body clearance, current OBB and exterior checks stay hard.
@@ -34,7 +35,7 @@ maneuver_reserve_m: 1.2
 
 # LOCAL-2H geometry baseline was qualified at10km/h in FOGGY13.
 # New shared15/20 speed policy awaits the deferred closed-loop comparison.
-# Current OBB/30cm body clearance and350ms source freshness are unchanged.
+# Current OBB geometry and350ms source freshness remain unchanged.
 # A close tight selected sweep gets maneuver time, not every YOLO detection.
 maneuver_speed_cap_kph: 5.0
 # Six unique rigid source observations allow a nonzero2m/s past-age envelope.
