@@ -855,7 +855,8 @@ class Node {
         debug << ',';
       debug << g.rotation[k];
     }
-    debug << "],\"previous_recovery\":" << (scene.previous_recovery?"true":"false")
+    debug << "],\"previous_candidate_points\":" << scene.previous.size()
+          << ",\"previous_recovery\":" << (scene.previous_recovery?"true":"false")
           << ",\"speed_mps\":" << scene.speed
           << ",\"yaw_rate_rad_s\":" << scene.yaw_rate
           << ",\"acceleration_mps2\":" << scene.acceleration
@@ -1017,9 +1018,13 @@ class Node {
       previous = result.path;
       previous_recovery = result.recovery;
       previous_origin = *origin;
-    } else {
+    } else if(result.reason=="reverse_control_not_supported") {
       previous.clear();previous_recovery=false;
     }
+    // Keep the last geometric candidate across a failed solve. This is NOT
+    // a usable command/result cache: the controller receives the invalid
+    // result, and any later use must pass the new scene's complete checks.
+    // Epoch/config/mode teardown still clears it in the calculation owner.
   }
   void diagnose(const ros::SteadyTimerEvent &) {
     std::lock_guard<std::mutex> lock(diagnostic_mutex);

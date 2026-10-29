@@ -115,7 +115,7 @@ def main():
             sequence = 0
 
             prepare_mode = False
-            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0, family_valid=True):
+            def feed(seconds, speed, status=1, session="camera-a", duplicate=False, camera_age=.20, folded_role=0, family_valid=True, blocked=False):
                 nonlocal sequence
                 rows.clear()
                 plans.clear()
@@ -177,7 +177,7 @@ def main():
                         raster.width = 160
                         raster.step = 160
                         raster.encoding = "mono8"
-                        raster.data = bytes([255]) * 40000
+                        raster.data = bytes([0 if blocked else 255]) * 40000
                         pub["context"].publish(ctx)
                         pub["family"].publish(family)
                         pub["probability"].publish(raster)
@@ -238,6 +238,15 @@ def main():
                 print(
                     "independent latest / signed motion", speed, "PASS", len(observed)
                 )
+            feed(1.0,10./3.6,status=empty)
+            failed,_=feed(.8,10./3.6,status=empty,blocked=True)
+            blocked_plans=[r for r in failed if r.get("scene_valid")]
+            assert blocked_plans and not any(r["valid"] for r in blocked_plans), blocked_plans
+            assert any(r.get("scene",{}).get("previous_candidate_points",0)>0 for r in blocked_plans[-3:]), blocked_plans[-3:]
+            resumed,_=feed(1.,10./3.6,status=empty)
+            assert any(r["valid"] for r in resumed), resumed
+            print("Failed solve retains only a geometric seed; current blocked road stays invalid, fresh road resumes PASS")
+
             result, _ = feed(1.0, 1.0, status=invalid)
             assert any(r["reason"] == "local_objects_invalid" for r in result)
             assert not any(r.get("scene_valid") for r in result[-3:])
