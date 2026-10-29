@@ -14,6 +14,8 @@ end_radius_m: 3.0
 # and passing between ego samples are accepted; this does not change scene CPs.
 section_end_half_width_m: 10.0
 section_end_approach_m: 25.0
+# Planning-linked tunnel trials include the normal-controller recovery tail.
+planning_recovery_tail_m: 20.0
 # 구간별 검증에서만 적용. 해당 진입 방향이 초록인 교차로 단계를 주기적으로 갱신.
 # K-city 2025: 정적 IntTL7 첫 그룹, 동적 IntTL3 세 번째 그룹.
 # 개별 신호 고정은 교차로 단계 전환 때 풀리므로 그것만으로 유지하지 않는다.

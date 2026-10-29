@@ -79,6 +79,11 @@ catkin_install_python(PROGRAMS scripts/camera_bbox_crop.py scripts/camera_bbox_f
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(decision_guard_test test/decision_guard_test.cpp)
+  catkin_add_gtest(line_plan_resume_test test/line_plan_resume_test.cpp)
+  if(TARGET line_plan_resume_test)
+    add_dependencies(line_plan_resume_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(line_plan_resume_test lane_boundary_adapter ${catkin_LIBRARIES})
+  endif()
   catkin_add_gtest(dynamic_obstacle_risk_test test/dynamic_obstacle_risk_test.cpp)
   catkin_add_gtest(obstacle_memory_test test/obstacle_memory_test.cpp)
   catkin_add_nosetests(test/test_rviz_launch_contract.py)

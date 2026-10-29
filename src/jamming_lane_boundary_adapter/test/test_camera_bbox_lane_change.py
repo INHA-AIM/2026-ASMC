@@ -61,6 +61,7 @@ class LaneChangeTest(unittest.TestCase):
             'expected_config_sha256:=' + fixture.HASH,
             'straddle_avoidance:=' + str(not discrete).lower(),
             'dynamic_obstacle_stop:=' + str(not discrete and not creep).lower(),
+            'lane_hold_time:=0.5',
             'creep_speed_kph:=' + ('3.0' if creep else '0.0'),
             'creep_clear_distance:=0.0'], stdout=self.log, stderr=subprocess.STDOUT, start_new_session=True)
         self.gps_return_pub.publish(Bool(False))
@@ -72,6 +73,11 @@ class LaneChangeTest(unittest.TestCase):
             time.sleep(.03)
         self.assertIsNotNone(self.command)
         self.assertGreater(self.lidar_pub.get_num_connections(), 0)
+        if self._testMethodName != 'test_camera_lane_following_requires_a_valid_obstacle_snapshot':
+            # Startup must establish a fresh input stream and physical-rest
+            # confirmation, rather than relying on a pre-LiDAR empty vector.
+            self.feed(duration=1.5)
+            self.following()
 
     def tearDown(self):
         self.gps_return_pub.publish(Bool(False))
@@ -169,10 +175,16 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(self.status()[1]['dynamic_known_motion'], '1')
         self.assertEqual(self.status()[1]['dynamic_unknown_motion'], '0')
 
-    def test_camera_lane_following_does_not_require_a_new_lidar_scan(self):
+    def test_camera_lane_following_requires_a_valid_obstacle_snapshot(self):
         self.feed(publish_lidar=False, duration=.8)
-        self.following()
+        self.stopped('dynamic_inputs_unavailable')
         self.assertEqual(self.status()[1]['lidar_fresh'], 'false')
+        self.feed(duration=1.5)
+        self.following()
+        self.feed(publish_lidar=False, duration=.1)
+        self.following()  # A fresh cached scan may span camera/control cycles.
+        self.feed(publish_lidar=False, duration=.7)
+        self.stopped('dynamic_inputs_unavailable')
 
     def test_session_restart_replaces_old_session(self):
         self.feed([3.5])
@@ -187,8 +199,10 @@ class LaneChangeTest(unittest.TestCase):
         self.following()
 
     def test_prediction_is_preserved_but_velocity_is_unknown(self):
-        self.feed([3.5])
-        self.feed([3.5], predicted=True)
+        self.feed([3.5], duration=1.3)
+        self.feed([3.5], predicted=True, duration=.2)
+        self.assertEqual(self.status()[1]['dynamic_known_motion'], '1')
+        self.feed([3.5], predicted=True, duration=.45)
         self.assertEqual(self.status()[1]['line_obstacles'], '1')
         self.assertEqual(self.status()[1]['lidar_predicted_objects'], '1')
         self.assertEqual(self.status()[1]['dynamic_known_motion'], '0')
@@ -197,18 +211,20 @@ class LaneChangeTest(unittest.TestCase):
     def test_invalid_scan_does_not_clear_memory_as_empty(self):
         self.feed([3.5])
         self.feed(valid=False)
+        self.stopped('dynamic_inputs_unavailable')
         self.assertEqual(self.status()[1]['lidar_fresh'], 'false')
         self.assertEqual(self.status()[1]['line_obstacles'], '1')
         self.assertEqual(self.status()[1]['lidar_fresh'], 'false')
-        self.feed()
+        self.feed(duration=1.5)
         self.following()
 
     def test_missing_scan_and_duplicate_stamp_are_not_clear_observations(self):
         self.feed([3.5])
         self.feed(publish_lidar=False, duration=.8)
+        self.stopped('dynamic_inputs_unavailable')
         self.assertEqual(self.status()[1]['lidar_fresh'], 'false')
         self.assertEqual(self.status()[1]['line_obstacles'], '1')
-        self.feed()
+        self.feed(duration=1.5)
         self.following()
         self.feed(stamp=rospy.Time.now(), duration=.8)
         self.assertEqual(self.status()[1]['lidar_fresh'], 'false')

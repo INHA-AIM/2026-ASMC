@@ -53,7 +53,8 @@ TEST(StopHold,PhysicalRestThenContinuousSafeEvidenceAllowsResume){
     hold.observeSpeed(1.3,0,true,.1);
     EXPECT_FALSE(hold.release(1.3,true,true,"same",2,"source",.25,1.));
     EXPECT_FALSE(hold.release(1.8,true,true,"same",3,"source",.25,1.));
-    EXPECT_TRUE(hold.release(2.4,true,true,"same",4,"source",.25,1.));
+    EXPECT_FALSE(hold.release(2.2,true,true,"same",4,"source",.25,1.));
+    EXPECT_TRUE(hold.release(2.4,true,true,"same",5,"source",.25,1.));
     EXPECT_FALSE(hold.active);
 }
 TEST(StopHold,ChangingTheSelectedPathDoesNotReleaseTheStop){
@@ -73,6 +74,33 @@ TEST(StopHold,RiskReappearanceOrStaleInputCancelsClearConfirmation){
     hold.release(2.5,true,true,"same",4,"source",.25,1.);
     EXPECT_FALSE(hold.release(3.6,true,false,"same",5,"source",.25,1.));
     EXPECT_TRUE(hold.active);
+}
+TEST(StopHold,SameLineIdentifierCannotHideCumulativeGeometryChange){
+    StopHold hold;hold.engage();hold.observeSpeed(1.,0,true,.1);
+    hold.observePath({{0.,0.},{1.,0.}});
+    hold.release(1.3,true,true,"same_line",1,"source",.25,1.);
+    hold.observePath({{0.,0.},{1.,.2}});
+    hold.release(1.8,true,true,"same_line",2,"source",.25,1.);
+    EXPECT_EQ(hold.clear.frames,2u);
+    EXPECT_FALSE(hold.release(2.1,true,true,"same_line",2,"source",.25,1.));
+    hold.observePath({{0.,0.},{1.,.4}});
+    EXPECT_EQ(hold.clear.frames,0u);
+    EXPECT_EQ(hold.clear.reset_reason,"path_geometry_changed");
+    EXPECT_FALSE(hold.release(2.4,true,true,"same_line",3,"source",.25,1.));
+    hold.observePath({{0.,0.},{1.,.4}});
+    EXPECT_FALSE(hold.release(2.9,true,true,"same_line",4,"source",.25,1.));
+    EXPECT_FALSE(hold.release(3.3,true,true,"same_line",5,"source",.25,1.));
+    EXPECT_TRUE(hold.release(3.5,true,true,"same_line",6,"source",.25,1.));
+}
+TEST(StopHold,ForwardClockStepCannotCompleteTwoScanConfirmation){
+    StopHold hold;hold.engage();hold.observeSpeed(100.,0.,true,.1);
+    EXPECT_FALSE(hold.release(100.3,true,true,"same",1,"source",.25,1.));
+    EXPECT_FALSE(hold.release(100.35,true,true,"same",2,"source",.25,1.));
+    EXPECT_FALSE(hold.release(101.94,true,true,"same",3,"source",.25,1.));
+    EXPECT_TRUE(hold.active);EXPECT_EQ(hold.clear.frames,0u);
+    for(unsigned i=1;i<=24;++i)
+        EXPECT_FALSE(hold.release(101.94+i*.05,true,true,"same",3+i,"source",.25,1.));
+    EXPECT_TRUE(hold.release(103.24,true,true,"same",29,"source",.25,1.));
 }
 TEST(LineSelection,OppositeSideHasHigherChangeCost){
     EXPECT_TRUE(oppositeSide(5.,2.,4.));

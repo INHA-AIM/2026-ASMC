@@ -63,6 +63,7 @@
   <arg name="person_ignore_sec" default="4.0" doc="Deprecated; hazards are never ignored by a timer"/>
   <arg name="dynamic_obstacle_stop" default="$(arg person_stop)"/>
   <arg name="dynamic_prediction_sec" default="2.0"/>
+  <arg name="dynamic_acceleration_mps2" default="4.0" doc="Ego acceleration bound for prediction; calibrate with the pedal limit"/>
   <arg name="dynamic_clear_sec" default="1.0" doc="Continuous safe path confirmation after physical stop; at least 3 new LiDAR scans"/>
   <arg name="dynamic_stop_speed_mps" default="0.1"/>
   <arg name="dynamic_rest_sec" default="0.25"/>
@@ -216,6 +217,7 @@
     <param name="bbox_receive_timeout" type="double" value="$(arg bbox_receive_timeout)"/>
     <param name="dynamic_obstacle_stop" type="bool" value="$(arg dynamic_obstacle_stop)"/>
     <param name="dynamic_prediction_sec" value="$(arg dynamic_prediction_sec)"/>
+    <param name="dynamic_acceleration_mps2" value="$(arg dynamic_acceleration_mps2)"/>
     <param name="dynamic_clear_sec" value="$(arg dynamic_clear_sec)"/>
     <param name="dynamic_stop_speed_mps" value="$(arg dynamic_stop_speed_mps)"/>
     <param name="dynamic_rest_sec" value="$(arg dynamic_rest_sec)"/>

@@ -13,6 +13,8 @@
 #include <asmc_msgs/LidarObservation.h>
 #include <ros/master.h>
 #include <limits>
+#include <map>
+#include <sstream>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <geometry_msgs/PointStamped.h>
@@ -121,6 +123,7 @@ struct Parameters {
     bool dynamic_obstacle_stop = true;
     double dynamic_prediction_sec = 2.0;
     double dynamic_clear_sec = 1.0;
+    double dynamic_acceleration_mps2 = 4.0; // prediction bound; paired with the configured pedal limit
     double dynamic_stop_speed_mps = 0.1;
     double dynamic_rest_sec = 0.25;
     double line_return_clear_sec = 1.0;
@@ -344,6 +347,13 @@ std::vector<LaneChangeState::MeasuredObstacle> current_obstacles, planning_obsta
 bool planning_ready = false;
 std::string path_block_reason;  // 마지막 경로 거부 이유(진단용).
 std::string line_decision;      // 5개 기준선 판단 요약(진단용).
+struct LineCandidateCheck {
+    double line=0.,length_scale=0.,lateral_scale=0.;
+    unsigned attempts=0;
+    std::map<std::string,unsigned> rejected;
+    std::string result="rejected",last_reason;
+};
+std::vector<LineCandidateCheck> line_candidate_checks;
 double last_target_line = 0.0;
 double last_adjacent_offset = 0.0;  // 선택한 주행선의 옆 차로 중앙 기준 offset(옆 차로 변경으로 바꿀 때 사용).
 
@@ -364,6 +374,8 @@ struct LineState {
     lane_boundary_adapter::decision::ClearEvidence clear;
     double changed_at=-1;
     double commitment_home=0;
+    // A travel milestone only; never reused as obstacle/collision geometry.
+    double pass_odom=0.;
     unsigned long lidar_sequence = 0;     // 마지막으로 반영한 LiDAR 스캔.
 } line_state;
 bool line_mode_active = false;
@@ -420,12 +432,15 @@ struct DynamicStopState {
     double resume_until=-1;
     std::string final_check="unvalidated";
     dynamic_risk::Risk risk;
+    bool risk_checked=false;
     std::string decision="clear";
     unsigned known_motion=0,unknown_motion=0;
 } dynamic_state;
 std::string applyDynamicObstacleStop(morai_msgs::CtrlCmd& command,double dt,double previous_integral,bool creep);
 std::string crossingYieldPlan(bool& handled);
 std::vector<dynamic_risk::Object> riskObjects();
+bool lineClear(double line,std::vector<FamilyPoint2d>& path);
+bool lineObstacleBlocksHome(const LineObstacle& obstacle);
 bool pathClearOfLineObstacles(const std::vector<FamilyPoint2d>& path);
 
 bool ignoreOccupancyDuringLaneChange();
@@ -766,13 +781,19 @@ void ingestLidar(const asmc_msgs::LidarObjectArray::ConstPtr& message,const std:
         dynamic_risk::Motion motion;
         const bool predicted=object.observation_state==asmc_msgs::LidarObject::PREDICTED||object.miss_count;
         if(!predicted){
+            std::vector<dynamic_risk::Point> shape;
+            for(const auto& corner:object.obb_corners)shape.push_back({corner.x,corner.y});
+            const dynamic_risk::Point measured_velocity{object.absolute_velocity_mps.x,object.absolute_velocity_mps.y};
+            const bool velocity_valid=object.absolute_velocity_valid&&object.dynamic_valid&&
+                std::isfinite(measured_velocity.x)&&std::isfinite(measured_velocity.y);
+            // Feed valid producer motion into the same temporal evidence as
+            // the GPS-denied fallback. Replacing velocity only after that
+            // update left OBB-shape jitter in the stationary classification.
             motion=dynamic_motion.update(source,object.track_id,message->header.stamp.toSec(),
                 {(x0+x1)/2.,(y0+y1)/2.},ego_speed.speed,dead_reckoning.yaw_rate,
-                egoSpeedFresh()&&imuFresh());
-            if(object.absolute_velocity_valid&&object.dynamic_valid&&
-               std::isfinite(object.absolute_velocity_mps.x)&&std::isfinite(object.absolute_velocity_mps.y))
-                motion={true,{object.absolute_velocity_mps.x,object.absolute_velocity_mps.y}};
-        }
+                egoSpeedFresh()&&imuFresh(),velocity_valid?&measured_velocity:nullptr,&shape);
+        }else motion=dynamic_motion.predict(source,object.track_id,message->header.stamp.toSec(),
+            dead_reckoning.yaw_rate,egoSpeedFresh()&&imuFresh());
         LaneChangeState::MeasuredObstacle measured{x0,x1,y0,y1,true,object.track_id,object.camera_class,motion};
         measured.predicted=predicted;
         for(const auto& corner:object.obb_corners)measured.footprint.push_back({corner.x,corner.y});
@@ -876,6 +897,10 @@ void refreshPlanningObstacles() {
         aligned.footprint=object.footprint;
         aligned=dynamic_risk::alignToEgo(std::move(aligned),age,
             egoSpeedFresh()?ego_speed.speed:0.,imuFresh()?dead_reckoning.yaw_rate:0.);
+        if(aligned.motion.extrapolated){
+            aligned.motion.age+=age;
+            if(aligned.motion.age>.5){aligned.motion.valid=false;aligned.motion.stationary=false;}
+        }
         object.x=aligned.box.x0;object.x_far=aligned.box.x1;
         object.y_min=aligned.box.y0;object.y_max=aligned.box.y1;
         object.motion=aligned.motion;object.footprint=std::move(aligned.footprint);
@@ -956,6 +981,11 @@ void cameraLaneFollowingProcess() {
     dynamic_state.hold.observeSpeed(ros::Time::now().toSec(),ego_speed.speed,egoSpeedFresh(),params.dynamic_stop_speed_mps);
     dynamic_state.crossing_yield=false;
     dynamic_state.final_check="unvalidated";
+    dynamic_state.risk={};
+    dynamic_state.risk_checked=false;
+    dynamic_state.known_motion=dynamic_state.unknown_motion=0;
+    dynamic_state.decision=dynamic_state.hold.active?"holding":"not_evaluated";
+    line_candidate_checks.clear();
     if(planning_ready){
         rememberLineObstacles(false);
         if(avoid_state.active){
@@ -965,8 +995,7 @@ void cameraLaneFollowingProcess() {
     }
     bool ahead_observation=false;
     for(const auto& obstacle:line_state.obstacles)
-        ahead_observation|=lineObstacleInReach(obstacle)&&
-            lineObstacleX(obstacle)+obstacle.length+params.vehicle_rear+params.avoid_pass_margin>0.;
+        ahead_observation|=lineObstacleConfirmed(obstacle)&&lineObstacleBlocksHome(obstacle);
     line_state.clear.observe(ros::Time::now().toSec(),lidar_state.sequence,lidar_state.source,
         planning_ready,!ahead_observation);
     path_block_reason.clear();
@@ -1021,7 +1050,7 @@ void cameraLaneFollowingProcess() {
             command=makeStopCommand();tracking=false;creep=false;speed_integral=0.;
         }else{dynamic_state.final_check="passed";path_block_reason.clear();}
     }
-    if(dynamic_state.hold.active&&!tracking&&!creep)dynamic_state.hold.clear.reset();
+    if(dynamic_state.hold.active&&!tracking&&!creep)dynamic_state.hold.clear.reset("no_valid_path");
     if(stop_reason.rfind("dynamic_",0)==0&&!tracking&&!creep){
         dynamic_state.hold.engage();dynamic_state.decision="stop";
     }
@@ -1135,8 +1164,14 @@ void applySpeedControl(morai_msgs::CtrlCmd& command, double target_speed, double
         // 페달 PI: 목표보다 느리면 가속, 빠르면 브레이크. 둘을 동시에 밟지 않는다.
         command.longlCmdType = 1;
         const double error = target_speed / 3.6 - ego_speed.speed;
-        speed_integral = std::clamp(speed_integral + error * dt,
-                                    -params.speed_integral_limit, params.speed_integral_limit);
+        const double proposed_integral=std::clamp(speed_integral+error*dt,
+            -params.speed_integral_limit,params.speed_integral_limit);
+        const double proposed_effort=params.speed_kp*error+params.speed_ki*proposed_integral;
+        // Saturated pedals cannot apply more effort. Do not accumulate an
+        // integral that keeps accelerating after the target speed is reached.
+        if(!((proposed_effort>params.max_accel_pedal&&error>0.)||
+             (proposed_effort< -params.max_brake_pedal&&error<0.)))
+            speed_integral=proposed_integral;
         const double effort = params.speed_kp * error + params.speed_ki * speed_integral;
         if (effort >= 0.0) command.accel = std::min(effort, params.max_accel_pedal);
         else command.brake = std::min(-effort, params.max_brake_pedal);
@@ -1776,6 +1811,10 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status,"dynamic_stop_hold",dynamic_state.hold.active?"true":"false");
     addDiagnosticValue(status,"dynamic_at_rest",dynamic_state.hold.resting(ros::Time::now().toSec(),params.dynamic_rest_sec)?"true":"false");
     addDiagnosticValue(status,"dynamic_safe_frames",std::to_string(dynamic_state.hold.clear.frames));
+    addDiagnosticValue(status,"dynamic_clear_resets",std::to_string(dynamic_state.hold.clear.resets));
+    addDiagnosticValue(status,"dynamic_clear_reset_reason",dynamic_state.hold.clear.reset_reason);
+    addDiagnosticValue(status,"dynamic_risk_checked",dynamic_state.risk_checked?"true":"false");
+    addDiagnosticValue(status,"resume_target_held",dynamic_state.hold.active&&line_mode_active?"true":"false");
     addDiagnosticValue(status,"crossing_yield",dynamic_state.crossing_yield?"true":"false");
     addDiagnosticValue(status,"final_path_check",dynamic_state.final_check);
     addDiagnosticValue(status,"line_clear_frames",std::to_string(line_state.clear.frames));
@@ -1783,6 +1822,26 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status,"dynamic_ttc_sec",std::to_string(dynamic_state.risk.ttc));
     addDiagnosticValue(status,"dynamic_known_motion",std::to_string(dynamic_state.known_motion));
     addDiagnosticValue(status,"dynamic_unknown_motion",std::to_string(dynamic_state.unknown_motion));
+    addDiagnosticValue(status,"line_return_remaining_m",std::to_string(std::max(0.,line_state.pass_odom-line_state.odom)));
+    for(const auto& object:current_obstacles){
+        std::ostringstream detail;
+        detail<<"motion_valid="<<object.motion.valid<<" vx="<<object.motion.velocity.x
+              <<" vy="<<object.motion.velocity.y<<" stationary="<<object.motion.stationary
+              <<" extrapolated="<<object.motion.extrapolated<<" motion_age="<<object.motion.age
+              <<" x="<<object.x<<" x_far="<<object.x_far
+              <<" y_min="<<object.y_min<<" y_max="<<object.y_max;
+        addDiagnosticValue(status,"risk_input/"+std::to_string(object.track_id),detail.str());
+    }
+    addDiagnosticValue(status,"line_candidate_count",std::to_string(line_candidate_checks.size()));
+    for(std::size_t i=0;i<line_candidate_checks.size();++i){
+        const auto& check=line_candidate_checks[i];
+        std::ostringstream detail;
+        detail<<"line="<<check.line<<" result="<<check.result<<" attempts="<<check.attempts
+              <<" length_scale="<<check.length_scale<<" lateral_scale="<<check.lateral_scale;
+        for(const auto& rejected:check.rejected)detail<<" "<<rejected.first<<"="<<rejected.second;
+        if(!check.last_reason.empty())detail<<" last_reject="<<check.last_reason;
+        addDiagnosticValue(status,"line_candidate/"+std::to_string(i),detail.str());
+    }
 
     addDiagnosticValue(status, "enable_control", params.enable_control ? "true" : "false");
     addDiagnosticValue(status, "mode_received", mode_received ? "true" : "false");
@@ -1925,6 +1984,7 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("dynamic_obstacle_stop",params.dynamic_obstacle_stop,params.dynamic_obstacle_stop);
     private_nh.param("dynamic_prediction_sec",params.dynamic_prediction_sec,params.dynamic_prediction_sec);
     private_nh.param("dynamic_clear_sec",params.dynamic_clear_sec,params.dynamic_clear_sec);
+    private_nh.param("dynamic_acceleration_mps2",params.dynamic_acceleration_mps2,params.dynamic_acceleration_mps2);
     private_nh.param("dynamic_stop_speed_mps",params.dynamic_stop_speed_mps,params.dynamic_stop_speed_mps);
     private_nh.param("dynamic_rest_sec",params.dynamic_rest_sec,params.dynamic_rest_sec);
     private_nh.param("line_return_clear_sec",params.line_return_clear_sec,params.line_return_clear_sec);
@@ -2045,7 +2105,7 @@ void loadParameters(ros::NodeHandle& private_nh) {
 }
 
 void validateParameters() {
-    for(double value:{params.dynamic_prediction_sec,params.dynamic_clear_sec,params.dynamic_uncertain_speed_kph,
+    for(double value:{params.dynamic_prediction_sec,params.dynamic_clear_sec,params.dynamic_acceleration_mps2,params.dynamic_uncertain_speed_kph,
                       params.dynamic_stop_speed_mps,params.dynamic_rest_sec,params.line_return_clear_sec,params.line_commit_sec})
         if(!std::isfinite(value)||value<=0)throw std::runtime_error("invalid dynamic obstacle risk parameters");
 
@@ -2123,7 +2183,8 @@ std::vector<dynamic_risk::Object> riskObjects(){
     const double age=std::max(0.,(ros::Time::now()-lidar_state.stamp).toSec());
     for(const auto& measured:current_obstacles){
         dynamic_risk::Object object{{measured.x,measured.x_far,measured.y_min,measured.y_max},measured.motion,measured.track_id};
-        object.footprint=measured.footprint;object.uncertainty=object.motion.valid?0.:.5*age;
+        object.footprint=measured.footprint;object.uncertainty=object.motion.valid?
+            (object.motion.extrapolated?.3*object.motion.age+1.5*object.motion.age*object.motion.age:0.):.5*age;
         objects.push_back(std::move(object));
     }
     return objects;
@@ -2149,7 +2210,22 @@ std::string crossingYieldPlan(bool& handled){
     for(const auto& object:riskObjects())if(dynamic_risk::lateralMover(object,road))crossing.push_back(object);
     dynamic_risk::Config config;config.front=params.vehicle_front;config.rear=params.vehicle_rear;
     config.width=params.vehicle_width;config.margin=std::max(.3,params.obstacle_lateral_margin);
+    config.stationary_margin=params.obstacle_lateral_margin;
+    config.acceleration=params.dynamic_acceleration_mps2;
     config.horizon=std::max(4.,params.dynamic_prediction_sec);
+    // A crossing risk in the old physical lane must not replace an already
+    // verified avoidance curve with that occupied lane's centreline.
+    if(!crossing.empty()&&line_mode_active&&line_state.target>0.&&
+       std::abs(line_state.target-line_state.home)>params.epsilon){
+        std::vector<FamilyPoint2d> chosen;
+        if(lineClear(line_state.target,chosen)){
+            std::vector<dynamic_risk::Point> actual;
+            for(auto point:chosen)actual.push_back({point.x,point.y});
+            if(dynamic_risk::assess(actual,crossing,ego_speed.speed,params.target_speed_kph/3.6,config).clear){
+                dynamic_state.crossing_until=-1.;return "";
+            }
+        }
+    }
     if(!crossing.empty()){
         const auto risk=dynamic_risk::assess(road,crossing,ego_speed.speed,params.target_speed_kph/3.6,config);
         if(!risk.clear)dynamic_state.crossing_until=now+.5;
@@ -2170,10 +2246,12 @@ std::string applyDynamicObstacleStop(morai_msgs::CtrlCmd& command,double dt,doub
     const auto stop=[&](const std::string& reason){
         dynamic_state.hold.engage();dynamic_state.decision="stop";return reason;
     };
-    if(dynamic_state.hold.active&&(!lidarFresh()||!egoSpeedFresh()||!imuFresh()))
+    // refreshPlanningObstacles clears invalid inputs. An empty vector caused
+    // by sensor loss must never certify free space while the vehicle is moving.
+    if(!lidarFresh()||!egoSpeedFresh()||!imuFresh())
         return stop("dynamic_inputs_unavailable");
     if(dynamic_state.hold.active&&creep){
-        dynamic_state.hold.clear.reset();dynamic_state.decision="waiting_for_safe_path";
+        dynamic_state.hold.clear.reset("creep_without_confirmed_path");dynamic_state.decision="waiting_for_safe_path";
         return "dynamic_wait_for_safe_path";
     }
     const auto objects=riskObjects();
@@ -2190,6 +2268,8 @@ std::string applyDynamicObstacleStop(morai_msgs::CtrlCmd& command,double dt,doub
     }
     dynamic_risk::Config config;config.front=params.vehicle_front;config.rear=params.vehicle_rear;
     config.width=params.vehicle_width;config.margin=std::max(.3,params.obstacle_lateral_margin);
+    config.stationary_margin=params.obstacle_lateral_margin;
+    config.acceleration=params.dynamic_acceleration_mps2;
     config.horizon=params.dynamic_prediction_sec;
     std::vector<dynamic_risk::Point> path{{0,0}};
     if(creep){
@@ -2209,6 +2289,7 @@ std::string applyDynamicObstacleStop(morai_msgs::CtrlCmd& command,double dt,doub
         target=std::min(target,params.dynamic_uncertain_speed_kph);
     const auto assess=[&](double kph){return dynamic_risk::assess(path,objects,std::max(0.,ego_speed.speed),kph/3.6,config);};
     dynamic_state.risk=assess(target);
+    dynamic_state.risk_checked=true;
     if(!dynamic_state.risk.clear){
         for(double fraction:{.5,.25}){
             const double candidate=target*fraction;
@@ -2222,6 +2303,9 @@ std::string applyDynamicObstacleStop(morai_msgs::CtrlCmd& command,double dt,doub
         return stop("dynamic_path_conflict");
     }
     if(dynamic_state.hold.active){
+        std::vector<std::pair<double,double>> shape;
+        for(const auto& point:path)shape.emplace_back(point.x,point.y);
+        dynamic_state.hold.observePath(shape);
         const std::string plan=std::to_string(follower_state.locked_lane)+"/"+
             std::to_string(static_cast<int>(std::lround(line_state.target*4)));
         if(!dynamic_state.hold.release(now,lidarFresh()&&egoSpeedFresh()&&imuFresh(),true,plan,
@@ -2346,8 +2430,12 @@ bool pathInsideRoad(const std::vector<FamilyPoint2d>& path) {
         const std::size_t previous = index == 0 ? 0 : index - 1;
         const std::size_t next = std::min(index + 1, path.size() - 1);
         const double yaw = std::atan2(path[next].y - path[previous].y, path[next].x - path[previous].x);
-        const double front = params.vehicle_front + params.obstacle_longitudinal_margin + params.path_sample_step;
-        const double rear = params.vehicle_rear + params.obstacle_longitudinal_margin + params.path_sample_step;
+        // Road containment uses the actual body length. The collision-only
+        // longitudinal/sample margin remains in the obstacle swept-body check;
+        // adding it here can put a fictitious rear corner outside an unseen
+        // extrapolated boundary and reject every possible recovery at rest.
+        const double front = params.vehicle_front;
+        const double rear = params.vehicle_rear;
         const double half_width = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
         for (double dx : {-rear, front}) {
             for (double dy : {-half_width, half_width}) {
@@ -2423,7 +2511,8 @@ void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>&
     follower_state.selected_lane.centerline = path;
     change_state.path = path;
     // 같은 차로 안 회피는 짧은 offset 연결을 따라가도록 추종점을 당긴다.
-    const double lookahead = avoid_state.active && !change_state.changing ?
+    const double lookahead = (avoid_state.active || (line_mode_active&&
+        std::abs(line_state.target-line_state.home)>params.epsilon)) && !change_state.changing ?
         params.avoid_lookahead_distance : params.lookahead_distance;
     for (std::size_t index = 1; index < path.size(); ++index) {
         if (path[index].x < lookahead) continue;
@@ -2761,6 +2850,18 @@ bool lineObstacleInReach(const LineObstacle& obstacle) {
     return params.line_obstacle_reach <= 0.0 || lineObstacleX(obstacle) <= params.line_obstacle_reach;
 }
 
+bool lineObstacleBlocksHome(const LineObstacle& obstacle) {
+    if(!lineObstacleInReach(obstacle)||lineObstacleX(obstacle)+obstacle.length+
+       params.vehicle_rear+params.avoid_pass_margin<=0.)return false;
+    const double home=line_state.return_home>0.?line_state.return_home:
+        (follower_state.locked_lane==0?2.:4.);
+    LineFrame frame;
+    if(!lineFrameAt(std::max(lineObstacleX(obstacle),params.planning_start_x),frame))return true;
+    const double y=lineY(frame,home);
+    const double margin=params.vehicle_width/2.+params.avoid_clearance+params.avoid_plan_margin;
+    return y+margin>lineY(frame,obstacle.line_right)&&y-margin<lineY(frame,obstacle.line_left);
+}
+
 // Mirror the producer's complete valid track snapshot, including predicted tracks.
 void rememberLineObstacles(bool /*new_scan*/) {
     if(!planning_ready||lidar_state.sequence==line_state.lidar_sequence)return;
@@ -2788,14 +2889,14 @@ void rememberLineObstacles(bool /*new_scan*/) {
 bool buildLinePath(double line, std::vector<FamilyPoint2d>& path, double length_scale,
                    double lateral_scale, bool limit_lateral_step) {
     path.clear();
-    LineFrame origin, next;
-    if (!lineFrameAt(0.0, origin) || !lineFrameAt(1.0, next)) return false;
+    LineFrame origin;
+    if (!lineFrameAt(0.0, origin)) return false;
     const double origin_y = lineY(origin, line);
-    const double origin_heading = lineY(next, line) - origin_y;
     const double curvature_limit = params.steering_curvature_gain *
         std::tan(params.max_steering_deg * PI / 180.0) / params.wheelbase;
     const double connect_length = std::clamp(
-        std::sqrt(5.77 * std::abs(origin_y) / (0.8 * curvature_limit)) * length_scale,
+        std::max(params.avoid_shift_length,
+            std::sqrt(5.77 * std::abs(origin_y) / (0.8 * curvature_limit))) * length_scale,
         params.avoid_shift_length, params.path_horizon);
     const double lateral_gain = (limit_lateral_step ? std::min(1.0, params.max_lateral_step /
         std::max(std::abs(origin_y), params.epsilon)) : 1.0) * lateral_scale;
@@ -2806,9 +2907,11 @@ bool buildLinePath(double line, std::vector<FamilyPoint2d>& path, double length_
         if (!lineFrameAt(x, frame)) return false;
         const double ratio = std::clamp(x / connect_length, 0.0, 1.0);
         const double blend = ratio * ratio * ratio * (10.0 + ratio * (-15.0 + 6.0 * ratio));
-        double y = lineY(frame, line);
-        y -= origin_y * (1.0 - blend * lateral_gain);
-        y -= origin_heading * x * (1.0 - blend);
+        // Blend the complete observed curve from the ego pose. Subtracting only
+        // its near-field tangent left camera/extrapolation curvature jumps in
+        // the first metre, even when the desired lane was almost straight.
+        // The resulting curve still has to pass road, steering and OBB checks.
+        const double y = blend * (lineY(frame, line) - origin_y * (1.0 - lateral_gain));
         path.push_back({x, y});
     }
     return true;
@@ -2843,11 +2946,11 @@ bool pathClearOfLineObstacles(const std::vector<FamilyPoint2d>& path) {
 // (진입 차로를 기준으로만 재면 진입 차로를 막은 장애물을 옆 차로로 피하는 선이 모두 거부된다.)
 bool lineAllowed(double line) {
     LineFrame near;
-    if (!lineFrameAt(params.planning_start_x, near)) return false;
+    if (!lineFrameAt(params.planning_start_x, near)) {path_block_reason="line_frame_unavailable";return false;}
     const auto within = [&](double home) {
         return home > 0.0 && std::abs(lineY(near, line) - lineY(near, home)) <= params.avoid_max_offset + params.epsilon;
     };
-    if (!within(line_state.lane_home) && !within(line_state.return_home)) return false;
+    if (!within(line_state.lane_home) && !within(line_state.return_home)) {path_block_reason="line_offset_limit";return false;}
     const double edge = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
     const double clear = params.vehicle_width / 2.0 + params.avoid_clearance + params.avoid_plan_margin;
     for (const auto& obstacle : line_state.obstacles) {
@@ -2858,26 +2961,80 @@ bool lineAllowed(double line) {
         const double x = std::max(lineObstacleX(obstacle), params.planning_start_x);
         LineFrame frame;
         double left = 0.0, right = 0.0;
-        if (!lineFrameAt(x, frame) || !corridorAt(x, left, right)) return false;
+        if (!lineFrameAt(x, frame) || !corridorAt(x, left, right)) {path_block_reason="line_corridor_unavailable";return false;}
         const double y = lineY(frame, line);
-        if (!(y + clear <= lineY(frame, obstacle.line_right) || y - clear >= lineY(frame, obstacle.line_left))) return false;
-        if (y + edge > left || y - edge < right) return false;
+        if (!(y + clear <= lineY(frame, obstacle.line_right) || y - clear >= lineY(frame, obstacle.line_left))) {
+            path_block_reason="line_clearance id="+std::to_string(obstacle.track_id)+" required="+std::to_string(clear);
+            return false;
+        }
+        if (y + edge > left || y - edge < right) {
+            path_block_reason="line_boundary y="+std::to_string(y)+" bounds=["+std::to_string(right)+","+std::to_string(left)+"]";
+            return false;
+        }
     }
     return true;
 }
 
-// 장애물 충돌·주행 영역·곡률을 모두 통과하는 경로를 전환거리 1.0~1.6배 중 가장 짧은 것으로 만든다.
-bool lineClear(double line, std::vector<FamilyPoint2d>& path) {
-    if (!lineAllowed(line)) return false;
-    for (double length_scale : {1.0, 1.2, 1.4, 1.6}) {
-        std::vector<FamilyPoint2d> converged;
-        if (!buildLinePath(line, converged, length_scale, 1.0, false) || !pathClearOfLineObstacles(converged)) continue;
-        for (double lateral_scale : {1.0, 0.85, 0.70, 0.55, 0.40}) {
-            if (buildLinePath(line, path, length_scale, lateral_scale, true) && pathInsideRoad(path) &&
-                pathClearOfLineObstacles(path)){path_block_reason.clear();return true;}
-        }
+// 모든 연결 후보에 차체 충돌·주행 영역·조향 곡률 검사를 적용한다.
+bool predictedPathRiskClear(const std::vector<FamilyPoint2d>& path){
+    if(!params.dynamic_obstacle_stop||!dynamic_state.hold.active)return true;
+    std::vector<dynamic_risk::Point> actual;for(auto p:path)actual.push_back({p.x,p.y});
+    const auto objects=riskObjects();
+    dynamic_risk::Config config;config.front=params.vehicle_front;config.rear=params.vehicle_rear;
+    config.width=params.vehicle_width;config.margin=std::max(.3,params.obstacle_lateral_margin);
+    config.stationary_margin=params.obstacle_lateral_margin;
+    config.acceleration=params.dynamic_acceleration_mps2;config.horizon=params.dynamic_prediction_sec;
+    const double target=std::min(params.target_speed_kph,params.avoid_speed_kph)/3.6;
+    for(double fraction:{1.,.5,.25}){
+        const auto risk=dynamic_risk::assess(actual,objects,std::max(0.,ego_speed.speed),target*fraction,config);
+        if(risk.clear)return true;
+        path_block_reason="predicted_collision id="+std::to_string(risk.id)+" t="+std::to_string(risk.ttc);
     }
     return false;
+}
+
+bool lineClear(double line, std::vector<FamilyPoint2d>& path) {
+    LineCandidateCheck check;check.line=line;
+    const auto reject=[&](const std::string& stage){
+        ++check.attempts;++check.rejected[stage];check.last_reason=path_block_reason;
+    };
+    const auto finish=[&](bool passed){
+        check.result=passed?"passed":"rejected";
+        // At most two checks per grid entry, plus home/current/gap refinements.
+        if(line_candidate_checks.size()<128)line_candidate_checks.push_back(check);
+        return passed;
+    };
+    if (!lineAllowed(line)) {reject("line_gate");return finish(false);}
+    for (double length_scale : {1.0, 1.2, 1.4, 1.6}) {
+        check.length_scale=length_scale;check.lateral_scale=1.;
+        std::vector<FamilyPoint2d> converged;
+        if (!buildLinePath(line, converged, length_scale, 1.0, false)) {
+            path_block_reason="unlimited_path_unavailable";reject("unlimited_build");continue;
+        }
+        if (!pathClearOfLineObstacles(converged)) {reject("unlimited_collision");continue;}
+        for (double lateral_scale : {1.0, 0.85, 0.70, 0.55, 0.40}) {
+            check.lateral_scale=lateral_scale;
+            if(!buildLinePath(line,path,length_scale,lateral_scale,true)){
+                path_block_reason="limited_path_unavailable";reject("limited_build");continue;
+            }
+            if(!pathInsideRoad(path)){reject("limited_road_or_curvature");continue;}
+            if(!pathClearOfLineObstacles(path)){reject("limited_collision");continue;}
+            if(!predictedPathRiskClear(path)){reject("predicted_collision");continue;}
+            ++check.attempts;path_block_reason.clear();return finish(true);
+        }
+        // The lateral-step cap can pull an otherwise safe lane-change curve
+        // back into the obstacle. Use the complete curve only after checking
+        // its actual swept body, road boundary and steering curvature too.
+        check.lateral_scale=1.;
+        if(pathInsideRoad(converged)&&pathClearOfLineObstacles(converged)&&predictedPathRiskClear(converged)){
+            ++check.attempts;path=std::move(converged);
+            check.result="full_path_passed";
+            if(line_candidate_checks.size()<128)line_candidate_checks.push_back(check);
+            path_block_reason.clear();return true;
+        }
+        reject("full_road_or_collision");
+    }
+    return finish(false);
 }
 
 // 선 line의 왼쪽과 오른쪽에 모두 아직 지나지 않은 장애물이 있으면 그 사이 틈의 중앙 선.
@@ -2904,7 +3061,10 @@ std::string updateLinePlan(bool new_scan) {
     const double now=ros::Time::now().toSec();
     const double previous_target=line_state.target;
     const bool stable_clear=line_state.clear.ready(now,params.line_return_clear_sec);
-    const bool braking_hold=dynamic_state.hold.active&&!dynamic_state.hold.resting(now,params.dynamic_rest_sec);
+    // At rest, retain the currently safe target while confirming release.
+    // A blocked target may still be replaced by the safe-path search below.
+    const bool resume_hold=dynamic_state.hold.active;
+    const bool passed_avoidance=line_state.odom>=line_state.pass_odom;
     const double own_home = follower_state.locked_lane == 0 ? 2.0 : 4.0;
     if (line_state.target <= 0.0) line_state.target = own_home;
     if(line_state.commitment_home<=0)line_state.commitment_home=own_home;
@@ -2914,7 +3074,7 @@ std::string updateLinePlan(bool new_scan) {
     // 시뮬레이터에서 차량을 다른 차로로 옮기거나 노드를 재시작해도 장애물 없이 옆 차로로 가지 않는다.
     // 진입 차로 복귀가 남아 있으면 그 차로가 아닌 곳으로 다시 잡지 않는다.
     const double vehicle_line = lineOf(near, 0.0);
-    if (!braking_hold && stable_clear && line_state.obstacles.empty() && std::abs(line_state.target - 3.0) > 0.5) {
+    if (!resume_hold && passed_avoidance && stable_clear && line_state.obstacles.empty() && std::abs(line_state.target - 3.0) > 0.5) {
         const double vehicle_home = vehicle_line < 3.0 ? 2.0 : 4.0;
         if (vehicle_home != line_state.target && std::abs(vehicle_line - vehicle_home) < 0.5 &&
             (line_state.return_home <= 0.0 || vehicle_home == line_state.return_home)) {
@@ -2935,7 +3095,7 @@ std::string updateLinePlan(bool new_scan) {
         cover_right = std::max(cover_right, obstacle.line_right);
         // 장애물 끝 + 차량 후방 + 여유를 완전히 지나기 전에는 복귀하지 않는다. 옆을 지나는 동안 복귀하면
         // 다시 측정된 장애물에 막혀 선택할 선이 없어진다.
-        ahead = ahead || lineObstacleX(obstacle) + obstacle.length + params.vehicle_rear + params.avoid_pass_margin > 0.0;
+        ahead = ahead || lineObstacleBlocksHome(obstacle);
     }
     char summary[160];
     const auto describe = [&](const char* action) {
@@ -2952,7 +3112,7 @@ std::string updateLinePlan(bool new_scan) {
     std::vector<FamilyPoint2d> centre_path;
     // GPS가 돌아오면 통과 여유(avoid_pass_margin)를 기다리지 않고, 경로가 비는 즉시 진입 차로로 복귀한다.
     // 일반 플래너가 이어받을 수 있도록 복귀 대기(최대 recovery_timeout_s) 안에 기준 경로로 돌아가기 위함이다.
-    if (!braking_hold && stable_clear && (!ahead || gps_return) && std::abs(line_state.target - line_state.home) > params.epsilon &&
+    if (!resume_hold && stable_clear && ((!ahead&&passed_avoidance) || gps_return) && std::abs(line_state.target - line_state.home) > params.epsilon &&
         lineClear(line_state.home, path)) {
         // 일반 구간 AVOID의 RETURN과 같다: 장애물 중심을 모두 지났고 차로 중앙 경로가 비어 있으면 복귀.
         ROS_INFO("Line selection: return %.2f -> %.2f%s", line_state.target, line_state.home,
@@ -2961,7 +3121,7 @@ std::string updateLinePlan(bool new_scan) {
         describe("return");
     } else if (lineClear(line_state.target, path)) {
         // 양쪽 장애물 사이를 지나는 중이면 틈 중앙으로 맞춘다. 한 칸 이상 벗어났을 때만 옮겨 떨림을 막는다.
-        if (!braking_hold && (line_state.changed_at<0||now-line_state.changed_at>=params.line_commit_sec) &&
+        if (!resume_hold && (line_state.changed_at<0||now-line_state.changed_at>=params.line_commit_sec) &&
             lineGapCentre(line_state.target, centre) &&
             std::abs(centre - line_state.target) >= params.avoid_line_step - params.epsilon &&
             lineClear(centre, centre_path)) {
@@ -3027,6 +3187,12 @@ std::string updateLinePlan(bool new_scan) {
     }
     if(std::abs(line_state.target-previous_target)>params.epsilon)line_state.changed_at=now;
     if(!pathInsideRoad(path)||!pathClearOfLineObstacles(path))return "dynamic_final_path_collision";
+    if(std::abs(line_state.target-line_state.home)>params.epsilon){
+        for(const auto& obstacle:line_state.obstacles)
+            if(lineObstacleConfirmed(obstacle)&&lineObstacleBlocksHome(obstacle))
+                line_state.pass_odom=std::max(line_state.pass_odom,line_state.odom+lineObstacleX(obstacle)+
+                    obstacle.length+params.vehicle_rear+params.avoid_pass_margin);
+    }
     path_block_reason.clear();
     // 고른 선이 속한 차로가 내 차선(초록)이다. 중앙선 위(3)면 이전 차선을 유지한다.
     if (line_state.target < 3.0 - params.epsilon) follower_state.locked_lane = 0;
@@ -3037,10 +3203,12 @@ std::string updateLinePlan(bool new_scan) {
         change_state.path = path;
         follower_state.selected_lane.centerline = path;
     }
-    // storePlannedTarget가 없는 경우에도 추종점은 경로에서 정한다.
+    // Match the avoidance lookahead even when storePlannedTarget is unavailable.
+    const double lookahead=std::abs(line_state.target-line_state.home)>params.epsilon?
+        params.avoid_lookahead_distance:params.lookahead_distance;
     for (std::size_t index = 1; index < path.size(); ++index) {
-        if (path[index].x < params.lookahead_distance) continue;
-        const double ratio = (params.lookahead_distance - path[index - 1].x) / (path[index].x - path[index - 1].x);
+        if (path[index].x < lookahead) continue;
+        const double ratio = (lookahead - path[index - 1].x) / (path[index].x - path[index - 1].x);
         follower_state.target_point = interpolatePoint(path[index - 1], path[index], ratio);
         break;
     }
