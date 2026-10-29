@@ -101,7 +101,7 @@ class PositionNode {
       // anchor can warm up again from fresh GPS without requiring a stop.
       // This discards the old map transform; ordinary ten-fix validation and
       // native path checks must pass before returning to localization.
-      if(local_recovery_enabled&&local_recovery.active&&anchor.state=="reanchor_stop")
+      if(MayRewarmAnchor(local_recovery_enabled,local_recovery.active,selected,preparing)&&anchor.state=="reanchor_stop")
         anchor.reset();
       anchor.observe(*paired,x,y,yaw);gps_reason=anchor.reason;
       if(generation!=anchor.generation)planner->reset_reference();

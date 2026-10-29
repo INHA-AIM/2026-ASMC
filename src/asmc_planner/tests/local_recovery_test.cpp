@@ -12,6 +12,9 @@ int main(){
  check(!a.at(.5,&failure).valid&&failure=="anchor_no_past_sample","query before available anchor is explicit");
  motion.t=3;motion.x=251;a.motion(motion);
  check(!a.at(3,&failure).valid&&failure=="anchor_distance_limit","distance guard remains in force");
+ check(MayRewarmAnchor(true,false,false,true),"NORMAL prewarm can validate a fresh anchor without stopping");
+ check(!MayRewarmAnchor(true,false,true,true),"selected native controller cannot bypass rejected map anchor");
+ check(!MayRewarmAnchor(false,false,false,true),"baseline without LOCAL recovery remains unchanged");
  LocalRecoveryPolicy p;
  check(!p.update(1,true,false,true,true,true,false),"does not switch on first stopped scan");
  check(!p.update(1.05,true,false,true,true,true,false),"requires a second planning interval");

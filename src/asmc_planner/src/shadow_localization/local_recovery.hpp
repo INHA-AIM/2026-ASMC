@@ -24,6 +24,11 @@ inline bool RecoverableAnchorFailure(const std::string& reason) {
       reason=="epoch_reset" || reason=="anchor_time_limit" ||
       reason=="anchor_distance_limit" || reason=="anchor_no_past_sample";
 }
+// NORMAL owns control during prewarm. Rebuild a rejected anchor there rather
+// than carrying a stopped-only reanchor requirement into the takeover.
+inline bool MayRewarmAnchor(bool enabled,bool recovery_active,bool selected,bool preparing) {
+  return enabled && (recovery_active || (!selected && preparing));
+}
 class LocalRecoveryPolicy {
  public:
   bool active=false;
