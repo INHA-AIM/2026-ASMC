@@ -38,6 +38,7 @@ struct Config {
   double speed_cap = 20. / 3.6, decel = 1.5, accel = 1., jerk = 4.8;
   double controlled_decel = 1.5; // Candidate actual-state brake; cruise stays at decel.
   double preferred_clearance = .40;
+  double forward_warning_weight = 0.; // LOCAL ranking only; no free-space claim.
   double low_speed_rate_floor = 1.;
   double maneuver_reserve = 0.; // Keep turn room if a verified prefix ends at an obstacle.
   double recovery_speed = 5./3.6; // Escape ceiling; geometry/braking determine progress, never a speed floor.
@@ -67,6 +68,8 @@ struct Grid {
 struct Scene {
   Grid grid;
   std::vector<Obstacle> obstacles;
+  struct AheadWarning { double x, lo, hi, freshness; };
+  std::vector<AheadWarning> ahead_warnings;
   // Current family support: x, left painted line, right painted line. Its
   // longitudinal support is diagnostic. Painted lines are NOT
   // physical walls or footprint clipping bounds. LOCAL-2B uses right-home

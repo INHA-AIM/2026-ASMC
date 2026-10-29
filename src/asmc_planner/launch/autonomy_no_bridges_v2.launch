@@ -7,6 +7,7 @@
   <arg name="jamming_speed_kph" default="$(eval {'camera':10.0,'local':20.0,'localization':20.0}[arg('jamming_planner')])"/>
   <arg name="local_semantic_input" default="true"/>
   <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
+  <arg name="local_forward_warning_weight" default=""/>
   <arg name="shadow_static_avoidance" default="$(eval arg('jamming_planner') == 'localization')" doc="Localization comparison profile: measured static bypass and return; see documented failures"/>
   <arg name="shadow_dynamic_obstacles" default="$(eval arg('jamming_planner') == 'localization')" doc="Localization comparison profile: observed-motion yield; not general dynamic acceptance"/>
   <arg name="shadow_lane_rules" default="$(eval arg('jamming_planner') == 'localization')" doc="verified shadow zone paint exemption; physical road stays hard"/>
@@ -156,6 +157,7 @@
     <arg name="run_id" value="$(arg shadow_run_id)"/>
     <arg name="journal_path" value="$(arg shadow_journal_path)"/>
     <arg name="planner_config" value="$(arg local_planner_config)"/>
+    <arg name="forward_warning_weight" value="$(arg local_forward_warning_weight)"/>
   </include>
   <include if="$(eval arg('jamming_planner') == 'localization')" file="$(find asmc_planner)/launch/shadow_localization.launch">
     <arg name="run_id" value="$(arg shadow_run_id)"/>

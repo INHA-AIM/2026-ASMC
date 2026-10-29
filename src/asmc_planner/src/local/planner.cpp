@@ -25,6 +25,39 @@ double ReferenceAt(const Scene &s, double x) {
     }
   return s.home.back()[1];
 }
+void PrepareAheadWarnings(Scene& s,const Config& c) {
+  s.ahead_warnings.clear();
+  if(c.forward_warning_weight<=0.) return;
+  for(const auto& o:s.obstacles) {
+    if(o.retained || !std::isfinite(o.source_age) || o.source_age<0. || o.source_age>.35 ||
+       o.classification.empty() || o.classification=="unknown" || o.polygon.empty()) continue;
+    double x=1e9,lo=1e9,hi=-1e9;
+    for(const auto& p:o.polygon){x=std::min(x,p.x);lo=std::min(lo,p.y);hi=std::max(hi,p.y);}
+    if(x<4. || x>c.max_range)continue;
+    const double home=ReferenceAt(s,x),pad=c.width*.5+c.margin+o.uncertainty;
+    if(home<lo-pad || home>hi+pad)continue;
+    s.ahead_warnings.push_back({x,lo-pad,hi+pad,std::max(.2,1.-o.source_age/.35)});
+  }
+  std::stable_sort(s.ahead_warnings.begin(),s.ahead_warnings.end(),
+                   [](const auto& a,const auto& b){return a.x<b.x;});
+  if(s.ahead_warnings.size()>6)s.ahead_warnings.resize(6);
+}
+double AheadObstacleCost(const Scene& s,const Config& c,const Pose& p) {
+  if(c.forward_warning_weight<=0.)return 0.;
+  double risk=0.;
+  for(const auto& o:s.ahead_warnings) {
+    const double dx=o.x-p.x;
+    if(dx<=c.length-c.rear+.5)continue;
+    // Extrapolation ranks verified paths only; it is never published or used
+    // as evidence that the unsupported continuation is collision-free.
+    const double look=p.y+dx*std::tan(std::clamp(p.yaw,-.55,.55));
+    const double half=.5*(o.hi-o.lo),distance=std::abs(look-.5*(o.hi+o.lo));
+    const double overlap=std::max(0.,1.-distance/std::max(.2,half));
+    const double urgency=std::clamp((20.-dx)/15.,.1,1.);
+    risk=std::max(risk,overlap*overlap*urgency*o.freshness);
+  }
+  return c.forward_warning_weight*risk;
+}
 namespace {
 double elapsed(std::chrono::steady_clock::time_point t) {
   return std::chrono::duration<double, std::milli>(
@@ -73,6 +106,7 @@ double SegmentQualityCost(const Scene &s, const Config &c, const Pose &a,
   for(const auto &o:s.obstacles)gap=std::min(gap,geometry::ConvexPolygonDistance(body,o.polygon));
   const double near=std::max(0.,c.preferred_clearance-gap);
   return distance*(density(0)+4*density(.5)+density(1))/6. + .4*distance*near*near +
+         .5*distance*(AheadObstacleCost(s,c,a)+AheadObstacleCost(s,c,b)) +
          std::pow(b.k-a.k,2)/distance + .002*distance*soft_cells/samples;
 }
 static Result PlanPrepared(const Scene &, const Config &);
@@ -88,6 +122,7 @@ Result Plan(Scene indexed, const Config &c) {
     out.reason = "grid_invalid";
     return out;
   }
+  PrepareAheadWarnings(indexed,c);
   BuildGridIndex(grid);
   const double index_ms = elapsed(started);
   auto out_prepared = PlanPrepared(indexed, c);

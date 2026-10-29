@@ -34,6 +34,21 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty();Obstacle o;o.id=7;o.classification="static_obstacle";
+    o.polygon={{12.,-.5},{13.,-.5},{13.,.5},{12.,.5}};s.obstacles={o};
+    Config c;c.forward_warning_weight=8.;PrepareAheadWarnings(s,c);
+    expect(s.ahead_warnings.size()==1,"fresh observed obstacle supplies ranking hint");
+    expect(AheadObstacleCost(s,c,Pose{})>AheadObstacleCost(s,c,Pose{0.,0.,.3}),
+           "straight continuation ranks behind a direction away from the obstacle");
+    Result blocked;
+    expect(!CheckFootprint(s,c,Pose{9.,0.},blocked),
+           "warning cannot turn a measured obstacle into free space");
+    s.obstacles[0].source_age=.351;PrepareAheadWarnings(s,c);
+    expect(s.ahead_warnings.empty(),"stale observations do not provide fresh warning costs");
+    c.forward_warning_weight=0.;s.obstacles[0].source_age=0.;PrepareAheadWarnings(s,c);
+    expect(s.ahead_warnings.empty(),"zero-weight profile preserves the original ranking");
+  }
+  {
     // Four roadside obstacles preceded the actual19m barrier in the source
     // array. A verified bypass should still be proposed, not starved by order.
     auto s=empty();

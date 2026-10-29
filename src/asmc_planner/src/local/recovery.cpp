@@ -166,7 +166,8 @@ bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
           // Penalising it as nonroad steers an empty-road car towards the
           // visible sides. This neutrality is recovery-only, not free space.
         }
-      cost += .02 * std::pow(p.y - ReferenceAt(s, p.x), 2) + .1 * p.k * p.k;
+      cost += .02 * std::pow(p.y - ReferenceAt(s, p.x), 2) + .1 * p.k * p.k +
+              .4 * AheadObstacleCost(s,c,p);
       if (!s.previous.empty()) {
         auto old = std::min_element(
             s.previous.begin(), s.previous.end(), [&](auto &a, auto &b) {

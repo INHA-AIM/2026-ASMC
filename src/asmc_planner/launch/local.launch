@@ -10,6 +10,7 @@
   <arg name="run_id" default="local-preview"/>
   <arg name="journal_path" default=""/>
   <arg name="planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
+  <arg name="forward_warning_weight" default=""/>
   <arg name="speed_cap_kph" default="20"/>
   <arg name="recovery" default="true"/>
   <arg name="near_blind_assist" default="false"/>
@@ -25,6 +26,7 @@
     <!-- Algorithm profiles may choose policy values; conflicting dimensions
          remain visible to the node and are rejected rather than overwritten. -->
     <rosparam command="load" file="$(arg planner_config)"/>
+    <param if="$(eval arg('forward_warning_weight') != '')" name="forward_warning_weight" value="$(arg forward_warning_weight)" type="double"/>
     <param name="run_id" value="$(arg run_id)"/>
     <param name="journal_path" value="$(arg journal_path)"/>
     <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>

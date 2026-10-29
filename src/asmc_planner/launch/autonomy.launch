@@ -14,6 +14,7 @@
   <arg name="local_run_id" default="$(optenv ASMC_RUNTIME_SESSION_ID standalone)"/>
   <arg name="local_journal_path" default=""/>
   <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
+  <arg name="local_forward_warning_weight" default=""/>
   <include file="$(find asmc_bridge)/launch/bridge.launch">
     <arg name="transport_profile" value="$(arg transport_profile)"/>
     <arg name="cmd_ip" value="$(arg cmd_ip)"/>
@@ -33,6 +34,7 @@
     <arg name="shadow_run_id" value="$(arg local_run_id)"/>
     <arg name="shadow_journal_path" value="$(arg local_journal_path)"/>
     <arg name="local_planner_config" value="$(arg local_planner_config)"/>
+    <arg name="local_forward_warning_weight" value="$(arg local_forward_warning_weight)"/>
   </include>
   <include if="$(arg lidar_view)" file="$(find asmc_lidar)/launch/view.launch">
     <arg name="dashboard_port" value="$(arg lidar_dashboard_port)"/>
