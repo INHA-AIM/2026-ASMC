@@ -126,8 +126,14 @@ def main():
                             'shadow_run_id:='+record['run_id']],trial/'autonomy.log')
             player=None
             try:
-                # Startup imports/engine loading proceed while /clock is fixed.
-                time.sleep(8)
+                # The CPU-limited offline runtime must finish loading its map
+                # before playback; a sleeping roslaunch is not planner readiness.
+                deadline=time.monotonic()+45
+                while not dict(master.getSystemState()[0]).get('/planning/mode'):
+                    if time.monotonic()>deadline:raise RuntimeError('normal planner/mode source startup deadline')
+                    if any(child.poll() is not None for child in (camera,lidar,autonomy)):
+                        raise RuntimeError('production launch exited during startup')
+                    time.sleep(.1)
                 graph=master.getSystemState()
                 (trial/'graph-before.json').write_text(json.dumps(graph,indent=2))
                 expected={'camera':'/camera_bbox_lane_change','local':'/local_controller','localization':'/localization_controller'}[strategy]
