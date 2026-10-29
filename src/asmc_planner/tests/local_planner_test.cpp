@@ -34,6 +34,23 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty();s.speed=2.;Config c;c.speed_cap=10./3.6;c.budget_ms=100.;
+    for(int i=0;i<=77;++i)s.previous.push_back(Pose{.2*i,0.,0.,0.,.2*i});
+    auto old=Plan(s,c);
+    c.path_continuity_slack=.8;auto stable=Plan(s,c);
+    expect(old.valid && stable.valid && old.path_source!="rechecked_previous" &&
+           stable.path_source=="rechecked_previous",
+           "a feasible prior losing only one receding frame can retain navigation continuity");
+    expect(stable.path.back().s<=s.previous.back().s+1e-8,
+           "continuity never extends the old verified support");
+    s.obstacles.push_back(Obstacle{});s.obstacles.back().polygon={{6,-8},{8,-8},{8,8},{6,8}};
+    auto blocked=Plan(s,c);
+    for(const auto& p:blocked.path) {
+      Result check;expect(CheckFootprint(s,c,p,check),
+          "a retained preference cannot pass a newly observed OBB");
+    }
+  }
+  {
     auto s=empty();s.speed=1.;s.acceleration=1.;
     Config c;c.recovery=true;c.low_speed_rate_floor=.1;c.speed_cap=10./3.6;
     Result old;old.path_source="rechecked_recovery";
