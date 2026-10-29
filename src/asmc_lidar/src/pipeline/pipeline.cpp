@@ -78,6 +78,14 @@ Pipeline::Pipeline(const PipelineConfig& config)
   frame_.Configure(config_.vehicle, config_.calibration_id);
   ValidateTunnelNoise(config_.tunnel_noise);
   ValidateCameraPointRefinement(config_.camera_point_refinement);
+  ValidateShadowWall(config_.shadow_wall);
+  if(config_.shadow_wall.enabled) {
+    auto params=config_.tunnel_route.params;
+    // Use the same explicitly configured wall-removal band on approach and
+    // inside the shadow zone; ground and wall-fitting tolerances stay separate.
+    params.residual_wall_surface_enable=false;
+    entrance_wall_core_=std::make_unique<tunnel_filter::TunnelPipeline>(params);
+  }
   // Construct only when enabled; shipped YAML enables GPS-denied routing.
   if (config_.tunnel.enabled) {
     if (config_.tunnel_route.original_pipeline) tunnel_route_ = std::make_unique<TunnelRoute>(config_.tunnel_route);
@@ -133,7 +141,15 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   // MakePointCloudFromRaw is a plain copy of the PointCloud2 points; the input
   // cloud is read directly (Roi does not modify it).
   auto begin = Clock::now();
+  const auto wall_gate=ShadowWallGate(config_.shadow_wall,map_pose,entrance_wall_active_);
+  if(wall_gate.active&&previous_original_tunnel_&&entrance_wall_core_&&tunnel_route_)
+    entrance_wall_core_->CopyWallHistoryFrom(tunnel_route_->wall_core());
+  const bool seed_entry=!map_pose.valid&&entrance_wall_active_&&entrance_wall_core_&&tunnel_route_;
   const bool original_tunnel = tunnel_route_ && tunnel_route_->Select(map_pose.valid);
+  if(seed_entry&&original_tunnel)tunnel_route_->SeedWallHistory(*entrance_wall_core_);
+  if(entrance_wall_active_&&!wall_gate.active&&entrance_wall_core_)entrance_wall_core_->Reset();
+  entrance_wall_active_=wall_gate.active;
+  previous_original_tunnel_=original_tunnel;
   Roi(scan.points, roi_cloud, config_.range, config_.roi, config_.vehicle);
   if (original_tunnel) tunnel_route_->RestrictRoi(roi_cloud);
   auto end = Clock::now();
@@ -165,9 +181,28 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   std::vector<std::string> tunnel_classes;
   std::vector<LowObstacleCue> low_obstacle_cues;
   GroundPlaneSnapshot effective_ground_plane;
+  std::vector<MeasuredVehicleHistory> predicted_vehicles;
+  CloudPtr vehicle_support_sensor(new Cloud);
+  if(config_.camera_point_refinement.enabled&&config_.camera_point_refinement.vehicle_history_enabled&&scan.current_sensor_from_past_sensor) {
+    for(const auto& entry:vehicle_history_) {
+      const auto& old=entry.second;
+      const auto* previous_tracks=tracker_.LastFrame();
+      if(!previous_tracks||std::none_of(previous_tracks->begin(),previous_tracks->end(),[&](const auto& o){
+          return o.tracking.s32_Id==old.track_id&&o.tracking.s32_MissCount==0&&o.camera.str_ObjectClass=="vehicle";}))continue;
+      if(old.confirmations<5||!old.points||raw<=old.stamp_ns||raw-old.stamp_ns>200000000LL||
+          raw-old.camera_stamp_ns>static_cast<std::int64_t>(config_.camera_point_refinement.vehicle_history_max_camera_age_s*1e9))continue;
+      const auto transform=scan.current_sensor_from_past_sensor(old.stamp_ns);if(!transform||!pose_valid(*transform))continue;
+      auto predicted=old;predicted.points.reset(new Cloud);
+      for(const auto& p:*old.points) {
+        const Vec q=(*transform)*Vec(p.x,p.y,p.z);auto v=p;v.x=q.x();v.y=q.y();v.z=q.z();
+        predicted.points->push_back(v);vehicle_support_sensor->push_back(v);
+      }
+      predicted_vehicles.push_back(std::move(predicted));
+    }
+  }
   if(original_tunnel) {
     begin=Clock::now();
-    auto migrated=tunnel_route_->Process(voxeled_cloud,local,raw,config_.vehicle,scan.tunnel_camera.get(),scan.tunnel_motion.get());
+    auto migrated=tunnel_route_->Process(voxeled_cloud,local,raw,config_.vehicle,scan.tunnel_camera.get(),scan.tunnel_motion.get(),vehicle_support_sensor,config_.camera_point_refinement.vehicle_history_match_m);
     leveled_cloud=migrated.leveled;
     frame_.StoreLeveling(migrated.leveling);
     ground_cloud=migrated.filtered;
@@ -232,6 +267,30 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     timings.tunnel_ms = Ms(begin, end);
     counts.tunnel_removed_points = result.tunnel.removed_points;
   }
+  if(wall_gate.active&&entrance_wall_core_) {
+    const auto wall_begin=Clock::now();const auto& plane=ground_.CurrentPlane();
+    tunnel_filter::Plane p;p.a=plane.coefficients[0];p.b=plane.coefficients[1];
+    p.c=plane.coefficients[2];p.d=plane.coefficients[3];
+    const auto& walls=entrance_wall_core_->ProcessWallsOnly(*leveled_cloud,ground_kept_indices,
+        plane.valid,p,scan.tunnel_motion.get());
+    CloudPtr filtered(new Cloud);std::vector<int> kept;
+    for(int i:ground_kept_indices)if(walls.labels.at(i)==tunnel_filter::kKept) {
+      filtered->push_back(leveled_cloud->at(i));kept.push_back(i);
+    }
+    ground_cloud=filtered;ground_kept_indices=std::move(kept);
+    auto& report=result.tunnel;report.ran=true;report.pre_entry_wall=true;
+    report.wall_labeled=report.removed_points=walls.wall_removed;
+    report.input_points=walls.input_points;report.ground_fallback_used=walls.ground_fallback_used;
+    report.wall_left_removal_allowed=walls.walls[0].removal_allowed;
+    report.wall_right_removal_allowed=walls.walls[1].removal_allowed;
+    for(std::size_t side=0;side<2;++side)for(const auto& seg:walls.walls[side].segments) {
+      TunnelWallEvidence e;e.side=side;e.valid=seg.valid;e.allowed=walls.walls[side].removal_allowed;
+      e.plane={seg.plane.a,seg.plane.b,seg.plane.c,seg.plane.d};e.intervals=seg.intervals;
+      e.span=seg.span;e.reason=seg.reject_reason;report.wall_evidence.push_back(std::move(e));
+    }
+    report.core_ms=Ms(wall_begin,Clock::now());timings.tunnel_ms+=report.core_ms;
+    counts.tunnel_removed_points=report.removed_points;
+  }
   counts.cluster_input_points = static_cast<int>(ground_cloud->points.size());
 
   // Main Clustering (LidarProcess.cpp:242-247). It mutates ground_cloud.
@@ -246,6 +305,10 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
     effective_ground_plane=ground_.CurrentPlane();
   }
 
+  result.tunnel.wall_gate_reason=original_tunnel?"gps_denied_tunnel":wall_gate.reason;
+  result.tunnel.route_station_m=wall_gate.station_m;
+  result.tunnel.entry_distance_m=wall_gate.distance_to_entry_m;
+  result.tunnel.route_lateral_m=wall_gate.lateral_m;
   // Refine CURRENT-scan measurements before OBB fitting or tracker association.
   // Keep unclassified residuals; delete only confirmed wall support belonging
   // to a cluster from which an object was successfully extracted.
@@ -292,6 +355,35 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
           }
           refinement=std::move(continued);
         }
+      }
+    }
+  }
+  std::vector<int> measured_vehicle_ids;
+  if(!predicted_vehicles.empty()) {
+    const auto base=base_from_input(frame_.Current());
+    if(base) {
+      const Pose input_from_sensor=base->inverse()*frame_.Current().base_from_sensor;
+      for(auto& old:predicted_vehicles)for(auto& p:*old.points) {
+        const Vec q=input_from_sensor*Vec(p.x,p.y,p.z);p.x=q.x();p.y=q.y();p.z=q.z();
+      }
+      const bool had=refinement.report.applied;
+      auto continued=ContinueMeasuredVehicles(ground_cloud,had?refinement.clusters:all_cluster_indices,
+          predicted_vehicles,result.tunnel.wall_evidence,config_.camera_point_refinement,
+          had?&refinement.support:nullptr,&refinement.wall_veto_indices,&measured_vehicle_ids);
+      if(continued.report.applied) {
+        if(had)for(std::size_t i=0;i<continued.parent_clusters.size();++i) {
+          const int p=continued.parent_clusters[i];
+          if(p>=0){continued.support[i]=refinement.support[p];continued.parent_clusters[i]=refinement.parent_clusters[p];}
+        }
+        continued.removed_wall_indices.insert(continued.removed_wall_indices.end(),refinement.removed_wall_indices.begin(),refinement.removed_wall_indices.end());
+        refinement.report.decisions.insert(refinement.report.decisions.end(),continued.report.decisions.begin(),continued.report.decisions.end());
+        refinement.report.extracted_objects+=continued.report.extracted_objects;refinement.report.ms+=continued.report.ms;
+        refinement.report.removed_wall_points=continued.removed_wall_indices.size();refinement.report.applied=true;
+        refinement.report.reason="applied_with_vehicle_history";continued.report=std::move(refinement.report);
+        refinement=std::move(continued);
+      } else {
+        refinement.report.decisions.insert(refinement.report.decisions.end(),continued.report.decisions.begin(),continued.report.decisions.end());
+        measured_vehicle_ids.clear();
       }
     }
   }
@@ -342,6 +434,8 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   timings.detection_ms = Ms(begin, end);
   for(std::size_t i=0;i<object.size()&&i<camera_support.size();++i)
     object[i].detection.camera_point_support=std::move(camera_support[i]);
+  for(std::size_t i=0;i<object.size()&&i<measured_vehicle_ids.size();++i)
+    object[i].detection.measured_vehicle_track_id=measured_vehicle_ids[i];
   if(original_tunnel) {
     for(std::size_t i=0;i<object.size()&&i<low_obstacle_cues.size();++i)object[i].detection.low_obstacle_cue=low_obstacle_cues[i];
     for(std::size_t i=0;i<object.size()&&i<tunnel_classes.size();++i)if(tunnel_classes[i]!="unknown") {
@@ -371,6 +465,27 @@ ScanResult Pipeline::Process(const ScanInput& scan, const LocalState& local,
   const double dt_s = SourceDeltaSeconds(raw, previous_stamp_ns_);
   begin = Clock::now();
   tracker_.Update(object, dt_s, local, frame_);
+  if(config_.camera_point_refinement.enabled&&config_.camera_point_refinement.vehicle_history_enabled) {
+    std::map<int,MeasuredVehicleHistory> next;
+    const auto base=base_from_input(frame_.Current());
+    if(base)for(const auto& o:object) {
+      if(o.tracking.s32_MissCount!=0||o.tracking.s32_Age<20||o.detection.pcl_ClusterPoints.size()<10||o.detection.pcl_ClusterPoints.size()>2048||next.size()>=32)continue;
+      const int id=o.tracking.s32_Id;const auto previous=vehicle_history_.find(id);
+      MeasuredVehicleHistory h;if(previous!=vehicle_history_.end())h=previous->second;h.track_id=id;
+      const auto& cs=o.detection.camera_point_support;
+      const bool fresh=cs.box_index>=0&&(cs.source_class=="car"||cs.source_class=="truck"||cs.source_class=="bus")&&
+        cs.stamp_ns>0&&raw>=cs.stamp_ns&&raw-cs.stamp_ns<=150000000LL&&o.camera.str_ObjectClass=="vehicle";
+      const bool continued=o.detection.measured_vehicle_track_id==id&&h.confirmations>=5&&
+        raw-h.camera_stamp_ns<=static_cast<std::int64_t>(config_.camera_point_refinement.vehicle_history_max_camera_age_s*1e9);
+      if(!fresh&&!continued)continue;
+      if(fresh&&cs.identity!=h.camera_identity) {++h.confirmations;h.camera_stamp_ns=cs.stamp_ns;h.camera_identity=cs.identity;}
+      h.stamp_ns=raw;h.points.reset(new Cloud);
+      const Pose sensor_from_input=frame_.Current().base_from_sensor.inverse()* *base;
+      for(const auto& p:o.detection.pcl_ClusterPoints) {const Vec q=sensor_from_input*Vec(p.x,p.y,p.z);auto v=p;v.x=q.x();v.y=q.y();v.z=q.z();h.points->push_back(v);}
+      next[id]=std::move(h);
+    }
+    vehicle_history_=std::move(next);
+  }
   end = Clock::now();
   timings.tracking_ms = Ms(begin, end);
   result.dt_s = dt_s;

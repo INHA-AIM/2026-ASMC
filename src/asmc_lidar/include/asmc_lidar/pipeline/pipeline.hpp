@@ -18,6 +18,7 @@
 #include <asmc_lidar/experimental/tunnel_filter_stage.hpp>
 #include <asmc_lidar/experimental/tunnel_route.hpp>
 #include <asmc_lidar/experimental/tunnel_noise.hpp>
+#include <asmc_lidar/experimental/shadow_wall_gate.hpp>
 
 #include <memory>
 #include <string>
@@ -28,6 +29,7 @@ namespace lidar {
 namespace pipeline {
 
 struct PipelineConfig {
+  ShadowWallConfig shadow_wall;
   CameraPointRefinementConfig camera_point_refinement;
   RangeConfig range;
   RoiConfig roi;
@@ -84,6 +86,7 @@ struct ScanInput {
   std::uint64_t generation = 1;  // processing-state epoch, not a per-scan counter
   std::shared_ptr<const tunnel_filter::EgoMotion> tunnel_motion;
   std::shared_ptr<const TunnelCameraInput> tunnel_camera;  // selected by runtime, never consumed
+  std::function<std::optional<asmc::lidar::Pose>(std::int64_t)> current_sensor_from_past_sensor;
 };
 
 // When !processed only stamp_ns, previous_stamp_ns and reason are set (the
@@ -148,6 +151,7 @@ class Pipeline {
 
  private:
   PipelineConfig config_;
+  std::map<int,MeasuredVehicleHistory> vehicle_history_;
   GroundFilter ground_;
   Tracker tracker_;
   motion_classifier::MotionClassifier motion_classifier_;
@@ -159,6 +163,9 @@ class Pipeline {
   ScanFrame frame_;
   std::unique_ptr<TunnelFilterStage> tunnel_;
   std::unique_ptr<TunnelRoute> tunnel_route_;
+  std::unique_ptr<tunnel_filter::TunnelPipeline> entrance_wall_core_;
+  bool entrance_wall_active_=false;
+  bool previous_original_tunnel_=false;
   std::int64_t last_raw_ns_ = 0;
   std::int64_t previous_stamp_ns_ = 0;  // Main ts_PrevTime (0 before the first scan)
 };

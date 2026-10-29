@@ -53,6 +53,7 @@ struct TunnelRouteConfig {
 };
 struct TunnelCameraInput;
 struct TunnelCameraView {
+  std::string camera_id;
   bool common_projection=false; // M1 uses the canonical optical-axis transform
   bool calibrated = false, available = false;
   camera::Calibration calibration;
@@ -70,6 +71,9 @@ struct TunnelCameraView {
 };
 struct TunnelCameraInput : TunnelCameraView {
   std::vector<TunnelCameraView> views; // empty preserves the front rollback path
+  // Per-view causal, motion-compensated input for measured point refinement.
+  // Separate from the synchronous wall-protection views above.
+  std::vector<std::shared_ptr<const TunnelCameraInput>> refinement_views;
 };
 struct TunnelRouteOutput {
   CloudPtr leveled{new Cloud}, filtered{new Cloud}, centroids{new Cloud};
@@ -100,8 +104,11 @@ class TunnelRoute {
   TunnelRouteOutput Process(const CloudPtr& voxel, const LocalState& local,
                             std::int64_t stamp_ns, const VehicleSpec& vehicle,
                             const TunnelCameraInput* camera,
-                            const tunnel_filter::EgoMotion* motion = nullptr);
+                            const tunnel_filter::EgoMotion* motion = nullptr,
+                            const CloudPtr& measured_vehicle_support = {},float vehicle_match_m=.25f);
   const tunnel_filter::FrameResult& last() const { return core_.LastResult(); }
+  const tunnel_filter::TunnelPipeline& wall_core() const { return core_; }
+  void SeedWallHistory(const tunnel_filter::TunnelPipeline& other) { core_.CopyWallHistoryFrom(other); }
  private:
   TunnelRouteConfig config_;
   tunnel_filter::TunnelPipeline core_;

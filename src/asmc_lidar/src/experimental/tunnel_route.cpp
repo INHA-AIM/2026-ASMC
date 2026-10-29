@@ -249,7 +249,8 @@ bool TunnelRoute::InsideCurrentWalls(const TrackedObject& object,float margin) c
   return true;
 }
 TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& local,std::int64_t stamp,
-                                       const VehicleSpec& vehicle,const TunnelCameraInput* camera,const tunnel_filter::EgoMotion* integrated_motion) {
+                                       const VehicleSpec& vehicle,const TunnelCameraInput* camera,const tunnel_filter::EgoMotion* integrated_motion,
+                                       const CloudPtr& measured_vehicle_support,float vehicle_match_m) {
   if(!active_||!voxel)throw std::invalid_argument("inactive/null tunnel route");
   tunnel_filter::EgoMotion motion;
   if(!config_.integrated_motion && anchor_valid_&&local.st_IMU.b_ImuReady) {
@@ -292,6 +293,13 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   }
   const auto protection_start=std::chrono::steady_clock::now();
   Protection(*voxel,vehicle,protection_camera,config_.protection,protect,ambiguous);
+  if(measured_vehicle_support&&!measured_vehicle_support->empty()) {
+    pcl::search::KdTree<pcl::PointXYZI> tree;tree.setInputCloud(measured_vehicle_support);
+    std::vector<int> near(1);std::vector<float> distance(1);
+    for(std::size_t i=0;i<voxel->size();++i)
+      if(tree.nearestKSearch(voxel->at(i),1,near,distance)==1&&distance[0]<=vehicle_match_m*vehicle_match_m)
+        protect[i]=tunnel_filter::kProtectCar;
+  }
   const double protection_ms=std::chrono::duration<double,std::milli>(
     std::chrono::steady_clock::now()-protection_start).count();
   const bool available=config_.protection.enabled&&protection_camera&&

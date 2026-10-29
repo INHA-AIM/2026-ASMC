@@ -1,8 +1,12 @@
 #include <Lidar/TunnelFilter/TunnelFilterCore.hpp>
+#include <asmc_lidar/experimental/shadow_wall_gate.hpp>
 
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <chrono>
+#include <filesystem>
+#include <yaml-cpp/yaml.h>
 
 using namespace tunnel_filter;
 
@@ -461,6 +465,101 @@ TEST(TunnelFilterWall, CarBesideWallIsNotAbsorbed) {
     }
     ASSERT_GT(car_points, 0);
     EXPECT_EQ(car_points, car_kept);
+}
+
+TEST(ShadowWallGate, ArmsOnlyReviewedForwardRouteWindowAndUsesExitHysteresis) {
+    using namespace asmc::lidar;using namespace asmc::lidar::pipeline;
+    ShadowWallConfig c;c.enabled=true;c.entry_m=100;c.exit_m=200;c.route={{{0,0,0}},{{300,300,0}}};
+    ValidateShadowWall(c);PoseSelection p;p.valid=true;
+    p.map_from_base.translation().x()=69;EXPECT_FALSE(ShadowWallGate(c,p,false).active);
+    p.map_from_base.translation().x()=70;EXPECT_TRUE(ShadowWallGate(c,p,false).active);
+    p.map_from_base.translation().x()=100;EXPECT_TRUE(ShadowWallGate(c,p,false).active);
+    p.map_from_base.translation().y()=7;EXPECT_FALSE(ShadowWallGate(c,p,false).active);
+    p.map_from_base.translation().y()=0;
+    p.map_from_base.linear()=Eigen::AngleAxisd(3.141592653589793,Eigen::Vector3d::UnitZ()).toRotationMatrix();
+    EXPECT_FALSE(ShadowWallGate(c,p,false).active);
+    p.map_from_base.linear().setIdentity();p.map_from_base.translation().x()=212;
+    EXPECT_FALSE(ShadowWallGate(c,p,false).active);EXPECT_TRUE(ShadowWallGate(c,p,true).active);
+    p.map_from_base.translation().x()=214;EXPECT_FALSE(ShadowWallGate(c,p,true).active);
+    p.valid=false;EXPECT_FALSE(ShadowWallGate(c,p,true).active);
+    c.route[1][0]=0;EXPECT_THROW(ValidateShadowWall(c),std::invalid_argument);
+}
+
+TEST(ShadowWallGate, OfficialProfileMatchesEntranceAndMeasuresLightweightGate) {
+    using namespace asmc::lidar;using namespace asmc::lidar::pipeline;
+    const auto path=std::filesystem::path(__FILE__).parent_path().parent_path().parent_path()/"config/shadow_wall_gate.yaml";
+    const auto doc=YAML::LoadFile(path.string());ShadowWallConfig c;c.enabled=true;
+    c.entry_m=doc["entry_m"].as<double>();c.exit_m=doc["exit_m"].as<double>();
+    for(const auto& row:doc["route"])c.route.push_back(row.as<std::array<double,3>>());ValidateShadowWall(c);
+    PoseSelection p;p.valid=true;p.map_from_base.translation()<<33.951933,-484.370651,28.65246;
+    p.map_from_base.linear()=Eigen::AngleAxisd(-2.524,Eigen::Vector3d::UnitZ()).toRotationMatrix();
+    const auto near=ShadowWallGate(c,p,false);ASSERT_TRUE(near.active);EXPECT_NEAR(5.457884,near.distance_to_entry_m,.02);
+    volatile int active=0;const auto start=std::chrono::steady_clock::now();
+    for(int i=0;i<10000;++i){p.map_from_base.translation().x()+=(i%2?1:-1)*1e-6;active+=ShadowWallGate(c,p,false).active;}
+    const auto middle=std::chrono::steady_clock::now();p.map_from_base.translation().setZero();
+    for(int i=0;i<10000;++i){p.map_from_base.translation().x()+=(i%2?1:-1)*1e-6;active+=ShadowWallGate(c,p,false).active;}
+    const auto end=std::chrono::steady_clock::now();EXPECT_EQ(10000,active);
+    std::cout<<"GATE_MEAN_US_NEAR="<<std::chrono::duration<double,std::micro>(middle-start).count()/10000
+             <<" GATE_MEAN_US_FAR="<<std::chrono::duration<double,std::micro>(end-middle).count()/10000<<std::endl;
+}
+
+TEST(TunnelFilterWall, EntrancePassChangesOnlyConfirmedWallPoints) {
+    Params params=TestParams();params.wall_remove_distance_m=.15f;
+    TunnelPipeline pipeline(params);pcl::PointCloud<pcl::PointXYZI> cloud;
+    AddWall(&cloud,6.f,-8.f,40.f);const auto car_begin=cloud.size();
+    AddBox(&cloud,15.f,19.6f,3.2f,5.f,kGroundZ+.3f,kGroundZ+1.5f);
+    cloud.push_back(MakePoint(12,0,5)); // above tunnel ceiling: common path owns it
+    cloud.push_back(MakePoint(14,0,kGroundZ+.04f)); // common ground filter owns it
+    cloud.push_back(MakePoint(10,5.8f,0)); // outside the 15cm wall surface
+    std::vector<int> kept;for(std::size_t i=0;i<cloud.size();++i)kept.push_back(i);
+    Plane ground;ground.c=1;ground.d=-kGroundZ;
+    for(int f=0;f<3;++f)pipeline.ProcessWallsOnly(cloud,kept,true,ground);
+    const auto& r=pipeline.LastResult();ASSERT_TRUE(r.walls[0].removal_allowed);
+    EXPECT_GT(r.wall_removed,300);EXPECT_EQ(0,r.ground_removed);EXPECT_EQ(0,r.ceiling_removed);
+    for(std::size_t i=car_begin;i<cloud.size();++i)EXPECT_EQ(kKept,r.labels[i]);
+    TunnelPipeline next(params);next.CopyWallHistoryFrom(pipeline);
+    EXPECT_TRUE(next.ProcessWallsOnly(cloud,kept,true,ground).walls[0].removal_allowed);
+    const auto& bad=pipeline.ProcessWallsOnly(cloud,kept,false,ground);
+    EXPECT_EQ(0,bad.wall_removed);EXPECT_EQ(kept.size(),bad.kept_indices.size());
+}
+
+TEST(TunnelFilterWall, TwentyCentimeterBandDoesNotExpandGroundOrEraseOutsideBand) {
+    Params params=TestParams();params.wall_geometry_precedence=true;
+    params.wall_remove_distance_m=.20f;params.wall_fit_distance_m=.15f;
+    TunnelPipeline pipeline(params);pcl::PointCloud<pcl::PointXYZI> cloud;
+    AddGround(&cloud);AddWall(&cloud,6.f,-8.f,40.f);
+    const auto within=cloud.size();cloud.push_back(MakePoint(21,5.82f,kGroundZ+.9f));
+    const auto outside=cloud.size();cloud.push_back(MakePoint(21,5.78f,kGroundZ+.9f));
+    std::vector<std::uint8_t> protect(cloud.size(),kProtectNone);
+    protect[within]=protect[outside]=kProtectCar;
+    for(int f=0;f<3;++f)pipeline.Process(cloud,0,0,&protect,nullptr,true);
+    const auto& r=pipeline.LastResult();ASSERT_TRUE(r.walls[0].removal_allowed);
+    EXPECT_EQ(kWall,r.labels[within]);EXPECT_EQ(kKept,r.labels[outside]);
+}
+
+TEST(TunnelFilterWall, ConfirmedSurfaceOverridesBoxMaskButPreservesForegroundCar) {
+    for (bool camera_available : {false,true}) {
+        Params params=TestParams();params.wall_geometry_precedence=true;
+        TunnelPipeline pipeline(params);
+        pcl::PointCloud<pcl::PointXYZI> cloud;
+        AddGround(&cloud);AddWall(&cloud,6.f,-8.f,40.f);
+        const auto car_begin=cloud.size();
+        AddBox(&cloud,15.f,19.6f,3.2f,5.f,kGroundZ+.3f,kGroundZ+1.5f);
+        std::vector<std::uint8_t> protect(cloud.size(),kProtectNone),ambiguous(cloud.size(),0);
+        for(std::size_t i=0;i<cloud.size();++i) {
+            // Simulate a YOLO rectangle containing both car and wall.
+            if((cloud[i].x>20.f&&cloud[i].x<22.f)||i>=car_begin)protect[i]=kProtectCar;
+            ambiguous[i]=!camera_available;
+        }
+        for(int f=0;f<3;++f)pipeline.Process(cloud,0,0,&protect,&ambiguous,camera_available);
+        const auto& r=pipeline.LastResult();ASSERT_TRUE(r.walls[0].removal_allowed);
+        int protected_wall=0;
+        for(std::size_t i=0;i<car_begin;++i)if(cloud[i].y==6.f&&protect[i]==kProtectCar) {
+            ++protected_wall;EXPECT_EQ(kWall,r.labels[i]);
+        }
+        EXPECT_GT(protected_wall,0);
+        for(std::size_t i=car_begin;i<cloud.size();++i)EXPECT_EQ(kKept,r.labels[i]);
+    }
 }
 
 TEST(TunnelFilterObb, CeilingAndWallRulesRespectProtection) {

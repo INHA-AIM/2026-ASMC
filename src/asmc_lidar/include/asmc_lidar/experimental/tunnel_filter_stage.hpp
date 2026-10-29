@@ -32,6 +32,9 @@ struct TunnelWallEvidence {
   std::string reason;
 };
 struct TunnelFilterStageReport {
+  bool pre_entry_wall=false;
+  double route_station_m=-1,entry_distance_m=-1,route_lateral_m=-1;
+  std::string wall_gate_reason="disabled";
   int low_obstacle_verified=0,low_obstacle_rescued=0,low_obstacle_rescued_points=0;
   std::vector<std::pair<std::array<float,7>,std::string>> low_obstacle_decisions;
   std::vector<TunnelWallEvidence> wall_evidence;

@@ -24,6 +24,7 @@ def configured(base, profile="integrated", tuning="keep"):
         detached_wall_cleanup=wall, steel_minimum_confidence=0.5,
         steel_maximum_gap_m=2.8, steel_minimum_ownership=0.8)
     tunnel = result["experimental"]["tunnel_filter"]
+    tunnel["wall_geometry_precedence"] = wall
     tunnel["low_obstacle_evidence"] = profile != "disabled"
     tunnel.setdefault("protection", {})["motion_compensated_fallback"] = wall
     if tuning == "low-obstacle":

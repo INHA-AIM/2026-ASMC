@@ -2,6 +2,7 @@
 #include <asmc_lidar/experimental/tunnel_route.hpp>
 #include <asmc_lidar/geometry/projection.hpp>
 #include <pcl/search/kdtree.h>
+#include <pcl/common/point_tests.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <algorithm>
 #include <chrono>
@@ -250,6 +251,9 @@ CameraPointRefinementResult ContinueMeasuredSteelFragments(
 }
 
 void ValidateCameraPointRefinement(const CameraPointRefinementConfig& c) {
+  if(!std::isfinite(c.vehicle_history_max_camera_age_s)||c.vehicle_history_max_camera_age_s<=0||c.vehicle_history_max_camera_age_s>30||
+      !std::isfinite(c.vehicle_history_match_m)||c.vehicle_history_match_m<.1f||c.vehicle_history_match_m>.4f)
+    throw std::invalid_argument("invalid measured vehicle history parameters");
   if(!std::isfinite(c.steel_minimum_confidence)||c.steel_minimum_confidence<.4f||c.steel_minimum_confidence>1||
      !std::isfinite(c.steel_maximum_gap_m)||c.steel_maximum_gap_m<1||c.steel_maximum_gap_m>3||
      !std::isfinite(c.steel_minimum_ownership)||c.steel_minimum_ownership<.8f||c.steel_minimum_ownership>1||
@@ -268,7 +272,7 @@ void ValidateCameraPointRefinement(const CameraPointRefinementConfig& c) {
     throw std::invalid_argument("invalid camera point refinement parameters");
 }
 
-CameraPointRefinementResult RefineCameraPoints(const CloudPtr& cloud,
+static CameraPointRefinementResult RefineCameraPointsSingle(const CloudPtr& cloud,
     const std::vector<pcl::PointIndices>& clusters,const asmc::lidar::Context& context,
     const TunnelCameraInput* input,const std::vector<TunnelWallEvidence>& walls,
     const CameraPointRefinementConfig& cfg) {
@@ -332,13 +336,17 @@ CameraPointRefinementResult RefineCameraPoints(const CloudPtr& cloud,
     const bool steel=cfg.steel_fragment_merge&&name=="steel_barricade";
     if(!general_current&&!steel)continue;
     const float minimum_confidence=steel?cfg.steel_minimum_confidence:cfg.minimum_confidence;
-    if(!SupportedClass(name)||!box.confidence_valid||!std::isfinite(box.confidence)||box.confidence<minimum_confidence)continue;
+    if(!SupportedClass(name)||!box.confidence_valid||!std::isfinite(box.confidence)||box.confidence<minimum_confidence) {
+      CameraPointDecision d;d.box=b;d.camera_id=cam->camera_id;d.source_class=name;
+      d.reason=!SupportedClass(name)?"unsupported_class":"below_confidence";
+      report.decisions.push_back(std::move(d));continue;
+    }
     const float w=box.xmax-box.xmin,h=box.ymax-box.ymin;
     if(!std::isfinite(w)||!std::isfinite(h)||w<=0||h<=0||box.xmin<0||box.ymin<0||
        box.xmax>cam->image_width||box.ymax>cam->image_height)continue;
     const bool vehicle=name=="car"||name=="truck"||name=="bus";
     if(vehicle&&w>=cam->image_width*.6f&&.5f*(box.ymin+box.ymax)>=cam->image_height*.85f&&box.ymax>=cam->image_height*.95f)continue;
-    CameraPointDecision decision;decision.box=b;decision.source_class=name;
+    CameraPointDecision decision;decision.box=b;decision.camera_id=cam->camera_id;decision.source_class=name;
     const auto di=report.decisions.size();report.decisions.push_back(decision);
     auto& d=report.decisions.back();
     std::vector<int> indices;std::vector<float> depths;
@@ -504,6 +512,7 @@ CameraPointRefinementResult RefineCameraPoints(const CloudPtr& cloud,
     if(d.reason=="extracted"||d.reason=="steel_fragments_joined"||d.reason=="overlapping_box_conflict")resolved[d.box]=true;
   for(std::size_t b=0;b<box_membership.size();++b)if(!resolved[b])
     for(int i:box_membership[b])wall_veto[i]=true;
+  for(std::size_t i=0;i<wall_veto.size();++i)if(wall_veto[i])out.wall_veto_indices.push_back(i);
   // Wall authority is independent of successful object extraction. Only touch
   // original parents supported by current qualified boxes; unresolved boxes
   // veto deletion inside their rectangles. Unrelated clusters remain byte-for-byte.
@@ -566,5 +575,185 @@ CameraPointRefinementResult RefineCameraPoints(const CloudPtr& cloud,
   }
   report.applied=true;report.removed_wall_points=out.removed_wall_indices.size();
   return finish(report.extracted_objects?"applied":"confirmed_wall_cleanup_only");
+}
+
+CameraPointRefinementResult RefineCameraPoints(const CloudPtr& cloud,
+    const std::vector<pcl::PointIndices>& clusters,const asmc::lidar::Context& context,
+    const TunnelCameraInput* input,const std::vector<TunnelWallEvidence>& walls,
+    const CameraPointRefinementConfig& cfg) {
+  if(!input||input->refinement_views.empty())return RefineCameraPointsSingle(cloud,clusters,context,input,walls,cfg);
+  CameraPointRefinementResult out;auto& report=out.report;
+  report.enabled=cfg.enabled||cfg.steel_fragment_merge;
+  const auto start=std::chrono::steady_clock::now();
+  auto finish=[&](const std::string& reason) {
+    report.reason=reason;report.ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
+    return std::move(out);
+  };
+  if(!report.enabled)return finish("disabled");
+  if(!cloud)return finish("no_cloud");
+  // Every camera proposes a plan against the SAME measured cloud. Sequential
+  // mutation would let the first camera remove evidence needed by another.
+  struct Plan {const TunnelCameraInput* camera;CameraPointRefinementResult result;std::size_t decision_offset;};
+  std::vector<Plan> plans;
+  std::vector<bool> veto(cloud->size(),false),remove(cloud->size(),false);
+  for(const auto& camera:input->refinement_views) {
+    if(!camera)continue;
+    Plan plan{camera.get(),RefineCameraPointsSingle(cloud,clusters,context,camera.get(),walls,cfg),report.decisions.size()};
+    const auto& r=plan.result.report;
+    CameraPointViewReport view;view.camera_id=camera->camera_id;view.reason=r.reason;
+    view.image_stamp_ns=r.image_stamp_ns;view.projection=r.projection;view.projected_points=r.projected_points;
+    report.views.push_back(std::move(view));report.projected_points+=r.projected_points;
+    if(camera->camera_id=="camera_front"){report.image_stamp_ns=r.image_stamp_ns;report.projection=r.projection;}
+    report.decisions.insert(report.decisions.end(),r.decisions.begin(),r.decisions.end());
+    for(int i:plan.result.wall_veto_indices)veto.at(i)=true;
+    if(r.applied)for(int i:plan.result.removed_wall_indices)remove.at(i)=true;
+    plans.push_back(std::move(plan));
+  }
+  struct Proposal {std::size_t view,cluster,decision;float confidence;};
+  std::vector<Proposal> proposals;
+  for(std::size_t v=0;v<plans.size();++v) {
+    const auto& plan=plans[v];if(!plan.result.report.applied)continue;
+    for(std::size_t c=0;c<plan.result.clusters.size();++c) {
+      const auto& support=plan.result.support[c];if(support.box_index<0)continue;
+      for(std::size_t d=0;d<plan.result.report.decisions.size();++d) {
+        const auto& decision=plan.result.report.decisions[d];
+        if(decision.box==support.box_index&&(decision.reason=="extracted"||decision.reason=="steel_fragments_joined")) {
+          proposals.push_back({v,c,plan.decision_offset+d,plan.camera->boxes.at(support.box_index).confidence});break;
+        }
+      }
+    }
+  }
+  std::stable_sort(proposals.begin(),proposals.end(),[](const auto& a,const auto& b){return a.confidence>b.confidence;});
+  std::vector<int> owner(cloud->size(),-1),parent(cloud->size(),-1);
+  std::vector<bool> touched(clusters.size(),false);
+  for(std::size_t c=0;c<clusters.size();++c)for(int i:clusters[c].indices)parent.at(i)=c;
+  // Even a duplicate proposal that loses cross-view ownership is measured
+  // foreground evidence; another view cannot erase its unshared tail as wall.
+  for(const auto& proposal:proposals)
+    for(int i:plans[proposal.view].result.clusters[proposal.cluster].indices)veto.at(i)=true;
+  for(std::size_t i=0;i<veto.size();++i)if(veto[i])out.wall_veto_indices.push_back(i);
+  for(const auto& proposal:proposals) {
+    const auto& plan=plans[proposal.view];const auto& points=plan.result.clusters[proposal.cluster];
+    auto& decision=report.decisions[proposal.decision];
+    if(std::any_of(points.indices.begin(),points.indices.end(),[&](int i){return owner.at(i)>=0;})) {
+      decision.reason="cross_view_overlap_conflict";continue;
+    }
+    const auto next=out.clusters.size();
+    for(int i:points.indices){owner.at(i)=next;if(parent.at(i)>=0)touched[parent[i]]=true;}
+    out.clusters.push_back(points);out.parent_clusters.push_back(plan.result.parent_clusters[proposal.cluster]);
+    out.support.push_back(plan.result.support[proposal.cluster]);
+    ++report.extracted_objects;++report.views[proposal.view].extracted_objects;report.views[proposal.view].applied=true;
+  }
+  // A point claimed as an object by ANY view or inside an unresolved qualified
+  // box cannot be deleted by a different camera's wall plan.
+  for(std::size_t i=0;i<remove.size();++i) {
+    remove[i]=remove[i]&&!veto[i]&&owner[i]<0;
+    if(remove[i]) {
+      out.removed_wall_indices.push_back(i);if(parent[i]>=0)touched[parent[i]]=true;
+      for(std::size_t v=0;v<plans.size();++v) {
+        const auto& indices=plans[v].result.removed_wall_indices;
+        if(std::find(indices.begin(),indices.end(),i)!=indices.end()) {
+          ++report.views[v].removed_wall_points;report.views[v].applied=true;
+        }
+      }
+    }
+  }
+  if(!report.extracted_objects&&out.removed_wall_indices.empty())return finish("no_unambiguous_object");
+  for(std::size_t c=0;c<clusters.size();++c) {
+    if(!touched[c]){out.clusters.push_back(clusters[c]);out.parent_clusters.push_back(c);out.support.emplace_back();continue;}
+    std::vector<int> residual;
+    for(int i:clusters[c].indices)if(owner.at(i)<0&&!remove.at(i))residual.push_back(i);
+    for(auto& part:Components(cloud,residual,cfg.maximum_connection_m,3)) {
+      out.clusters.push_back(std::move(part));out.parent_clusters.push_back(-2);out.support.emplace_back();
+    }
+  }
+  // Commit all views as one transaction. A reset of any participating image
+  // invalidates its veto/ownership evidence as well as its extracted objects.
+  for(const auto& plan:plans)if(plan.result.report.image_stamp_ns>0&&
+      (!plan.camera->still_current||!plan.camera->still_current())) {
+    out.clusters.clear();out.parent_clusters.clear();out.support.clear();out.removed_wall_indices.clear();
+    report.extracted_objects=0;for(auto& view:report.views){view.applied=false;view.extracted_objects=0;view.removed_wall_points=0;}
+    return finish("camera_changed_during_refinement");
+  }
+  report.applied=true;report.removed_wall_points=out.removed_wall_indices.size();
+  return finish(report.extracted_objects?"applied":"confirmed_wall_cleanup_only");
+}
+
+CameraPointRefinementResult ContinueMeasuredVehicles(const CloudPtr& cloud,
+    const std::vector<pcl::PointIndices>& clusters,const std::vector<MeasuredVehicleHistory>& history,
+    const std::vector<TunnelWallEvidence>& walls,const CameraPointRefinementConfig& cfg,
+    const std::vector<CameraPointSupport>* current_support,const std::vector<int>* wall_veto,
+    std::vector<int>* track_ids) {
+  CameraPointRefinementResult out;auto& report=out.report;report.enabled=cfg.enabled&&cfg.vehicle_history_enabled;
+  const auto start=std::chrono::steady_clock::now();
+  auto finish=[&](const char* reason){report.reason=reason;report.ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();return std::move(out);};
+  if(track_ids)track_ids->clear();
+  if(!report.enabled||!cloud||!track_ids||history.size()>32)return finish("vehicle_history_unavailable");
+  std::vector<int> parent(cloud->size(),-1),owner(cloud->size(),-1);
+  std::vector<bool> blocked(cloud->size(),false),veto(cloud->size(),false),touched(clusters.size(),false);
+  if(wall_veto)for(int i:*wall_veto)veto.at(i)=true;
+  for(std::size_t c=0;c<clusters.size();++c)for(int i:clusters[c].indices) {
+    parent.at(i)=c;if(current_support&&c<current_support->size()&&current_support->at(c).box_index>=0)blocked.at(i)=true;
+  }
+  struct Proposal {int id;std::vector<int> points;};std::vector<Proposal> proposals;
+  std::vector<int> fresh_track_ids(clusters.size(),-1);
+  for(const auto& old:history) {
+    if(old.track_id<0||old.confirmations<5||!old.points||old.points->size()<10||old.points->size()>2048)continue;
+    pcl::search::KdTree<pcl::PointXYZI> tree;tree.setInputCloud(old.points);
+    Proposal proposal{old.track_id,{}};std::vector<bool> matched(old.points->size(),false);
+    std::vector<int> near(1);std::vector<float> distance(1);std::map<int,int> fresh_matches;
+    float xmin=INFINITY,xmax=-INFINITY,ymin=INFINITY,ymax=-INFINITY,zmin=INFINITY,zmax=-INFINITY;
+    for(std::size_t i=0;i<cloud->size();++i) {
+      const auto& p=cloud->at(i);
+      if(!pcl::isFinite(p)||OnWall(p,walls,cfg.wall_band_m)||tree.nearestKSearch(p,1,near,distance)!=1||distance[0]>cfg.vehicle_history_match_m*cfg.vehicle_history_match_m)continue;
+      if(blocked[i]){++fresh_matches[parent[i]];matched[near[0]]=true;continue;}
+      proposal.points.push_back(i);matched[near[0]]=true;
+      xmin=std::min(xmin,p.x);xmax=std::max(xmax,p.x);ymin=std::min(ymin,p.y);ymax=std::max(ymax,p.y);zmin=std::min(zmin,p.z);zmax=std::max(zmax,p.z);
+    }
+    CameraPointDecision d;d.camera_id="lidar_history";d.box=old.track_id;d.source_class="car";
+    d.input_points=proposal.points.size();
+    const auto covered=static_cast<std::size_t>(std::count(matched.begin(),matched.end(),true));
+    if(!fresh_matches.empty()) {
+      const auto best=std::max_element(fresh_matches.begin(),fresh_matches.end(),[](const auto& a,const auto& b){return a.second<b.second;});
+      const auto& current=current_support->at(best->first).source_class;
+      if(fresh_matches.size()==1&&best->second>=10&&covered>=std::max<std::size_t>(5,old.points->size()*15/100)&&
+          (current=="car"||current=="truck"||current=="bus")) {
+        int& id=fresh_track_ids[best->first];id=id==-1?old.track_id:-2;
+        d.reason="vehicle_history_current_camera_confirmed";d.object_points=best->second;
+      } else d.reason="vehicle_history_current_camera_ownership";
+    }
+    else if(proposal.points.size()<10||covered<std::max<std::size_t>(5,old.points->size()*15/100))d.reason="vehicle_history_insufficient_measured_support";
+    else if(std::hypot(xmax-xmin,ymax-ymin)<.4f||std::hypot(xmax-xmin,ymax-ymin)>10.f||zmax-zmin<.15f||zmax-zmin>3.5f)d.reason="vehicle_history_shape_rejected";
+    else {d.reason="vehicle_history_candidate";proposals.push_back(std::move(proposal));}
+    report.decisions.push_back(std::move(d));
+  }
+  std::vector<int> votes(cloud->size(),0);for(const auto& p:proposals)for(int i:p.points)++votes[i];
+  for(const auto& p:proposals) {
+    auto decision=std::find_if(report.decisions.begin(),report.decisions.end(),[&](const auto& d){return d.box==p.id;});
+    if(std::any_of(p.points.begin(),p.points.end(),[&](int i){return votes[i]>1;})) {
+      if(decision!=report.decisions.end())decision->reason="vehicle_history_competing_tracks";
+      continue;
+    }
+    pcl::PointIndices selected;selected.indices=p.points;
+    const int next=out.clusters.size();for(int i:p.points){owner[i]=next;if(parent[i]>=0)touched[parent[i]]=true;}
+    out.clusters.push_back(std::move(selected));out.parent_clusters.push_back(-1);out.support.emplace_back();track_ids->push_back(p.id);
+    if(decision!=report.decisions.end()){decision->reason="vehicle_measured_continuation";decision->object_points=p.points.size();}
+    ++report.extracted_objects;
+  }
+  const bool fresh_associated=std::any_of(fresh_track_ids.begin(),fresh_track_ids.end(),[](int id){return id>=0;});
+  if(!report.extracted_objects&&!fresh_associated)return finish("no_verified_vehicle_history");
+  for(std::size_t c=0;c<clusters.size();++c) {
+    if(!touched[c]){out.clusters.push_back(clusters[c]);out.parent_clusters.push_back(c);out.support.emplace_back();track_ids->push_back(fresh_track_ids[c]>=0?fresh_track_ids[c]:-1);continue;}
+    std::vector<int> residual;
+    for(int i:clusters[c].indices)if(owner[i]<0) {
+      if(!veto[i]&&OnWall(cloud->at(i),walls,cfg.wall_band_m))out.removed_wall_indices.push_back(i);
+      else residual.push_back(i);
+    }
+    for(auto& part:Components(cloud,residual,cfg.maximum_connection_m,3)) {
+      out.clusters.push_back(std::move(part));out.parent_clusters.push_back(-2);out.support.emplace_back();track_ids->push_back(-1);
+    }
+  }
+  report.applied=true;report.removed_wall_points=out.removed_wall_indices.size();
+  return finish("vehicle_measured_continuation");
 }
 }

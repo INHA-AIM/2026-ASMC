@@ -423,3 +423,116 @@ TEST(CameraPointRefinementV4, DetachedCleanupCannotEraseNearOrUnconfirmedWall) {
   auto r=f.Run({w});EXPECT_EQ(0,r.report.removed_wall_points);
   w.allowed=false;r=f.Run({w});EXPECT_EQ(0,r.report.removed_wall_points);
 }
+
+TEST(CameraPointRefinementMultiView, LeftAndRightUseTheirOwnExtrinsics) {
+  for(int sign:{-1,1}) {
+    Fixture f;f.Surface(10);f.OneCluster();
+    for(auto& p:*f.cloud){const float x=p.x;p.x=-sign*p.y;p.y=sign*x;}
+    auto front=std::make_shared<TunnelCameraInput>(f.cam);front->camera_id="camera_front";
+    auto side=std::make_shared<TunnelCameraInput>(f.cam);side->camera_id=sign>0?"camera_left":"camera_right";
+    side->calibration.base_from_camera.linear()=rpy(0,0,sign*1.5707963267948966);
+    f.cam.refinement_views={front,side};
+    const auto r=f.Run();ASSERT_TRUE(r.report.applied);ASSERT_EQ(1,r.report.extracted_objects);
+    ASSERT_EQ(2u,r.report.views.size());EXPECT_EQ(0,r.report.views[0].extracted_objects);
+    EXPECT_EQ(1,r.report.views[1].extracted_objects);EXPECT_EQ(f.cloud->size(),r.clusters.front().indices.size());
+    ASSERT_FALSE(r.report.decisions.empty());EXPECT_EQ(side->camera_id,r.report.decisions.back().camera_id);
+  }
+}
+TEST(CameraPointRefinementMultiView, OverlapIsResolvedOnceAndResidualsArePreserved) {
+  Fixture f;f.Surface(10);f.Surface(20);f.OneCluster();
+  auto front=std::make_shared<TunnelCameraInput>(f.cam);front->camera_id="camera_front";
+  auto left=std::make_shared<TunnelCameraInput>(f.cam);left->camera_id="camera_left";left->boxes[0].confidence=.99f;
+  f.cam.refinement_views={front,left};const auto r=f.Run();ASSERT_TRUE(r.report.applied);
+  EXPECT_EQ(1,r.report.extracted_objects);EXPECT_EQ(0,r.report.views[0].extracted_objects);EXPECT_EQ(1,r.report.views[1].extracted_objects);
+  std::set<int> all;for(const auto& c:r.clusters)for(int i:c.indices)EXPECT_TRUE(all.insert(i).second);
+  EXPECT_EQ(f.cloud->size(),all.size());EXPECT_EQ("cross_view_overlap_conflict",r.report.decisions[0].reason);
+}
+TEST(CameraPointRefinementMultiView, UnresolvedOtherViewVetoesWallDeletion) {
+  Fixture f;f.cfg.detached_wall_cleanup=true;f.Surface(10);const int first=f.cloud->size();
+  f.Surface(20,3,3,0,2);pcl::PointIndices a,b;
+  for(int i=0;i<int(f.cloud->size());++i)(i<first?a:b).indices.push_back(i);f.clusters={a,b};
+  auto front=std::make_shared<TunnelCameraInput>(f.cam);front->camera_id="camera_front";
+  auto left=std::make_shared<TunnelCameraInput>(f.cam);left->camera_id="camera_left";
+  left->boxes[0].xmin=84;left->boxes[0].xmax=86;left->boxes[0].ymin=88;left->boxes[0].ymax=102;
+  left->boxes[0].source_class_name="person";
+  f.cam.refinement_views={front,left};
+  TunnelWallEvidence w;w.valid=w.allowed=true;w.plane={0,-1,0,3};w.intervals={{5,25}};
+  const auto r=f.Run({w});ASSERT_TRUE(r.report.applied);EXPECT_EQ(1,r.report.extracted_objects);
+  EXPECT_EQ(0,r.report.removed_wall_points);
+}
+TEST(CameraPointRefinementMultiView, StaleSideAndLowConfidenceAreReportedWithoutInventingObjects) {
+  Fixture f;f.Surface(10);f.OneCluster();
+  auto front=std::make_shared<TunnelCameraInput>(f.cam);front->camera_id="camera_front";front->boxes[0].confidence=.65f;
+  auto left=std::make_shared<TunnelCameraInput>(f.cam);left->camera_id="camera_left";
+  left->stamp_ns-=200000000;left->motion_compensated=true;
+  f.cam.refinement_views={front,left};const auto r=f.Run();EXPECT_FALSE(r.report.applied);
+  ASSERT_EQ(1u,r.report.decisions.size());EXPECT_EQ("below_confidence",r.report.decisions[0].reason);
+  EXPECT_EQ("no_current_synchronized_camera",r.report.views[1].reason);
+}
+TEST(CameraPointRefinementMultiView, ResetOfAnyParticipatingViewAbortsCombinedPlan) {
+  Fixture f;f.Surface(10);f.OneCluster();
+  auto front=std::make_shared<TunnelCameraInput>(f.cam);front->camera_id="camera_front";
+  auto left=std::make_shared<TunnelCameraInput>(f.cam);left->camera_id="camera_left";int checks=0;
+  left->still_current=[&](){return ++checks<=2;};
+  f.cam.refinement_views={front,left};const auto r=f.Run();EXPECT_FALSE(r.report.applied);
+  EXPECT_EQ("camera_changed_during_refinement",r.report.reason);EXPECT_TRUE(r.clusters.empty());
+  EXPECT_TRUE(r.removed_wall_indices.empty());EXPECT_EQ(0,r.report.extracted_objects);
+}
+
+TEST(MeasuredVehicleContinuation, SplitsCurrentVehicleFromMergedBackgroundWithoutReusingOldPoints) {
+  Fixture f;f.cfg.vehicle_history_enabled=true;f.Surface(10);const int vehicle=f.cloud->size();
+  MeasuredVehicleHistory h;h.track_id=42;h.confirmations=5;h.points.reset(new Cloud(*f.cloud));
+  f.Surface(20);f.OneCluster();std::vector<int> ids;
+  const auto r=ContinueMeasuredVehicles(f.cloud,f.clusters,{h},{},f.cfg,nullptr,nullptr,&ids);
+  ASSERT_TRUE(r.report.applied);ASSERT_EQ(1,r.report.extracted_objects);ASSERT_EQ(42,ids.front());
+  EXPECT_EQ(vehicle,r.clusters.front().indices.size());EXPECT_EQ(-1,r.support.front().box_index);
+  std::set<int> all;for(const auto& c:r.clusters)for(int i:c.indices)EXPECT_TRUE(all.insert(i).second);
+  EXPECT_EQ(f.cloud->size(),all.size());EXPECT_TRUE(r.removed_wall_indices.empty());
+}
+TEST(MeasuredVehicleContinuation, NeverKeepsAnObjectWithNoCurrentMeasurementsOrUnconfirmedHistory) {
+  Fixture f;f.cfg.vehicle_history_enabled=true;f.Surface(10);f.OneCluster();
+  MeasuredVehicleHistory h;h.track_id=42;h.confirmations=4;h.points.reset(new Cloud(*f.cloud));std::vector<int> ids;
+  EXPECT_FALSE(ContinueMeasuredVehicles(f.cloud,f.clusters,{h},{},f.cfg,nullptr,nullptr,&ids).report.applied);
+  h.confirmations=5;for(auto& p:*h.points)p.x+=3;
+  EXPECT_FALSE(ContinueMeasuredVehicles(f.cloud,f.clusters,{h},{},f.cfg,nullptr,nullptr,&ids).report.applied);
+}
+TEST(MeasuredVehicleContinuation, ConflictingTracksAndFreshCameraOwnershipAbstain) {
+  Fixture f;f.cfg.vehicle_history_enabled=true;f.Surface(10);f.OneCluster();
+  MeasuredVehicleHistory h;h.track_id=42;h.confirmations=5;h.points.reset(new Cloud(*f.cloud));auto other=h;other.track_id=43;
+  std::vector<int> ids;auto r=ContinueMeasuredVehicles(f.cloud,f.clusters,{h,other},{},f.cfg,nullptr,nullptr,&ids);
+  EXPECT_FALSE(r.report.applied);EXPECT_EQ("vehicle_history_competing_tracks",r.report.decisions[0].reason);
+  std::vector<CameraPointSupport> support(1);support[0].box_index=0;support[0].source_class="person";
+  r=ContinueMeasuredVehicles(f.cloud,f.clusters,{h},{},f.cfg,&support,nullptr,&ids);
+  EXPECT_FALSE(r.report.applied);EXPECT_EQ("vehicle_history_current_camera_ownership",r.report.decisions[0].reason);
+}
+TEST(MeasuredVehicleContinuation, FreshVehiclePointsReserveOriginalTrackWithoutChangingCameraSupport) {
+  Fixture f;f.cfg.vehicle_history_enabled=true;f.Surface(10);f.OneCluster();
+  MeasuredVehicleHistory h;h.track_id=42;h.confirmations=5;h.points.reset(new Cloud(*f.cloud));
+  std::vector<CameraPointSupport> support(1);support[0].box_index=0;support[0].source_class="car";
+  std::vector<int> ids;const auto r=ContinueMeasuredVehicles(f.cloud,f.clusters,{h},{},f.cfg,&support,nullptr,&ids);
+  ASSERT_TRUE(r.report.applied);EXPECT_EQ(0,r.report.extracted_objects);ASSERT_EQ(1u,r.clusters.size());
+  EXPECT_EQ(f.clusters[0].indices,r.clusters[0].indices);ASSERT_EQ(1u,ids.size());EXPECT_EQ(42,ids[0]);
+  EXPECT_EQ(0,r.parent_clusters[0]);EXPECT_EQ("vehicle_history_current_camera_confirmed",r.report.decisions[0].reason);
+}
+TEST(MeasuredVehicleContinuation, VerifiedTurningMotionDoesNotRelaxCameraProjectionPolicy) {
+  for(bool trusted:{true,false}) {
+    TunnelMotionHistory h;
+    for(int i=0;i<=5;++i) {
+      const auto t=1000000000LL+i*20000000LL;h.AddYaw(t,.02*i,trusted);h.AddSpeed(t,3,true);
+    }
+    const auto mount=Pose::Identity();
+    EXPECT_FALSE(h.CameraFromScan(1000000000LL,1100000000LL,mount,200000000LL));
+    EXPECT_EQ(trusted,bool(h.CameraFromScan(1000000000LL,1100000000LL,mount,200000000LL,.2)));
+    EXPECT_FALSE(h.CameraFromScan(1000000000LL,1100000000LL,mount,200000000LL,.3));
+  }
+}
+TEST(MeasuredVehicleContinuation, MeasuredWallAndUnresolvedCameraRegionsStayDistinct) {
+  Fixture f;f.cfg.vehicle_history_enabled=true;f.Surface(10);const int vehicle=f.cloud->size();
+  MeasuredVehicleHistory h;h.track_id=42;h.confirmations=5;h.points.reset(new Cloud(*f.cloud));
+  f.Surface(20,3,3,0,2);f.OneCluster();TunnelWallEvidence w;w.valid=w.allowed=true;w.plane={0,-1,0,3};w.intervals={{5,25}};
+  std::vector<int> ids;auto r=ContinueMeasuredVehicles(f.cloud,f.clusters,{h},{w},f.cfg,nullptr,nullptr,&ids);
+  ASSERT_TRUE(r.report.applied);EXPECT_EQ(f.cloud->size()-vehicle,r.removed_wall_indices.size());
+  std::vector<int> veto;for(int i=vehicle;i<int(f.cloud->size());++i)veto.push_back(i);
+  r=ContinueMeasuredVehicles(f.cloud,f.clusters,{h},{w},f.cfg,nullptr,&veto,&ids);
+  EXPECT_TRUE(r.report.applied);EXPECT_TRUE(r.removed_wall_indices.empty());
+}
