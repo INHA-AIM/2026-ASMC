@@ -37,7 +37,6 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   params.param("shadow_zone/path_file", path_file, std::string());
   params.param("recovery_timeout_s", recovery_timeout_s_, recovery_timeout_s_);
   params.param("smooth_handoff",smooth_handoff_,false);
-  params.param("zone_prepare_only",zone_prepare_only_,false);
   params.param("approach_speed_kph",approach_speed_mps_,0.);
   if(!std::isfinite(approach_speed_mps_)||approach_speed_mps_<0||approach_speed_mps_>60.)
     throw std::runtime_error("invalid localization approach speed");
@@ -132,9 +131,7 @@ void GpsModeSource::stateCallback(const asmc_msgs::VehicleState::ConstPtr& messa
     publishPrepare();
   }
   zone_station_m_ = inside ? station : -1.0;
-  // Localization prepares at A448 but retains NORMAL while measured GPS is
-  // valid. Camera/LOCAL defaults still use their established route boundary.
-  detector_.OnZone(inside && !zone_prepare_only_);
+  detector_.OnZone(inside);
 }
 
 void GpsModeSource::feedbackCallback(const asmc_msgs::FrenetFeedback::ConstPtr& message) {

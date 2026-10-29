@@ -61,7 +61,6 @@
   <rosparam ns="planning_mode" command="load" file="$(find asmc_planner)/config/jamming_transition.yaml"/>
   <group ns="planning_mode">
     <param name="strategy" value="$(arg jamming_planner)"/>
-    <param name="zone_prepare_only" value="$(eval arg('jamming_planner') == 'localization')"/>
     <param name="links_file" value="$(find asmc_planner)/config/behavior/link_set.json"/>
     <param name="jamming_controller" value="$(eval {'camera':'/camera_bbox_lane_change','local':'/local_controller','localization':'/localization_controller'}[arg('jamming_planner')])"/>
     <param name="recovery_ready_topic" value="$(eval '/planning/localization/recovery_ready' if arg('jamming_planner') == 'localization' else '')"/>

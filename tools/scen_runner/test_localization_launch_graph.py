@@ -22,7 +22,6 @@ for choice in ('camera','local','localization'):
         assert (name in names)==(choice=='localization'),names
     assert c.params['/mpc_controller/suspend_in_jamming'].value is True
     assert c.params['/planning_mode/approach_speed_kph'].value==25.
-    assert c.params['/planning_mode/zone_prepare_only'].value==(choice=='localization')
     assert abs(c.params['/planning_mode/shadow_zone/station_start_m'].value-1859.6415782400395)<1e-6
     assert ('local_planner' in names)==(choice=='local')
     assert ('local_controller' in names)==(choice=='local')

@@ -43,7 +43,6 @@ class GpsModeSource final {
   void candidateCallback(const asmc_msgs::ControlHandoff::ConstPtr&);
   void publishPrepare();
   bool smooth_handoff_=false,handoff_pending_=false,approaching_=false;
-  bool zone_prepare_only_=false;
   double approach_speed_mps_=0,approach_distance_m_=0;
   asmc_msgs::ControlHandoff handoff_request_;
   ros::SteadyTime handoff_started_;
