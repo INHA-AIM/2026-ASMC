@@ -6,10 +6,9 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from scen_runner.morai.signal_trial_coordinates import Coordinates
 from scen_runner.runtime.signal_trial_oracle import Oracle
-# Support both the README's whole-suite discovery and unit-only discovery.
-if __package__:
+try:
     from .test_signal_trial_oracle import actor
-else:
+except ImportError:  # Also support discovery directly within test/unit.
     from test_signal_trial_oracle import actor
 
 

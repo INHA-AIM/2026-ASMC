@@ -64,6 +64,13 @@ def signal_settings(engine):
 def provenance():
     files=[p for p in (TOOL_ROOT/'config').glob('*.yaml') if p != LOCAL_CONFIG]
     files+=list((TOOL_ROOT/'scen_runner').rglob('*.py'))
+    files+=list((TOOL_ROOT/'launch').glob('*.launch'))
+    files.append(REPO_ROOT/'src/asmc_planner/launch/autonomy_no_bridges_v2.launch')
+    # Local controller changes may not be committed yet. HEAD+dirty alone
+    # cannot identify which avoidance implementation produced a recording.
+    consumer=REPO_ROOT/'src/jamming_lane_boundary_adapter'
+    for suffix in ('*.cpp','*.hpp','*.launch','*.yaml'):
+        files+=list(consumer.rglob(suffix))
     files+=list((TOOL_ROOT/'dll/src').glob('*.cs'))
     base=load_config()
     maps=[repo_path(value) for value in base['map'].values()]

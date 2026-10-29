@@ -79,6 +79,11 @@ GPU가 다른 PC에서 만든 객체 엔진을 사용하던 경우, 추론 노�
 판제 대시보드는 D에 포함되어 별도 실행하지 않습니다. 실행·보존·검증 범위는
 [통합 안내](../../src/asmc_planner/docs/main-integration-20261026.md)를 참고하세요.
 
+현재 재밍 개발 브랜치의 D는 차선 카메라로 도로를 잡고, 장애물 형상·위치·운동은
+LiDAR OBB로 판단합니다. 객체 카메라는 LiDAR SensorFusion의 클래스 보완에 사용합니다.
+카메라 BBOX로 6m 장애물을 만드는 경로는 제거했으며 실행 명령은 같습니다.
+[재밍 입력·기억 정책](../../src/jamming_lane_boundary_adapter/docs/bbox-lane-change.md)을 참고하세요.
+
 C/D는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)을 따릅니다. 전체 미션·속도 정확도 인수는 후속입니다.
 
 `roslaunch asmc_hd_map competition_map.launch`는 **선택 실행**입니다. 지도·미션 ROS 토픽과

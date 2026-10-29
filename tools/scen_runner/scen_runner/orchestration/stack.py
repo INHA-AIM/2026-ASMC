@@ -1,5 +1,6 @@
 """Four process groups; all source/config changes stay in scen_runner."""
 import argparse
+import hashlib
 import http.client
 import json
 import os
@@ -117,6 +118,17 @@ def launch_configuration(role, config):
     return launch_config
 
 
+def planning_configuration(launch_config):
+    """Resolved runtime values, rather than defaults inferred from source files."""
+    parameters = {key: value.value for key, value in sorted(launch_config.params.items())}
+    nodes = [dict(name=node.namespace+node.name, package=node.package, executable=node.type)
+             for node in launch_config.nodes]
+    fingerprint = hashlib.sha256(json.dumps(dict(parameters=parameters, nodes=nodes),
+                                           sort_keys=True).encode()).hexdigest()
+    return dict(process=process_identity(), created=time.time(), sha256=fingerprint,
+                parameters=parameters, nodes=nodes)
+
+
 def guarded_command(command, owner, stopping):
     group = OwnedProcess(command)
     try:
@@ -146,6 +158,10 @@ def worker(role, config, check=False, owner=None):
                               executable=node.type, python=node.launch_prefix)
                           for node in launch_config.nodes], ensure_ascii=False, indent=2))
         return 0
+    if role == 'planning':
+        resolved = planning_configuration(launch_config)
+        atomic_json(runtime_dir(config)/'planning_resolved.json', resolved)
+        print('[판제 설정] autonomy_no_bridges_v2.launch · SHA256='+resolved['sha256'], flush=True)
     graph = master_graph()
     if role == 'planning':
         # A SIGTERM during node initialization can leave ROS registrations
@@ -197,9 +213,11 @@ class PlanningServer:
     def publish(self):
         identity=getattr(self.group,'identity',None)
         worker_pid=identity.get('pid') if isinstance(identity,dict) else None
+        messages=getattr(self.probe,'messages',{})
+        mode=messages.get('mode') if isinstance(messages,dict) else None
         atomic_json(self.directory/'server.json', dict(process=self.process, heartbeat=self.clock(),
                     phase=self.phase, detail=self.detail,
-                    worker_pid=worker_pid,
+                    worker_pid=worker_pid,selected_mode=mode[0].data if mode else None,
                     generation=self.active['id'] if self.active and self.active['operation'] == 'start' else None))
 
     def stop(self):
@@ -278,7 +296,9 @@ class RosProbe(Readiness):
         self.lock = threading.RLock()
         super().__init__(config)
         import rospy
-        from asmc_msgs.msg import Trajectory, VehicleState, LaneBoundaryFamily, LidarTrackingObservation
+        from asmc_msgs.msg import LidarObservation, Trajectory, VehicleState, LaneBoundaryFamily, LidarTrackingObservation
+        from diagnostic_msgs.msg import DiagnosticArray
+        from std_msgs.msg import String, UInt8
         from planning_inputs.msg import DetectedObjectArray
         from morai_msgs.msg import CtrlCmd, GPSMessage, EgoVehicleStatus
         from std_msgs.msg import UInt8
@@ -292,6 +312,11 @@ class RosProbe(Readiness):
                 ('state', '/planning/vehicle/state', VehicleState),
                 ('objects', '/planning/objects', DetectedObjectArray),
                 ('trajectory', '/planning/trajectory', Trajectory),
+                ('mode', '/planning/mode', UInt8),
+                ('selector', '/planning/control_selector/diagnostics', String),
+                ('lidar', '/perception/lidar/observations_local', LidarObservation),
+                ('jamming', '/planning/camera_bbox_lane_change/diagnostics', DiagnosticArray),
+                ('jamming_control', '/ctrl_cmd/jamming', CtrlCmd),
                 ('control', '/ctrl_cmd', CtrlCmd)):
             self.subscribers.append(rospy.Subscriber(topic, kind,
                 lambda message, key=name: self.observe(key, message, time.monotonic()), queue_size=1))

@@ -35,13 +35,13 @@
        default="2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
   <arg name="rviz" default="false" doc="재밍 카메라 차선변경 RViz(BBOX·차선·경로) 표시"/>
-  <!-- 재밍 회피 튜닝(jamming_dev.launch와 같은 값). 좁은 틈 통과와 바깥쪽 회피선을 위해
-       여유는 줄이고 바깥 한계·추가 밀기는 늘렸다. 필요 여유 = 차폭/2 + max(clearance, margin). -->
+  <!-- 재밍 회피 튜닝(jamming_dev.launch와 같은 값). 측면 여유 0.20m를 검사하며
+       관측 도로 밖 확장과 불필요한 추가 밀기는 기본적으로 사용하지 않는다. -->
   <arg name="jamming_line_edge_expand" default="0.30" doc="[m] 기준선 1·5를 바깥으로 확장(최대 0.5)"/>
-  <arg name="jamming_avoid_line_extra" default="1.0" doc="통과 가능한 선에서 바깥으로 더 미는 양(선 번호, 최대 2.0)"/>
-  <arg name="jamming_avoid_clearance" default="0.05" doc="[m] 차체 측면-장애물 최소 간격"/>
-  <arg name="jamming_obstacle_lateral_margin" default="0.05" doc="[m] 차체 좌우 여유(도로 경계 검사 포함)"/>
-  <arg name="jamming_avoid_line_overrun" default="1.5" doc="[m] 벽 미확인 쪽에서 차량 중심이 끝 차선을 넘을 수 있는 거리"/>
+  <arg name="jamming_avoid_line_extra" default="0.0" doc="통과 가능한 선에서 바깥으로 더 미는 양(선 번호, 최대 2.0)"/>
+  <arg name="jamming_avoid_clearance" default="0.20" doc="[m] 차체 측면-장애물 최소 간격"/>
+  <arg name="jamming_obstacle_lateral_margin" default="0.20" doc="[m] 차체 좌우 여유(도로 경계 검사 포함)"/>
+  <arg name="jamming_avoid_line_overrun" default="0.0" doc="[m] 벽 미확인 쪽에서 차량 중심이 끝 차선을 넘을 수 있는 거리"/>
   <!-- 재밍 회피에 LiDAR 물체(카메라가 못 잡은 장애물)와 벽(갓길 한계)을 함께 쓴다.
        asmc_lidar를 skip_lidar_in_jamming:=false(기본)로 띄워야 재밍 중에도 들어온다. -->
   <arg name="jamming_use_lidar_obstacles" default="true"/>
@@ -127,11 +127,11 @@
     <arg name="avoid_clearance" value="$(arg jamming_avoid_clearance)"/>
     <arg name="obstacle_lateral_margin" value="$(arg jamming_obstacle_lateral_margin)"/>
     <arg name="avoid_line_overrun" value="$(arg jamming_avoid_line_overrun)"/>
-    <arg name="avoid_max_shoulder" value="2.0"/>
+    <arg name="avoid_max_shoulder" value="0.0"/>
     <arg name="use_lidar_obstacles" value="$(arg jamming_use_lidar_obstacles)"/>
     <arg name="creep_speed_kph" value="$(arg jamming_creep_speed_kph)"/>
     <arg name="creep_clear_distance" value="$(arg jamming_creep_clear_distance)"/>
-    <arg name="target_speed_kph" value="20.0"/>
+    <arg name="target_speed_kph" value="10.0"/>
     <arg name="avoid_speed_kph" value="10.0"/>
     <arg name="avoid_shift_length" value="7.0"/>
     <arg name="max_lateral_accel" value="1.8"/>
@@ -139,7 +139,8 @@
     <arg name="stop_brake" value="0.5"/>
     <arg name="speed_kp" value="0.3"/>
     <arg name="speed_ki" value="0.1"/>
-    <arg name="max_accel_pedal" value="0.5"/>
+    <arg name="max_accel_pedal" value="0.15"/>
+    <arg name="dynamic_acceleration_mps2" value="1.5"/>
     <arg name="max_brake_pedal" value="0.5"/>
   </include>
   <include if="$(eval arg('jamming_planner') == 'localization')" file="$(find asmc_planner)/launch/shadow_localization.launch">
