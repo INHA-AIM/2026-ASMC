@@ -8,7 +8,7 @@ vehicle_length: 4.635
 rear_axle_to_bumper: 0.790
 clearance_margin: 0.30
 planning_budget_ms: 40.0
-# Fresh near-field recovery is capped at3km/h. Internal semantic occlusion can
+# Fresh near-field recovery is target5km/h; physical constraints may lower it. Internal semantic occlusion can
 # be a soft cost, but body clearance, current OBB and exterior checks stay hard.
 recovery: true
 near_blind_assist: false
@@ -39,3 +39,6 @@ maneuver_speed_cap_kph: 5.0
 # Six unique rigid source observations allow a nonzero2m/s past-age envelope.
 # Known mobile groups are vetoed; raw velocity and valid absolute-speed floors remain.
 quiescent_geometry_padding: true
+
+# User-requested low-speed recovery target; not a forced minimum through hazards.
+recovery_target_kph: 5.0

@@ -80,6 +80,8 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
         prefix + "coverage": "coverage",
         prefix + "drivable_probability": "probability",
     }
+    optional_topics={prefix+'navigation_front_probability':'front_probability',
+                     prefix+'navigation_front_coverage':'front_coverage'}
     frames = {s: {} for s in selected}
     rgb = {}
     needed = set()
@@ -95,12 +97,12 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
             # Retain exact readable prefix, label incomplete evidence, and
             # never reindex/repair or silently declare the source bag healthy.
     for path in bags:
-        for topic, m, _ in messages(path,list(topics)):
+        for topic, m, _ in messages(path,list(topics)+list(optional_topics)):
             stamp = m.header.stamp.to_nsec()
             if stamp not in frames:
                 continue
-            frames[stamp][topics[topic]] = m
-            if topics[topic] == "context":
+            frames[stamp][{**topics,**optional_topics}[topic]] = m
+            if topics.get(topic) == "context":
                 i = list(m.views).index("front")
                 needed.add(m.image_headers[i].stamp.to_nsec())
     for path in bags:
@@ -112,7 +114,7 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
     missing = Counter()
     for stamp, row in selected.items():
         f = frames[stamp]
-        if set(f) != set(topics.values()):
+        if not set(topics.values()).issubset(f):
             missing["incomplete_exact_bundle"] += 1
             continue
         context = f["context"]
@@ -220,11 +222,17 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
                               True,(255,170,65),1)
         stem = "case-%02d" % len(cases)
         cv2.imwrite(str(out / (stem + ".png")), image)
+        has_front='front_probability' in f and 'front_coverage' in f
+        if has_front:
+            fp,fc=[np.frombuffer(f[k].data,np.uint8).reshape(f[k].height,f[k].step)[:,:f[k].width]
+                   for k in ('front_probability','front_coverage')]
+            cv2.imwrite(str(out/(stem+'-front.png')),cv2.resize(raster(fp,fc),None,fx=3,fy=3,
+                         interpolation=cv2.INTER_NEAREST))
         (out / (stem + ".jpg")).write_bytes(rgb[source])
         (out / (stem + ".json")).write_text(json.dumps(row, indent=2))
         cases.append(
             dict(
-                stem=stem,
+                stem=stem,front_navigation=has_front,
                 scene_stamp_ns=stamp,
                 front_stamp_ns=source,
                 reason=row["reason"],
@@ -254,7 +262,9 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
         + c["stem"]
         + '.png"><p><a href="'
         + c["stem"]
-        + '.json">판단 원문</a></p></article>'
+        + '.json">판단 원문</a></p>'
+        + ('<p>동일 시각 전방 전용 노면 · 충돌 검사는 위3뷰 정본을 유지</p><img width=360 src="'+c['stem']+'-front.png">' if c.get('front_navigation') else '')
+        + '</article>'
         for c in cases
     )
     (out / "index.html").write_text(

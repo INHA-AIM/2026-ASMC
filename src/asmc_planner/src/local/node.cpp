@@ -1191,6 +1191,9 @@ public:
     p.param("preferred_clearance", config.preferred_clearance, .40);
     p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
     p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
+    double recovery_kph=5.;p.param("recovery_target_kph",recovery_kph,5.);
+    if(!std::isfinite(recovery_kph) || recovery_kph<3. || recovery_kph>5.)throw std::runtime_error("invalid recovery target");
+    config.recovery_speed=recovery_kph/3.6;
     p.param("recovery_verified_target_m", config.recovery_target, 4.);
     p.param("path_selection_trial", config.selection_trial, 0);
     p.param("semantic_speckle_guard", config.semantic_speckle_guard, false);

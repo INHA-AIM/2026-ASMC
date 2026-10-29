@@ -154,8 +154,8 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
     out.speed_reason = "experimental_near_blind_assist";
   }
   if (out.recovery) {
-    out.chosen_cap = std::min(3. / 3.6, out.chosen_cap);
-    out.speed_reason = "near_field_recovery_3kph";
+    out.chosen_cap = std::min(c.recovery_speed, out.chosen_cap);
+    out.speed_reason = c.recovery_speed>3./3.6?"near_field_recovery_5kph":"near_field_recovery_3kph";
   }
   if (out.required_stopping_m > distance) {
     out.reason = "insufficient_stopping_space";

@@ -74,6 +74,7 @@ def main():
                    help="bounded wait before SDK/UDP startup; never stop another owner")
     p.add_argument("--no-dashboard", action="store_true", help="observer-OFF cost baseline; control is unchanged")
     p.add_argument("--dashboard-port", type=int, default=8088, help="preferred stable observer URL; never replace another listener")
+    p.add_argument("--jamming-planner",choices=("camera","local"),default="local")
     p.add_argument("--integrated", action="store_true", help="exercise real NORMAL/JAMMING mode transitions")
     p.add_argument("--bridge-invert-steer", choices=("true", "false"), default="false")
     p.add_argument("--distance", type=float, default=35)
@@ -595,7 +596,7 @@ def main():
         )
         if args.integrated:
             command=["roslaunch", "asmc_planner", "autonomy_no_bridges_v2.launch",
-                   "jamming_planner:=local", "dashboard:=false",
+                   "jamming_planner:="+args.jamming_planner, "dashboard:=false",
                    "local_speed_cap_kph:=" + str(args.cap), "local_run_id:=" + run_id,
                    "local_journal_path:=" + str(root / "decisions.jsonl")]
             if args.planner_config: command.append('local_planner_config:='+str(args.planner_config))

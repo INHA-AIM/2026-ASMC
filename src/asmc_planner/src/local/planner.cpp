@@ -705,7 +705,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   // Seek a longer alternative, never raise the speed of that short prefix.
   const bool no_crawl_progress=out.path.size()>1 &&
       std::max(0.,SpaceSpeed(out.path.back().s-.1,c.accel,prefix_lag,c)-.35)<
-      std::min(c.speed_cap,3./3.6);
+      std::min(c.speed_cap,c.recovery_speed);
   if ((out.path.size() < 3 || short_for_current_speed || no_crawl_progress) && c.recovery) {
     // Prefer a full-horizon swept path with explicitly bounded near-camera
     // unknown assistance over a short centroid arc. Known nonroad and OBBs
@@ -716,7 +716,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
     Config aided = c;
     aided.recovery = false;
     aided.blind_assist = true;
-    aided.speed_cap = std::min(c.speed_cap, 3. / 3.6);
+    aided.speed_cap = std::min(c.speed_cap,c.recovery_speed);
     aided.budget_ms = std::max(1., c.budget_ms - elapsed(start));
     auto full = PlanPrepared(
         s, aided); // Reuse indexed scene; no second raster copy/index.
@@ -751,7 +751,7 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       full.recovery = true;
       full.reason = full.path.back().x>=4.?"near_field_assisted_sweep":"near_field_assisted_prefix";
       if(full.path.back().x<4.)full.path_source="bounded_recovery_prefix";
-      full.speed_reason = full.braking_limit>c.decel?"near_field_controlled_braking":"near_field_recovery_3kph";
+      full.speed_reason = full.braking_limit>c.decel?"near_field_controlled_braking":c.recovery_speed>3./3.6?"near_field_recovery_5kph":"near_field_recovery_3kph";
       full.raw_cap = c.speed_cap;
       full.elapsed_ms = elapsed(start);
       return full;

@@ -138,6 +138,7 @@ def category(row):
 
 
 def friendly_group(group):
+    if group.startswith('local2h-'):return 'LOCAL-2H · 연속성·기준선·검증 길이 · '+group[len('local2h-'):]
     if group.startswith('local2g-'):return 'LOCAL-2G · 동적 횡단·정적 회피·물리 여유 검수 · '+group[len('local2g-'):]
     if group.startswith('local2f-'):return 'LOCAL-2F · 제동·복구 경로 검수 · '+group[len('local2f-'):]
     if group.startswith('local2e-'):return 'LOCAL-2E · 전환·장애물 회피 개선 · '+group[len('local2e-'):]
@@ -202,7 +203,9 @@ def main():
     local2e=next((r for r in pages if r['path'].startswith('local2e-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
     local2f=next((r for r in pages if r['path'].startswith('local2f-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
     local2g=next((r for r in pages if r['path'].startswith('local2g-') and r['path'].endswith('/status.html')),None)
-    wishes=[('LOCAL-2G 실시간 웹·회피 검수',local2g['path'] if local2g else None),
+    local2h=next((r for r in pages if r['path'].startswith('local2h-') and r['path'].endswith('/status.html')),None)
+    wishes=[('LOCAL-2H 연속성·기준선·검증 길이',local2h['path'] if local2h else None),
+            ('LOCAL-2G 실시간 웹·회피 검수',local2g['path'] if local2g else None),
             ('LOCAL-2F 제동·복구 경로 검수',local2f['path'] if local2f else None),
             ('LOCAL-2E 전환·장애물 회피 검수',local2e['path'] if local2e else None),
             ('LOCAL-2D 공급·전환·주행 검수',local2d['path'] if local2d else None),

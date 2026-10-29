@@ -521,7 +521,12 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 현재 이 브랜치의 LOCAL YAML은 노면 reference 복구·짧은 기하 운동 예측·안쪽 최소
 여유30cm·쾌적 감속2m/s²·controlled brake3m/s² 후보를 사용한다. 정적 asset 기억은
 OFF이며, CAN 조향 시작상태 후보는 별도 시험 profile에서만 켠다.
-[LOCAL-2G 검증과 남은 정체·인지 누락](../records/planning/2026-10-29-local-obstacle-campaign.md)을
+현재 선택한 LOCAL profile은 최신 rigid 기하의 비영점 나이 외곽 후보와 실제 좁은 sweep의
+5km/h maneuver 상한을 사용한다. 이는 YOLO 검출 감속이나 물체의 정적 확정이 아니다.
+장애물 없는 LOCAL 상한10km/h, 사용자 요청 회복 목표5km/h를 사용한다. 물리 검사는 더 낮출 수 있다. 6m 복구/경로 유지/단계적5선은
+별도 실험 설정이며 사용자 기본 실행에 자동 활성화하지 않는다.
+[LOCAL-2H 1차 비교·가용 범위](../records/planning/2026-10-29-local-first-comparison.md)와
+[LOCAL-2G 당시 검증](../records/planning/2026-10-29-local-obstacle-campaign.md)을
 확인한다. 거리 도달과 공급·충돌 수락은 구분하며, 늦은 횡단·작은 동물 사례까지
 해결된 운영 정본으로 표시하지 않는다. 기본 camera 선택과 LOCAL10km/h 상한은 유지한다.
 
