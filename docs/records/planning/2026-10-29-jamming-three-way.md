@@ -139,3 +139,40 @@ stale를 무시해 성공으로 만들지 않았다. 실시간 자원 조건과 
 콘솔 복구·제어 명령 그래프·실패 진단은 ASMC 갤러리 **E746**에 게시했다:
 http://localhost:8000/jamming-three-way-replay-20261029-r01/review-r4/index.html
 그림 생성 코드와 모든 재생·실패 근거는 해당 run에 보존하며 기존 갤러리 번호는 유지했다.
+
+## 공용 구조·설정 정리와 반복 정지 탈출 — 23시 후속 단위
+
+소스 체크포인트는 `929ec998`이다. LOCAL 후속 WIP와 실제 세 방식 비교는 사용자의
+완료 통보 이후로 보류했다. 다른 작업트리와 물리 시뮬레이터는 변경하지 않았다.
+
+공통 데이터·상대이동·차체 검사·속도 계산을 `jamming_common`과 `asmc_jamming_common`으로
+분리했다. LOCAL 검색과 localization의 map/Frenet 책임을 별도 라이브러리로 유지하고
+기존 LOCAL include를 호환 헤더로 보존했다. ROS 메시지와 단일 selector 계약은 유지한다.
+
+LOCAL/localization은 순항15·상한20km/h, 세 방식과 NORMAL의 차체 폭은1.892m다.
+LOCAL30cm, localization 최종10cm/native45cm, 별도 도로 외곽 폭2.161m와 벽65cm 여유는
+유지했다.3km/h 고정 복구는 후속 사용자 지시로 취소했다. 새 관측이 계속 들어오는
+5초 정지가 두 번 누적되면 좌우9개/최대8m 탈출 후보를 우선 검사한다. 동적 전방 충돌은
+양보하며, LOCAL raster/OBB 또는 localization map/native 여유·현재/예측 물체 검사를
+통과한 후보에만 최대5km/h의 저속 계획을 준다.2m 진행/epoch/입력 공백은 누적을 해제한다.
+통과 공간이 실제로 없거나 입력이 무효인 상태를 주행 가능하다고 바꾸지 않는다.
+
+근거는 등록 run `jamming-common-policy-20261029-r02`다. 초기 등록 구성의3km/h 요청과
+그 뒤 변경 지시를 구분해 `effective-config.json`을 남긴다. 첫 빌드/실패 로그도 보존한다.
+
+| 검사 | 최종 근거 | 결과 |
+|---|---|---|
+| 전체 runtime·변경된 두 planner·공용 MPC/시험 빌드 | `build-r4.log`, `build-final.log` | 통과 |
+| 계획부 essential CI | `essential-planning-r4.log` | 통과 |
+| 세 옵션 준비된 제어 인계 | `handoff-camera/local/localization.log` | 각각 통과 |
+| 공용 속도·실측25km/h 인계·차폭/여유·반복정지/동적양보/실제 raster-OBB 우회 | `policy-build-test-r3.log` | 통과 |
+| LOCAL/측위/벽 권한 및15km/h 합성 Frenet 장면 | `core-final.log` | 통과, 실제 시뮬 주행 수락 아님 |
+| launch/관측 포트 guard Python 검사 | `python-tests-final.log` |13개 통과 |
+
+차폭 변경으로 기존 hard/soft 경계 fixture의 실제 간격이 바뀌어 좌표를 조정했다.
+순항15가 새 지배 조건이 된 시험은 상한까지 순항을 요청하는 별도 조건에서 정지 거리
+제한을 검증한다. 회복3km/h 고정 assertion도 설정된 탈출 상한 검사로 바꿨다. 입력 유효성,
+실제 장애물·노면 veto나 watchdog을 낮춰 통과시킨 결과가 아니다.
+
+현행 설정 설명과 경계는 `docs/operations/jamming-parameters.md`를 따른다.
+실제 `test1`·FOGGY13·전환/복귀/정지 회복과15/20km/h 반복 주행은 미검증이다.
