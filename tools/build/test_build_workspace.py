@@ -49,7 +49,7 @@ class BuildGraphTest(unittest.TestCase):
         self.root = Path(self.temp.name); self.build = self.root/'build';self.package=self.root/'package';self.package.mkdir()
         self.module = Path(__file__).resolve().parents[2]/'cmake/AsmcBuildProfiles.cmake'
         # Same names as runtime packages; only a tiny real executable is needed.
-        self.runtime = ['mpc_controller_node','asmc_control_selector_node','asmc_competition_speed_state_node',
+        self.runtime = ['asmc_local_planner_node','asmc_local_controller_node','mpc_controller_node','asmc_control_selector_node','asmc_competition_speed_state_node',
                         'planning_vehicle_state_node','planning_objects_adapter','lidar_pipeline_node','vehicle_state_node',
                         'camera_bbox_lane_node','camera_bbox_lane_change_node','_lane_association',
                         'asmc_camera_generate_messages','asmc_hd_map_generate_messages','lane_boundary_adapter_generate_messages']
@@ -97,5 +97,8 @@ add_dependencies(excluded_test common_generate_messages)
         self.assertIn('Unknown/recursive', self.configure('-DASMC_BUILD_REQUESTS=typo',okay=False))
 
     def test_runtime_missing_native_fails_at_configuration(self):
-        p=self.root/'CMakeLists.txt';p.write_text(p.read_text().replace('add_custom_target(_lane_association)',''))
-        self.assertIn('_lane_association',self.configure('-DASMC_BUILD_REQUESTS=asmc_runtime',okay=False))
+        p=self.root/'CMakeLists.txt';original=p.read_text()
+        for required in ('_lane_association','asmc_local_planner_node','asmc_local_controller_node'):
+            with self.subTest(required=required):
+                p.write_text(original.replace('add_custom_target('+required+')',''))
+                self.assertIn(required,self.configure('-DASMC_BUILD_REQUESTS=asmc_runtime',okay=False))
