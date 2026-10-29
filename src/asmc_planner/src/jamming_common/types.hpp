@@ -34,6 +34,9 @@ struct Obstacle {
 };
 struct Config {
   double length = 4.635, width = 1.892, rear = .79, margin = .10;
+  // Negative means legacy callers use margin/preferred_clearance for both
+  // purposes. Runtime profiles set these explicitly to the same old values.
+  double road_margin = -1., maneuver_clearance = -1.;
   double cruise_speed = 15. / 3.6; // Nominal target; speed_cap is the independent hard ceiling.
   double speed_cap = 20. / 3.6, decel = 1.5, accel = 1., jerk = 4.8;
   double controlled_decel = 1.5; // Candidate actual-state brake; cruise stays at decel.

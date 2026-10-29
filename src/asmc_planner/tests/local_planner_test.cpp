@@ -34,6 +34,37 @@ Scene empty() {
 }
 int main() {
   {
+    auto s=empty();Config legacy;legacy.margin=.30;
+    // A known nonroad cell lies just outside the physical body.
+    s.grid.probability[150*160+67]=0;
+    Result a,b,narrow;
+    Config split=legacy;split.road_margin=.30;
+    expect(!CheckFootprint(s,legacy,Pose{4.,0.},a) &&
+           !CheckFootprint(s,split,Pose{4.,0.},b),
+           "split road margin preserves the former nonroad veto");
+    split.road_margin=.15;
+    expect(CheckFootprint(s,split,Pose{4.,0.},narrow),
+           "road boundary reserve can change independently of object clearance");
+    Obstacle o;o.id=99;o.polygon={{5.,1.2},{6.,1.2},{6.,1.4},{5.,1.4}};
+    s.obstacles={o};Result obstacle;
+    expect(!CheckFootprint(s,split,Pose{4.,0.},obstacle),
+           "reducing road margin does not reduce measured object clearance");
+  }
+  {
+    auto s=empty();Obstacle o;o.id=42;
+    o.polygon={{6.,1.5},{7.,1.5},{7.,2.},{6.,2.}};s.obstacles={o};
+    Config c;c.preferred_clearance=.55;c.maneuver_speed_cap=5./3.6;
+    Result legacy;legacy.path={{0,0,0,0,0},{10,0,0,0,10}};
+    Result split=legacy;
+    expect(BuildSpeedProfile(s,c,legacy),"legacy maneuver profile is feasible");
+    c.maneuver_clearance=.55;
+    expect(BuildSpeedProfile(s,c,split) && std::abs(split.maneuver_cap-legacy.maneuver_cap)<1e-9,
+           "split maneuver threshold preserves the old speed cap");
+    c.maneuver_clearance=.20;Result narrow=legacy;
+    expect(BuildSpeedProfile(s,c,narrow) && narrow.maneuver_cap>split.maneuver_cap,
+           "maneuver deceleration threshold is independent of preference cost");
+  }
+  {
     auto s=empty();Obstacle o;o.id=7;o.classification="static_obstacle";
     o.polygon={{12.,-.5},{13.,-.5},{13.,.5},{12.,.5}};s.obstacles={o};
     Config c;c.forward_warning_weight=8.;PrepareAheadWarnings(s,c);

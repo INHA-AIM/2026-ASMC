@@ -66,6 +66,8 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   const auto physical = MakeEgoFootprint(state, shape, 0.);
   const double clearance_margin =
       c.margin + std::min(.25, .015 * s.speed * s.speed);
+  const double road_margin = c.road_margin >= 0. ? c.road_margin : c.margin;
+  const double road_clearance = road_margin + std::min(.25, .015 * s.speed * s.speed);
   for (const auto &o : s.obstacles) {
     double distance = geometry::ConvexPolygonDistance(physical, o.polygon);
     r.minimum_clearance = std::min(r.minimum_clearance, distance);
@@ -85,7 +87,7 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
   const double cs = std::cos(p.yaw), sn = std::sin(p.yaw);
   // Cell half-diagonal covers discretisation; the physical footprint is not
   // shrunk. A measured plane is undone only for querying its original raster.
-  const double pad = clearance_margin + g.resolution * std::sqrt(.5);
+  const double pad = road_clearance + g.resolution * std::sqrt(.5);
   const double front = c.length - c.rear + pad, rear = c.rear + pad,
                half = c.width * .5 + pad;
   int row0 = g.rows, row1 = 0, col0 = g.cols, col1 = 0;
@@ -165,7 +167,7 @@ bool CheckFootprint(const Scene &s, const Config &c, const Pose &p, Result &r) {
         // speed-dependent semantic clearance is a preference, not collision.
         // Otherwise a single bonnet-edge pixel30cm outside the body can
         // truncate a clear15m path to40cm at speed. LiDAR veto is unchanged.
-        const double hard = c.margin + g.resolution * std::sqrt(.5);
+        const double hard = road_margin + g.resolution * std::sqrt(.5);
         if (a >= -c.rear - hard && a <= c.length - c.rear + hard &&
             std::abs(b) <= c.width * .5 + hard)
           return fail(r, c.recovery_geometry?"recovery_exterior_nonroad":"observed_nonroad", x, y);

@@ -3,6 +3,7 @@
 # Vehicle dimensions and cruise/ceiling/recovery policy: jamming_motion.yaml + launch.
 # The user-selected1.892m body model does not remove the margins below.
 clearance_margin: 0.30
+road_clearance_margin: 0.30
 planning_budget_ms: 40.0
 # Fresh near-field recovery uses a5km/h ceiling; physical constraints may lower it. Internal semantic occlusion can
 # be a soft cost, but body clearance, current OBB and exterior checks stay hard.
@@ -24,6 +25,7 @@ controlled_braking_limit_mps2: 3.0
 
 comfort_deceleration_mps2: 2.0
 preferred_clearance: 0.55
+maneuver_clearance: 0.55
 # Cost-only LOCAL trial; 0 preserves the deployed ranking.
 forward_warning_weight: 0.0
 low_speed_rate_floor_mps: 0.1

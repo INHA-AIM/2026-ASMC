@@ -1188,10 +1188,12 @@ public:
     p.param("vehicle_length", config.length, 4.635);
     p.param("rear_axle_to_bumper", config.rear, .790);
     p.param("clearance_margin", config.margin, .10);
+    p.param("road_clearance_margin", config.road_margin, config.margin);
     p.param("planning_budget_ms", config.budget_ms, 40.);
     p.param("acceleration_limit_mps2", config.accel, 1.);
     p.param("comfort_deceleration_mps2", config.decel, 1.5);
     p.param("preferred_clearance", config.preferred_clearance, .40);
+    p.param("maneuver_clearance", config.maneuver_clearance, config.preferred_clearance);
     p.param("forward_warning_weight", config.forward_warning_weight, 0.);
     p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
     p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
@@ -1206,7 +1208,7 @@ public:
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
                               "WXYZ0123456789-_.") != std::string::npos ||
         !std::isfinite(config.width + config.length + config.rear +
-                       config.margin + config.budget_ms + config.speed_cap + config.cruise_speed +
+                       config.margin + config.road_margin + config.maneuver_clearance + config.budget_ms + config.speed_cap + config.cruise_speed +
                        config.accel + config.controlled_decel + config.decel +
                        config.preferred_clearance + config.forward_warning_weight + config.low_speed_rate_floor + config.maneuver_reserve + config.maneuver_speed_cap) ||
         config.forward_warning_weight<0. || config.forward_warning_weight>20. ||
@@ -1214,6 +1216,8 @@ public:
         config.maneuver_reserve<0. || config.maneuver_reserve>2. ||
         config.decel<1.5 || config.decel>3. ||
         config.preferred_clearance<config.margin || config.preferred_clearance>1. ||
+        config.road_margin<0. || config.road_margin>1. ||
+        config.maneuver_clearance<0. || config.maneuver_clearance>1. ||
         config.low_speed_rate_floor<.1 || config.low_speed_rate_floor>1. ||
         config.controlled_decel<config.decel || config.controlled_decel>3. ||
         std::abs(config.width - Config{}.width) > 1e-9 ||

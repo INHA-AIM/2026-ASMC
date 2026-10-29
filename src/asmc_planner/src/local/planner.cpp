@@ -162,7 +162,8 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       InitialCurvature(s,c);
   // Paint is a rear-axle navigation reference, not the end of free road.
   // The full-body grid/OBB check independently limits physical progress.
-  const double margin = c.margin + std::min(.25, .015 * s.speed * s.speed) +
+  const double road_margin=c.road_margin>=0.?c.road_margin:c.margin;
+  const double margin = road_margin + std::min(.25, .015 * s.speed * s.speed) +
                         s.grid.resolution * std::sqrt(.5);
   const double raster_end =
       std::min(GridToPlan(s.grid, s.grid.xmax, -c.width * .5)[0],

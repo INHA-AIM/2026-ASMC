@@ -56,7 +56,8 @@ bool BuildRecoveryPath(const Scene &s, const Config &c, Result &out) {
           // Sample both inset edges instead of treating a centroid's sign as
           // proof that the opposite opening is unavailable. Every resulting
           // arc still passes the unchanged current body/OBB/exterior sweep.
-          const double inset=.5*c.width+c.margin+g.resolution;
+          const double road_margin=c.road_margin>=0.?c.road_margin:c.margin;
+          const double inset=.5*c.width+road_margin+g.resolution;
           if(last-first>=2*inset)
             for(double y:{first+inset,last-inset})
               if(std::none_of(goals.begin(),goals.end(),[&](const auto &p){return p[0]==x && std::abs(p[1]-y)<.15;}))

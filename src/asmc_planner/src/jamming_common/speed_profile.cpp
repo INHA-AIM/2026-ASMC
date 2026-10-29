@@ -104,7 +104,8 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
         for(int k=0;k<=count;++k) {
           const double t=double(k)/count;
           const auto body=MakeEgoFootprint(CartesianState{a.x+t*(b.x-a.x),a.y+t*(b.y-a.y),a.yaw+t*(b.yaw-a.yaw),0,0,0},VehicleShape{c.width,c.length,c.rear},0.);
-          if(geometry::ConvexPolygonDistance(body,o.polygon)<=c.preferred_clearance+o.uncertainty+o.extra_clearance+.10) {
+          const double maneuver_clearance=c.maneuver_clearance>=0.?c.maneuver_clearance:c.preferred_clearance;
+          if(geometry::ConvexPolygonDistance(body,o.polygon)<=maneuver_clearance+o.uncertainty+o.extra_clearance+.10) {
             out.maneuver_cap=std::min(c.speed_cap,c.maneuver_speed_cap);break;
           }
         }
