@@ -113,12 +113,19 @@ struct Parameters {
     double far_obstacle_speed_kph = 5.0; // [km/h] 먼 BBOX의 차로 미확정 시 접근 속도 상한. 0이면 정지.
     double bbox_source_timeout = 0.5;      // [s] BBOX 원본 영상 나이 상한.
     double bbox_receive_timeout = 0.5;     // [s] 새 BBOX 판정 미수신 상한.
-    // 사람: 차도(OWN/ADJACENT/BOTH)에서 보이면 person_stop_sec 동안 정지한 뒤 출발한다.
-    // 출발 후 person_ignore_sec 동안은 사람으로 다시 정지하지 않는다. 사람 박스는 그동안에도
-    // 일반 장애물로 남아 차도를 점유하면 차로 변경·회피 판단에 쓰인다.
+    // 사람: 차도(OWN/ADJACENT/BOTH)에서 보이면 정지하고 사람 위치를 최신으로 기억한다.
+    // 최소 person_stop_sec 정지 뒤, 사람이 내 차로를 벗어나거나 person_settle_sec 동안
+    // person_move_tolerance 이상 움직이지 않거나 person_max_wait_sec가 지나면 그 위치로 선을 다시 고른다.
+    // 재선택이 끝나 출발한 뒤 person_ignore_sec 동안은 사람으로 다시 정지하지 않는다. 사람 박스는
+    // 그동안에도 일반 장애물로 남고, 피할 경로가 없어지면 기어가지 않고 다시 정지한다.
     bool person_stop = true;
     std::string person_label = "person";
-    double person_stop_sec = 3.0;
+    double person_stop_sec = 5.0;
+    double person_settle_sec = 1.0;
+    double person_max_wait_sec = 10.0;
+    double person_move_tolerance = 0.3;    // [m]
+    // [m] 주행 중 이보다 먼 사람 기억은 새 BBOX 판정으로 교체한다. 더 가까우면 화면 밖(옆)일 수 있어 지날 때까지 유지.
+    double person_replace_min_x = 5.0;
     double person_ignore_sec = 4.0;
     double max_sensor_skew = 0.4;          // [s] 현재 차선과 BBOX/판정에 사용한 차선 stamp 차이.
     int obstacle_confirm_frames = 2;      // 내 차로 검출을 연속 확인할 서로 다른 BBOX frame 수.
@@ -300,7 +307,7 @@ struct LaneChangeState {
     double maximum_path_curvature = 0.0;
     // 최신 유효 BBOX frame의 차로 점유 박스 지면 접점(base_link, BBOX 시각 기준).
     // x~x_far 종방향 범위. 카메라는 길이를 모르므로 avoid_obstacle_length를 가정한다.
-    struct MeasuredObstacle { double x, x_far, y_min, y_max; bool lidar; };
+    struct MeasuredObstacle { double x, x_far, y_min, y_max; bool lidar; bool person = false; };
     std::vector<MeasuredObstacle> measured;
     bool measured_complete = false;       // 모든 점유 박스가 측정되었을 때만 회피 판단에 사용.
 } change_state;
@@ -353,6 +360,7 @@ struct LineObstacle {
     double odom_at;
     int hits;                             // 서로 다른 관측 frame에서 확인한 횟수.
     bool lidar = false;                   // LiDAR 측정. 매 LiDAR 스캔의 형상으로 교체한다(합치지 않음).
+    bool person = false;                  // 카메라 사람 박스. 움직이므로 합치지 않고 최신 관측으로 교체한다.
 };
 struct LineState {
     double target = 0.0;                  // 따라가는 선(1~5 좌표). 0이면 아직 정하지 않음.
@@ -364,6 +372,7 @@ struct LineState {
     double odom = 0.0;                    // [m] 실제 속도 적분 이동 거리.
     std::vector<LineObstacle> obstacles;  // 선 좌표로 기억한 장애물(화면 밖에서도 유지).
     unsigned long lidar_sequence = 0;     // 마지막으로 반영한 LiDAR 스캔.
+    unsigned long camera_sequence = 0;    // 카메라 기억을 마지막으로 교체한 BBOX 판정.
 } line_state;
 bool line_mode_active = false;
 
@@ -412,13 +421,27 @@ ros::Publisher reference_lane_publisher;
 bool mode_active = false;
 bool mode_received = false;
 bool await_activation_bbox = false;
+// 사람 정지: IDLE -> STOP(정지·관찰) -> RESELECT(최신 위치로 선 재선택) -> IGNORE -> IDLE.
 struct PersonStopState {
-    bool active = false;                  // 정지 또는 무시 구간이 진행 중.
-    ros::SteadyTime stop_until;
+    enum Phase { kIdle, kStop, kReselect, kIgnore } phase = kIdle;
+    ros::SteadyTime stop_since;
+    ros::SteadyTime moved_at;             // 사람 위치가 person_move_tolerance 이상 마지막으로 바뀐 시각.
     ros::SteadyTime ignore_until;
+    bool anchored = false;                // 움직임 판단 기준 위치(가장 가까운 사람의 접점 중앙).
+    double anchor_x = 0.0, anchor_y = 0.0;
+    int anchor_count = 0;
+    bool on_road = false, in_own = false; // 최신 BBOX 판정.
+    ros::SteadyTime seen_at;
 } person_state;
-bool personIgnoring(const ros::SteadyTime& now) { return person_state.active && now < person_state.ignore_until; }
+// 정지·재선택 중에는 차가 서 있으므로 카메라 장애물을 합치지 않고 최신 관측으로 교체한다.
+bool personObserving() {
+    return person_state.phase == PersonStopState::kStop || person_state.phase == PersonStopState::kReselect;
+}
 std::string personStopReason();
+std::string updatePersonPhase(const std::string& stop_reason);
+void refreshPersonStopObstacles();
+bool lineModeEligible();
+void rememberLineObstacles(bool new_scan);
 
 void bboxCallback(const BboxResult::ConstPtr& message);
 std::string bboxStopReason();
@@ -934,7 +957,10 @@ void cameraLaneFollowingProcess() {
         lane_hold.active = false;
     }
     if (change_state.change_failed) stop_reason = change_state.change_failure_reason;
-    if (stop_reason.empty()) stop_reason = personStopReason();
+    if (stop_reason.empty()) {
+        stop_reason = personStopReason();
+        if (stop_reason == "person_stop") refreshPersonStopObstacles();
+    }
     if (stop_reason.empty()) {
         stop_reason = bboxStopReason();
     }
@@ -945,6 +971,7 @@ void cameraLaneFollowingProcess() {
         change_state.clear_hits = 0;
         change_state.return_clear_since = ros::SteadyTime();
     }
+    stop_reason = updatePersonPhase(stop_reason);
     if (!stop_reason.empty()) change_state.completion_hits = 0;
     const bool tracking = stop_reason.empty() && follower_state.target_ready;
     // 인식·판단 정지면 앞 경로가 비어 있는 한 마지막 조향으로 기어간다(creep_speed_kph).
@@ -1085,7 +1112,7 @@ void applySpeedControl(morai_msgs::CtrlCmd& command, double target_speed, double
 
 // 기어가기를 허용하지 않는 정지: 안전 입력·의도된 정지·차속 없음.
 bool hardStopReason(const std::string& reason) {
-    return reason == "emergency_stop" || reason == "inactive_mode" || reason == "person_stop" ||
+    return reason == "emergency_stop" || reason == "inactive_mode" || reason.rfind("person_", 0) == 0 ||
         reason.find("timeout") != std::string::npos || reason.find("expired") != std::string::npos ||
         reason.find("restart_required") != std::string::npos || !egoSpeedFresh();
 }
@@ -1713,10 +1740,13 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "bbox_input_error", change_state.bbox_error);
     {
         const auto diag_now = ros::SteadyTime::now();
-        const bool stopping = person_state.active && diag_now < person_state.stop_until;
-        addDiagnosticValue(status, "person_state", stopping ? "stop" : personIgnoring(diag_now) ? "ignore" : "idle");
-        addDiagnosticValue(status, "person_remaining_sec", std::to_string(!person_state.active ? 0.0 :
-            std::max(0.0, ((stopping ? person_state.stop_until : person_state.ignore_until) - diag_now).toSec())));
+        static const char* phases[] = {"idle", "stop", "reselect", "ignore"};
+        addDiagnosticValue(status, "person_state", phases[person_state.phase]);
+        addDiagnosticValue(status, "person_stopped_sec", std::to_string(!personObserving() ? 0.0 :
+            (diag_now - person_state.stop_since).toSec()));
+        addDiagnosticValue(status, "person_remaining_sec", std::to_string(
+            person_state.phase != PersonStopState::kIgnore ? 0.0 :
+            std::max(0.0, (person_state.ignore_until - diag_now).toSec())));
     }
 
     addDiagnosticValue(status, "enable_control", params.enable_control ? "true" : "false");
@@ -1848,6 +1878,10 @@ void loadParameters(ros::NodeHandle& private_nh) {
     private_nh.param("person_stop", params.person_stop, params.person_stop);
     private_nh.param("person_label", params.person_label, params.person_label);
     private_nh.param("person_stop_sec", params.person_stop_sec, params.person_stop_sec);
+    private_nh.param("person_settle_sec", params.person_settle_sec, params.person_settle_sec);
+    private_nh.param("person_max_wait_sec", params.person_max_wait_sec, params.person_max_wait_sec);
+    private_nh.param("person_move_tolerance", params.person_move_tolerance, params.person_move_tolerance);
+    private_nh.param("person_replace_min_x", params.person_replace_min_x, params.person_replace_min_x);
     private_nh.param("person_ignore_sec", params.person_ignore_sec, params.person_ignore_sec);
     private_nh.param("ignore_bbox_during_lane_change", params.ignore_bbox_during_lane_change, params.ignore_bbox_during_lane_change);
     private_nh.param("one_lane_change_only", params.one_lane_change_only, params.one_lane_change_only);
@@ -1986,7 +2020,9 @@ void validateParameters() {
     // 0을 허용하는 값.
     const std::vector<double> nonnegative_values = {
         params.target_speed_kph, params.inferred_speed_kph, params.future_tolerance,
-        params.lane_boundary_margin, params.min_confidence, params.consumer_x_min
+        params.lane_boundary_margin, params.min_confidence, params.consumer_x_min,
+        params.person_stop_sec, params.person_settle_sec, params.person_move_tolerance, params.person_ignore_sec,
+        params.person_replace_min_x
     };
     for (double value : nonnegative_values) {
         if (!std::isfinite(value) || value < 0.0) {
@@ -2010,9 +2046,11 @@ void validateParameters() {
         params.max_steering_deg >= 90.0;
     const bool invalid_display_or_contract =
         !std::isfinite(params.marker_z) || params.expected_config_sha256.empty();
+    const bool invalid_person_stop =
+        !std::isfinite(params.person_max_wait_sec) || params.person_max_wait_sec < params.person_stop_sec;
 
     if (invalid_lane_selection || invalid_lookahead_range || invalid_lane_geometry ||
-        invalid_control_settings || invalid_display_or_contract) {
+        invalid_control_settings || invalid_display_or_contract || invalid_person_stop) {
         throw std::runtime_error("invalid lane follower parameter ranges");
     }
 
@@ -2077,7 +2115,9 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         reject("waiting_for_bbox_matching_observed_lane"); return;
     }
     const ros::SteadyTime person_now = ros::SteadyTime::now();
-    bool person_on_road = false;
+    bool person_on_road = false, person_in_own = false, person_measured = true;
+    int person_count = 0;
+    double person_x = std::numeric_limits<double>::infinity(), person_y = 0.0;
     int own = BboxResult::NO_DETECTION, adjacent = BboxResult::NO_DETECTION;
     bool deferred_far = false;
     bool clipped_association = false;
@@ -2091,14 +2131,25 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         clipped_association |= message->clipped_association[i];
         if (label == BboxResult::UNKNOWN || label > BboxResult::DEFERRED_FAR) { reject("bbox_lane_unknown"); return; }
         const bool on_road = label == BboxResult::OWN || label == BboxResult::ADJACENT || label == BboxResult::BOTH;
-        person_on_road |= on_road && message->boxes[i].label == params.person_label;
+        if (on_road && message->boxes[i].label == params.person_label) {
+            person_on_road = true;
+            person_in_own |= label == BboxResult::OWN || label == BboxResult::BOTH;
+            person_count++;
+            const double x = message->contact_x[i], y_min = message->contact_y_min[i], y_max = message->contact_y_max[i];
+            if (std::isfinite(x) && std::isfinite(y_min) && std::isfinite(y_max)) {
+                if (x < person_x) { person_x = x; person_y = 0.5 * (y_min + y_max); }
+            } else {
+                person_measured = false;
+            }
+        }
         deferred_far |= label == BboxResult::DEFERRED_FAR;
         if (label == BboxResult::OWN || label == BboxResult::BOTH) own = BboxResult::DETECTED;
         if (label == BboxResult::ADJACENT || label == BboxResult::BOTH) adjacent = BboxResult::DETECTED;
         if (on_road) {
             const double x = message->contact_x[i], y_min = message->contact_y_min[i], y_max = message->contact_y_max[i];
             if (std::isfinite(x) && std::isfinite(y_min) && std::isfinite(y_max) && x > 0.0 && y_min <= y_max) {
-                measured.push_back({x, x + params.avoid_obstacle_length, y_min, y_max, false});
+                measured.push_back({x, x + params.avoid_obstacle_length, y_min, y_max, false,
+                                    message->boxes[i].label == params.person_label});
             } else {
                 measured_complete = false;  // 잘린 연속 추적 등 미측정 박스가 있으면 회피 판단 금지.
             }
@@ -2109,12 +2160,30 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
         if (adjacent != BboxResult::DETECTED) adjacent = BboxResult::UNOBSERVED;
     }
     if (message->own_state != own || message->adjacent_state != adjacent) { reject("bbox_occupancy_mismatch"); return; }
-    if (params.person_stop && person_on_road && !personIgnoring(person_now)) {
-        person_state.active = true;
-        person_state.stop_until = person_now + ros::WallDuration(params.person_stop_sec);
-        person_state.ignore_until = person_state.stop_until + ros::WallDuration(params.person_ignore_sec);
-        ROS_WARN("Person on road: stop %.1fs, then no person stop for %.1fs",
-                 params.person_stop_sec, params.person_ignore_sec);
+    if (params.person_stop) {
+        auto& person = person_state;
+        person.on_road = person_on_road;
+        person.in_own = person_in_own;
+        person.seen_at = person_now;
+        if (person.phase == PersonStopState::kIdle && person_on_road) {
+            person.phase = PersonStopState::kStop;
+            person.stop_since = person.moved_at = person_now;
+            person.anchored = false;
+            ROS_WARN("Person on road: stop at least %.1fs and wait until the person leaves or settles",
+                     params.person_stop_sec);
+        }
+        if (person.phase == PersonStopState::kStop) {
+            // 기준 위치에서 person_move_tolerance 이상 벗어날 때만 기준을 옮긴다(천천히 걸어도 움직임으로 본다).
+            const bool measured = person_measured && std::isfinite(person_x);
+            if (!measured || !person.anchored || person_count != person.anchor_count ||
+                std::hypot(person_x - person.anchor_x, person_y - person.anchor_y) > params.person_move_tolerance) {
+                person.moved_at = person_now;
+                person.anchored = measured;
+                person.anchor_x = person_x;
+                person.anchor_y = person_y;
+                person.anchor_count = person_count;
+            }
+        }
     }
     change_state.deferred_far = deferred_far;
     change_state.clipped_association = clipped_association;
@@ -2132,12 +2201,58 @@ void bboxCallback(const BboxResult::ConstPtr& message) {
     await_activation_bbox = false;
 }
 
+// STOP 유지 여부. 끝나면 RESELECT로 넘겨 이번 주기의 판단이 사람의 최신 위치로 선을 고르게 한다.
 std::string personStopReason() {
-    if (!params.person_stop || !person_state.active) return "";
+    auto& person = person_state;
+    if (!params.person_stop || person.phase != PersonStopState::kStop) return "";
     const auto now = ros::SteadyTime::now();
-    if (now < person_state.stop_until) return "person_stop";
-    if (now >= person_state.ignore_until) person_state.active = false;
+    const double stopped = (now - person.stop_since).toSec();
+    if (stopped < params.person_stop_sec) return "person_stop";
+    const bool fresh = (now - person.seen_at).toSec() <= params.bbox_receive_timeout;
+    const bool left = fresh && !person.in_own;
+    const bool settled = (now - person.moved_at).toSec() >= params.person_settle_sec;
+    if (!left && !settled && stopped < params.person_max_wait_sec) return "person_stop";
+    ROS_INFO("Person stop %.1fs ended (%s); reselecting the line from the latest position", stopped,
+             left ? "left own lane" : settled ? "settled" : "max wait");
+    person.phase = PersonStopState::kReselect;
     return "";
+}
+
+// RESELECT: 판단이 정지 사유 없이 끝나면 출발하고 그때부터 무시 시간을 센다. 막히면 기어가지 않고 정지한다.
+// IGNORE: 사람이 보이는 동안 피할 경로가 없어지면 기어가지 않고 다시 STOP으로 돌아간다.
+std::string updatePersonPhase(const std::string& stop_reason) {
+    auto& person = person_state;
+    const auto now = ros::SteadyTime::now();
+    if (person.phase == PersonStopState::kReselect) {
+        if (!stop_reason.empty()) return "person_reselect:" + stop_reason;
+        if (!follower_state.target_ready) return stop_reason;
+        person.phase = PersonStopState::kIgnore;
+        person.ignore_until = now + ros::WallDuration(params.person_ignore_sec);
+        ROS_INFO("Person reselection done (line %.2f, lane %d); no person stop for %.1fs",
+                 line_state.target, follower_state.locked_lane, params.person_ignore_sec);
+        return stop_reason;
+    }
+    if (person.phase != PersonStopState::kIgnore) return stop_reason;
+    if (now >= person.ignore_until) {
+        person = PersonStopState{};
+        return stop_reason;
+    }
+    const bool visible = person.on_road && (now - person.seen_at).toSec() <= params.bbox_receive_timeout;
+    if (stop_reason.empty() || hardStopReason(stop_reason) || !visible) return stop_reason;
+    ROS_WARN("Person on road and no clear path while ignoring (%s): stop again", stop_reason.c_str());
+    person.phase = PersonStopState::kStop;
+    person.stop_since = person.moved_at = now;
+    person.anchored = false;
+    return "person_stop";
+}
+
+// 정지 중에는 판단을 멈추지만, 선 선택 기억은 최신 관측으로 계속 교체해 둔다.
+void refreshPersonStopObstacles() {
+    LineFrame near;
+    if (!lineModeEligible() || !planning_ready || !lineFrameAt(params.planning_start_x, near)) return;
+    const bool new_scan = change_state.decision_sequence != observationSequence();
+    change_state.decision_sequence = observationSequence();
+    rememberLineObstacles(new_scan);
 }
 
 std::string bboxStopReason() {
@@ -2543,7 +2658,7 @@ void rememberAvoidObstacles(const LaneChain& lane) {
         if (!samplePlanningLane(lane, std::max(obstacle.x, params.planning_start_x), sample)) continue;
         const AvoidState::Obstacle measured{obstacle.x, obstacle.x_far - obstacle.x, obstacle.y_min - sample.center.y,
                                             obstacle.y_max - sample.center.y, avoid_state.odom};
-        // 같은 물체의 재측정은 기존 기록을 최신 값으로 교체한다(정지 중 매 frame 누적 방지).
+        // 같은 물체의 재측정은 종방향 위치를 최신 값으로 옮기고 횡 구간은 합친다(정지 중 매 frame 누적 방지).
         // 종방향 위치가 길이 가정 안에서 겹치고 횡 구간이 겹치면 같은 물체로 본다.
         auto same = std::find_if(avoid_state.obstacles.begin(), avoid_state.obstacles.end(), [&](const auto& old) {
             const double old_x = old.x - (avoid_state.odom - old.odom_at);
@@ -2726,18 +2841,33 @@ bool lineObstacleInReach(const LineObstacle& obstacle) {
 // LiDAR는 매 스캔 물체 전체 OBB를 주므로, 이번 스캔에서 보인 물체는 겹치는 이전 기억을 최신 형상으로
 // 교체한다(합치면 근처 물체·일시 측정·이동 중 오차가 누적되어 좁은 통로가 막힌다). 이번 스캔에서
 // 보이지 않은 이전 LiDAR 물체(옆을 지나는 중 가림·추적 끊김)는 지날 때까지 그대로 유지한다.
+// 사람 박스는 움직이므로 합치지 않는다. 모든 박스가 측정된 새 BBOX 판정이 오면 person_replace_min_x보다 먼
+// 사람 기억을 최신 관측으로 교체한다(더 가까우면 화면 밖 옆일 수 있어 지날 때까지 유지).
+// 사람 정지·재선택 중에는 출발 전 선 선택이 사람의 최신 위치만 보도록(지나간 자리가 남지 않게)
+// 사람 기억은 거리와 관계없이, 다른 카메라 물체는 person_replace_min_x보다 먼 것만 새 판정으로 교체하고,
+// 주위 전체를 보는 LiDAR 기억은 새 스캔으로 통째로 교체한다.
 void rememberLineObstacles(bool new_scan) {
     const bool lidar_scan = lidarFresh() && lidar_state.sequence != line_state.lidar_sequence;
-    std::vector<LineObstacle> lidar_scan_obstacles;
+    const bool stopped_for_person = personObserving();
+    const bool camera_scan = change_state.bbox_valid && change_state.measured_complete &&
+        change_state.bbox_sequence != line_state.camera_sequence;
+    const auto replaced_by_camera = [&](const LineObstacle& obstacle, double x) {
+        if (obstacle.lidar) return false;
+        return (obstacle.person && stopped_for_person) ||
+            (x >= params.person_replace_min_x && (obstacle.person || stopped_for_person));
+    };
+    std::vector<LineObstacle> lidar_scan_obstacles, camera_scan_obstacles;
     for (const auto& obstacle : planning_obstacles) {
         LineFrame frame;
         if (!lineFrameAt(std::max(obstacle.x, params.planning_start_x), frame)) continue;
         LineObstacle measured{obstacle.x, obstacle.x_far - obstacle.x, lineOf(frame, obstacle.y_max),
                               lineOf(frame, obstacle.y_min), line_state.odom, 1};
+        measured.person = obstacle.person;
         if (obstacle.lidar) {
             if (!lidar_scan) continue;  // 같은 LiDAR 스캔을 여러 제어 주기에 다시 반영하지 않는다.
             measured.lidar = true;
-            // 겹치는 이전 LiDAR 물체의 확인 횟수를 이어받는다.
+            // 겹치는 이전 LiDAR 물체의 확인 횟수를 이어받는다. 사람 때문에 서 있는 동안 본 물체는 바로 피할 대상이다.
+            if (stopped_for_person) measured.hits = params.obstacle_confirm_frames;
             for (const auto& old : line_state.obstacles) {
                 if (!old.lidar) continue;
                 const double old_x = lineObstacleX(old);
@@ -2749,9 +2879,16 @@ void rememberLineObstacles(bool new_scan) {
             lidar_scan_obstacles.push_back(measured);
             continue;
         }
+        if (replaced_by_camera(measured, measured.x)) {
+            if (!camera_scan) continue;
+            measured.hits = params.obstacle_confirm_frames;  // 사람·정지 중 관측은 바로 피할 대상으로 둔다.
+            camera_scan_obstacles.push_back(measured);
+            continue;
+        }
         auto same = std::find_if(line_state.obstacles.begin(), line_state.obstacles.end(), [&](const auto& old) {
             const double old_x = lineObstacleX(old);
-            return !old.lidar && old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
+            return !old.lidar && old.person == measured.person &&
+                old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
                 old.line_left < measured.line_right && measured.line_left < old.line_right;
         });
         if (same == line_state.obstacles.end()) {
@@ -2770,6 +2907,7 @@ void rememberLineObstacles(bool new_scan) {
         auto& stored = line_state.obstacles;
         stored.erase(std::remove_if(stored.begin(), stored.end(), [&](const auto& old) {
             if (!old.lidar) return false;
+            if (stopped_for_person) return true;
             const double old_x = lineObstacleX(old);
             return std::any_of(lidar_scan_obstacles.begin(), lidar_scan_obstacles.end(), [&](const auto& measured) {
                 return old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
@@ -2777,6 +2915,14 @@ void rememberLineObstacles(bool new_scan) {
             });
         }), stored.end());
         stored.insert(stored.end(), lidar_scan_obstacles.begin(), lidar_scan_obstacles.end());
+    }
+    if (camera_scan) {
+        line_state.camera_sequence = change_state.bbox_sequence;
+        auto& stored = line_state.obstacles;
+        stored.erase(std::remove_if(stored.begin(), stored.end(), [&](const auto& old) {
+            return replaced_by_camera(old, lineObstacleX(old));
+        }), stored.end());
+        stored.insert(stored.end(), camera_scan_obstacles.begin(), camera_scan_obstacles.end());
     }
     const double passed = params.vehicle_rear + params.avoid_pass_margin;
     auto& obstacles = line_state.obstacles;
@@ -3075,6 +3221,13 @@ std::string startLaneChange(int adjacent_index, const LaneChain& adjacent,
     return "";
 }
 
+bool lineModeEligible() {
+    const bool unmeasured_occupancy =
+        change_state.bbox_valid && !change_state.measured_complete && !lidarFresh();
+    return params.straddle_avoidance && params.avoid_line_straddle && egoSpeedFresh() &&
+        !unmeasured_occupancy && !change_state.changing && !avoid_state.active;
+}
+
 std::string updateLaneChangePlan() {
     if (change_state.change_failed) return change_state.change_failure_reason;
     if (change_state.entry_lane < 0) change_state.entry_lane = follower_state.locked_lane;
@@ -3089,10 +3242,7 @@ std::string updateLaneChangePlan() {
     // 이때는 점유 라벨만으로 판단하는 기존 경로에 넘겨 차선변경/정지를 하게 한다.
     // BBOX 자체가 없는 경우는 포함하지 않는다. 그 상황은 bboxStopReason과 차선 유지
     // (lane hold)가 담당하며, 여기서 끄면 차선 유실 중 추측 항법 주행이 깨진다.
-    const bool unmeasured_occupancy =
-        change_state.bbox_valid && !change_state.measured_complete && !lidarFresh();
-    line_mode_active = params.straddle_avoidance && params.avoid_line_straddle && egoSpeedFresh() &&
-        !unmeasured_occupancy && !change_state.changing && !avoid_state.active;
+    line_mode_active = lineModeEligible();
     if (line_mode_active) return updateLinePlan(new_scan);
     // 속도를 적분할 수 없으면 장애물 옆을 지났는지 알 수 없으므로 회피 중에는 정지한다.
     if (avoid_state.active && !egoSpeedFresh()) return "avoid_ego_speed_timeout";

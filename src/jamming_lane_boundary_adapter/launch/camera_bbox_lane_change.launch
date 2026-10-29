@@ -57,10 +57,16 @@
   <arg name="far_obstacle_speed_kph" default="5.0"/>
   <arg name="bbox_source_timeout" default="0.5"/>
   <arg name="bbox_receive_timeout" default="0.5"/>
-  <!-- 차도 위 사람: person_stop_sec 정지 후 출발, 그 뒤 person_ignore_sec 동안 사람으로 재정지하지 않는다.
-       사람 박스는 계속 장애물이라 차도를 점유하면 차로 변경·회피한다. -->
+  <!-- 차도 위 사람: 최소 person_stop_sec 정지하며 사람 위치를 최신으로 기억한다. 사람이 내 차로를 벗어나거나
+       person_settle_sec 동안 person_move_tolerance 이상 움직이지 않거나 person_max_wait_sec가 지나면 그 위치로
+       선을 다시 고르고, 출발한 때부터 person_ignore_sec 동안 사람으로 재정지하지 않는다.
+       사람 박스는 계속 장애물이라 피할 경로가 없어지면 기어가지 않고 다시 정지한다. -->
   <arg name="person_stop" default="true"/>
-  <arg name="person_stop_sec" default="3.0"/>
+  <arg name="person_stop_sec" default="5.0"/>
+  <arg name="person_settle_sec" default="1.0"/>
+  <arg name="person_max_wait_sec" default="10.0"/>
+  <arg name="person_move_tolerance" default="0.3" doc="[m] 이보다 크게 움직이면 아직 움직이는 사람으로 본다"/>
+  <arg name="person_replace_min_x" default="5.0" doc="[m] 주행 중 이보다 먼 사람 기억은 새 BBOX 판정으로 교체(합치지 않음)"/>
   <arg name="person_ignore_sec" default="4.0"/>
   <arg name="max_sensor_skew" default="0.4"/>
   <arg name="obstacle_confirm_frames" default="2"/>
@@ -209,6 +215,10 @@
     <param name="bbox_receive_timeout" type="double" value="$(arg bbox_receive_timeout)"/>
     <param name="person_stop" type="bool" value="$(arg person_stop)"/>
     <param name="person_stop_sec" type="double" value="$(arg person_stop_sec)"/>
+    <param name="person_settle_sec" type="double" value="$(arg person_settle_sec)"/>
+    <param name="person_max_wait_sec" type="double" value="$(arg person_max_wait_sec)"/>
+    <param name="person_move_tolerance" type="double" value="$(arg person_move_tolerance)"/>
+    <param name="person_replace_min_x" type="double" value="$(arg person_replace_min_x)"/>
     <param name="person_ignore_sec" type="double" value="$(arg person_ignore_sec)"/>
     <param name="max_sensor_skew" type="double" value="$(arg max_sensor_skew)"/>
     <param name="obstacle_confirm_frames" type="int" value="$(arg obstacle_confirm_frames)"/>

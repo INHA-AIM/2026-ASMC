@@ -380,7 +380,11 @@
 | `bbox_source_timeout` | `0.5` | — |
 | `bbox_receive_timeout` | `0.5` | — |
 | `person_stop` | `true` | — |
-| `person_stop_sec` | `3.0` | — |
+| `person_stop_sec` | `5.0` | — |
+| `person_settle_sec` | `1.0` | — |
+| `person_max_wait_sec` | `10.0` | — |
+| `person_move_tolerance` | `0.3` | [m] 이보다 크게 움직이면 아직 움직이는 사람으로 본다 |
+| `person_replace_min_x` | `5.0` | [m] 주행 중 이보다 먼 사람 기억은 새 BBOX 판정으로 교체(합치지 않음) |
 | `person_ignore_sec` | `4.0` | — |
 | `max_sensor_skew` | `0.4` | — |
 | `obstacle_confirm_frames` | `2` | — |

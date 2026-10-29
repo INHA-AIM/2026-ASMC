@@ -138,7 +138,7 @@ class LaneChangeTest(unittest.TestCase):
                     # Wide box whose bottom edge spans the given ground interval (base_link y, +left).
                     uv,_=self.camera.project_ground(np.array([[x,y_max+shift],[x,y_min+shift]]))
                     (left,v),(right,_)=uv
-                    boxes.append(fixture.camera_box(left,v-60,right,v,'car'))
+                    boxes.append(fixture.camera_box(left,v-60,right,v,label))
                 if far:
                     uv,_=self.camera.project_ground(np.array([[30.,shift]]))
                     u,v=uv[0]
@@ -209,19 +209,75 @@ class LaneChangeTest(unittest.TestCase):
         self.feed([], shift=-3.5, duration=.9)
         self.assertEqual(self.status()[1]['locked_lane'], '1')
 
-    def test_person_stops_three_seconds_then_changes_lane_without_restop(self):
+    def test_person_stops_five_seconds_then_changes_lane_without_restop(self):
         self.feed()
         self.following()
         self.assertEqual(self.status()[1]['locked_lane'],'1')
         self.feed([0],label='person',duration=.5)
         self.stopped('person_stop')
         self.assertEqual(self.status()[1]['person_state'],'stop')
-        self.feed([0],label='person',duration=2.8)
-        # After 3 s the person no longer stops the vehicle but still occupies the lane.
+        self.feed([0],label='person',duration=4.8)
+        # After 5 s the person no longer stops the vehicle but still occupies the lane.
         self.following()
         self.assertEqual(self.status()[1]['person_state'],'ignore')
         self.assertEqual(self.status()[1]['locked_lane'],'0')
         self.assertEqual(self.reference.data,0)
+
+    def test_person_waits_while_moving_then_reselects_from_latest_position(self):
+        self.feed()
+        self.feed(spans=[(-1.5,-0.9,10.)],label='person',speed=0.,duration=.5)
+        self.stopped('person_stop')
+        # 0.4 m steps exceed person_move_tolerance (0.3 m).
+        # Walking left inside the own lane past the minimum 5 s keeps the vehicle stopped.
+        for y in (-0.8,-0.4,0.0,0.4,0.8,1.2):
+            self.feed(spans=[(y-0.3,y+0.3,10.)],label='person',speed=0.,duration=.85)
+        self.stopped('person_stop')
+        self.assertEqual(self.status()[1]['person_state'],'stop')
+        # Settled at the left side: the line is chosen from that position only, not from the walked area,
+        # so the vehicle passes on the right inside its own lane instead of leaving it.
+        self.feed(spans=[(0.9,1.5,10.)],label='person',speed=0.,duration=1.5)
+        self.following()
+        line,status=self.line_status()
+        self.assertEqual(status['person_state'],'ignore',status)
+        self.assertGreater(line,4.0)
+        self.assertEqual(status['locked_lane'],'1')
+
+    def test_person_stop_replaces_lidar_memory_when_person_leaves_road(self):
+        self.feed()
+        person=(10.,10.5,-0.3,0.3,1.7)
+        self.feed(spans=[(-0.3,0.3,10.)],label='person',speed=0.,lidar=[person],duration=.5)
+        self.stopped('person_stop')
+        # The person walks off the road: LiDAR no longer reports a road obstacle and the camera box leaves the road.
+        self.feed(spans=[(-6.2,-5.8,10.)],label='person',speed=0.,lidar=[(10.,10.5,-6.2,-5.8,1.7)],duration=5.2)
+        # The stopped-time LiDAR memory follows the latest scan: no trace is left at the old position.
+        self.following()
+        line,status=self.line_status()
+        self.assertEqual(status['person_state'],'ignore',status)
+        self.assertEqual(status['lidar_fresh'],'true',status)
+        self.assertAlmostEqual(line,4.0)
+
+    def test_person_moving_while_ignoring_follows_latest_position(self):
+        self.feed()
+        self.feed(spans=[(0.9,1.5,10.)],label='person',speed=0.,duration=6.2)
+        self.following()
+        self.assertGreater(self.line_status()[0],4.0)
+        # While ignoring, the person crosses to the right side of the own lane. The far person box is replaced,
+        # not merged with the earlier position, so a line on the left stays clear instead of a new stop.
+        self.feed(spans=[(-1.5,-0.9,10.)],label='person',speed=0.,duration=.8)
+        self.following()
+        line,status=self.line_status()
+        self.assertEqual(status['person_state'],'ignore',status)
+        self.assertLess(line,4.0)
+
+    def test_person_restops_instead_of_creep_without_clear_distance(self):
+        self.feed()
+        self.feed(spans=[(0.9,1.5,10.)],label='person',speed=0.,duration=6.2)
+        self.following()
+        self.assertEqual(self.status()[1]['person_state'],'ignore')
+        # While ignoring, the person blocks every line: stop again rather than creep towards the person.
+        self.feed(spans=[(-4.0,5.0,10.)],label='person',speed=0.,duration=.5)
+        self.stopped('person_stop')
+        self.assertEqual(self.status()[1]['person_state'],'stop')
 
     def test_repeat_changes_use_new_own_lane_and_reset_completion(self):
         self.feed()
