@@ -3,10 +3,25 @@ from pathlib import Path
 import os
 import tempfile
 import unittest
-from build_experiment_gallery_hub import catalogue, number_pages, collect_pages, category, friendly_group
+from build_experiment_gallery_hub import catalogue, number_pages, collect_pages, category, friendly_group, audit_refresh
 
 
 class GalleryChronologyTest(unittest.TestCase):
+    def test_partial_link_audit_keeps_cross_targets_and_global_report_separate(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            for group in ('old','changed'):(root/group).mkdir()
+            (root/'old/index.html').write_text('<a href="missing.bin">old</a>')
+            page=root/'changed/index.html';page.write_text('<h1>new</h1>')
+            pages=catalogue(root,root/'index.html')
+            full,name=audit_refresh(root,pages)
+            self.assertEqual(name,'gallery-link-report.json');self.assertEqual(len(full['missing']),1)
+            scoped,name=audit_refresh(root,pages,['changed'])
+            self.assertEqual(scoped['missing'],[]);self.assertIn('.partial-',name)
+            page.write_text('<a href="../old/missing.bin">referenced old target</a>')
+            scoped,_=audit_refresh(root,pages,['changed'])
+            self.assertEqual(len(scoped['missing']),1)
+
     def test_local2d_review_is_planning_without_implying_acceptance(self):
         self.assertEqual(category({'path':'local2d-run/index.html'}),'planning')
         self.assertIn('검수',friendly_group('local2d-run'))

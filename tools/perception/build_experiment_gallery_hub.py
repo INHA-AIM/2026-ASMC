@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime, timezone, timedelta
 import html
+import hashlib
 from itertools import chain
 from html.parser import HTMLParser
 import json
@@ -172,6 +173,19 @@ def enrich(pages):
     return pages
 
 
+def audit_refresh(root,pages,groups=()):
+    # Full audits remain full. An explicit partial refresh checks every local
+    # link in its changed pages (including cross-group targets), without
+    # rewriting another campaign's ongoing global audit or failing on unrelated
+    # frozen wheel/source templates.
+    selected=[p for p in pages if not groups or p['group'] in groups]
+    links=check_local_links(root,selected)
+    links['refresh_scope']=list(groups) or ['all']
+    suffix=hashlib.sha256('\n'.join(sorted(groups)).encode()).hexdigest()[:12] if groups else None
+    name='gallery-link-report.partial-'+suffix+'.json' if suffix else 'gallery-link-report.json'
+    return links,name
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifacts',type=Path,required=True)
@@ -187,7 +201,9 @@ def main():
     local2d=next((r for r in pages if r['path'].startswith('local2d-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
     local2e=next((r for r in pages if r['path'].startswith('local2e-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
     local2f=next((r for r in pages if r['path'].startswith('local2f-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
-    wishes=[('LOCAL-2F 제동·복구 경로 검수',local2f['path'] if local2f else None),
+    local2g=next((r for r in pages if r['path'].startswith('local2g-') and r['path'].endswith('/status.html')),None)
+    wishes=[('LOCAL-2G 실시간 웹·회피 검수',local2g['path'] if local2g else None),
+            ('LOCAL-2F 제동·복구 경로 검수',local2f['path'] if local2f else None),
             ('LOCAL-2E 전환·장애물 회피 검수',local2e['path'] if local2e else None),
             ('LOCAL-2D 공급·전환·주행 검수',local2d['path'] if local2d else None),
             ('LOCAL-2C 속도·노면 OBB 검수',local2c['path'] if local2c else None),
@@ -205,9 +221,9 @@ def main():
     template=Path(__file__).with_name('templates')/'experiment_catalogue.html'
     output.write_text(template.read_text().replace('__CATALOGUE_DATA__',json.dumps(payload,ensure_ascii=False).replace('<','\\u003c')),encoding='utf-8')
     (root/'gallery-catalogue.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    links=check_local_links(root,pages)
-    (root/'gallery-link-report.json').write_text(json.dumps(links,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    if links['missing']:raise SystemExit('Missing local gallery links; see gallery-link-report.json')
+    links,report_name=audit_refresh(root,pages,args.group)
+    (root/report_name).write_text(json.dumps(links,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    if links['missing']:raise SystemExit('Missing local gallery links; see '+report_name)
     print(json.dumps(dict(output=str(output),pages=len(pages),groups=len({p['group'] for p in pages}))))
 
 
