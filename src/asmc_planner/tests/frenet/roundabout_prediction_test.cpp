@@ -262,6 +262,49 @@ int main(){
     object.type=2;
     expect(history.ExecutionOccupancies({object},{supplied_lane},2).size()==1,
         "vehicle continuation refinement does not force pedestrians into the circulating model");
+    // Short missing observations are model queries, never new sensor samples.
+    {
+        RoundaboutPrediction retained;
+        auto car=object;car.id=601;car.type=0;car.length=4.5;car.width=1.9;
+        car.motion_state=ObjectMotionState::DYNAMIC;car.velocity_unavailable=false;
+        car.vx=5;car.vy=0;car.y=0;car.yaw_rate=0;
+        const auto stamp_car=[&](double x) {
+            car.x=x;
+            for(int k=0;k<8;++k)car.corners[k]={x+(k%4==0||k%4==3?-2.25:2.25),
+                k%4<2?-.95:.95,double(k/4)};
+        };
+        for(int i=0;i<8;++i){stamp_car(.5*i);retained.Observe({car},1000+.1*i,1,5);}
+        retained.Observe({},1000.8,1,5);
+        auto missing=retained.MissingDepartureOccupancies(1000.85,[](double,double){return true;},6,3,1);
+        expect(missing.size()==1&&!missing[0].models.empty()&&missing[0].observations==8,
+            "one missing frame retains a previously verified whole-body vehicle");
+        bool aligned=false;
+        if(!missing.empty())for(const auto& model:missing[0].models)
+            if(std::fabs(model.yaw_rate)<1e-9)aligned|=
+                std::fabs(model.x-4.25)<1e-6&&std::fabs(model.prediction_origin_offset_s-.15)<1e-6;
+        expect(aligned,"missing geometry aligns from real source time to ego time exactly once");
+        retained.Observe({},1000.86,1,5);
+        auto ahead=retained.MissingDepartureOccupancies(1000.85,[](double,double){return true;},6,3,1);
+        expect(ahead.size()==1&&!ahead[0].models.empty()&&std::fabs(ahead[0].age-.15)<1e-6,
+            "slightly future array time cannot hide a missing older vehicle");
+        const auto repeated=retained.MissingDepartureOccupancies(1000.9,[](double,double){return true;},6,3,1);
+        expect(repeated.size()==1&&repeated[0].observations==8&&
+            std::fabs(repeated[0].source_stamp-1000.7)<1e-6,
+            "repeated missing queries cannot renew the source stamp or fit observations");
+        stamp_car(4.5);retained.Observe({car},1000.9,1,5);
+        expect(retained.MissingDepartureOccupancies(1000.9,[](double,double){return true;},6,3,1).empty(),
+            "reacquisition removes the missing copy rather than duplicating the vehicle");
+        auto new_id=car;new_id.id=602;retained.Observe({new_id},1001,1,5);
+        expect(retained.DepartureOccupancies({new_id},[](double,double){return true;},6,3).empty(),
+            "a new ID cannot inherit the prior vehicle body or motion authority");
+        retained.Observe({},1001.1,1,5);
+        auto mixed=retained.MissingDepartureOccupancies(1001.1,[](double,double){return true;},6,3,1);
+        bool unsupported=false;for(const auto& m:mixed)if(m.id==602)unsupported=m.models.empty();
+        expect(unsupported,"unverified missing geometry is explicit and cannot certify a departure");
+        retained.Observe({},1016,1,5);
+        expect(retained.MissingDepartureOccupancies(1016,[](double,double){return true;},6,3,1).empty(),
+            "one-second history is unchanged: no missing vehicle model survives fifteen seconds");
+    }
     return failures?1:0;
 }
 

@@ -483,6 +483,14 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 const auto reason=ok?RoundaboutEntryStatus::PATH_CONVERSION_FAILED:result.entry_status;
                 failed.detail += std::string("; entry_reason=")+RoundaboutEntryStatusName(reason);
                 failed.detail += "; blocking_id="+std::to_string(result.blocking_object_id);
+                failed.detail += "; retained_missing="+std::to_string(result.retained_missing_objects)+
+                    "; unverified_missing="+std::to_string(result.unverified_missing_objects)+
+                    "; history_age="+std::to_string(result.blocking_history_age)+
+                    "; missing_status="+result.missing_status+"; missing_reason="+result.missing_reason+
+                    "; missing_checked="+std::to_string(result.missing_models_checked)+
+                    "; missing_cleared="+std::to_string(result.missing_non_interference)+
+                    "; blocking_time="+std::to_string(result.blocking_path_time)+
+                    "; gap_shift="+std::to_string(result.blocking_gap_shift);
             }
             const auto stop = MakeStopTrajectory(port.stopReferenceVehicle(snapshot), port.trajectoryDt(), asmc_msgs::Trajectory::FAILURE_GENERATION);
             port.trajectory_pub_.publish(stop);
@@ -527,6 +535,14 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         if(!port.planner().roundabout_merge_committed()) {
             succeeded.detail += std::string("; entry_reason=")+RoundaboutEntryStatusName(result.entry_status);
             succeeded.detail += "; blocking_id="+std::to_string(result.blocking_object_id);
+            succeeded.detail += "; retained_missing="+std::to_string(result.retained_missing_objects)+
+                "; unverified_missing="+std::to_string(result.unverified_missing_objects)+
+                "; history_age="+std::to_string(result.blocking_history_age)+
+                    "; missing_status="+result.missing_status+"; missing_reason="+result.missing_reason+
+                    "; missing_checked="+std::to_string(result.missing_models_checked)+
+                    "; missing_cleared="+std::to_string(result.missing_non_interference)+
+                    "; blocking_time="+std::to_string(result.blocking_path_time)+
+                    "; gap_shift="+std::to_string(result.blocking_gap_shift);
         }
         port.publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
             port.planner().roundabout_merge_committed() ?
