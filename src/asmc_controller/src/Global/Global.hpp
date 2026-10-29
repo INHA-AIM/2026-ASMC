@@ -32,6 +32,7 @@ struct MPCParams {
     double steering_rate_min = 0.1;    // [rad/s]
     double steering_response_delay_s = 0.0;  // command-to-yaw response, optional
     double accel_min        = -5.0;    // [m/s^2]
+    double acceleration_rise_rate = 0.0; // opt-in stage-wise brake release; NORMAL remains 0
     double accel_max        = 3.0;     // [m/s^2]
     // MORAI longlCmdType=1의 brake=1.0에 대응하는 차량 최대 감속도.
     // MPC 제약(accel_min)과 페달 변환 캘리브레이션을 분리한다.

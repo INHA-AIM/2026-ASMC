@@ -419,12 +419,9 @@ class LocalController {
     const double measured_acceleration=candidate->points.front().acceleration;
     if(speed_cap_mps>0)ceiling=std::min(ceiling,RecoveryAccelerationLimit(speed_cap_mps,ego.vx,
       measured_acceleration,.5,GetMPCParams().accel_min,GetMPCParams().accel_max));
-    if(comfort_rise_rate>0){
-      const double previous=execution_snapshot.steering.empty()?measured_acceleration:execution_snapshot.previous.accel;
-      const double elapsed=execution_snapshot.steering.empty()?.05:execution_snapshot.elapsed_s;
-      ceiling=AccelerationRiseCeiling(ceiling,previous,elapsed,comfort_rise_rate);
-    }
-    auto output = MPCProcess(ego, ref, ceiling);
+    // Release is constrained across the prediction horizon, not frozen as a
+    // negative acceleration maximum for every future stage.
+    auto output = MPCProcess(ego, ref, ceiling, comfort_rise_rate);
     if (!output.success) {
       stop(output.failure_reason ? output.failure_reason : "mpc_failed");
       return;
