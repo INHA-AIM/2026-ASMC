@@ -1,6 +1,6 @@
 # Localization → LOCAL recovery comparison (2026-10-30)
 
-Status: implemented opt-in; physical trial blocked before departure, not accepted. Start: `b001c2c1`,
+Status: opt-in implementation restored after baseline rollback; recovery driving remains unaccepted. Start: `b001c2c1`,
 backup ref `archive/pre-localization-local-recovery-20261030`.
 Remote compare branch was fetched; six existing local commits are preserved.
 No main merge/rebase, other worktree or perception parameter changes.
@@ -97,3 +97,36 @@ Next: establish live GPS/IMU/camera/LiDAR reception; repeat identical 1830→189
 entry with recovery OFF/ON and inspect native reason, candidate age and handoff
 trace at station1859.6416. Then one static blockage and one moving actor test.
 Until this passes, camera/local/localization final selection remains unresolved.
+
+
+## Re-enabled checkpoint after baseline investigation
+
+The user requested the pre-rollback implementation again. Original `75160004` and
+`08a43ca7` were reapplied as `ecb99af5` and `fc95209d`, preserving the subsequent
+runner heading guard (`7a922a7a`). Rollback reference:
+`archive/before-reenable-local-recovery-20261030` (7a922a7a).
+The baseline short NORMAL drive passed after resetting the simulator pose;
+see [the separate investigation](2026-10-30-localization-start-rollback.md).
+That result is not a physical acceptance of LOCAL recovery or A448 handoff.
+
+Inside `asmc-jamming-compare`, with the existing bridge/camera/LiDAR and dashboard:
+
+```bash
+source /devel/setup.bash
+export ROS_MASTER_URI=http://127.0.0.1:11373
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=localization localization_local_recovery:=true dashboard:=false
+```
+
+The existing observer is http://localhost:8089/web/index_v2.html; LiDAR view is
+http://localhost:8097. Only launch one autonomy instance. To return to baseline,
+stop that launch and repeat with `localization_local_recovery:=false`.
+The option remains false by default; camera remains the default jamming planner.
+LOCAL recovery starts a planner and semantic input, not a second jamming MPC.
+No new autonomous drive was started for this rebuild request.
+
+Rebuild verification: explicit CMake reconfigure restored the newly re-added test
+target; localization node, LOCAL planner/controller and recovery test built.
+Recovery policy/conversion 23 assertions, localization input regression, dashboard
+9 tests and all baseline/optional recovery launch graphs passed. Runtime source
+under src/ matches checkpoint 08a43ca7; subsequent changes are the runner guard
+and investigation/re-enable documentation only.
