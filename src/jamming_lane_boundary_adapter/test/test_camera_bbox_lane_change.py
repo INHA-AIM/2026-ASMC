@@ -71,7 +71,7 @@ class LaneChangeTest(unittest.TestCase):
             *(['avoid_clearance:=0.75'] if self._testMethodName.startswith('test_straddle_overflow') else []),
             *(['path_horizon:=10.0'] if self._testMethodName.startswith('test_straddle_far') else []),
             *(['lane_hold_time:=3.0'] if 'hold' in self._testMethodName else []),
-            *(['use_lidar_obstacles:=true'] if 'lidar' in self._testMethodName else []),
+            *(['use_lidar_obstacles:=true'] if 'lidar' in self._testMethodName or getattr(self,'handoff_enabled',False) else []),
             *(['creep_speed_kph:=3.0'] if 'creep' in self._testMethodName else []),
             *(['creep_clear_distance:=0.0'] if 'without_clear_distance' in self._testMethodName else []),
             *(['avoid_line_overrun:=0.0'] if 'wall' in self._testMethodName else []),
