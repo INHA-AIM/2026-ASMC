@@ -103,7 +103,8 @@ def audit(root=ROOT):
     required_targets = {
         'planning': {'asmc_planner_node', 'mpc_controller_node', 'asmc_control_selector_node',
                      'planning_objects_adapter', 'highway_merge_preflight', 'planning_gps_recovery_test',
-                     'stop_brake_response_test', 'reference_validator_test'},
+                     'stop_brake_response_test', 'reference_validator_test',
+                     'gps_mode_source_test_node'},
         'perception': {'lidar_pipeline_node', 'vehicle_state_node', 'camera_bbox_lane_node',
                        'camera_bbox_lane_change_node', '_lane_association',
                        'asmc_lidar_frame_time_core_test', 'asmc_lidar_geometry_boundary_test'}}

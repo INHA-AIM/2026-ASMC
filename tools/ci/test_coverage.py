@@ -64,6 +64,15 @@ done''')
         path.write_text(json.dumps(spec))
         self.assertTrue(any('targets missing' in e for e in audit(root)[0]))
 
+    def test_handoff_fixture_must_be_built_before_direct_rostest(self):
+        import json
+        root = self.copy_ci()
+        path = root/'.github/ci/essential.json'
+        spec = json.loads(path.read_text())
+        spec['jobs']['planning']['targets'].remove('gps_mode_source_test_node')
+        path.write_text(json.dumps(spec))
+        self.assertTrue(any('targets missing' in e for e in audit(root)[0]))
+
     def test_full_tensor_runtime_cannot_return_to_fast_ci(self):
         root = self.copy_ci()
         path = root/'.github/workflows/ci.yml'

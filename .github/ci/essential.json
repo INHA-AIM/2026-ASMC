@@ -36,7 +36,8 @@
         "jamming_policy_test",
         "local_execution_history_test",
         "local_ownership_probe",
-        "jamming_wall_scope_test"
+        "jamming_wall_scope_test",
+        "gps_mode_source_test_node"
       ],
       "script": ".github/ci/essential-planning.sh"
     },
