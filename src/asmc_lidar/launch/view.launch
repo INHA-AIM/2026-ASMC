@@ -6,7 +6,7 @@
   <arg name="open_browser" default="false"/>
   <arg name="dashboard_port" default="8091"/>
   <arg name="bind_address" default="127.0.0.1"/>
-  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml"/>
+  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_wall_vehicle.yaml"/>
   <arg name="max_clients" default="8"/>
   <arg name="http_header_timeout_s" default="5.0"/>
   <arg name="http_request_timeout_s" default="20.0"/>

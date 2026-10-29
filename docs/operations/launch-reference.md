@@ -348,7 +348,7 @@
 | `open_browser` | `false` | — |
 | `dashboard_port` | `8091` | — |
 | `bind_address` | `127.0.0.1` | — |
-| `pipeline_config` | `$(find asmc_lidar)/config/lidar_pipeline.yaml` | — |
+| `pipeline_config` | `$(find asmc_lidar)/config/lidar_wall_vehicle.yaml` | — |
 | `max_clients` | `8` | — |
 | `http_header_timeout_s` | `5.0` | — |
 | `http_request_timeout_s` | `20.0` | — |
