@@ -93,6 +93,9 @@ sh::RuntimeConfig ShippedRuntimeConfig() {
   // Existing Main-equivalence fixtures use the pre-height/audit path. Production
   // defaults are checked independently below and in the ROS integration tests.
   cfg.pipeline.height_roi.enabled=false;cfg.hd_map_audit_mode="off";
+  // These historical fixtures isolate classification-only camera fusion.
+  // Point-based splitting has its own tests and is enabled in the release YAML.
+  cfg.pipeline.camera_point_refinement.enabled=false;
   cfg.delivery_filters.reset();  // pre-final-publication reference, tested separately below
   cfg.hd_map_audit.reset();return cfg;
 }
@@ -546,7 +549,7 @@ TEST(RuntimeConfig, FrontRearReleaseProfileAndLegacyYamlFallback) {
 }
 
 TEST(RuntimeConfig, LoadsShippedConfigWithLocalGroundFitAndMainValues) {
-  const auto c = ShippedRuntimeConfig();
+  const auto c = sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
   const auto& p = c.pipeline;
   EXPECT_EQ(p.vehicle.f32_Length, 4.635f);
   EXPECT_EQ(p.vehicle.f32_Width, 1.892f);
@@ -579,9 +582,9 @@ TEST(RuntimeConfig, LoadsShippedConfigWithLocalGroundFitAndMainValues) {
   EXPECT_EQ(p.voxel_leaf_m, 0.1f);
   // Main tuning stays canonical; the historical low-obstacle profile is opt-in.
   EXPECT_EQ(p.ground.near_threshold_m, 0.30);
-  EXPECT_FALSE(p.camera_point_refinement.enabled);
+  EXPECT_TRUE(p.camera_point_refinement.enabled);
   EXPECT_EQ(p.ground.far_threshold_m, 0.40);
-  EXPECT_DOUBLE_EQ(p.ground.fit_threshold_m, .10);  // LOCAL-2D worktree candidate.
+  EXPECT_DOUBLE_EQ(p.ground.fit_threshold_m, 0.);  // Main far-band fit; explicit override stays opt-in.
   EXPECT_EQ(p.ground.seed_max_z_m, -0.65);
   EXPECT_EQ(p.ground.maximum_iterations, 80);
   EXPECT_EQ(p.ground.minimum_seed_points, 30);

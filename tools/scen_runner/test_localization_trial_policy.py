@@ -2,6 +2,16 @@ import unittest
 from localization_trial_policy import ready,offset_start,ClearContactWindow
 
 class DeparturePolicyTests(unittest.TestCase):
+    def test_preserved_scene_only_accepts_stationary_assets_without_mutation(self):
+        import copy
+        from localization_trial_policy import validate_preserved_static
+        actor=dict(kind=3,speed_kmh=0.,pose=dict(x=1.,y=2.,z=3.,roll=0.,pitch=0.,yaw=10.))
+        original=copy.deepcopy(actor)
+        validate_preserved_static(actor)
+        self.assertEqual(actor,original)
+        for bad in (dict(actor,kind=1),dict(actor,speed_kmh=.3),
+                    dict(actor,speed_kmh=float('nan')),dict(actor,pose=dict(actor['pose'],x=float('inf')))):
+            with self.assertRaises(ValueError):validate_preserved_static(bad)
     def test_udp_self_tuple_requires_matching_time_position_and_empty_native_contacts(self):
         from localization_trial_policy import udp_contact_classification as check
         ego=dict(pose=dict(x=10.,y=20.,z=1.),native_contacts=['Ego'])

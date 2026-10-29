@@ -126,7 +126,13 @@ void ControlSelector::handoffRequest(const asmc_msgs::ControlHandoff::ConstPtr& 
     pending_handoff_=true;pending_mode_=mode_;pending_started_=ros::SteadyTime::now();
   }
   if(!m->valid && pending_handoff_) {
+    // /planning/mode already selected this target. A preparation deadline
+    // cancels permission to use its candidate, not the logical mode change.
+    // Otherwise mode-before-cancel delivery leaves the selector in NORMAL;
+    // a later valid JAMMING request can never complete the stopped handoff.
+    mode_=pending_mode_;has_mode_=true;
     pending_handoff_=false;awaiting_selected_command_=true;publishStop();
+    publishDiagnostics();
   }
 }
 

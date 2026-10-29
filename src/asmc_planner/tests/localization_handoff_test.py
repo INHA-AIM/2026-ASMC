@@ -60,8 +60,13 @@ class HandoffTest(unittest.TestCase):
         gps.publish(GPSMessage());time.sleep(.04)
         self.assertTrue(requests[-1].valid and requests[-1].target_mode==1,
                         'rapid re-entry preserves the incomplete JAMMING handoff')
-        current=requests[-1]
-        first=len(commands);candidate.publish(evidence(current));wait(lambda:len(commands)>first and commands[-1][1].accel==.2)
+        first=len(commands);deadline=time.monotonic()+1
+        while not (len(commands)>first and commands[-1][1].accel==.2):
+            self.assertLess(time.monotonic(),deadline)
+            # Request and candidate travel on different connections. Mirror a
+            # controller's fresh candidate cadence after producer re-entry.
+            if requests[-1].valid:candidate.publish(evidence(requests[-1]))
+            time.sleep(.02)
         time.sleep(.3);self.assertEqual(commands[-1][1].brake,1,'selected command timeout stays 250ms')
 
 

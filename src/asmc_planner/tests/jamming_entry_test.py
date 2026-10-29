@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Route entry is independent of GPS loss and prepared-command availability."""
-import time,unittest
+import time,unittest,threading
 import rospy,rostest
 from std_msgs.msg import UInt8,Bool
 from morai_msgs.msg import GPSMessage,CtrlCmd
@@ -23,6 +23,11 @@ class Entry(unittest.TestCase):
    while not pred():
     self.assertLess(time.monotonic(),end);time.sleep(.005)
   wait(lambda:state.get_num_connections() and gps.get_num_connections() and modes)
+  stop=threading.Event()
+  def normal_heartbeat():
+   while not stop.wait(.02):normal.publish(CtrlCmd(longlCmdType=1,accel=.1))
+  heartbeat=threading.Thread(target=normal_heartbeat,daemon=True);heartbeat.start()
+  self.addCleanup(stop.set)
   def sample(x):
    gps.publish(GPSMessage(latitude=37.,longitude=126.,status=1))
    m=VehicleState(valid=True,x=x,y=0.,yaw=0.,speed=2.)
@@ -39,7 +44,10 @@ class Entry(unittest.TestCase):
    candidate.publish(c)
   offer(request);time.sleep(.03);self.assertEqual(modes[-1],0,'a prepared command cannot enter before A448')
   normal.publish(CtrlCmd(longlCmdType=1,accel=.1));sample(50.2);time.sleep(.03)
-  first=len(commands);offer(request);wait(lambda:modes[-1]==1)
+  # A delayed prewarm may have expired under test/build load. Follow the
+  # current request, as a real controller does; never reuse the old epoch.
+  wait(lambda:requests[-1].valid and requests[-1].target_mode==1)
+  first=len(commands);offer(requests[-1]);wait(lambda:modes[-1]==1)
   self.assertTrue(all(c.brake<1 for c in commands[first:]),'entry must not add a stop')
   sample(60);time.sleep(.10);self.assertEqual(modes[-1],1,'valid GPS inside the route does not end jamming ownership')
   sample(72);time.sleep(.12);ready.publish(Bool(True));time.sleep(.02)
