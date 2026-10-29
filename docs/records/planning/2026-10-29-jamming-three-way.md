@@ -39,8 +39,7 @@ flowchart LR
 MPC 실행 코드를 공유하되, LOCAL의 GPS 독립 yaw 정책과 localization의 map anchor,
 Frenet 시간 매개화는 명시적인 프로필로 구분한다. camera 추종기는 교체하지 않는다.
 
-A448 시작까지 접근 목표 25km/h, A448 시작부터 camera/LOCAL 10km/h,
-localization 15km/h다. GPS 건강 상태와 제어 소유권, 페인트 횡단 허용과 벽 확장 권한은
+A448 시작까지 접근 목표 25km/h이며 현재 camera 목표 10km/h, LOCAL/localization 순항 목표 15km/h·상한 20km/h다. GPS 건강 상태와 제어 소유권, 페인트 횡단 허용과 벽 확장 권한은
 분리한다. 복구 속도 5km/h는 검증된 경로의 목표이며 막힌 공간에 강제로 적용하지 않는다.
 
 ## 재부팅 전 확인한 범위
@@ -176,3 +175,82 @@ LOCAL30cm, localization 최종10cm/native45cm, 별도 도로 외곽 폭2.161m와
 
 현행 설정 설명과 경계는 `docs/operations/jamming-parameters.md`를 따른다.
 실제 `test1`·FOGGY13·전환/복귀/정지 회복과15/20km/h 반복 주행은 미검증이다.
+
+## 10월 30일 통합 체크포인트: 선택과 미선택
+
+이 항목은 이전 기록에 이어 수행한 결과다. 새 기준 main은 `af911727`,
+이 단위 시작은 `ff9650fb`, LOCAL 완료 원본은 `5f9e1cfa`, #138 원격은
+`e95dba0e`, localization 원본은 `711fe7c6`과 별도 WIP다. 원본 worktree는
+변경하지 않았다. 변경 전 incremental bundle은 개인 workspace의
+`.storage/jamming-pr141-pre-local-20261030-ff9650fb.bundle`이며 원래 base가 필요하다.
+
+| 판단 | 변경과 이유 | 상태 |
+|---|---|---|
+| LOCAL seed | `8df69a20`의 관련성·거리 정렬, 중복 offset 제거, 6개 제한을 현재 LOCAL 검색에 이식 | 채택, `43627a06` |
+| LOCAL 방향 선호 | 검증된 경로의 현재 LiDAR known-class에 대한 비용만 선택적으로 적용 | 부분 채택, `ec430aeb`; 기본 0, 8은 실험값. 원본 20–40m camera preview와 동일 구현 아님 |
+| camera guard·quiet bypass | 시야 상실이 통과 증거가 아님 | 미채택; 3회 빈 검출만으로 대상 해제 금지 |
+| semantic OBB recovery, KF/static 예외 | 큰 unknown 제거·운동 확정 근거 부족 | 보류, OFF; 시각·속도 validity 유지 |
+| 벽·지도 | localization의 이미 통합된 구간 한정 확장과 벽 권한 유지 | 유지; 실제 정체의 원인이라고 단정하지 않음 |
+| 차량·여유 | `2.161=1.892+2×.1345` 동등성 검증 및 LOCAL 도로·기동 임계 분리 | 채택, `d529d25c`·`d9244d90`; 도로/물체 veto 별도 |
+| 단일 운영 | 최신 main의 11311/8088/8091, camera 기본 및 세 옵션 | launch 기본 복원 `2930c4f4`; 실행 중 타 컨테이너는 변경 안 함 |
+| #125/#126 | 관측시각·IMU 단일 투영·sweep·후보 누락·접촉 교훈 | 현 구현/시험과 대응, 오래된 추종기·설정 복원 안 함 |
+| #138/#139 | #141이 관련 구현 일부를 통합·대체하지만 전체 기능 등가/완전 검증은 아님 | OPEN 보존; #141 병합 후 누락 검토를 거쳐 별도 종료 여부 결정 |
+
+LOCAL의 rate yaw와 localization의 orientation yaw·anchor/DR/GPS 복구, 서로
+다른 Frenet/LOCAL 속도 프로필을 유지한다. LOCAL 후보 시험의 코드는 공통 polygon
+검사를 재사용하지만 raster 관측 근거를 지도/Frenet과 동일시하지 않는다.
+서로 다른 제원 전체의 단일 canonical loader 이관은 완료하지 않았다. LOCAL 명시
+제원 충돌과 native 도로 총폭/reserve 불일치는 오류 처리하지만 모든 옵션에서
+제원 정본 충돌을 포괄적으로 검사하는 것은 후속 과제다.
+
+### 격리 검증과 동일 입력 재생
+
+D run `jamming-policy-freeze-20261030-r01`의 계획 CI, CTest 7개,
+launch 계약·단일 제어 소유권 검사는 `d9244d90` 실행파일에서 통과했다.
+`db48eba0`의 LOCAL 시작 오류 진단만 바뀐 뒤 LOCAL 회귀도 다시 통과했다.
+옛 폭 2.160835 설정을 넣으면 기대 폭 1.892를 표시하고 시작을 거절했다.
+문서·CI만 이후에 변경한 revision과 실제 빌드 revision은 동결 manifest에 따로 기록한다.
+
+D run `jamming-local-replay-20261030-r01`은 원본 bag
+`local3kmh-20261030-drive13/sensors_0.bag`, SHA256
+`27b53bb5c7990c46193487a635d816a0363ae4742aa92ded322294a7809b9f91`의
+동일 자차 운동 입력을 30초씩 재생했다. weight 0/8 각각 valid 293/291,
+LOCAL critical path p95 62.50/46.40ms였다. 각 재생의 타이밍이 다를 수 있고,
+동일 scene/lidar stamp로 대응된 유효 221 프레임 중 72개에서 경로 길이가
+10cm 초과로 달랐다. 실제 폐루프의 우열이나 독립 시험으로 해석하지 않는다.
+기존 원본 LOCAL의 더 큰 차폭과 guard/원거리 예고는 이 A/B에 포함되지 않았다.
+비용 8의 운영 승격 근거가 부족하므로 0을 기본으로 남긴다.
+
+### 실제 MORAI 대표 시험
+
+새 run `jamming-compare-drive-20261030-r01`에서 FOGGY 13시, 동일
+source·센서·start station 1830·10km/h 상한을 사용했다. 원래 test1 전체를
+그대로 재배치하지 않았다. 비정적 actor가 있어 full-preserved 검사는 차량/객체
+조작 전에 거절됐고, 기존 배치를 유지하면서 부분 진입(1878)과 정적 장면(1905)
+두 구간을 시험했다. dynamic actor가 관측 범위에 들어올 가능성은 배제하지 못한다.
+각 셀은 1회이며 시간은 완주 우열을 결정하기에 부족하다.
+
+| 구간 | camera | LOCAL | localization |
+|---|---|---|---|
+| 진입 station 1878 | 24.00초 완료 | 25.13초 완료 | 23.29초 완료 |
+| 진입 제어 공백 최대 | 55.7ms | 110.8ms | 63.4ms |
+| 정적 장면 station 1905 | 54.44초 완료, 최장 정지 2.60초 | 42.68초 완료, 최장 정지 0초 | station 약1889, 11.97초 정지 후 중단 |
+| 정적 장면 인계 공백 | 51.8ms | 101.1ms | 63.1ms |
+
+LOCAL 정적 장면은 near-field recovery 및 assisted sweep을 사용했으며 기존
+4m 근거리의 일부 미관측/내부 비노면 완화가 존재한다. camera의
+`creep_clear_distance=0`에서는 해당 정적 객체 creep 확인이 비활성이다.
+localization 정지는 fresh 객체 3개, DR, 탈출 요청 이후 후보 0개이며
+`shadow_native_blocked`와 `stall_escape_no_observed_opening`이 기록됐다.
+벽, 맵, OBB 중 원인은 확정되지 않았다. 100ms 인계 목표는 LOCAL 두 회차에서
+미달했고, 이 시험의 측정 공백은 모두 250ms 미만이었다.
+
+UDP 원시 충돌은 각 회차에서 `(-1,0)`만 수신됐고 일부 표본은 동시 자차 위치와
+일치했다. native 목록은 비어 있었으나 이를 무충돌 확정으로 취급하지 않는다.
+원시 bag·UDP 이벤트·native 상태·scene을 보존했다. 시험 복구 오류는 기록상
+없다. 총 주행·터널 출구/GPS 복귀·동적 횡단·25km/h 접근·15/20km/h 수락은
+미실시다. 같은 배치에서의 반복과 속도별 수락 전에는 주력 방식 선정을 보류한다.
+
+원시 로그 및 표시(유효 양수 계산 표본의 p95만 포함):
+http://localhost:8000/jamming-compare-drive-20261030-r01/review-r2/index.html
+조건과 원본 경로는 해당 run의 registration과 각 trial manifest를 따른다.
