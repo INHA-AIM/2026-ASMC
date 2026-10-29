@@ -165,6 +165,7 @@ def main():
             "src/asmc_planner/launch/local.launch",
             "src/asmc_planner/scripts/behavior_dashboard_server.py",
             "src/asmc_planner/web/dashboard_v2.js",
+            "tools/scen_runner/scen_runner/runtime/trial_command_gate.py",
             "src/asmc_planner/web/index_v2.html",
             "tools/scen_runner/scen_runner/runtime/trial_monitor.py",
             "src/asmc_planner/config/local_planner.yaml",
@@ -281,11 +282,15 @@ def main():
         control_rows.write(message.data + "\n")
         control_rows.flush()
 
+    transport_gate = None
+    transport_timer = None
     def commands(topic, name):
         stream = (root / name).open("x")
         handles.append(stream)
         def write(m):
-            if topic=='/ctrl_cmd':latest['wire']=(time.monotonic(),m)
+            if topic=='/ctrl_cmd':
+                latest['wire']=(time.monotonic(),m)
+                if transport_gate is not None:transport_gate.command(m)
             stream.write(json.dumps(dict(received_steady=time.monotonic(), ros_time=rospy.Time.now().to_sec(),
                 steering=m.steering, accel=m.accel, brake=m.brake)) + "\n")
         return rospy.Subscriber(topic, CtrlCmd, write, queue_size=100)
@@ -395,8 +400,25 @@ def main():
                 # Observation startup cannot create a new control failure path.
                 emit(dict(event='monitor_error',error=str(exc)))
                 (root/'monitor-startup-error.json').write_text(json.dumps(dict(error=str(exc))))
-        start(["roslaunch", "asmc_bridge", "bridge.launch", "transport_profile:=local",
-               "invert_steer:=" + args.bridge_invert_steer], "bridge")
+        # A private transport topic prevents UDP's fixed D gear from driving
+        # during SDK-P warmup. Operating bridge/selector contracts are intact.
+        from scen_runner.runtime.trial_command_gate import TrialCommandGate
+        def held_command():
+            command=CtrlCmd();command.longlCmdType=1;command.brake=1.
+            return command
+        actuator=rospy.Publisher('/local_trial/actuator_cmd',CtrlCmd,queue_size=1)
+        transport_gate=TrialCommandGate(actuator.publish,held_command)
+        transport_timer=rospy.Timer(rospy.Duration(.05),lambda _:transport_gate.tick())
+        subscriptions.append(commands('/local_trial/actuator_cmd','actuator.jsonl'))
+        import xml.etree.ElementTree as ET
+        bridge_xml=ET.Element('launch')
+        ET.SubElement(bridge_xml,'remap',{'from':'/ctrl_cmd','to':'/local_trial/actuator_cmd'})
+        include=ET.SubElement(bridge_xml,'include',{'file':'$(find asmc_bridge)/launch/bridge.launch'})
+        for name,value in [('transport_profile','local'),('invert_steer',args.bridge_invert_steer)]:
+            ET.SubElement(include,'arg',{'name':name,'value':value})
+        bridge_path=root/'trial-bridge.launch'
+        ET.ElementTree(bridge_xml).write(str(bridge_path),encoding='unicode')
+        start(['roslaunch',str(bridge_path)],'bridge')
         rospy.wait_for_message("/Ego_topic", __import__("morai_msgs.msg", fromlist=["EgoVehicleStatus"]).EgoVehicleStatus, timeout=15)
         rospy.wait_for_message("/imu", __import__("sensor_msgs.msg", fromlist=["Imu"]).Imu, timeout=10)
         if args.start_perception:
@@ -517,6 +539,7 @@ def main():
             "/ctrl_cmd/normal",
             "/ctrl_cmd",
             "/ctrl_cmd/jamming",
+            "/local_trial/actuator_cmd",
             "/CollisionData",
             "/image_jpeg/compressed",
             "/cam_left/image_jpeg/compressed",
@@ -626,6 +649,9 @@ def main():
         from scen_runner.records.local_margin_audit import footprint
         snapshot=link.states()
         initial=actor_state(next(x for x in snapshot if x.actor_info.id.value==link.ego_id))
+        if not link.held_at(definition['start_pose']):
+            emit(dict(event='trial_start_pose_or_speed_invalid',actual=initial,expected=definition['start_pose']))
+            raise RuntimeError('trial moved before release; fixed start condition not met')
         last=(initial['pose']['x'],initial['pose']['y'])
         started = time.monotonic()
         if monitor: monitor.update(phase='driving')
@@ -641,6 +667,9 @@ def main():
         r.mode = VehicleControlMode.VEHICLE_CONTROL_AUTO_MODE
         link.check(link._require()._actor_stub.SetVehicleControlMode(r, timeout=3),"enable native auto control")
         link.release()
+        transport_gate.release()
+        emit(dict(event='actuation_gate_released',held_commands=transport_gate.held,
+                  actual_pre_release_speed_kph=initial['speed_kmh'],topic='/local_trial/actuator_cmd'))
         emit(dict(event='ego_released'))
         # The earlier LOCAL fixture runner only prepared saved actors. Without
         # resuming/ticking ReplaySection, pedestrians/events stayed frozen and
@@ -725,6 +754,7 @@ def main():
             time.sleep(0.1)
     finally:
         driving_finished=time.monotonic()
+        if transport_gate:transport_gate.close()
         if monitor: monitor.update(phase='finishing')
         if started is not None: emit(dict(event='driving_ended'))
         resources.close()
@@ -743,6 +773,7 @@ def main():
                 except subprocess.TimeoutExpired:
                     os.killpg(proc.pid, signal.SIGTERM)
                     proc.wait(timeout=10)
+        if transport_timer:transport_timer.shutdown()
         if section:
             try:
                 section.cleanup()
@@ -812,6 +843,7 @@ def main():
             cleanup_errors=cleanup_errors,
             closed_loop_acceptance=False,
             child_exits=child_exits,
+            transport_gate=dict(held_commands=transport_gate.held,forwarded_commands=transport_gate.forwarded) if transport_gate else None,
         )
         (root / "trial-result.json").write_text(json.dumps(result, indent=2))
         print(json.dumps(result), flush=True)
