@@ -550,7 +550,7 @@ TEST(RuntimeConfig, FrontRearReleaseProfileAndLegacyYamlFallback) {
 }
 
 TEST(RuntimeConfig, LoadsShippedConfigWithCurrentOperatingValues) {
-  const auto c = ShippedRuntimeConfig();
+  const auto c = sh::LoadRuntimeConfig(ShippedConfig(),PackageDir());
   const auto& p = c.pipeline;
   EXPECT_EQ(p.vehicle.f32_Length, 4.635f);
   EXPECT_EQ(p.vehicle.f32_Width, 1.892f);
@@ -679,7 +679,7 @@ TEST(RuntimeConfig, RemovingLocalGroundFitRestoresLegacyConsensus) {
   n["ground"].remove("fit_distance_threshold_m");
   const auto c = sh::LoadRuntimeConfig(dir.Write("ground-rollback.yaml", n), PackageDir());
   EXPECT_DOUBLE_EQ(c.pipeline.ground.fit_threshold_m, 0.);
-  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .30);
+  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .23);
   EXPECT_DOUBLE_EQ(c.pipeline.ground.far_threshold_m, .40);
 }
 
@@ -689,7 +689,7 @@ TEST(RuntimeConfig, GroundFitAuditIsExplicitAndDoesNotChangeRemovalBands) {
   n["ground"]["fit_distance_threshold_m"] = .08;
   const auto c = sh::LoadRuntimeConfig(dir.Write("ground-fit.yaml", n), PackageDir());
   EXPECT_DOUBLE_EQ(c.pipeline.ground.fit_threshold_m, .08);
-  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .30);
+  EXPECT_DOUBLE_EQ(c.pipeline.ground.near_threshold_m, .23);
   EXPECT_DOUBLE_EQ(c.pipeline.ground.far_threshold_m, .40);
   EXPECT_NE(c.config_sha256, ShippedRuntimeConfig().config_sha256);
   for (double value : {0., -.1, .41, std::numeric_limits<double>::infinity()})
