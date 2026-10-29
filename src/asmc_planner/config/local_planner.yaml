@@ -1,11 +1,12 @@
-# LOCAL-1 simulator experiment only. NORMAL/jamming configurations are unchanged.
+# GPS-independent LOCAL runtime. NORMAL and the camera jamming selector remain separate.
+# LOCAL-2G: geometric motion forecasts, turn-room reserve and measured-gap checks.
 # VehicleSpec width=1.892m; SDK bounding box width=2.1608348m. Until a contact
 # envelope test resolves the difference, use the larger physical test envelope.
 # No separate expansion of the LiDAR OBB: clearance is applied once here.
 vehicle_width: 2.160835
 vehicle_length: 4.635
 rear_axle_to_bumper: 0.790
-clearance_margin: 0.10
+clearance_margin: 0.30
 planning_budget_ms: 40.0
 # Fresh semantic near-field recovery is explicitly capped at3km/h. It is a
 # soft-cost simulation trial and must not be reported as collision-free space.
@@ -19,8 +20,14 @@ causal_road_memory: true
 acceleration_limit_mps2: 1.0
 # Candidate for a missing/folded home reference. Current raster/OBB collision
 # checks remain authoritative; unvalidated candidate stays OFF in this profile.
-semantic_reference_fallback: false
+semantic_reference_fallback: true
 # LOCAL-2F short measured-asset retention candidate, max200ms; OFF until A/B.
 retain_static_observations: false
-# Comfort1.5m/s² remains the default;3.0 is a separately validated trial profile.
-controlled_braking_limit_mps2: 1.5
+# Comfort2.0m/s²; controlled3.0 only when actual-state braking needs it.
+controlled_braking_limit_mps2: 3.0
+
+comfort_deceleration_mps2: 2.0
+preferred_clearance: 0.55
+low_speed_rate_floor_mps: 0.5
+local_motion_prediction: true
+maneuver_reserve_m: 1.2

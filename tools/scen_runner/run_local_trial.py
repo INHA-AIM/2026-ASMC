@@ -47,6 +47,9 @@ def selected_command_ready(latest,now):
 
 def validate_trial_definition(raw,seconds):
     definition=raw['replay']['tunnel']
+    env=raw.get('trial_environment',dict(weather='Sunny',hour=13))
+    if env.get('weather') not in ('Sunny','Foggy') or env.get('hour') not in (11,13,15):
+        raise ValueError('bounded competition weather/time required')
     records=[e['record'] for e in definition.get('baseline',[])]
     records += [e['record'] for e in definition.get('events',[]) if e['action']=='spawn']
     if any(r['definition']['type'] not in ('static','crossing') for r in records):
@@ -412,7 +415,9 @@ def main():
         link.pause_ego(False)
         time.sleep(0.5)
         link.hold()
-        link.set_environment("Sunny", 13)
+        environment=raw.get("trial_environment",dict(weather="Sunny",hour=13))
+        link.set_environment(environment["weather"],environment["hour"])
+        emit(dict(event="environment_applied",**environment))
         section = ReplaySection(
             "tunnel",
             42,
@@ -545,13 +550,6 @@ def main():
                 reason = 'input_or_plan_not_ready'
                 raise RuntimeError('no fresh usable trajectory before enabling auto control')
             time.sleep(.05)
-        r = VehicleControlModeParam()
-        r.actor_info.CopyFrom(link.ego_info())
-        r.mode = VehicleControlMode.VEHICLE_CONTROL_AUTO_MODE
-        link.check(
-            link._require()._actor_stub.SetVehicleControlMode(r, timeout=3),
-            "enable native auto control",
-        )
         # MORAI can retain the native unknown-contact marker after a removed
         # actor (observed after drive06). Preserve/quarantine startup records;
         # they are not a new contact. UDP events remain independently active.
@@ -585,14 +583,28 @@ def main():
         # Independent native boxes are an evaluation guard for recycled,
         # continuously published collision IDs. They never enter the planner.
         from scen_runner.records.local_margin_audit import footprint
-        link.release()
+        snapshot=link.states()
+        initial=actor_state(next(x for x in snapshot if x.actor_info.id.value==link.ego_id))
+        last=(initial['pose']['x'],initial['pose']['y'])
         started = time.monotonic()
         last_udp_evaluation=started
+        emit(dict(event='driving_started'))
+        emit(dict(event='native_sample',phase='pre_release',ego=initial,travel_m=0.,
+            plan_valid=bool(latest.get('plan') and latest['plan'].valid),
+            plan_reason=latest['plan'].reason if latest.get('plan') else 'missing',
+            plan_sequence=latest['plan'].plan_sequence if latest.get('plan') else 0,
+            owned=section.owned(),actor_states=[actor_state(x) for x in snapshot if x.actor_info.id.value in section.owned()]))
+        r = VehicleControlModeParam()
+        r.actor_info.CopyFrom(link.ego_info())
+        r.mode = VehicleControlMode.VEHICLE_CONTROL_AUTO_MODE
+        link.check(link._require()._actor_stub.SetVehicleControlMode(r, timeout=3),"enable native auto control")
+        link.release()
+        emit(dict(event='ego_released'))
         # The earlier LOCAL fixture runner only prepared saved actors. Without
         # resuming/ticking ReplaySection, pedestrians/events stayed frozen and
         # a nominal dynamic test was actually a static-placement test.
         section.resume_schedule(started)
-        emit(dict(event='driving_started'))
+        emit(dict(event='actors_resumed'))
         reason = "time_limit"
         stationary = started
         while time.monotonic() - started < args.seconds:
@@ -670,6 +682,7 @@ def main():
                 break
             time.sleep(0.1)
     finally:
+        driving_finished=time.monotonic()
         if started is not None: emit(dict(event='driving_ended'))
         resources.close()
         if mutated:
@@ -748,7 +761,8 @@ def main():
             native_evidence_limited=native_evidence_limited,
             travel_m=travel,
             maximum_speed_kph=speedmax,
-            seconds=time.monotonic() - started if started else 0,
+            seconds=driving_finished - started if started else 0,
+            cleanup_seconds=time.monotonic()-driving_finished,
             cap_kph=args.cap,
             near_blind_assist=args.near_blind_assist,
             cleanup_errors=cleanup_errors,

@@ -734,7 +734,7 @@
   }
   function updateLocalExperimentPanel(){
     const r=data.localExperiment,c=data.localControl,fresh=localExperimentFresh();
-    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL CONTROL · ACTIVE':r.phase==='prepare'?'LOCAL PREPARE':r.phase==='idle'?'LOCAL IDLE':'LOCAL PREVIEW'):'LOCAL-1 STALE'):'LOCAL-1 WAIT';
+    $('localStatus').textContent=r?(fresh?(c?.control_enabled?'LOCAL CONTROL · ACTIVE':r.phase==='prepare'?'LOCAL PREPARE':r.phase==='idle'?'LOCAL IDLE':'LOCAL PREVIEW'):'LOCAL STALE'):'LOCAL WAIT';
     $('localStatus').className='chip '+(fresh?'ok':'bad');
     $('localExperimentPanel').hidden=!r;
     if(!r)return;
@@ -746,6 +746,8 @@
       ['최종 속도 제한',r.speed_reason],
       ['쾌적 제동거리 / 적용 한계',fmt(r.comfort_stopping_m)+' m / '+fmt(r.braking_limit_mps2)+' m/s²'],
       ['필요 / 확보 제동거리',fmt(r.required_stopping_m)+' / '+fmt(r.available_stopping_m)+' m'],
+      ['회피 공간 확보',fmt(r.maneuver_reserve_m)+' m (우회 미완성 접근에서만)'],
+      ['선택 경로의 OBB 간격',r.minimum_object_clearance_m<1e6?fmt(r.minimum_object_clearance_m,2)+' m · 인지 OBB 기준':'주변 객체 없음'],
       ['복구 경로 연장',fmt(r.recovery_extension_m)+' m (연장부는 현재 차체 sweep 검사)'],
       ['선택 길이 / 탐색 한계',fmt(r.selected_length_m,1)+' / '+fmt(r.search_horizon_m,1)+'m'],
       ['본차로 근거 끝 / 선택',fmt(r.reference_end_m,1)+'m · '+(r.path_source||'—')],

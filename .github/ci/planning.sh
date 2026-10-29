@@ -32,6 +32,7 @@ PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/t
 PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_local_delivery_metrics.py'
 PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_local_model_audit.py'
 PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_local_route_review.py'
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_local_margin_audit.py'
 (
   cd "$ASMC_CI_BUILD/asmc_controller"
   ctest --output-on-failure -R 'local_execution_history_test'
