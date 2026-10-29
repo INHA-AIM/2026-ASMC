@@ -15,12 +15,11 @@ from urllib.parse import quote, unquote, urljoin, urlsplit
 
 def catalogue(root, output, scan_roots=None):
     pages = []
-    for directory, directories, filenames in os.walk(root, followlinks=False):
+    for directory, directories, filenames in chain.from_iterable(
+            os.walk(p, followlinks=False) for p in (scan_roots or [root])):
         if '.gallery-ignore' in filenames:
             directories[:]=[]
             continue  # Browser automation caches are not experiment pages.
-    for directory, directories, filenames in chain.from_iterable(
-            os.walk(p, followlinks=False) for p in (scan_roots or [root])):
         # Reproduction sources are not rendered experiments (keep them on disk).
         directories[:] = [d for d in directories if d not in ("source-snapshot", "source-untracked")]
         for name in filenames:
