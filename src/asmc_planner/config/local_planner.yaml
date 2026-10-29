@@ -31,3 +31,11 @@ preferred_clearance: 0.55
 low_speed_rate_floor_mps: 0.1
 local_motion_prediction: true
 maneuver_reserve_m: 1.2
+
+# LOCAL-2H first-comparison profile, validated at10km/h in FOGGY13.
+# Current OBB/30cm body clearance and350ms source freshness are unchanged.
+# A close tight selected sweep gets maneuver time, not every YOLO detection.
+maneuver_speed_cap_kph: 5.0
+# Six unique rigid source observations allow a nonzero2m/s past-age envelope.
+# Known mobile groups are vetoed; raw velocity and valid absolute-speed floors remain.
+quiescent_geometry_padding: true
