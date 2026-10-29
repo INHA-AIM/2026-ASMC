@@ -744,6 +744,7 @@
       ['run / plan',r.run_id+' / '+r.plan_sequence],['실행 단계',r.phase||'기존 기록'],['실제 제어',c?.control_enabled?'연결됨':'계산 전용'],
       ['목표 / 제한 속도',fmt(r.requested_kph)+' / '+fmt(r.selected_kph)+' km/h'],
       ['최종 속도 제한',r.speed_reason],
+      ['곡률 / 조향 변화 속도 상한',fmt(r.curve_kph)+' / '+fmt(r.steering_kph)+' km/h'],
       ['쾌적 제동거리 / 적용 한계',fmt(r.comfort_stopping_m)+' m / '+fmt(r.braking_limit_mps2)+' m/s²'],
       ['필요 / 확보 제동거리',fmt(r.required_stopping_m)+' / '+fmt(r.available_stopping_m)+' m'],
       ['회피 공간 확보',fmt(r.maneuver_reserve_m)+' m (우회 미완성 접근에서만)'],

@@ -44,7 +44,12 @@ def summarize(root):
         active_path_gap_ms=summary.get('active_local_valid_plan_max_silence_ms'),
         critical_p95_ms=quantiles([r.get('critical_path_ms',r['processing_ms']) for r in plans]).get('p95'),
         input_lock_p95_ms=quantiles([r.get('input_lock_hold_ms',0) for r in plans]).get('p95'),
-        actual_udp_contacts=[e for e in events if e.get('event')=='udp_collision'],
+        # UDP callbacks include clear packets and persistent startup IDs. The
+        # runner's accepted result is distinct from that raw evidence stream.
+        actual_udp_contacts=[value for value in result.get('native_contacts',[]) if value.startswith('udp:')],
+        raw_udp_contact_messages=sum(e.get('event')=='udp_collision' and bool(e.get('objects')) for e in events),
+        contact_signal_qualification=('fresh-event gate with startup quarantine' if 'native_evidence_limited' in result else
+                                      'historical signal; inspect startup and body geometry before calling it contact'),
         stationary_after_motion_max_s=stationary,
         controlled_braking_frames=sum(r.get('braking_limit_mps2',1.5)>1.5 for r in plans),
         retained_measurement_frames=sum(any(o.get('retained_measurement') for o in r.get('scene',{}).get('obstacles',[])) for r in plans),
