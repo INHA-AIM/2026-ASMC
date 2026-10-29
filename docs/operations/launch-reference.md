@@ -225,8 +225,7 @@
 | `highway_merge` | `true` | — |
 | `dashboard` | `true` | — |
 | `open_dashboard` | `false` | — |
-| `shadow_planner` | `main` | Compatibility input: main/localization; used when jamming_planner is omitted |
-| `jamming_planner` | `$(eval {'main': 'camera', 'localization': 'localization'}[arg('shadow_planner')])` | camera: existing main, localization: map localization; LOCAL is pending PR138 |
+| `jamming_planner` | `camera` | camera: existing main, localization: map localization; LOCAL is pending PR138 |
 | `dashboard_port` | `$(eval 8089 if arg('jamming_planner') == 'localization' else 8088)` | — |
 | `shadow_static_avoidance` | `$(eval arg('jamming_planner') == 'localization')` | Localization comparison profile: measured static bypass and return; see documented failures |
 | `shadow_dynamic_obstacles` | `$(eval arg('jamming_planner') == 'localization')` | Localization comparison profile: observed-motion yield; not general dynamic acceptance |

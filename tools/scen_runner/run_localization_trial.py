@@ -22,7 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('root', type=Path)
     parser.add_argument('--trial', required=True)
-    parser.add_argument('--planner',choices=['main','localization'],default='localization')
+    parser.add_argument('--jamming-planner',choices=['camera','localization'],default='localization')
     parser.add_argument('--gps-outage', action='store_true')
     parser.add_argument('--own-perception', action='store_true')
     parser.add_argument('--lidar-debug', action='store_true',
@@ -57,7 +57,7 @@ def main():
     storage_floor=storage_minimum_free_bytes()
     registration=active_registration(args.root)
     if (args.dynamic_obstacles or args.shadow_lane_rules) and (
-            not args.static_avoidance or args.planner!='localization'):
+            not args.static_avoidance or args.jamming_planner!='localization'):
         raise ValueError('motion/lane experiments require the explicit Localization M3 preview')
     if args.fixture in ('crossing_left','crossing_right','standing_person') and not args.dynamic_obstacles:
         raise ValueError('vehicle/pedestrian motion fixtures require explicit dynamic preview')
@@ -87,7 +87,7 @@ def main():
     output.parent.mkdir(exist_ok=True)
     output.mkdir(exist_ok=False)
     if args.fixture!='none' and not args.static_avoidance:raise ValueError('obstacle trials require explicit M3 preview')
-    if args.static_avoidance and args.planner!='localization':raise ValueError('M3 fixture requires Localization')
+    if args.static_avoidance and args.jamming_planner!='localization':raise ValueError('M3 fixture requires Localization')
     import rospy
     import rosgraph
     from std_msgs.msg import Bool, String, UInt8
@@ -344,7 +344,7 @@ def main():
             wrapper = output/'trial.launch'
             wrapper.write_text('''<launch>
   <include file="$(find asmc_planner)/launch/autonomy_no_bridges_v2.launch">
-    <arg name="shadow_planner" value="%s"/>
+    <arg name="jamming_planner" value="%s"/>
     <arg name="dashboard" value="false"/>
     <arg name="shadow_run_id" value="%s"/>
     <arg name="shadow_speed_cap_kph" value="%s"/>
@@ -360,7 +360,7 @@ def main():
   <param name="/mpc_controller/validation_speed_cap_kph" value="%s"/>
   <param name="/localization/trial_id" value="%s"/>
   <param name="/localization_motion/speed_callerid" value="/morai_udp_bridge"/>
-</launch>\n''' % (args.planner,escape(registration['run_id']), args.cap, str(args.static_avoidance).lower(), str(args.dynamic_obstacles).lower(), str(args.shadow_lane_rules).lower(), args.yaw_source, args.motion_reference_offset, args.motion_turn_gain, escape(str(output/'decisions.jsonl')), normal_ceiling,normal_cap,escape(args.trial)))
+</launch>\n''' % (args.jamming_planner,escape(registration['run_id']), args.cap, str(args.static_avoidance).lower(), str(args.dynamic_obstacles).lower(), str(args.shadow_lane_rules).lower(), args.yaw_source, args.motion_reference_offset, args.motion_turn_gain, escape(str(output/'decisions.jsonl')), normal_ceiling,normal_cap,escape(args.trial)))
             bag_topics = [t for t, k in (
                 ('/gps', None), ('/simulation/raw/gps', None), ('/simulation/gps_fault', None), ('/imu', None), ('/Ego_topic', None),
                 ('/planning/localization/motion', None),
@@ -408,7 +408,7 @@ def main():
                 models_ready=all(s.get('loaded') and s.get('warmed') and s.get('successful_batches',0)>0 and
                                  -.05<=rospy.Time.now().to_sec()-s.get('last_source_stamp',0)<=.75
                                  for s in model_states)
-                anchor_ready=args.planner=='main' or (anchor[1] and now-anchor[0]<.2)
+                anchor_ready=args.jamming_planner=='camera' or (anchor[1] and now-anchor[0]<.2)
                 if (models_ready and anchor_ready and now-command[0] < .2 and
                     state[1].get('valid') and command[1].get('brake', 1) < .9): break
                 if now > deadline: raise RuntimeError('startup_readiness_timeout')
@@ -567,7 +567,7 @@ def main():
     result['udp_collision_observations']=dict(nonempty_messages=len(udp_contacts),active_messages=sum(c['phase']=='running' for c in udp_contacts),raw_evidence='events.jsonl and critical.bag')
     result['collision_evidence_policy']='raw UDP retained; only time/position-matched type=-1/id=0 ego status is neutral; unresolved active evidence stops for joint review'
     result['motion_turn_gain_m2ps']=args.motion_turn_gain
-    result['planner']=args.planner
+    result['planner']=args.jamming_planner
     result['main_view_size']=args.main_view_size
     result['restore_view_size']=args.restore_view_size
     result['monitoring']=monitoring

@@ -69,7 +69,7 @@ keep their original target; later recoveries cannot change past poses. Acceptanc
 requires an uninterrupted GPS→DR→verification→blend→GPS sequence in the same
 motion/anchor epoch. A stopped reanchor is recorded as a failure of that sequence.
 
-The full pipeline can select this route with `shadow_planner:=localization` in
+The full pipeline can select this route with `jamming_planner:=localization` in
 `autonomy_no_bridges_v2.launch`. Its default `main` still selects the existing
 camera BBox route. Localization selects only its motion, position and MPC nodes;
 the old BBox nodes are absent. NORMAL keeps the anchor warm; near the shadow region the next reference and MPC
@@ -102,7 +102,7 @@ records the source boundary, new analysis, and current live acceptance status.
 
 Runtime naming migration: operational `shadow_map` source/launch and the old
 external-repository-named option are replaced by `shadow_localization` and
-`shadow_planner:=localization`. Old options are rejected. Frozen experiment IDs,
+`jamming_planner:=localization`. Old options are rejected. Frozen experiment IDs,
 gallery numbers, commit SHAs and external implementation attribution are immutable.
 The original external source informed the IMU/CAN integration approach; it is not
 the current runtime's name.

@@ -40,7 +40,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=localizati
 판제: <http://localhost:8089/web/index_v2.html>의 Auto 또는 Localization map 후보·선택.
 LiDAR: <http://localhost:8097>. main 판제 기본 포트는 8088로 유지한다.
 전체 파이프라인을 한 worktree씩 실행한다. 기존 autonomy를 Ctrl-C로 종료한 다음
-`roslaunch asmc_planner autonomy_no_bridges_v2.launch shadow_planner:=main`으로 복귀한다.
+`roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=camera`으로 복귀한다.
 선택하지 않은 재밍 제어기는 실행하지 않으며 `/ctrl_cmd`는 selector 한 개가 소유한다.
 
 자동 시험은 환경을 명시한 private master 11371을 사용한다. 대시보드는 같은 master의
@@ -144,7 +144,9 @@ LiDAR의 기본 `lidar.launch`는 debug stage가 꺼져 있어 콘솔의 진단/
 LOCAL PR [#138](https://github.com/INHAautonav/2026-ASMC/pull/138)의 공개 head는
 `c73f10f6`이며 확인 시점에는 OPEN, main에는 미포함이다. 해당 코드는 가져오지 않았다.
 그 PR의 명칭을 존중해 정본 선택은 `jamming_planner:=camera` / `jamming_planner:=localization`으로 맞췄다.
-기존 `shadow_planner:=main/localization`은 새 인자가 생략됐을 때의 호환 입력이다.
-새 인자를 명시하면 그 값이 우선한다. 아직 `jamming_planner:=local`은 실행 전 오류로 거절한다.
+선택 인자는 `jamming_planner` 하나로 통일했고 호환 별칭은 제거했다.
+아직 `jamming_planner:=local`은 실행 전 오류로 거절한다.
 #138 병합 후에는 최신 main을 다시 통합해 local 분기와 공용 foundation의 양쪽 의도를 검토해야 한다.
 별도 브랜치의 구현을 미리 합쳤거나 세 방식 통합을 이미 수락한 것으로 표현하지 않는다.
+
+자동 시험 도구도 `--jamming-planner camera|localization`으로 선택하며 기존 동결 run의 명령·기록은 보존한다.

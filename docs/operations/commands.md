@@ -74,7 +74,7 @@ GPU가 다른 PC에서 만든 객체 엔진을 사용하던 경우, 추론 노�
 엔진을 생성합니다. 검증을 마친 로컬 객체 엔진은 직접 실행하는 `camera.launch`와
 시나리오 실행기 모두에서 선택됩니다. [로컬 엔진 안내](local-lane-engine.md)를 참고하세요.
 이 연구 checkout에서 위치측위 기반 음영 M2를 선택할 때는 D에
-`shadow_planner:=localization`를 지정합니다. 기본 `main`은 기존 BBox 방식이며,
+`jamming_planner:=localization`을 지정합니다. 기본 `camera`는 기존 BBox 방식이며,
 [공유 master·중복 방지·연구 범위](planning-control.md#localization-음영-위치-추종-연구-옵션)를 먼저 확인합니다.
 판제 대시보드는 D에 포함되어 별도 실행하지 않습니다. 실행·보존·검증 범위는
 [통합 안내](../../src/asmc_planner/docs/main-integration-20261026.md)를 참고하세요.

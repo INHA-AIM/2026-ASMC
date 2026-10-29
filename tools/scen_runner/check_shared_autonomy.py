@@ -22,7 +22,7 @@ def main():
     config = roslaunch.config.ROSLaunchConfig()
     roslaunch.xmlloader.XmlLoader().load(
         str(package / 'launch/autonomy_no_bridges_v2.launch'), config,
-        argv=['shadow_planner:=localization', 'dashboard:=false'], verbose=False)
+        argv=['jamming_planner:=localization', 'dashboard:=false'], verbose=False)
     expected = {n.namespace.rstrip('/') + '/' + n.name for n in config.nodes}
     master = rosgraph.Master('/localization_preflight')
     master.getPid()
