@@ -20,7 +20,7 @@ ProductionRuntime::ProductionRuntime()
     policy_params.param("heading_tolerance_rad", heading, heading);
     // Invalid/mismatched assets must not silently broaden or disable the scope.
     static_policy = std::make_shared<const StaticMissionPolicy>(metadata, data_root, lateral, heading);
-    ROS_INFO("Static mission UNKNOWN policy: official route %.3f-%.3f m (%s)",
+    ROS_INFO("Static mission stationary planning prior: official route %.3f-%.3f m (%s)",
              static_policy->start(), static_policy->end(), metadata.c_str());
   }
   planning_.reset(new frenet_planner_ros::PlanningPort(

@@ -642,7 +642,7 @@ void BehaviorInput::runOnce() {
     static_mission_ego_in_scope = static_mission_observation_.egoInScope();
     static_mission_remapped = static_mission_observation_.remapped();
     if (static_mission_remapped > 0) {
-      ROS_INFO_THROTTLE(2.0, "Static mission: %zu person/vehicle objects use UNKNOWN policy (motion unchanged)",
+      ROS_INFO_THROTTLE(2.0, "Static mission: %zu objects use stationary mission prior (raw velocity/validity unchanged)",
                         static_mission_remapped);
     }
   }
@@ -672,6 +672,9 @@ void BehaviorInput::runOnce() {
       out << "{\"planner_id\":" << raw->objects[i].id
           << ",\"original_type\":" << int(raw->objects[i].type)
           << ",\"effective_type\":" << int(static_mission_policy_ ? static_mission_observation_.objects().objects[i].type : raw->objects[i].type)
+          << ",\"original_motion\":" << int(raw->objects[i].motion_state)
+          << ",\"effective_motion\":" << int(static_mission_policy_ ? static_mission_observation_.objects().objects[i].motion_state : raw->objects[i].motion_state)
+          << ",\"mission_prior\":" << (static_mission_ego_in_scope && static_mission_policy_ && static_mission_policy_->contains(raw->objects[i].center.x, raw->objects[i].center.y))
           << '}';
     }
     out << "]}";

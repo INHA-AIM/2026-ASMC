@@ -1,3 +1,4 @@
+#include "Frenet/Maneuver/Merge/RoundaboutObjectPolicy.hpp"
 #include "Frenet/Maneuver/Merge/ProgressStoppingCertificate.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutDeparture.hpp"
 #include "Frenet/frenet_planner.hpp"
@@ -460,7 +461,7 @@ void FrenetPlanner::ApplyRoundaboutMergeCommit(const MergePrepareResult&) {
     execution_.resetStopTarget();
 }
 bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
-    const std::vector<TrackedObject>& obstacles,const PlannerCommand& command,
+    const std::vector<TrackedObject>& source_obstacles,const PlannerCommand& command,
     double planning_time,double observation_stamp,CartesianPath& out_path,
     MergePrepareResult& result,double ego_observation_time) {
     result=MergePrepareResult{};result.epoch=++roundabout_epoch_;
@@ -477,6 +478,13 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         roundabout_acceleration_memory_.Reset();
         last_failure_reason_=PlanFailureReason::INVALID_COMMAND;return false;
     }
+    // User-approved competition assumption: only vehicles circulate here.
+    // Unknown geometry remains, including camera blind spots. This private
+    // input copy does not delete LiDAR tracks or affect ordinary/local planning.
+    std::vector<TrackedObject> obstacles;
+    obstacles.reserve(source_obstacles.size());
+    for (const auto& object : source_obstacles)
+        if (roundabout_policy::Keep(object.classification)) obstacles.push_back(object);
     speed_profiler_.Reset();
     last_profiled_acceleration_=0.0;
     const double evaluation_time=ego_observation_time>=0?ego_observation_time:planning_time;
