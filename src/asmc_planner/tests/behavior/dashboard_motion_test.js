@@ -37,7 +37,7 @@ const originalBox = JSON.stringify(box);
 p.data.feature = {static_obstacle_ahead: true, avoidance_object_id: 0};
 p.drawLidarObject(box);
 assert(drawnLabels.some(text => text.includes('box · static_obstacle') && text.includes('AVOID TARGET')));
-assert(drawnLabels.includes('policy UNKNOWN · motion LOW_THREAT'));
+assert(drawnLabels.includes('policy 미확인 (입력 UNKNOWN) · motion LOW_THREAT'));
 assert.strictEqual(JSON.stringify(box), originalBox, 'rendering must not change policy or motion');
 for (const [camera_class, classification, type] of [
   ['car', 'vehicle', 1], ['person', 'dynamic_obstacle', 2]]) {
@@ -51,7 +51,7 @@ drawnLabels.length = 0;
 p.motionDebugById.set(0, {classification: 'vehicle', yolo_class: 'truck', motion_state: 'DYNAMIC'});
 p.drawLidarObject({...box, camera_class: '', classification: ' ', motion_state: 0});
 assert(drawnLabels.some(text => text.includes('unknown · unknown')));
-assert(drawnLabels.includes('policy UNKNOWN · motion UNKNOWN'));
+assert(drawnLabels.includes('policy 미확인 (입력 UNKNOWN) · motion UNKNOWN'));
 assert(!drawnLabels.some(text => text.includes('truck')), 'no stale debug semantic fallback');
 p.motionDebugById.clear();
 p.data.lidarObjects = {header: {frame_id: 'map', stamp: 100},

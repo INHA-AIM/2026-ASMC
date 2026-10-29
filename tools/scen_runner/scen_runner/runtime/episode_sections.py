@@ -19,12 +19,28 @@ def crossing_definition(actor,plan,section,route_registered):
                 preparation_paused=False,direction=plan.direction_label,route_registered=route_registered)
 
 
+def live_static_catalog(link):
+    """Keep measured geometry, but select only models this simulator exposes."""
+    catalog = load_catalog()
+    available = set(link.available_obstacle_models())
+    recorded = catalog.get('available_models', [])
+    supported = [name for name in recorded
+                 if catalog['models'].get(name, {}).get('morai_model', name) in available]
+    missing = [name for name in recorded if name not in supported]
+    if missing:
+        print('[모델 호환] 현재 MORAI 미지원 정적 모델 제외: '+', '.join(missing), flush=True)
+    if not supported:
+        raise RuntimeError('현재 MORAI에서 사용할 수 있는 실측 정적 모델이 없습니다.')
+    catalog['available_models'] = supported
+    return catalog
+
+
 class StaticSection(Section):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.policy = load_yaml(POLICY_PATH)
         self.cfg = runtime_config(self.base, self.policy)
-        self.catalog = load_catalog()
+        self.catalog = live_static_catalog(self.link)
         if not self.catalog.get('measurement_complete'):
             raise RuntimeError('정적 객체 실측 카탈로그가 필요합니다. 정적구간 모델 측정을 먼저 실행하세요.')
         self.checkers = None
@@ -110,7 +126,8 @@ class DynamicSection(Section):
 class TunnelSection(Section):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.plan = TunnelPlan(self.seed,**self.base.get('tunnel_profile',{}))
+        self.plan = TunnelPlan(self.seed, catalog=live_static_catalog(self.link),
+                               **self.base.get('tunnel_profile',{}))
         self.spawned = False
         self.route_registered=False
 

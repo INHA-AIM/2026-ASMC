@@ -144,16 +144,17 @@ def stopping_crossing(generator,prefix,station_range,cancelled):
     raise RuntimeError('정지 차체·제동 궤적과 겹치지 않는 터널 횡단을 찾지 못했습니다.')
 
 
-def tunnel_static_models():
+def tunnel_static_models(catalog=None):
     policy=load_yaml(TOOL_ROOT/'config/one_scene.yaml')
-    catalog=load_catalog()
+    catalog=load_catalog() if catalog is None else catalog
     excluded=set(policy['excluded_models'])
     excluded.update(name for name in catalog['models'] if name.startswith('OBJ_Hyundai_Xcient'))
     return candidate_models(catalog,policy['intersection'],excluded)
 
 
 class TunnelPlan:
-    def __init__(self,seed=None,scene_type=None,cross_pattern=None,static_models=None):
+    def __init__(self,seed=None,scene_type=None,cross_pattern=None,catalog=None,static_models=None):
+        self.catalog=catalog
         self.cfg=load_yaml(TOOL_ROOT/'config/tunnel.yaml')
         if self.cfg['static_max_tries']<=0 or self.cfg.get('static_tick_candidates',12)<=0:
             raise ValueError('정적 탐색 배치 크기는 양수여야 합니다.')
@@ -169,7 +170,7 @@ class TunnelPlan:
         if static_models is not None:
             if not isinstance(static_models,list) or not static_models or not all(isinstance(x,str) for x in static_models):
                 raise ValueError('static_models는 비어 있지 않은 모델 이름 목록이어야 합니다.')
-            allowed={model.name for model in tunnel_static_models()}
+            allowed={model.name for model in tunnel_static_models(self.catalog)}
             if set(static_models)-allowed:raise ValueError('터널 배치가 허용되지 않은 모델: '+','.join(sorted(set(static_models)-allowed)))
             if self.scene_type=='dynamic':raise ValueError('dynamic 씬에 static_models를 지정할 수 없습니다.')
             self.static_models=tuple(dict.fromkeys(static_models))
@@ -235,7 +236,7 @@ class TunnelPlan:
             cfg['zone'].update(evaluation_s_range=[s0,s1],view_s_range=[s0-45,s1+10],grid_resolution_m=.1)
             cfg['search']['goal_after_checkpoint_m']=0.
             self.scene=load_scene(cfg)
-            models=tunnel_static_models()
+            models=tunnel_static_models(self.catalog)
             if self.static_models is not None:models=[m for m in models if m.name in self.static_models]
             self._static_context=(s0,AvoidanceChecker(self.scene,cfg),models)
         s0,checker,models=self._static_context

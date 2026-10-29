@@ -9,8 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs nav_msgs diagnostic_msgs geometry_msgs
   sensor_msgs visualization_msgs)
 find_package(yaml-cpp REQUIRED)
-find_package(OpenSSL REQUIRED)
 find_package(Boost REQUIRED)
+find_package(OpenSSL REQUIRED)
 catkin_package(INCLUDE_DIRS src
   LIBRARIES asmc_signal_policy_core asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_core
     asmc_planner_execution_core asmc_planner_behavior_module asmc_planner_ros_adapters
@@ -196,6 +196,7 @@ add_library(asmc_planner_ros_adapters
   src/Parser/DetectedObjects.cpp
   src/Parser/MoraiObjects.cpp
   src/Parser/PlanningInput.cpp
+  src/Parser/StaticMissionPolicy.cpp
   src/Parser/PlanningInputCallbacks.cpp
   src/Parser/RuntimeConfig.cpp
   src/Parser/Traffic/ros_traffic_light_provider.cpp

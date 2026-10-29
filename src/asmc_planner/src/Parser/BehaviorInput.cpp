@@ -21,6 +21,18 @@
 namespace behavior_planner {
 namespace {
 
+std::string JsonString(const std::string& value) {
+  std::ostringstream out;
+  out << '"';
+  for (unsigned char c : value) {
+    if (c == '"' || c == '\\') out << '\\' << c;
+    else if (c < 0x20) out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << int(c);
+    else out << c;
+  }
+  out << '"';
+  return out.str();
+}
+
 DynamicPolicyConfig LoadDynamicPolicyConfig(ros::NodeHandle& node) {
   DynamicPolicyConfig config;
   node.getParam("dynamic_behavior/route_links",config.route_links);
@@ -106,6 +118,7 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
   signal_shadow_=std::make_unique<SignalShadow>(nh_,pnh_);
   signal_active_=std::make_unique<SignalShadow>(nh_,pnh_,true);
   dynamic_diagnostics_pub_=nh_.advertise<std_msgs::String>("/planning/dynamic_behavior",10);
+  static_mission_diagnostics_pub_=nh_.advertise<std_msgs::String>("/planning/static_mission_policy",2);
   std::string ego_topic = "/vehicle/state";
   std::string objects_topic = "/Object_topic";
   std::string objects_input_type = "morai";
@@ -606,6 +619,59 @@ void BehaviorInput::runOnce() {
   if (objects_received_ && !objects_fresh) {
     ROS_WARN_THROTTLE(1.0, "Behavior object input is stale; clearing targets");
   }
+  // Recheck ego scope every cycle, but only rebuild the immutable observation
+  // and converters when the input or scope changes. A zone exit still restores
+  // person/vehicle semantics without waiting for a new object callback.
+  std::size_t static_mission_remapped = 0;
+  bool static_mission_ego_in_scope = false;
+  if (static_mission_policy_ && raw_detected_objects_ && objects_fresh) {
+    if (static_mission_observation_.update(*static_mission_policy_, raw_detected_objects_,
+                                         ego_.x, ego_.y, ego_.yaw, ego_.valid)) {
+      const auto& effective = static_mission_observation_.objects();
+      canonical_objects_.clear();
+      frenet_planner_ros::ConvertDetectedObjects(effective, canonical_objects_);
+      objects_ = DetectedMsgConverter::toPerceptionObjects(effective);
+      objects_.source_stamp = effective.header.stamp.toSec();
+    }
+    static_mission_ego_in_scope = static_mission_observation_.egoInScope();
+    static_mission_remapped = static_mission_observation_.remapped();
+    if (static_mission_remapped > 0) {
+      ROS_INFO_THROTTLE(2.0, "Static mission: %zu person/vehicle objects use UNKNOWN policy (motion unchanged)",
+                        static_mission_remapped);
+    }
+  }
+  // Read-only evidence of the exact copy consumed above. Array order and full
+  // observation identity let the viewer join private IDs to LiDAR track IDs.
+  if (static_mission_diagnostics_pub_.getNumSubscribers() > 0) {
+    const auto* raw = raw_detected_objects_.get();
+    const bool fresh = raw && objects_fresh;
+    if (static_mission_policy_ && !fresh)
+      static_mission_ego_in_scope = static_mission_policy_->containsEgo(ego_.x, ego_.y, ego_.yaw, ego_.valid);
+    std::ostringstream out;
+    out << std::boolalpha << "{\"schema\":\"static_mission_policy/v1\",\"enabled\":"
+        << bool(static_mission_policy_) << ",\"input_fresh\":" << fresh
+        << ",\"ego_in_scope\":" << static_mission_ego_in_scope
+        << ",\"remapped\":" << static_mission_remapped;
+    if (raw) {
+      out << ",\"stamp_ns\":\"" << raw->header.stamp.toNSec()
+          << "\",\"producer_session_id\":" << JsonString(raw->producer_session_id)
+          << ",\"generation\":\"" << raw->generation
+          << "\",\"scan_sequence\":\"" << raw->scan_sequence
+          << "\",\"config_id\":" << JsonString(raw->config_id)
+          << ",\"calibration_id\":" << JsonString(raw->calibration_id);
+    }
+    out << ",\"objects\":[";
+    if (fresh) for (std::size_t i = 0; i < raw->objects.size(); ++i) {
+      if (i) out << ',';
+      out << "{\"planner_id\":" << raw->objects[i].id
+          << ",\"original_type\":" << int(raw->objects[i].type)
+          << ",\"effective_type\":" << int(static_mission_policy_ ? static_mission_observation_.objects().objects[i].type : raw->objects[i].type)
+          << '}';
+    }
+    out << "]}";
+    std_msgs::String report; report.data = out.str();
+    static_mission_diagnostics_pub_.publish(report);
+  }
   double scope_s=0,scope_d=0;std::string scope_link;
   const bool projected=route_.projectEgo(ego_.x,ego_.y,&scope_s,&scope_d,&scope_link);
   const bool scoped_dynamic=dynamic_enabled_ && projected && dynamic_policy_.inScope(scope_link);
@@ -952,6 +1018,8 @@ void BehaviorInput::egoCallback(
 void BehaviorInput::moraiObjectsCallback(
     const morai_msgs::ObjectStatusList::ConstPtr& message) {
   if (!message) return;
+  raw_detected_objects_.reset();
+  static_mission_observation_ = {};
   objects_ = MoraiMsgConverter::toPerceptionObjects(*message);
   objects_.source_stamp=message->header.stamp.toSec();
   objects_received_at_ = ros::SteadyTime::now();
@@ -966,11 +1034,14 @@ void BehaviorInput::detectedObjectsCallback(
         1.0, "Behavior rejected DetectedObjectArray with invalid header");
     return;
   }
-  canonical_objects_.clear();
-  frenet_planner_ros::ConvertDetectedObjects(*message,canonical_objects_);
+  raw_detected_objects_ = message;
   objects_source_time_=message->header.stamp.toSec();
-  objects_ = DetectedMsgConverter::toPerceptionObjects(*message);
-  objects_.source_stamp=message->header.stamp.toSec();
+  if (!static_mission_policy_) {
+    canonical_objects_.clear();
+    frenet_planner_ros::ConvertDetectedObjects(*message,canonical_objects_);
+    objects_ = DetectedMsgConverter::toPerceptionObjects(*message);
+    objects_.source_stamp=message->header.stamp.toSec();
+  }
   objects_received_at_ = ros::SteadyTime::now();
   objects_received_ = true;
 }

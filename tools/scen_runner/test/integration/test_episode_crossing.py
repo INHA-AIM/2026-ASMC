@@ -52,6 +52,11 @@ class EpisodeCrossingTest(unittest.TestCase):
 
     def test_tunnel_dynamic_uses_same_deferred_route_lifecycle(self):
         link=Mock(actor_scopes={});link.spawn_crossing.return_value='7'
+        from scen_runner.config import load_catalog
+        catalog=load_catalog()
+        link.available_obstacle_models.return_value=[
+            catalog['models'][name].get('morai_model',name)
+            for name in catalog['available_models']]
         with patch('scen_runner.runtime.episode_actors.SceneLink',return_value=link):
             section=TunnelSection('tunnel',44,'scope',load_config(),lambda:False,lambda *_:None)
         from scen_runner.planning.random_crossing import CrossingGenerator

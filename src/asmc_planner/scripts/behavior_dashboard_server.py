@@ -35,12 +35,14 @@ from lane_boundary_adapter.msg import CameraBBoxLaneResult
 from dashboard_startup import run_on_port
 from dashboard_localization import LocalizationView,ExperimentView,map_trajectory_fresh
 import dashboard_localization
-from dashboard_observation import LocalScene, family_payload, markers_payload, objects_payload, stamp_ns
+from dashboard_observation import (LocalScene, StaticPolicyObservations, family_payload,
+                                   markers_payload, objects_payload, stamp_ns)
 
 local_scene = LocalScene()
 local_debug = LocalDebugCache()
 localization_view = LocalizationView()
 experiment_view = ExperimentView(localization_view)
+static_policy = StaticPolicyObservations()
 
 
 TRAJECTORY_FAILURE_NAMES = {
@@ -153,6 +155,11 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
             snapshot['localization_handoff_fresh']=0<=time.monotonic()-steady_received.get('localization_handoff',-float('inf'))<=.6
             snapshot['normal_path_fresh']=map_trajectory_fresh(snapshot.get('trajectory') or {},
                 rospy.Time.now().to_sec(),time.monotonic()-steady_received.get('trajectory',-float('inf')))
+            objects, policy = static_policy.paired_snapshot(snapshot.get("lidar_objects"))
+            snapshot["lidar_objects"] = objects
+            snapshot["static_mission_policy"] = policy
+            if policy.get("display_wait_ms", 0) > 0:
+                snapshot["received_at"]["lidar_objects"] = time.time()-policy["object_age_ms"]/1000.
             body = json.dumps(snapshot, separators=(",", ":")).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -198,10 +205,23 @@ def set_local_camera(message):
 
 def set_snapshot(key, message):
     converted = ros_to_dict(message)
+    if key == "lidar_objects":
+        # Never reconstruct nanoseconds from a float in the browser.
+        converted["stamp_ns"] = str(message.header.stamp.to_nsec())
+        converted["generation"] = str(message.generation)
+        converted["scan_sequence"] = str(message.scan_sequence)
+        static_policy.remember_objects(converted)
     with DashboardHandler.snapshot_lock:
         DashboardHandler.snapshot[key] = converted
         DashboardHandler.snapshot["received_at"][key] = time.time()
         DashboardHandler.received_steady[key] = time.monotonic()
+
+
+def set_static_policy(message):
+    try:
+        static_policy.put(json.loads(message.data))
+    except (ValueError, TypeError):
+        rospy.logwarn_throttle(5., "Rejected static mission policy diagnostics")
 
 
 def _set_recent_planning_issue_locked(source, reason, detail="",
@@ -429,6 +449,7 @@ def run_dashboard(server=None, reserved_port=None):
             set_frenet_feedback, queue_size=10)
         lidar_objects_topic = rospy.get_param(
             "~lidar_objects_topic", "/planning/objects")
+        rospy.Subscriber("/planning/static_mission_policy", String, set_static_policy, queue_size=4)
         rospy.Subscriber(
             lidar_objects_topic, DetectedObjectArray,
             lambda message: set_snapshot("lidar_objects", message),
