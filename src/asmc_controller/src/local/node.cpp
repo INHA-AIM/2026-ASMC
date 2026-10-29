@@ -417,8 +417,11 @@ class LocalController {
     if(!selected&&handoff.preparing())handoff.seed(candidate->points.front().acceleration);
     double ceiling=local_acceleration_limit;
     const double measured_acceleration=candidate->points.front().acceleration;
-    if(speed_cap_mps>0)ceiling=std::min(ceiling,RecoveryAccelerationLimit(speed_cap_mps,ego.vx,
-      measured_acceleration,.5,GetMPCParams().accel_min,GetMPCParams().accel_max));
+    // Approaching the15km/h cap from NORMAL25 is not a command to apply
+    // maximum braking throughout the horizon. Forbid further acceleration;
+    // the already validated timed reference owns the physical deceleration.
+    if(speed_cap_mps>0)ceiling=std::min(ceiling,std::max(0.,RecoveryAccelerationLimit(speed_cap_mps,ego.vx,
+      measured_acceleration,.5,GetMPCParams().accel_min,GetMPCParams().accel_max)));
     // Release is constrained across the prediction horizon, not frozen as a
     // negative acceleration maximum for every future stage.
     auto output = MPCProcess(ego, ref, ceiling, comfort_rise_rate);
