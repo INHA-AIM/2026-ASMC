@@ -46,6 +46,8 @@ def main():
     p.add_argument("--integrated", action="store_true", help="exercise real NORMAL/JAMMING mode transitions")
     p.add_argument("--bridge-invert-steer", choices=("true", "false"), default="false")
     p.add_argument("--distance", type=float, default=35)
+    p.add_argument("--stationary-timeout", type=float, default=12,
+                   help="bounded wait for scripted crossing/blocked traffic, max30s")
     p.add_argument("--near-blind-assist", action="store_true")
     p.add_argument("--empty", action="store_true")
     p.add_argument("--lidar-config", type=Path)
@@ -73,6 +75,7 @@ def main():
         or not 0 < args.cap <= 25
         or not 0 < args.distance <= 300
         or not 0 <= args.lease_wait_seconds <= 600
+        or not 5 <= args.stationary_timeout <= 30
     ):
         raise ValueError("bounded duration/cap required")
     if args.near_blind_assist and args.cap > 5:
@@ -523,10 +526,30 @@ def main():
         )
         link.release()
         started = time.monotonic()
+        # The earlier LOCAL fixture runner only prepared saved actors. Without
+        # resuming/ticking ReplaySection, pedestrians/events stayed frozen and
+        # a nominal dynamic test was actually a static-placement test.
+        section.resume_schedule(started)
+        actions=list(raw.get('trial_actions',[]))
+        for action in actions:
+            if (action.get('action') not in ('pause','resume') or
+                    not 0<=action.get('time_s',-1)<=args.seconds):
+                raise ValueError('bounded owned-actor action required')
         emit(dict(event='driving_started'))
         reason = "time_limit"
         stationary = started
         while time.monotonic() - started < args.seconds:
+            section.tick()
+            elapsed=time.monotonic()-started
+            for action in list(actions):
+                if elapsed < action['time_s'] or travel < action.get('ego_travel_m',0):
+                    continue
+                actor=section.by_key.get(action['key'])
+                if actor is None or actor.native_id not in section.owned():
+                    raise RuntimeError('scripted action must name this trial owned actor')
+                section.link.pause_actor(actor.request_id,actor.kind,action['action']=='pause')
+                emit(dict(event='scripted_actor_action',definition=action,actor_id=actor.native_id))
+                actions.remove(action)
             child_exits=[dict(name=child_names[x.pid],returncode=x.returncode)
                          for x in children if x.poll() is not None]
             if child_exits:
@@ -561,6 +584,8 @@ def main():
                     plan_reason=plan.reason if plan else "missing",
                     plan_sequence=plan.plan_sequence if plan else 0,
                     owned=section.owned(),
+                    actor_states=[actor_state(x) for x in section.link.states()
+                                  if x.actor_info.id.value in section.owned()],
                 )
             )
             if native or udp:
@@ -569,8 +594,8 @@ def main():
                 break
             if state["speed_kmh"] > 0.36:
                 stationary = time.monotonic()
-            if time.monotonic() - stationary > 12:
-                reason = "stationary_12s"
+            if time.monotonic() - stationary > args.stationary_timeout:
+                reason = "stationary_%gs" % args.stationary_timeout
                 break
             if travel >= args.distance:
                 reason = "distance_limit"
