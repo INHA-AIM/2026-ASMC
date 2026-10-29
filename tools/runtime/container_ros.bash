@@ -29,12 +29,13 @@ roscore() {
 }
 
 roslaunch() {
-  local previous='' arg port='' requested_port='' explicit_port=false bridge=false inspect=false disabled=false
+  local previous='' arg port='' requested_port='' explicit_port=false bridge=false inspect=false disabled=false console_kind='' autonomy=false disposition=''
   for arg in "$@"; do
     case "$previous/$arg" in
       asmc_planner/autonomy_no_bridges_v2.launch|asmc_planner/dashboard.launch)
-        port=$ASMC_PLANNING_WEB_PORT ;;
-      asmc_lidar/view.launch) port=$ASMC_LIDAR_WEB_PORT ;;
+        port=$ASMC_PLANNING_WEB_PORT; console_kind=dashboard
+        [[ $arg == autonomy_no_bridges_v2.launch ]] && autonomy=true ;;
+      asmc_lidar/view.launch) port=$ASMC_LIDAR_WEB_PORT; console_kind=lidar ;;
       asmc_bridge/bridge.launch) bridge=true ;;
     esac
     case "$arg" in
@@ -46,7 +47,15 @@ roslaunch() {
   done
   if $explicit_port; then port=$requested_port; fi
   if [[ -n $port ]] && ! $inspect && ! $disabled; then
-    command python3 /root/.asmc-launch-guard.py --check-http "$port" || return $?
+    disposition=$(command python3 /root/.asmc-launch-guard.py --http-disposition "$port" "$console_kind") || return $?
+    if [[ $disposition == reuse ]]; then
+      echo "Reusing this container's $console_kind console on $port ($ROS_MASTER_URI)."
+      if $autonomy; then
+        command roslaunch "$@" dashboard:=false
+        return $?
+      fi
+      return 0
+    fi
   fi
   if $bridge && ! $inspect; then
     command python3 /root/.asmc-launch-guard.py "$@"

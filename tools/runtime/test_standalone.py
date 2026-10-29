@@ -8,6 +8,14 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scen_runner'))
 from scen_runner.runtime.private_master import PrivateMaster
 
 class StandaloneOwnershipTest(unittest.TestCase):
+    def test_console_reuse_requires_same_source_master_and_revision(self):
+        from launch_guard import dashboard_identity_matches
+        metadata=dict(master_uri='http://127.0.0.1:11373',source_root='/own',revision='1234')
+        self.assertTrue(dashboard_identity_matches(metadata,metadata['master_uri'],'/own','1234'))
+        for uri,root,revision in (('http://127.0.0.1:11311','/own','1234'),
+                                  (metadata['master_uri'],'/other','1234'),
+                                  (metadata['master_uri'],'/own','old')):
+            self.assertFalse(dashboard_identity_matches(metadata,uri,root,revision))
     def test_command_destination_is_not_mistaken_for_receive_port(self):
         p={'/morai_udp_bridge/enable_ego_status':True,'/morai_udp_bridge/ego_port':9099,
            '/morai_udp_bridge/cmd_ip':'127.0.0.1','/morai_udp_bridge/cmd_port':9093,

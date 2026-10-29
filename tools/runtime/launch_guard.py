@@ -10,9 +10,46 @@ import signal
 import socket
 import subprocess
 import sys
+import json
+import xmlrpc.client
+from urllib.request import urlopen
 
 
 UDP_PORTS = (9099, 9798, 9092, 9291, 9293, 9295, 9297, 9299, 9301, 9303)
+
+
+def dashboard_identity_matches(metadata, uri, root, revision):
+    return (metadata.get('master_uri')==uri and metadata.get('source_root')==root and
+            metadata.get('revision')==revision)
+
+
+def http_disposition(port, kind):
+    """Reuse only a live console owned by this container and the same graph."""
+    try:
+        check_http_port(port)
+        return 'free'
+    except RuntimeError:
+        pass
+    import rosgraph
+    master=rosgraph.Master('/asmc_console_owner_guard')
+    node='/behavior_dashboard_server' if kind=='dashboard' else '/perception/lidar/lidar_monitor'
+    try:
+        api=master.lookupNode(node)
+        code,_,pid=xmlrpc.client.ServerProxy(api).getPid('/asmc_console_owner_guard')
+        command=(Path('/proc')/str(pid)/'cmdline').read_bytes()
+        script=b'behavior_dashboard_server.py' if kind=='dashboard' else b'asmc_lidar_monitor_node.py'
+        if code!=1 or script not in command or int(master.getParam(node+'/port'))!=int(port):
+            raise RuntimeError('console is outside the selected container/master')
+        if kind=='dashboard':
+            with urlopen('http://127.0.0.1:%d/api/observer'%int(port),timeout=1) as response:
+                metadata=json.load(response)['observer']
+            root=str(Path('/root/ws').resolve())
+            revision=subprocess.check_output(['git','-C',root,'rev-parse','HEAD'],text=True).strip()
+            if not dashboard_identity_matches(metadata,os.environ.get('ROS_MASTER_URI'),root,revision):
+                raise RuntimeError('dashboard source/master/revision differs')
+    except Exception as error:
+        raise RuntimeError('Console port %s belongs to another graph or source; left untouched'%port) from error
+    return 'reuse'
 
 
 def check_http_port(port):
@@ -99,6 +136,8 @@ if __name__ == '__main__':
     try:
         if len(sys.argv) == 3 and sys.argv[1] == '--check-http':
             check_http_port(sys.argv[2])
+        elif len(sys.argv)==4 and sys.argv[1]=='--http-disposition':
+            print(http_disposition(sys.argv[2],sys.argv[3]))
         else:
             sys.exit(run(sys.argv[1:]))
     except KeyboardInterrupt:
