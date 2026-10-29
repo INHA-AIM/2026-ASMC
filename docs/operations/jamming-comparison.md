@@ -5,12 +5,14 @@
 ## 선택과 실행
 
 `asmc-jamming-compare` 컨테이너에 세 구현이 함께 빌드된다. 새 대화형 Bash는 이 워크트리의 `/devel`과 전용 master11373을 적용한다. 각 터미널에서 추가 env source 없이 실행한다.
+공식 지도 정본은 `ASMC_DATA=/workspace/data` 병합 뷰로 읽는다. `/data`의 과거 상대 링크를 지도 정본으로 사용하지 않는다. main #140의 정적 구간 UNKNOWN 정책도 이 정본의 SHA를 검증한다.
 
 ```bash
 docker exec -it asmc-jamming-compare bash
 ```
 
 각각의 터미널에서 다음을 실행한다. MORAI 월드는 하나이므로 다른 물리 시험의 bridge/control이 없어야 한다.
+컨테이너가 정지돼 있으면 먼저 `docker start asmc-jamming-compare`를 실행한다. roscore는 해당 master가 없을 때 한 번만 시작한다. 읽기 전용 콘솔을 먼저 켠 경우 같은 컨테이너·master·revision의 콘솔은 이후 `view.launch`와 autonomy에서 재사용한다. 다른 소유자의 포트는 종료하지 않는다.
 
 ```bash
 roscore
@@ -33,6 +35,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=localizati
 - 판제: http://localhost:8089/web/index_v2.html — 자동 보기 또는 LOCAL/Localization map 보기.
 - LiDAR: http://localhost:8097 — 점군 단계는 위의 `debug:=true`가 필요하다.
 - 자동 시험은 별도 master11374와 같은 physical lease를 사용한다. 대화형 master를 재사용하지 않는다.
+- 다른 작업이 canonical 포트를 사용하던 오프라인 회차는 판제8087·LiDAR8098을 사용했다. 이는 수동11373 콘솔과 다른 replay 그래프이며 완료 후 종료된다. 녹화 재생은 `BAG 재생 · 고정 자차 · 주행 수락 아님`으로 표시한다.
 - 포트 점유 시 다른 실행을 종료하지 않고 시작을 거절한다. 다른 ROS master도 같은 MORAI 차량을 움직일 수 있다.
 
 ## 공통 전환과 책임
@@ -70,3 +73,9 @@ FOGGY13시, 동일 출발·배치·센서로 무장애 진입/복귀, 정차 차
 완주, native/UDP/영상 충돌 근거, 정지 시간·사유, 인계 공백, 추종 상태와 처리 비용을 원시 bag과 함께 기록한다. 열린 새 경로가 있는데3초 이상 정지가 남으면 실패다. 입력 무효와 실제 폐쇄 통로는 별도 실패/제약으로 남긴다. 관측 부재를 무충돌로 확정하지 않는다.
 
 현재 구현의 검증 결과는 `docs/records/planning/2026-10-29-jamming-three-way.md`에 회차·source SHA와 함께 갱신한다. 과거 두 브랜치의 주행 성공은 이 통합본의 수락을 대신하지 않는다.
+
+## 재부팅 후 콘솔 점검
+
+화면이 열리지 않으면 컨테이너 재생성 전에 HTTP 리스너와 실제 master를 확인한다. 이번 복구에서는 서버 종료 상태와 header 밖의 상태바가 본문을 밀어내는 표시 오류를 각각 수정했다. Windows 브라우저의 지도·패널·LiDAR canvas를 확인했다. 입력이 없을 때 WAIT/STALE과 데이터 대기는 정상이며 다른 master의 데이터를 대신 표시하지 않는다.
+
+재사용 검사는 같은 master, 컨테이너 내부의 살아 있는 ROS 노드, 포트, dashboard 소스 경로·revision을 확인한다. autonomy가 동일한 기존 dashboard를 재사용할 때는 셸 실행기가 `dashboard:=false`를 전달해 두 번째 서버만 생략한다. 플래너 선택·제어에는 영향을 주지 않는다. 새 대화형 Bash에서 적용된다.
