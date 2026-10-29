@@ -14,10 +14,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scen_runner.orchestration.control import (PlanningClient, RoleLease, alive, atomic_json,
     process_identity, read_json, settings)
 from scen_runner.orchestration.process import OwnedProcess
-from scen_runner.orchestration.stack import PlanningServer, configure_nodes, check_conflicts, guarded_command
+from scen_runner.orchestration.stack import (PlanningServer, configure_nodes, check_conflicts,
+                                            guarded_command, planning_configuration)
 
 
 class StackLifecycleTest(unittest.TestCase):
+    def test_resolved_configuration_fingerprint_changes_with_runtime_settings(self):
+        config=S(params={'/camera_bbox_lane_change/avoid_clearance':S(value=.05)},
+                 nodes=[S(namespace='/',name='camera_bbox_lane_change',package='lane_boundary_adapter',
+                          type='camera_bbox_lane_change_node')])
+        first=planning_configuration(config)
+        self.assertEqual(first['sha256'],planning_configuration(config)['sha256'])
+        config.params['/camera_bbox_lane_change/avoid_clearance'].value=.5
+        self.assertNotEqual(first['sha256'],planning_configuration(config)['sha256'])
+        self.assertEqual(first['parameters']['/camera_bbox_lane_change/avoid_clearance'],.05)
+
+    def test_previous_worker_configuration_is_not_attached_to_a_new_episode(self):
+        with tempfile.TemporaryDirectory() as folder:
+            client=PlanningClient(settings(),folder)
+            atomic_json(Path(folder)/'planning_resolved.json',dict(process=process_identity(),sha256='first'))
+            atomic_json(Path(folder)/'server.json',dict(worker_pid=99999999))
+            self.assertEqual(client.configuration(),{})
+            atomic_json(Path(folder)/'server.json',dict(worker_pid=os.getpid()))
+            self.assertEqual(client.configuration()['sha256'],'first')
+
     def test_controller_with_another_node_name_cannot_share_control_topic(self):
         graph = [[('/ctrl_cmd', ['/external_pid'])], [], []]
         with self.assertRaisesRegex(RuntimeError, 'external_pid'):
@@ -148,7 +168,7 @@ class StackLifecycleTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             (Path(folder)/'model').mkdir(); (Path(folder)/'model/model.py').touch()
             config = settings(); config.update(gpu_python=sys.executable, twinlite_root=folder, camera_runtime='off')
-            nodes = [S(type=kind, launch_prefix=None, required=False, respawn=False) for kind in
+            nodes = [S(type=kind, launch_prefix=None, required=False, respawn=False, env_args=[]) for kind in
                      ('semantic_inference_node.py', 'object_detection_node.py', 'traffic_light_node.py', 'camera_bev_node.py')]
             launch = S(nodes=nodes, params={'/camera_semantic_inference/twinlite_root': S(value='missing')})
             configure_nodes(config, launch)

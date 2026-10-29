@@ -235,10 +235,10 @@
 | `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
 | `rviz` | `false` | 재밍 카메라 차선변경 RViz(BBOX·차선·경로) 표시 |
 | `jamming_line_edge_expand` | `0.30` | [m] 기준선 1·5를 바깥으로 확장(최대 0.5) |
-| `jamming_avoid_line_extra` | `1.0` | 통과 가능한 선에서 바깥으로 더 미는 양(선 번호, 최대 2.0) |
-| `jamming_avoid_clearance` | `0.05` | [m] 차체 측면-장애물 최소 간격 |
-| `jamming_obstacle_lateral_margin` | `0.05` | [m] 차체 좌우 여유(도로 경계 검사 포함) |
-| `jamming_avoid_line_overrun` | `1.5` | [m] 벽 미확인 쪽에서 차량 중심이 끝 차선을 넘을 수 있는 거리 |
+| `jamming_avoid_line_extra` | `0.0` | 통과 가능한 선에서 바깥으로 더 미는 양(선 번호, 최대 2.0) |
+| `jamming_avoid_clearance` | `0.20` | [m] 차체 측면-장애물 최소 간격 |
+| `jamming_obstacle_lateral_margin` | `0.20` | [m] 차체 좌우 여유(도로 경계 검사 포함) |
+| `jamming_avoid_line_overrun` | `0.0` | [m] 벽 미확인 쪽에서 차량 중심이 끝 차선을 넘을 수 있는 거리 |
 | `jamming_use_lidar_obstacles` | `true` | — |
 | `jamming_creep_speed_kph` | `3.0` | — |
 | `jamming_creep_clear_distance` | `0.0` | [m] 0보다 크면 앞 범퍼부터 이 거리 안 경로 장애물에 정지 |
@@ -379,9 +379,18 @@
 | `far_obstacle_speed_kph` | `5.0` | — |
 | `bbox_source_timeout` | `0.5` | — |
 | `bbox_receive_timeout` | `0.5` | — |
-| `person_stop` | `true` | — |
-| `person_stop_sec` | `3.0` | — |
-| `person_ignore_sec` | `4.0` | — |
+| `person_stop` | `true` | Deprecated alias for dynamic_obstacle_stop |
+| `person_stop_sec` | `3.0` | Deprecated; no fixed stop timer |
+| `person_ignore_sec` | `4.0` | Deprecated; hazards are never ignored by a timer |
+| `dynamic_obstacle_stop` | `$(arg person_stop)` | — |
+| `dynamic_prediction_sec` | `2.0` | — |
+| `dynamic_acceleration_mps2` | `4.0` | Ego acceleration bound for prediction; calibrate with the pedal limit |
+| `dynamic_clear_sec` | `1.0` | Continuous safe path confirmation after physical stop; at least 3 new LiDAR scans |
+| `dynamic_stop_speed_mps` | `0.1` | — |
+| `dynamic_rest_sec` | `0.25` | — |
+| `line_return_clear_sec` | `1.0` | — |
+| `line_commit_sec` | `1.0` | — |
+| `dynamic_uncertain_speed_kph` | `3.0` | — |
 | `max_sensor_skew` | `0.4` | — |
 | `obstacle_confirm_frames` | `2` | — |
 | `adjacent_clear_frames` | `3` | — |
@@ -410,7 +419,7 @@
 | `ego_speed_timeout` | `0.3` | — |
 | `avoid_clearance` | `0.5` | — |
 | `avoid_speed_kph` | `8.0` | — |
-| `avoid_obstacle_length` | `6.0` | — |
+| `avoid_obstacle_length` | `6.0` | Deprecated; obstacle size comes from LiDAR OBB only |
 | `avoid_pass_margin` | `2.0` | — |
 | `avoid_lane_tie` | `0.10` | — |
 | `avoid_shift_length` | `5.0` | — |
@@ -437,7 +446,7 @@
 | `max_brake_pedal` | `0.5` | — |
 | `avoid_reconsider_distance` | `0.5` | — |
 | `avoid_plan_margin` | `0.05` | — |
-| `use_lidar_obstacles` | `false` | — |
+| `use_lidar_obstacles` | `true` | LiDAR supplies metric obstacle geometry; camera lane following remains active |
 | `lidar_objects_topic` | `/perception/lidar/objects_local` | — |
 | `lidar_timeout` | `0.6` | — |
 | `lidar_max_x` | `30.0` | — |
@@ -449,7 +458,7 @@
 | `lidar_structure_hold` | `1.5` | — |
 | `use_rviz` | `true` | — |
 | `bbox_consumer_x_max` | `20.0` | — |
-| `start_classifier` | `true` | — |
+| `start_classifier` | `true` | Keep camera lane assignment/image display; obstacle metric geometry comes from LiDAR |
 | `projection_context_required` | `true` | — |
 | `projection_manifest` | `$(find asmc_camera)/config/bev/projection_context_v1.yaml` | — |
 | `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |

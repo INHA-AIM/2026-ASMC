@@ -16,3 +16,5 @@ readiness:
   state_age_s: 0.2
   objects_age_s: 0.3
   trajectory_age_s: 0.25
+  selector_age_s: 1.5
+  lane_age_s: 0.5

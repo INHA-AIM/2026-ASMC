@@ -172,3 +172,16 @@ class PlanningClient:
         return dict(enabled=True,online=bool(online),phase=state.get('phase','unknown') if online else 'offline',
                     worker_pid=state.get('worker_pid') if online else None,
                     detail=state.get('detail','판제 실행기 응답 대기') if online else '판제 실행기 응답 없음')
+
+    def configuration(self):
+        resolved=read_json(self.directory/'planning_resolved.json')
+        worker=read_json(self.directory/'server.json').get('worker_pid')
+        identity=resolved.get('process')
+        if not identity or identity.get('pid')!=worker or not alive(identity):
+            return {}
+        return resolved
+
+    def recovery_ready(self):
+        state=self._server()
+        return (state.get('generation')==self.generation and state.get('phase')=='ready' and
+                state.get('selected_mode')==0)

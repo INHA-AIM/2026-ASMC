@@ -57,11 +57,19 @@
   <arg name="far_obstacle_speed_kph" default="5.0"/>
   <arg name="bbox_source_timeout" default="0.5"/>
   <arg name="bbox_receive_timeout" default="0.5"/>
-  <!-- 차도 위 사람: person_stop_sec 정지 후 출발, 그 뒤 person_ignore_sec 동안 사람으로 재정지하지 않는다.
-       사람 박스는 계속 장애물이라 차도를 점유하면 차로 변경·회피한다. -->
-  <arg name="person_stop" default="true"/>
-  <arg name="person_stop_sec" default="3.0"/>
-  <arg name="person_ignore_sec" default="4.0"/>
+  <!-- Legacy startup arguments retained; fixed person stop/ignore timers are retired. -->
+  <arg name="person_stop" default="true" doc="Deprecated alias for dynamic_obstacle_stop"/>
+  <arg name="person_stop_sec" default="3.0" doc="Deprecated; no fixed stop timer"/>
+  <arg name="person_ignore_sec" default="4.0" doc="Deprecated; hazards are never ignored by a timer"/>
+  <arg name="dynamic_obstacle_stop" default="$(arg person_stop)"/>
+  <arg name="dynamic_prediction_sec" default="2.0"/>
+  <arg name="dynamic_acceleration_mps2" default="4.0" doc="Ego acceleration bound for prediction; calibrate with the pedal limit"/>
+  <arg name="dynamic_clear_sec" default="1.0" doc="Continuous safe path confirmation after physical stop; at least 3 new LiDAR scans"/>
+  <arg name="dynamic_stop_speed_mps" default="0.1"/>
+  <arg name="dynamic_rest_sec" default="0.25"/>
+  <arg name="line_return_clear_sec" default="1.0"/>
+  <arg name="line_commit_sec" default="1.0"/>
+  <arg name="dynamic_uncertain_speed_kph" default="3.0"/>
   <arg name="max_sensor_skew" default="0.4"/>
   <arg name="obstacle_confirm_frames" default="2"/>
   <arg name="adjacent_clear_frames" default="3"/>
@@ -91,7 +99,7 @@
   <arg name="ego_speed_timeout" default="0.3"/>
   <arg name="avoid_clearance" default="0.5"/>
   <arg name="avoid_speed_kph" default="8.0"/>
-  <arg name="avoid_obstacle_length" default="6.0"/>
+  <arg name="avoid_obstacle_length" default="6.0" doc="Deprecated; obstacle size comes from LiDAR OBB only"/>
   <arg name="avoid_pass_margin" default="2.0"/>
   <arg name="avoid_lane_tie" default="0.10"/>
   <arg name="avoid_shift_length" default="5.0"/>
@@ -123,7 +131,7 @@
   <arg name="avoid_reconsider_distance" default="0.5"/>
   <arg name="avoid_plan_margin" default="0.05"/>
   <!-- LiDAR objects_local (Main enable_common_geometry:=true), filtered to the current camera road area. -->
-  <arg name="use_lidar_obstacles" default="false"/>
+  <arg name="use_lidar_obstacles" default="true" doc="LiDAR supplies metric obstacle geometry; camera lane following remains active"/>
   <arg name="lidar_objects_topic" default="/perception/lidar/objects_local"/>
   <arg name="lidar_timeout" default="0.6"/>
   <arg name="lidar_max_x" default="30.0"/>
@@ -135,7 +143,7 @@
   <arg name="lidar_structure_hold" default="1.5"/>
   <arg name="use_rviz" default="true"/>
   <arg name="bbox_consumer_x_max" default="20.0"/>
-  <arg name="start_classifier" default="true"/>
+  <arg name="start_classifier" default="true" doc="Keep camera lane assignment/image display; obstacle metric geometry comes from LiDAR"/>
   <arg name="projection_context_required" default="true"/>
   <arg name="projection_manifest" default="$(find asmc_camera)/config/bev/projection_context_v1.yaml"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
@@ -207,9 +215,15 @@
     <param name="far_obstacle_speed_kph" type="double" value="$(arg far_obstacle_speed_kph)"/>
     <param name="bbox_source_timeout" type="double" value="$(arg bbox_source_timeout)"/>
     <param name="bbox_receive_timeout" type="double" value="$(arg bbox_receive_timeout)"/>
-    <param name="person_stop" type="bool" value="$(arg person_stop)"/>
-    <param name="person_stop_sec" type="double" value="$(arg person_stop_sec)"/>
-    <param name="person_ignore_sec" type="double" value="$(arg person_ignore_sec)"/>
+    <param name="dynamic_obstacle_stop" type="bool" value="$(arg dynamic_obstacle_stop)"/>
+    <param name="dynamic_prediction_sec" value="$(arg dynamic_prediction_sec)"/>
+    <param name="dynamic_acceleration_mps2" value="$(arg dynamic_acceleration_mps2)"/>
+    <param name="dynamic_clear_sec" value="$(arg dynamic_clear_sec)"/>
+    <param name="dynamic_stop_speed_mps" value="$(arg dynamic_stop_speed_mps)"/>
+    <param name="dynamic_rest_sec" value="$(arg dynamic_rest_sec)"/>
+    <param name="line_return_clear_sec" value="$(arg line_return_clear_sec)"/>
+    <param name="line_commit_sec" value="$(arg line_commit_sec)"/>
+    <param name="dynamic_uncertain_speed_kph" value="$(arg dynamic_uncertain_speed_kph)"/>
     <param name="max_sensor_skew" type="double" value="$(arg max_sensor_skew)"/>
     <param name="obstacle_confirm_frames" type="int" value="$(arg obstacle_confirm_frames)"/>
     <param name="adjacent_clear_frames" type="int" value="$(arg adjacent_clear_frames)"/>
