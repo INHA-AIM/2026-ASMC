@@ -4,6 +4,11 @@
 다른 checkout을 빌드한 setup과 섞지 않습니다. 인자는 `name:=value`이며
 [실제 launch 인자/기본값](launch-reference.md)은 소스에서 자동 생성합니다.
 
+Localization 연구 컨테이너의 새 대화형 Bash에서는 ROS·전용 빌드·공용 master 환경이
+자동 적용됩니다. 브릿지만 공유하고 해당 컨테이너에서 네 launch를 실행하는 안내는
+[Localization 운영](planning-control.md#localization-음영-위치-추종-연구-옵션)을 따릅니다.
+자동 시험은 별도 master와 공용 시뮬 lease를 사용합니다.
+
 ## 1. 개별 구성으로 전체 스택 실행
 
 ### Host와 빌드
@@ -68,6 +73,9 @@ GPU가 다른 PC에서 만든 객체 엔진을 사용하던 경우, 추론 노�
 `bash tools/scen_runner/prepare_camera_engines.sh`로 현재 모델·GPU·TensorRT에 맞는
 엔진을 생성합니다. 검증을 마친 로컬 객체 엔진은 직접 실행하는 `camera.launch`와
 시나리오 실행기 모두에서 선택됩니다. [로컬 엔진 안내](local-lane-engine.md)를 참고하세요.
+이 연구 checkout에서 위치측위 기반 음영 M2를 선택할 때는 D에
+`shadow_planner:=localization`를 지정합니다. 기본 `main`은 기존 BBox 방식이며,
+[공유 master·중복 방지·연구 범위](planning-control.md#localization-음영-위치-추종-연구-옵션)를 먼저 확인합니다.
 판제 대시보드는 D에 포함되어 별도 실행하지 않습니다. 실행·보존·검증 범위는
 [통합 안내](../../src/asmc_planner/docs/main-integration-20261026.md)를 참고하세요.
 
@@ -473,3 +481,46 @@ rosservice call /test/lidar/lidar_pipeline/reset "{}"
 보정·시간·터널 비교 등의 내부 옵션과 관측·진단 규칙은
 [asmc_lidar README](../../src/asmc_lidar/README.md),
 [웹 모니터](../../src/asmc_lidar/docs/web-monitor.md)를 따릅니다.
+
+
+## LOCAL-1 실험 계산과 모니터
+
+일반 autonomy 실행과 별도로 개발 중인 GPS 독립 경로다. 현재 운영 기본이나
+전 터널 수락 구성이 아니다. [검증 상태·제한](../records/planning/2026-10-28-local-planner.md)을 먼저 확인한다.
+bridge·camera·LiDAR가 한 세트 실행 중인 outer workspace에서 다음을 사용한다.
+
+```bash
+cd /root/ws
+source devel/setup.bash
+roslaunch /root/ws/tools/scen_runner/launch/semantic_space.launch
+```
+
+semantic 실험 launch는 저장소 tools의 launch 파일을 직접 지정한다.
+별도 nested workspace를 source하지 않는다.
+이미 `/experimental/shadow/semantic_space_trial`이 실행 중이면 중복 시작하지 않는다.
+다른 터미널에서 계산과 MPC preview를 켠다. **차량 제어는 기본 OFF**다.
+
+```bash
+roslaunch asmc_planner local.launch
+```
+
+기존 판제 웹 서버를 재사용한다. `http://localhost:8088/web/index_v2.html`에서
+자동 보기 또는 `LOCAL-1 경로·노면·fusion`을 선택한다. 추론 노면, family·본차로,
+후보, 선택 경로, 차체 sweep, local fusion OBB와 원본 YOLO 관측을 볼 수 있다.
+NORMAL의 map 궤적과 local 궤적을 같은 좌표처럼 섞지 않는다. 재빌드 후 실행 중인
+웹 서버도 재시작하고 브라우저를 새로고침한다. 서버를 이중 실행하지 않는다.
+
+| 내부 실험 인자 | 기본·용도 |
+|---|---|
+| `enable_control` | false. true는 기존 음영 제어 생산자를 제외한 소유권 통제시험에서만 사용 |
+| `speed_cap_kph` |25. 경로·관측·회복 제한이 더 낮으면 그 이유와 실제 상한 표시 |
+| `recovery` |true. 신선한 semantic의 저속3km/h 회복 시험; 충돌 없음의 증명 아님 |
+| `near_blind_assist` |false. S3 미관측 보조의 명시적 비교용, 켤 때≤5km/h 시험만 |
+| `run_id`, `journal_path` |새 등록 run과 새 판단 파일. preview 기본은 파일 쓰기 없음 |
+
+폐루프 반복시험은 `tools/scen_runner/run_local_trial.py`가 simulator fixture·selector·
+local 제어의 소유권을 함께 관리한다. 실행 중인 정상 판제를 두고
+`enable_control:=true`만 추가하지 않는다. 저장 등록과 실제 actuation·native
+접촉·원복 결과를 기록한다. bag 비교는 `replay_local.py`, 본차로/급제동 평가는
+`scen_runner.records.analyze_local_following`, 시각/자세 대조는
+`scen_runner.records.audit_local_inputs`를 사용한다.

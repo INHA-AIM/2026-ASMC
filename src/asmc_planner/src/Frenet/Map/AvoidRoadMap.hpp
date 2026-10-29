@@ -14,6 +14,7 @@ class AvoidRoadMap {
  public:
   bool Load(const std::string& areas, const std::string& lines, std::string& error);
   bool enabled() const { return enabled_; }
+  void SetPaintExemption(bool value) { paint_exempt_=value; }
   // Full canonical XY footprint against the original raster; unknown is false.
   bool IntersectsDrivable(const geometry::Polygon2D& footprint) const;
   bool PoseClear(double x, double y, double yaw, const VehicleShape& shape) const;
@@ -73,6 +74,7 @@ class AvoidRoadMap {
   bool TouchesPaint(double x, double y, double yaw, const VehicleShape& shape,
                     bool all_solids = false) const;
   bool enabled_ = false;
+  bool paint_exempt_ = false;
   double grid_resolution_ = 0.0, grid_x_ = 0.0, grid_y_ = 0.0;
   int grid_width_ = 0, grid_height_ = 0;
   std::vector<std::vector<std::pair<int,int>>> grid_rows_;

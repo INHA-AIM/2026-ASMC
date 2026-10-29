@@ -13,7 +13,10 @@ from urllib.parse import quote, unquote, urljoin, urlsplit
 
 def catalogue(root, output):
     pages = []
-    for directory, _, filenames in os.walk(root, followlinks=False):
+    for directory, directories, filenames in os.walk(root, followlinks=False):
+        if '.gallery-ignore' in filenames:
+            directories[:]=[]
+            continue  # Browser automation caches are not experiment pages.
         for name in filenames:
             if not name.lower().endswith('.html'):
                 continue

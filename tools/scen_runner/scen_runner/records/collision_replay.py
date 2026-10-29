@@ -59,6 +59,12 @@ class ReplaySection(Section):
         self.events=sorted(self.definition.get('events',[]),key=lambda e:(e['time_s'],e['action']=='spawn'))
         self.next_event=0;self.by_key={};self.plans={};self.tickets=[];self.pending=None;self.started=None
 
+    def ready_live(self, states):
+        if (self.definition.get('allow_empty_scene') is True and
+                self.definition.get('baseline')==[] and not self.events):
+            return not self.actors
+        return super().ready_live(states)
+
     def vehicle_cfg(self,definition,state):
         cfg=copy.deepcopy(definition['cfg'])
         if state:
@@ -159,9 +165,9 @@ class ReplaySection(Section):
                     if not plan.replay_finished:self.link.register_crossing(actor.native_id,plan)
                     plan.registered=True
 
-    def tick(self):
+    def tick(self,states=None):
         if self.cancelled():return
-        states=self.link.states()
+        if states is None:states=self.link.states()
         self.map_statics();self.register_live_crossings(states)
         if not self.bind_pending(states):return
         if self.next_event>=len(self.events):return

@@ -28,12 +28,40 @@ TEST(ControlBinding,OldCommandWithNewStateTimestampCannotRelease) {
  EXPECT_FALSE(gate.PlanReceived(p));EXPECT_FALSE(gate.linked());
  EXPECT_TRUE(gate.PlanReceived(Plan(current,2)));EXPECT_TRUE(gate.linked());
 }
+TEST(RecoverySpeed,ApproachOnlyRestrictsTheOptInActiveEpisode) {
+ EXPECT_DOUBLE_EQ(CombinedSpeedCap(0,0,true),0);
+ EXPECT_DOUBLE_EQ(CombinedSpeedCap(0,15./3.6,false),0);
+ EXPECT_DOUBLE_EQ(CombinedSpeedCap(0,15./3.6,true),15./3.6);
+ EXPECT_DOUBLE_EQ(CombinedSpeedCap(5./3.6,15./3.6,true),5./3.6);
+ EXPECT_DOUBLE_EQ(CombinedSpeedCap(30./3.6,15./3.6,true),15./3.6);
+}
 TEST(RecoverySpeed,MeasuredAccelerationAndOverspeedCannotReinforceLaunchAcceleration) {
  EXPECT_GT(RecoveryAccelerationLimit(2,0,0,.5,-6,2),0);
  EXPECT_LE(RecoveryAccelerationLimit(2,1.5,1,.5,-6,2),0);
  EXPECT_LT(RecoveryAccelerationLimit(2,2.2,0,.5,-6,2),0);
  EXPECT_DOUBLE_EQ(RecoveryAccelerationLimit(2,10,0,.5,-6,2),-6);
  EXPECT_LT(RecoveryAccelerationLimit(NAN,0,0,.5,-6,2),0);
+}
+TEST(RecoverySpeed,ComfortRiseNeverDelaysStrongerBraking) {
+ EXPECT_DOUBLE_EQ(AccelerationRiseCeiling(1.,0.,.05,2.),.1);
+ EXPECT_DOUBLE_EQ(AccelerationRiseCeiling(1.,-.5,.05,2.),-.4);
+ EXPECT_DOUBLE_EQ(AccelerationRiseCeiling(-5.,.5,.05,2.),-5.);
+ EXPECT_DOUBLE_EQ(AccelerationRiseCeiling(1.,0.,.05,0.),1.);
+ EXPECT_LE(AccelerationRiseCeiling(1.,NAN,.05,2.),0.);
+ double applied=0.;
+ for(int i=0;i<30;++i){const auto next=AccelerationRiseCeiling(1.,applied,.05,2.);
+  EXPECT_LE(next-applied,.10000001);EXPECT_LE(next,1.);applied=next;}
+ EXPECT_DOUBLE_EQ(applied,1.);
+}
+TEST(RecoverySpeed,StandstillNormalizationIsOptInAndPreservesMeasuredMotion) {
+ const double measured=-.004;
+ EXPECT_FALSE(BoundedForwardSolverSpeed(measured));
+ ASSERT_TRUE(BoundedForwardSolverSpeed(measured,.05));
+ EXPECT_DOUBLE_EQ(*BoundedForwardSolverSpeed(measured,.05),0.);
+ EXPECT_DOUBLE_EQ(measured,-.004);
+ EXPECT_FALSE(BoundedForwardSolverSpeed(-.051,.05));
+ EXPECT_FALSE(BoundedForwardSolverSpeed(NAN,.05));
+ EXPECT_FALSE(BoundedForwardSolverSpeed(0.,.051));
 }
 TEST(ControlBinding,CertifiedRoundaboutPrepareApproachIsNotDeparturePermission) {
  auto r=Request();r.command.maneuver_type=asmc_msgs::BehaviorCommand::MERGE;

@@ -18,13 +18,14 @@ from scen_runner.config import REPO_ROOT, TOOL_ROOT, LINK_MAP, LOCAL_CONFIG, loa
 
 SCHEMA='asmc.section_collision'
 STAGNATION_SCHEMA='asmc.section_stagnation'
+TRIAL_SCHEMA='asmc.section_trial'
 VERSION=1
 KST=timezone(timedelta(hours=9),'KST')
 SAVE_ROOT=TOOL_ROOT/'save_collision_log'
 
 
 def saved_event(record):
-    kind='stagnation' if record.get('schema')==STAGNATION_SCHEMA or 'stagnation' in record else 'collision'
+    kind='trial' if record.get('schema')==TRIAL_SCHEMA else 'stagnation' if record.get('schema')==STAGNATION_SCHEMA or 'stagnation' in record else 'collision'
     return kind,record[kind]
 
 
@@ -205,6 +206,22 @@ class CollisionArchive:
                 if (environment.get('weather'),environment.get('hour'))!=(last.get('weather'),last.get('hour')):
                     entry['weather_events'].append(dict(time_s=relative,environment=copy.deepcopy(environment)))
 
+    def checkpoint(self,engine,reason):
+        """Save a non-collision scene too; do not consume its later failure event."""
+        now=engine.clock()
+        with self.lock:
+            targets=sorted(self.entries)
+            if not targets:return False
+            replay=self._replay_entries(targets,now,engine.run_started,'trial')
+            self.jobs.put(dict(schema=TRIAL_SCHEMA,version=VERSION,event_type='trial',
+                run_id=self.run_id,run_started=self.started,mode=engine.mode,episode=engine.episode,
+                seed=engine.seed,provenance=self.metadata,
+                trial=dict(time=wall_times(),sections=targets,reason=reason,
+                           elapsed_s=max(0.,now-engine.run_started),environment=engine.environment.snapshot()),
+                replay=replay,replay_available=len(replay)==len(targets),
+                all_section_settings=copy.deepcopy(list(self.records.values())),history=copy.deepcopy(list(self.history))))
+        return True
+
     def collision(self,engine,evidence,sample,hits):
         now=sample.get('received_at',engine.clock())
         # Preserve the most recent section entry. The impact pose is never used as a new entry.
@@ -307,7 +324,7 @@ class CollisionArchive:
                 self.sequence+=1
                 kind,event=saved_event(record)
                 section='-'.join(event['sections']) or 'unknown'
-                prefix='stagnation_' if kind=='stagnation' else ''
+                prefix=kind+'_' if kind!='collision' else ''
                 path=self.folder/f'{self.sequence:03d}_{prefix}{section}.json'
                 temporary=path.with_suffix('.json.tmp')
                 # Convert before opening a file: unsupported values must not
@@ -326,7 +343,7 @@ class CollisionArchive:
                                      env.get('weather'),env.get('hour'),record['seed'],path.name,kind])
                 self._set_owner(summary)
                 with self.lock:self.saved+=1;self.last_file=str(path)
-                self.notify(('[정체 저장 완료] ' if kind=='stagnation' else '[충돌 저장 완료] ')+str(path))
+                self.notify(({'stagnation':'[정체 저장 완료] ','trial':'[장면 저장 완료] '}.get(kind,'[충돌 저장 완료] '))+str(path))
             except Exception as exc:
                 self.error=str(exc);self.notify('[재현 기록 저장 실패] '+str(exc))
             finally:self.jobs.task_done()
@@ -339,7 +356,7 @@ class CollisionArchive:
 
 def load_collision(path,section=None,check_maps=True):
     record=json.loads(Path(path).read_text(encoding='utf-8'))
-    if record.get('schema') not in (SCHEMA,STAGNATION_SCHEMA) or record.get('version')!=VERSION:
+    if record.get('schema') not in (SCHEMA,STAGNATION_SCHEMA,TRIAL_SCHEMA) or record.get('version')!=VERSION:
         raise ValueError('지원하지 않는 구간 재현 파일 형식입니다.')
     choices=record.get('replay',{})
     if section is None:
@@ -363,7 +380,12 @@ def load_collision(path,section=None,check_maps=True):
             source=repo_path(name)
             if str(source.resolve()) in map_files and (not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest()!=expected):
                 raise ValueError('저장 당시와 현재 맵 파일이 다릅니다: '+name)
-    if not selected.get('baseline'):raise ValueError('재현할 객체의 구간 진입 상태가 없습니다.')
+    if not selected.get('baseline'):
+        # An explicitly authored empty control trial is different from a lost
+        # collision snapshot. Missing baseline never silently becomes clear.
+        if not (record.get('schema')==TRIAL_SCHEMA and selected.get('allow_empty_scene') is True
+                and selected.get('baseline')==[] and selected.get('events',[])==[]):
+            raise ValueError('재현할 객체의 구간 진입 상태가 없습니다.')
     for key in ('x','y','z','roll','pitch','yaw'):
         value=selected.get('start_pose',{}).get(key)
         if not isinstance(value,(int,float)) or not math.isfinite(value):raise ValueError('재현 ego 위치/방향 값이 유효하지 않습니다.')

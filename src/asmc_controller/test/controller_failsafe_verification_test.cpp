@@ -656,6 +656,16 @@ TEST(ControllerFailSafeVerification,BoundRecoveryBrakesAboveItsOwnCommandSpeedEv
  EXPECT_FALSE(g_control.brake_watchdog.failed());
 }
 
+TEST(ControllerFailSafeVerification,PrivateValidationCapConstrainsNormalSolverWithoutEmergencyStop) {
+ ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());ASSERT_TRUE(ReceiveNormalRuntimeInputs());
+ g_control.validation_speed_cap_mps=1.;
+ capture.ClearCommands();mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+ EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0.);
+ EXPECT_GT(capture.Commands().back().brake,0.);
+ EXPECT_FALSE(g_control.emergency_stop_active);
+ EXPECT_TRUE(g_control.handoff_solved);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {

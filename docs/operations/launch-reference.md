@@ -226,6 +226,18 @@
 | `dashboard` | `true` | — |
 | `dashboard_port` | `8088` | — |
 | `open_dashboard` | `false` | — |
+| `shadow_planner` | `main` | main or localization; exactly one JAMMING controller |
+| `shadow_static_avoidance` | `false` | research M3 preview; pending closed-loop acceptance |
+| `shadow_dynamic_obstacles` | `false` | unaccepted observed-motion research preview |
+| `shadow_lane_rules` | `false` | verified shadow zone paint exemption; physical road stays hard |
+| `shadow_run_id` | `localization-autonomy` | — |
+| `shadow_speed_cap_kph` | `5` | — |
+| `shadow_journal_path` | `(빈 문자열)` | — |
+| `shadow_start_motion` | `true` | — |
+| `shadow_motion_yaw_source` | `orientation` | — |
+| `shadow_motion_reference_offset_m` | `1.4` | — |
+| `shadow_motion_turn_gain_m2ps` | `1.54` | — |
+| `shadow_motion_topic` | `/planning/localization/motion` | — |
 | `state_source` | `competition` | competition, gps_imu or external |
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
@@ -264,6 +276,9 @@
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
 | `state_topic` | `/vehicle/state` | — |
+| `suspend_in_jamming` | `false` | — |
+| `smooth_handoff` | `false` | — |
+| `localization_approach_speed_kph` | `0` | — |
 
 ## Planning state component
 
@@ -291,6 +306,8 @@
 | `state_topic` | `/planning/vehicle/state` | — |
 | `dashboard_port` | `8088` | — |
 | `open_dashboard` | `false` | — |
+| `expected_master_uri` | `(빈 문자열)` | — |
+| `runtime_label` | `(빈 문자열)` | — |
 | `dashboard_lidar_objects_topic` | `/planning/objects` | — |
 | `dashboard_lidar_motion_debug_topic` | `(빈 문자열)` | — |
 
@@ -561,3 +578,16 @@
 | `state_topic` | `/planning/vehicle/state` | — |
 | `objects_topic` | `/planning/objects` | — |
 | `config` | `$(find asmc_planner)/config/reference_handover_trial.yaml` | — |
+
+## LOCAL-1 experimental preview
+
+[소스](../../src/asmc_planner/launch/local.launch)
+
+| 인자 | 기본값 / 필수 | 소스 설명 |
+|---|---|---|
+| `enable_control` | `false` | — |
+| `run_id` | `local-preview` | — |
+| `journal_path` | `(빈 문자열)` | — |
+| `speed_cap_kph` | `25` | — |
+| `recovery` | `true` | — |
+| `near_blind_assist` | `false` | — |

@@ -65,6 +65,14 @@ void ResetMPCForPlannerStop(double published_steering) {
     RecordPublishedSteering(g_mpc.last_control.delta);
 }
 
+void ResetMPCForHandoff(double steering,double acceleration) {
+    ResetMPCOnFailSafe();
+    if(!std::isfinite(steering+acceleration))return;
+    g_mpc.last_control.delta=std::clamp(steering,-g_mpc.params.steering_max,g_mpc.params.steering_max);
+    g_mpc.last_control.accel=std::clamp(acceleration,g_mpc.params.accel_min,g_mpc.params.accel_max);
+    RecordPublishedSteering(g_mpc.last_control.delta);
+}
+
 MPCOutput MPCProcess(
     const MPCState& ego_state, const ReferencePath& reference, double acceleration_limit) {
     MPCOutput output;

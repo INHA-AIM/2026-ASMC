@@ -1,0 +1,688 @@
+{
+  "onto": "be20138a5c8bfd797a1989827b50ce264477b241",
+  "old": "597e7150b0fc12aba5cc18462ec66e09a9e7563c",
+  "new": "ea81addeadbf2403ed9ac59592eb290ea74e7630",
+  "commits": [
+    {
+      "old": "f2a3dc1669e1f1b5402148ff3ebf6f5d6e1d98b9",
+      "new": "f2a3dc1669e1f1b5402148ff3ebf6f5d6e1d98b9",
+      "subject": "feat(scen-runner): record registered sensor evidence and replayable trial checkpoints",
+      "unchanged": true
+    },
+    {
+      "old": "10af8c44143f69ac87351e0ffacd468f002fc0be",
+      "new": "10af8c44143f69ac87351e0ffacd468f002fc0be",
+      "subject": "feat(scen-runner): summarize recorded shadow decisions and preserve failure provenance",
+      "unchanged": true
+    },
+    {
+      "old": "e3660996dbaff12f1128f6e27824e894c8eb45b7",
+      "new": "e3660996dbaff12f1128f6e27824e894c8eb45b7",
+      "subject": "feat(scen-runner): select tunnel test models through validated native placement",
+      "unchanged": true
+    },
+    {
+      "old": "a7ce7de0548a0c09fc2014dbc3e99c3d3f976e0d",
+      "new": "a7ce7de0548a0c09fc2014dbc3e99c3d3f976e0d",
+      "subject": "docs(scen-runner): document recorded trials and annotate exact-frame evidence",
+      "unchanged": true
+    },
+    {
+      "old": "0de72105d88ab9322e8171490810c70f1761dfb3",
+      "new": "0de72105d88ab9322e8171490810c70f1761dfb3",
+      "subject": "test(scen-runner): cover recorder failure and retain explicit episode outcomes",
+      "unchanged": true
+    },
+    {
+      "old": "1c70db8bd65337552335e0c29f96b36fcddd1b1e",
+      "new": "1c70db8bd65337552335e0c29f96b36fcddd1b1e",
+      "subject": "docs(shadow): preserve six simulator trials and unresolved decision evidence",
+      "unchanged": true
+    },
+    {
+      "old": "566ecab0914dc0583ae7fd1e19ef906752395f48",
+      "new": "566ecab0914dc0583ae7fd1e19ef906752395f48",
+      "subject": "feat(shadow): add bounded camera-contact clearance trial policy",
+      "unchanged": true
+    },
+    {
+      "old": "04439c5d897eb9493a8bf5e24815efa979827097",
+      "new": "04439c5d897eb9493a8bf5e24815efa979827097",
+      "subject": "fix(shadow): join contiguous observed and inferred contact support",
+      "unchanged": true
+    },
+    {
+      "old": "312348fa4c098850f7cd5735f935edcffe520072",
+      "new": "312348fa4c098850f7cd5735f935edcffe520072",
+      "subject": "test(shadow): cover contact clearance, blocked targets and stale input",
+      "unchanged": true
+    },
+    {
+      "old": "c6b63591fc65eae0608778765a1a9cb773c223f3",
+      "new": "c6b63591fc65eae0608778765a1a9cb773c223f3",
+      "subject": "feat(shadow): evaluate bounded curvature candidates at low-speed pursuit distance",
+      "unchanged": true
+    },
+    {
+      "old": "2731a06283c21c31df79bba769b86adb962470cf",
+      "new": "2731a06283c21c31df79bba769b86adb962470cf",
+      "subject": "test(shadow): add native candidate probe for recorded geometry",
+      "unchanged": true
+    },
+    {
+      "old": "3f5199bd53e00e3ca43adb5ed1c6249f97b9159d",
+      "new": "3f5199bd53e00e3ca43adb5ed1c6249f97b9159d",
+      "subject": "fix(shadow): sample narrow feasible offsets without reducing clearance margins",
+      "unchanged": true
+    },
+    {
+      "old": "7cd45a47cf66bcbbcd066c9b4ac72255bc571661",
+      "new": "7cd45a47cf66bcbbcd066c9b4ac72255bc571661",
+      "subject": "test(shadow): prepare tunnel approach and verify complete lane-change candidates",
+      "unchanged": true
+    },
+    {
+      "old": "b121018b3db44deaad5e82b569777b18327d78e5",
+      "new": "b121018b3db44deaad5e82b569777b18327d78e5",
+      "subject": "test(shadow): retain contact geometry, handoff speed and collision reports",
+      "unchanged": true
+    },
+    {
+      "old": "4074b401f79fd13bb7457662c7c93cedd3b3bfc7",
+      "new": "4074b401f79fd13bb7457662c7c93cedd3b3bfc7",
+      "subject": "fix(shadow): bound swept paths to shared camera and consumer support",
+      "unchanged": true
+    },
+    {
+      "old": "065b25b1dd3e0fd7da37b312e7ab525befc80d74",
+      "new": "065b25b1dd3e0fd7da37b312e7ab525befc80d74",
+      "subject": "fix(shadow): check contact paths against the exact paired lane frame",
+      "unchanged": true
+    },
+    {
+      "old": "0986740f220cfcd904560e6f8c6905682ecba750",
+      "new": "0986740f220cfcd904560e6f8c6905682ecba750",
+      "subject": "fix(shadow): reserve maneuver distance before a narrow edge-only path",
+      "unchanged": true
+    },
+    {
+      "old": "dad7d34ef1cded9c0ba02bdbf62effd019d21c0c",
+      "new": "dad7d34ef1cded9c0ba02bdbf62effd019d21c0c",
+      "subject": "fix(shadow): retain bounded paired frames across control callback batches",
+      "unchanged": true
+    },
+    {
+      "old": "c30d83c528febcf43a02bc518c3bed9a8cdd9bb9",
+      "new": "c30d83c528febcf43a02bc518c3bed9a8cdd9bb9",
+      "subject": "fix(shadow): align unobserved contact corridors with the paired road reference",
+      "unchanged": true
+    },
+    {
+      "old": "741b072e842168770e425ca4cd27f4200427f7de",
+      "new": "741b072e842168770e425ca4cd27f4200427f7de",
+      "subject": "refactor(shadow): distinguish polygon clearance from contact fixtures",
+      "unchanged": true
+    },
+    {
+      "old": "c3f240fc22457dbab9ce333afd38e438d6f27ba2",
+      "new": "c3f240fc22457dbab9ce333afd38e438d6f27ba2",
+      "subject": "fix(shadow): preserve endpoint heading with the quintic slope basis",
+      "unchanged": true
+    },
+    {
+      "old": "b544a93a9292e069bb01a4be82a8dfde5a50b3b8",
+      "new": "b544a93a9292e069bb01a4be82a8dfde5a50b3b8",
+      "subject": "test(shadow): expose contact planning cost and geometry provenance",
+      "unchanged": true
+    },
+    {
+      "old": "19973a536f203797d2ddfc06a1229721e226a883",
+      "new": "19973a536f203797d2ddfc06a1229721e226a883",
+      "subject": "test(shadow): preserve recorded drum geometry as a native feasibility regression",
+      "unchanged": true
+    },
+    {
+      "old": "1bdfed9284a62772315616e8dfebc723220fa593",
+      "new": "1bdfed9284a62772315616e8dfebc723220fa593",
+      "subject": "chore(test): store serialized geometry fixtures as non-executable data",
+      "unchanged": true
+    },
+    {
+      "old": "43a3142b81aa6a6ea035dd949cc1051ac8bc9694",
+      "new": "43a3142b81aa6a6ea035dd949cc1051ac8bc9694",
+      "subject": "fix(shadow): avoid postponing lateral completion on every replan",
+      "unchanged": true
+    },
+    {
+      "old": "1ab8385e0a1822fc8df8063010e538f5a4117506",
+      "new": "1ab8385e0a1822fc8df8063010e538f5a4117506",
+      "subject": "fix(scenario): require closed bag inventory and retain native contacts",
+      "unchanged": true
+    },
+    {
+      "old": "8f62eaf3862df38888c523d8f209ddae46291019",
+      "new": "8f62eaf3862df38888c523d8f209ddae46291019",
+      "subject": "feat(shadow): add opt-in observed local geometry support for masked contacts",
+      "unchanged": true
+    },
+    {
+      "old": "f88290780be805dcd85ce0fac9a630813c5aeb00",
+      "new": "f88290780be805dcd85ce0fac9a630813c5aeb00",
+      "subject": "test(shadow): bound local support identity time and unique association",
+      "unchanged": true
+    },
+    {
+      "old": "d43423811ddf4a4dd4812423500706356d596e67",
+      "new": "d43423811ddf4a4dd4812423500706356d596e67",
+      "subject": "test(shadow): expose native local contact association probe",
+      "unchanged": true
+    },
+    {
+      "old": "7db4b39721bee735d320c5269b40e85edfc4ca15",
+      "new": "7db4b39721bee735d320c5269b40e85edfc4ca15",
+      "subject": "fix(shadow): reject malformed or invalid local support immediately",
+      "unchanged": true
+    },
+    {
+      "old": "7c33e3901441cc0dfe59fc126c43734bbc45135d",
+      "new": "7c33e3901441cc0dfe59fc126c43734bbc45135d",
+      "subject": "fix(scenario): wait for recorder child to finalize split inventory",
+      "unchanged": true
+    },
+    {
+      "old": "278f0809615ade4d3cf81fce0c602294c8d9bc30",
+      "new": "278f0809615ade4d3cf81fce0c602294c8d9bc30",
+      "subject": "test(shadow): probe local footprints through native corridor decision",
+      "unchanged": true
+    },
+    {
+      "old": "12955bbd6dd2bf0112d07bc5f2081a5d6099a0ee",
+      "new": "12955bbd6dd2bf0112d07bc5f2081a5d6099a0ee",
+      "subject": "fix(shadow): use verified local extent consistently throughout approach",
+      "unchanged": true
+    },
+    {
+      "old": "a6c430ae395b4aa8bf74bedefacdc238642502d2",
+      "new": "a6c430ae395b4aa8bf74bedefacdc238642502d2",
+      "subject": "feat(shadow): use available family horizon in isolated contact trials",
+      "unchanged": true
+    },
+    {
+      "old": "51b48922350bb6656de6e7e8f177f83d7626e527",
+      "new": "51b48922350bb6656de6e7e8f177f83d7626e527",
+      "subject": "fix(shadow): require measured low speed and cap all trial approach behaviors",
+      "unchanged": true
+    },
+    {
+      "old": "8147e1aa508bdcdd5fdfd9ceacdb55270bdf89d6",
+      "new": "8147e1aa508bdcdd5fdfd9ceacdb55270bdf89d6",
+      "subject": "test(shadow): enforce local input availability and verify masked support in ROS",
+      "unchanged": true
+    },
+    {
+      "old": "22ddcfb55b63dec7bddb853c964d9bd840cd6edd",
+      "new": "22ddcfb55b63dec7bddb853c964d9bd840cd6edd",
+      "subject": "fix(shadow): allow physically feasible remaining maneuvers and cover trial checks in CI",
+      "unchanged": true
+    },
+    {
+      "old": "84781cc7b05066ca15d1779c08539eb236766235",
+      "new": "84781cc7b05066ca15d1779c08539eb236766235",
+      "subject": "test(shadow): isolate local support producer generations and calibration identity",
+      "unchanged": true
+    },
+    {
+      "old": "464d3d4587bcf91acdbab61bada9f8e2fafed7dc",
+      "new": "464d3d4587bcf91acdbab61bada9f8e2fafed7dc",
+      "subject": "fix(shadow): retain a verified within-lane corridor before requesting lane change",
+      "unchanged": true
+    },
+    {
+      "old": "31f2009fa1864d15e2f58f5d54956f31070836d4",
+      "new": "31f2009fa1864d15e2f58f5d54956f31070836d4",
+      "subject": "test(shadow): report fresh planning cost and native contacts without stale metric inflation",
+      "unchanged": true
+    },
+    {
+      "old": "5fa19555bfdfa3448bbd67a3239a28dd68e93763",
+      "new": "5fa19555bfdfa3448bbd67a3239a28dd68e93763",
+      "subject": "test(shadow): inspect narrow clearance feasibility without changing runtime margins",
+      "unchanged": true
+    },
+    {
+      "old": "b245dd94f852f8310c008b04a61beb91a0eee9d7",
+      "new": "b245dd94f852f8310c008b04a61beb91a0eee9d7",
+      "subject": "fix(shadow): retain narrow feasible corridors demonstrated by recorded native geometry",
+      "unchanged": true
+    },
+    {
+      "old": "1ac367053aec601e3baa8add2f76e871955517e1",
+      "new": "1ac367053aec601e3baa8add2f76e871955517e1",
+      "subject": "docs(shadow): separate experimental clearance behavior, failures and rollback from operating defaults",
+      "unchanged": true
+    },
+    {
+      "old": "8da9ab8d27ef3462373e56d7cb442e4ba35303e3",
+      "new": "8da9ab8d27ef3462373e56d7cb442e4ba35303e3",
+      "subject": "fix(scenario): analyze finalized failed trials explicitly without marking recordings accepted",
+      "unchanged": true
+    },
+    {
+      "old": "af08c31a72766745d15ee1f9e026a188941ec980",
+      "new": "af08c31a72766745d15ee1f9e026a188941ec980",
+      "subject": "fix(shadow): retain configured change budget and cooldown in clearance trials",
+      "unchanged": true
+    },
+    {
+      "old": "9a550bc395c1221d35390d4a20c1892881c64072",
+      "new": "9a550bc395c1221d35390d4a20c1892881c64072",
+      "subject": "fix(shadow): keep the pursuit target inside the checked residual maneuver",
+      "unchanged": true
+    },
+    {
+      "old": "25fd82013793cb80192d1418b11ccbe0d3e321a0",
+      "new": "25fd82013793cb80192d1418b11ccbe0d3e321a0",
+      "subject": "test(shadow): measure native candidate cost and interpolation equivalence",
+      "unchanged": true
+    },
+    {
+      "old": "b3b8c53c4d464fae61648445c132b1fec4c52089",
+      "new": "b3b8c53c4d464fae61648445c132b1fec4c52089",
+      "subject": "perf(shadow): reuse verified monotonic lane ordering for bounded candidate sampling",
+      "unchanged": true
+    },
+    {
+      "old": "1b6cd68c935837b8b4658a5cdf800d3ede9bdfdf",
+      "new": "1b6cd68c935837b8b4658a5cdf800d3ede9bdfdf",
+      "subject": "fix(shadow): pair delayed local observations through the existing bounded image queue",
+      "unchanged": true
+    },
+    {
+      "old": "cfc19c118e1483629311c0f35319946942c5cd52",
+      "new": "cfc19c118e1483629311c0f35319946942c5cd52",
+      "subject": "test(shadow): drive the pending timeout with an explicit fresh status callback",
+      "unchanged": true
+    },
+    {
+      "old": "aefcbf99e3f6f04ff02d1302b0cac7810c4d5f48",
+      "new": "aefcbf99e3f6f04ff02d1302b0cac7810c4d5f48",
+      "subject": "test(shadow): initialize projection epoch and heartbeat before delayed-input fixture",
+      "unchanged": true
+    },
+    {
+      "old": "28883930839e49b40b40b35f94d3b875f2283f42",
+      "new": "28883930839e49b40b40b35f94d3b875f2283f42",
+      "subject": "test(scenario): report driving and terminal lifecycle separately from bag completion",
+      "unchanged": true
+    },
+    {
+      "old": "40c42e1ae4b9b5db310b46ef563e4cde2b910978",
+      "new": "40c42e1ae4b9b5db310b46ef563e4cde2b910978",
+      "subject": "docs(shadow): record successful drum traversal, preparation failures and measured search cost",
+      "unchanged": true
+    },
+    {
+      "old": "fe144316aa956b5a274648694006a79dc740a4ec",
+      "new": "fe144316aa956b5a274648694006a79dc740a4ec",
+      "subject": "fix(shadow): reject old scan identities without flushing current local support",
+      "unchanged": true
+    },
+    {
+      "old": "7fa6fbe7adf2125da05266cd11aa6ca6b35232e0",
+      "new": "7fa6fbe7adf2125da05266cd11aa6ca6b35232e0",
+      "subject": "test(shadow): expose native supported strip intervals for failed-entry diagnosis",
+      "unchanged": true
+    },
+    {
+      "old": "9c7a137e8d29aec97776c45fb1a94c68a56e53cc",
+      "new": "9c7a137e8d29aec97776c45fb1a94c68a56e53cc",
+      "subject": "fix(shadow): anchor near-road tangents to the actual corrected sample within one grid interval",
+      "unchanged": true
+    },
+    {
+      "old": "0fa6666e0e8e14914b894962990942c4084c8235",
+      "new": "0fa6666e0e8e14914b894962990942c4084c8235",
+      "subject": "test(shadow): replay corrected near-support using the classifier shared calculation",
+      "unchanged": true
+    },
+    {
+      "old": "c1c2cd75906ab862c5745ae48ffb69c910b5850e",
+      "new": "c1c2cd75906ab862c5745ae48ffb69c910b5850e",
+      "subject": "test(shadow): preserve the false-zero support failure as a native replay fixture",
+      "unchanged": true
+    },
+    {
+      "old": "0f2bcede9a8c1ae695fcf63eb9b83148e62fd578",
+      "new": "0f2bcede9a8c1ae695fcf63eb9b83148e62fd578",
+      "subject": "docs(shadow): preserve support failure evidence and the repeated drum traversal",
+      "unchanged": true
+    },
+    {
+      "old": "c06a8eb95fb0d9061450baee83924450e45de9ad",
+      "new": "c06a8eb95fb0d9061450baee83924450e45de9ad",
+      "subject": "fix(shadow): bound trial paths to actual paired lane support",
+      "unchanged": true
+    },
+    {
+      "old": "94183ca9fbb5702c28135f60dfc602b85645131a",
+      "new": "94183ca9fbb5702c28135f60dfc602b85645131a",
+      "subject": "feat(shadow): compare extra-clearance paths before the near-corridor closes",
+      "unchanged": true
+    },
+    {
+      "old": "565f4023e2b9b13770f8351897cf105629906ad6",
+      "new": "565f4023e2b9b13770f8351897cf105629906ad6",
+      "subject": "feat(shadow): isolate an early adjacent-lane comparison under the same guards",
+      "unchanged": true
+    },
+    {
+      "old": "46b846f57244e042f04ab10a67096f5b46036479",
+      "new": "46b846f57244e042f04ab10a67096f5b46036479",
+      "subject": "fix(shadow): preserve projected contact quadrilaterals before unknown-depth occupancy",
+      "unchanged": true
+    },
+    {
+      "old": "30caa1bde87f07486f64bb86adf786914130f854",
+      "new": "30caa1bde87f07486f64bb86adf786914130f854",
+      "subject": "refactor(shadow): retire unsuccessful clearance-preference trials from the runnable profile",
+      "unchanged": true
+    },
+    {
+      "old": "577688810a445f03922975b85078e3b685b37c54",
+      "new": "577688810a445f03922975b85078e3b685b37c54",
+      "subject": "test(shadow): inspect bounded offset coverage without changing the driving policy",
+      "unchanged": true
+    },
+    {
+      "old": "632f2e6ac6c8a2b694fb2bf52d5dc73ef5ba1785",
+      "new": "632f2e6ac6c8a2b694fb2bf52d5dc73ef5ba1785",
+      "subject": "test(shadow): align low-speed baseline commands and retain unsuccessful trial evidence",
+      "unchanged": true
+    },
+    {
+      "old": "76ccc8909452dd653540128a930fd809bb29584e",
+      "new": "76ccc8909452dd653540128a930fd809bb29584e",
+      "subject": "test(scenarios): resolve shared fixture in full-suite discovery",
+      "unchanged": true
+    },
+    {
+      "old": "f4a8f481998093f3b7e4878079f0241ce2b2dfec",
+      "new": "f4a8f481998093f3b7e4878079f0241ce2b2dfec",
+      "subject": "test(shadow): expose native road-rejection evidence without changing acceptance",
+      "unchanged": true
+    },
+    {
+      "old": "8c8a9a33dae161afc7d45d9b7908804a988d4534",
+      "new": "8c8a9a33dae161afc7d45d9b7908804a988d4534",
+      "subject": "test(shadow): inspect maneuver-length gaps with unchanged road and collision guards",
+      "unchanged": true
+    },
+    {
+      "old": "6eda252335dd565cd978f69039b9d6ad77cfd662",
+      "new": "6eda252335dd565cd978f69039b9d6ad77cfd662",
+      "subject": "fix(shadow): retain a longer completion only after all existing corridor candidates fail",
+      "unchanged": true
+    },
+    {
+      "old": "08d8fec699df01fd17e24be739d3ce235e7fd158",
+      "new": "08d8fec699df01fd17e24be739d3ce235e7fd158",
+      "subject": "docs(shadow): report matched tunnel trials, remaining stops and bounded rollout",
+      "unchanged": true
+    },
+    {
+      "old": "3811a1fad3af86685ef59ccbfc4f290b3f5ee302",
+      "new": "3811a1fad3af86685ef59ccbfc4f290b3f5ee302",
+      "subject": "fix(shadow): preserve padded local OBB convex footprints through collision checks",
+      "unchanged": true
+    },
+    {
+      "old": "318b2b6a4b1a3641ec47836ddf001b4541f683a1",
+      "new": "318b2b6a4b1a3641ec47836ddf001b4541f683a1",
+      "subject": "feat(shadow): add opt-in BEV swept-footprint guard with existing controller",
+      "unchanged": true
+    },
+    {
+      "old": "ca1294a3411131573d1f4ebfd4d9abd5aa29dead",
+      "new": "ca1294a3411131573d1f4ebfd4d9abd5aa29dead",
+      "subject": "fix(shadow): bind BEV experiment subscribers to private configuration",
+      "unchanged": true
+    },
+    {
+      "old": "38726346ee4f5dc5db20458db69cb59f8e7e842d",
+      "new": "38726346ee4f5dc5db20458db69cb59f8e7e842d",
+      "subject": "test(shadow): guard BEV epochs and reconstruct exact measured footprint fixtures",
+      "unchanged": true
+    },
+    {
+      "old": "0787c8426de408e4239b380281567b0d26223f0e",
+      "new": "0787c8426de408e4239b380281567b0d26223f0e",
+      "subject": "fix(shadow): require real local readiness for GPS-denied scenario starts",
+      "unchanged": true
+    },
+    {
+      "old": "6b3b56feeebef1c8032dc6d8ea18f43da1195a9f",
+      "new": "6b3b56feeebef1c8032dc6d8ea18f43da1195a9f",
+      "subject": "test(shadow): keep BEV observational and cover tilted-footprint delivery",
+      "unchanged": true
+    },
+    {
+      "old": "2657d0185d91ee55fa85d757a9d94475a27fec11",
+      "new": "2657d0185d91ee55fa85d757a9d94475a27fec11",
+      "subject": "fix(scenarios): retain diagnostics when a gallery frame has no image payload",
+      "unchanged": true
+    },
+    {
+      "old": "5b57a99248abe3d02ffec155e7550849d74aff15",
+      "new": "5b57a99248abe3d02ffec155e7550849d74aff15",
+      "subject": "fix(shadow): canonicalize measured Point32 hulls without reboxing image rays",
+      "unchanged": true
+    },
+    {
+      "old": "7275fb778db60053c7c99199b5bc5aec760757f2",
+      "new": "7275fb778db60053c7c99199b5bc5aec760757f2",
+      "subject": "docs(shadow): record footprint validation and BEV control acceptance limits",
+      "unchanged": true
+    },
+    {
+      "old": "02e0e75968736252d2af0eab71d40b8cefbeadde",
+      "new": "b4380a95be77d285dedd45ff5d8647b6fb9c990d",
+      "subject": "Merge remote-tracking branch 'origin/main' into feat/shadow-local-footprint",
+      "unchanged": false
+    },
+    {
+      "old": "561b7ffafa7db98dd8f79496f4c97bd25a6749f9",
+      "new": "0ad4188862f1d709a2a6950cb123ac69f58188a6",
+      "subject": "feat(shadow): add opt-in shared-IMU semantic-space path experiment",
+      "unchanged": false
+    },
+    {
+      "old": "3059912d5401678344098b31eec71aa6247c1b72",
+      "new": "a6430107304241ffcf06b87854f24e42ab91b0d7",
+      "subject": "test(shadow): verify semantic-only paths and transport-independent frame pairing",
+      "unchanged": false
+    },
+    {
+      "old": "435daf8dcd3b64d819099b1e8bf141e0f8a1ce24",
+      "new": "523a05d63f8f4ab62c6f78d1a3622cbb7b94a333",
+      "subject": "feat(scenarios): record shared semantic-space experiment lineage",
+      "unchanged": false
+    },
+    {
+      "old": "3d7a4075b8ebe46e220131d945f222c41f273364",
+      "new": "377476204303d6a0499ba8a2c1d55b35846a4dfb",
+      "subject": "feat(shadow): distinguish ego occlusion from obstacle shadows in semantic trials",
+      "unchanged": false
+    },
+    {
+      "old": "e72be890b9bb7b50d1b9dd236239763cc6478f3e",
+      "new": "95ccb5eeb280300deac90f8c5b8d5d504639e9de",
+      "subject": "feat(scenarios): permit explicitly authored empty control trials",
+      "unchanged": false
+    },
+    {
+      "old": "9563eefaaa494dbec6d346946c5e1cafd8257680",
+      "new": "1259e5ad2af4d5647aa13b2cfeb58b22c31d2fec",
+      "subject": "fix(scenarios): keep empty-trial readiness consistent through release",
+      "unchanged": false
+    },
+    {
+      "old": "e9d91b527bf378765f3004e6206232e173a375a0",
+      "new": "a6c1d9c0542bb2bf7556f1b549e31b6a86bc2bb6",
+      "subject": "test(shadow): replay exact semantic source pairs and expose first blocked cell",
+      "unchanged": false
+    },
+    {
+      "old": "a712ac934df7ca9b991258cb28563259e544b5c4",
+      "new": "14227e3730e0bd322551326b0346064c188e5a2c",
+      "subject": "feat(shadow): bound and report explicit near-field LiDAR assistance candidate",
+      "unchanged": false
+    },
+    {
+      "old": "01af5cb61ead83e5bc7061fb7ca1ee86bd4fb12c",
+      "new": "f334f54a29c88946246f1426a8106d9bf07e0a20",
+      "subject": "fix(shadow): exclude measured hood interpolation halo from semantic visibility",
+      "unchanged": false
+    },
+    {
+      "old": "41a644d52c6fa7dbed68c079ae6eaa26dbaeece2",
+      "new": "d12336cf3948b4f648cba8e581adf390caef8904",
+      "subject": "fix(shadow): select newest complete tuple and bound measured ego-blind assistance",
+      "unchanged": false
+    },
+    {
+      "old": "95eebb3552679c9b4c687e144d689ddcf2336263",
+      "new": "3f2004ecd0cf5ca38283dcb21fec5d3bd1c62534",
+      "subject": "feat(shadow): audit exact semantic frames and distinguish calibrated mask wings",
+      "unchanged": false
+    },
+    {
+      "old": "634fe8dadbcf5936f9ef2fd066c5334bf73ea841",
+      "new": "f1a9d13ee5841a384e50923cd6bc523a41ef446b",
+      "subject": "fix(shadow): version exact decision-source association for offline galleries",
+      "unchanged": false
+    },
+    {
+      "old": "cde4166a03d2e06c8a2d4d156e0d88b5e4bcf5ab",
+      "new": "1b0a8178a7cbed13ca16466c2a777b401c752b14",
+      "subject": "fix(shadow): avoid short-prefix creep and require full observed return support",
+      "unchanged": false
+    },
+    {
+      "old": "b26294ec1b483a695b65becb5db48c63133d3f6e",
+      "new": "05ceb3a53a7f9507ed69b227d33fbe2b4e1e4cb2",
+      "subject": "test(shadow): attribute recorded stops without changing live guards",
+      "unchanged": false
+    },
+    {
+      "old": "1cee1228abf59c5d305a95b4702b9b3e1504c012",
+      "new": "90265b7d82da7c50e9637489ecf5d2a6d6db0242",
+      "subject": "test(shadow): identify local OBB vetoes in recorded semantic candidates",
+      "unchanged": false
+    },
+    {
+      "old": "1125582cd28b77ba3c86c6aafc6da8c56d40f575",
+      "new": "3add702aae7265622a2d4c20ece50a2cb9107d95",
+      "subject": "docs(shadow): record semantic tunnel trials, failures and recovery",
+      "unchanged": false
+    },
+    {
+      "old": "ce4cc193a4545872a2880b23d54b46825c6860e7",
+      "new": "ba42e97ff5eee63f5b11118b616983c2e7ade269",
+      "subject": "docs(local): pin independent GPS-free planning baseline and evidence",
+      "unchanged": false
+    },
+    {
+      "old": "afcb05262860d7f0376a1c9f916605ee342c4878",
+      "new": "a11eee2c894606e3953176a0e03d77efc96bfe0e",
+      "subject": "feat(local): add GPS-free family and road planner with isolated MPC boundary",
+      "unchanged": false
+    },
+    {
+      "old": "c4ed550a6e8288ac9e5b92bd699506ccdfa8c494",
+      "new": "5b5a25f723ba92534c866e77a0e7ecb6370d286a",
+      "subject": "test(local): record owned simulator trials and separate following from path error",
+      "unchanged": false
+    },
+    {
+      "old": "128346cb7a8b03969bed0d25dd1c8571d88c3125",
+      "new": "290a689852fd7e8f0d37f656b88615efa9807445",
+      "subject": "feat(dashboard): show exact local road, family and candidate paths in V2 console",
+      "unchanged": false
+    },
+    {
+      "old": "3648fc00c61dd0f2734a9edc87fa01fe194a12af",
+      "new": "8f89641d0166b6e07a1f2d2ccfd49cd56b227f91",
+      "subject": "docs(local): record measured following limits, failed trials and preview commands",
+      "unchanged": false
+    },
+    {
+      "old": "e92d453e0e800e22821a005472963a81ed9a7bb3",
+      "new": "fc19db992ad6aa51fda8d4e79fd2613d603a0f70",
+      "subject": "fix(dashboard): fit local scene to viewport and separate source skew from arrival delay",
+      "unchanged": false
+    },
+    {
+      "old": "7bda2c260521155414d8bdc2d5dddeff602a0483",
+      "new": "a2566e0ad3fe6516e5260236d3fce78cf27d3ffc",
+      "subject": "diag(local): retain common family support when a local scene is rejected",
+      "unchanged": false
+    },
+    {
+      "old": "a93582d7ddb105c6ac2b777db480604cc2c692fc",
+      "new": "95855caad23fc61d10e01b71d97dc4b3e9a1794f",
+      "subject": "audit(local): compare short dead reckoning and current speed policies without control",
+      "unchanged": false
+    },
+    {
+      "old": "84b19ab4fe51ec4c22e0bd2a3cc4bf17c564055e",
+      "new": "0dcabd8d28020d76cdfbe9d08e60665a0a20112e",
+      "subject": "docs(local): split timing, 25kmh following and noise handling into acceptance units",
+      "unchanged": false
+    },
+    {
+      "old": "985f52893261a30b179bc4b2b006834752198e35",
+      "new": "27fb87cb70df66d9fe0b5e993ff0ce7dd7741463",
+      "subject": "fix(local): reject simultaneous normal and legacy command producers",
+      "unchanged": false
+    },
+    {
+      "old": "6f416d466bc316a147b92c6da903c54f1bdf0071",
+      "new": "db04b9413bbc3f1e8e5e8756dfc17d8d1ce41979",
+      "subject": "docs(local): separate right-home guidance from physical drivable space",
+      "unchanged": false
+    },
+    {
+      "old": "f4b54c6e5078b452875ba65d5c01f51ffaae7d52",
+      "new": "f4f2d63eec14e77f04b87f20847a304ff9748ac2",
+      "subject": "docs(shadow): analyze AIMDrive localization for map planner reuse",
+      "unchanged": false
+    },
+    {
+      "old": "6eb37258c9f87a55b20d0023f54136258deccf38",
+      "new": "48cdf59f71afe86fe663eb237323f51a38243094",
+      "subject": "feat(shadow): reuse map static avoidance with GPS-anchored local odometry",
+      "unchanged": false
+    },
+    {
+      "old": "597e7150b0fc12aba5cc18462ec66e09a9e7563c",
+      "new": "ea81addeadbf2403ed9ac59592eb290ea74e7630",
+      "subject": "feat(shadow): validate GPS-anchored tunnel position following",
+      "unchanged": false
+    }
+  ],
+  "backup": {
+    "ref": "archive/aimdrive-pre-main-20261029-597e7150",
+    "head": "597e7150b0fc12aba5cc18462ec66e09a9e7563c",
+    "bundle": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/.storage/manifests/aimdrive-rebase-20261029-r1/aimdrive-before-main.bundle",
+    "bundle_sha256": "8050ecf1fce05d1bb5a224418d3719c2a7a99b71b85d014bcbf77ae5051a9efe",
+    "bytes": 407622
+  },
+  "resolution_notes": "Preserved 111 commits (including original cousin history and recreated merge).\nMerge: retain both BBox contact schemas; main buildPath first six parameters and experimental extra parameters; call probe adjusted. Main corridor/straddle and person stop retained, experimental geometric guard opt-in.\nSemantic trial: main lane hold retained except experiment; experimental failed-change exception retained.\nCMake: union std_srvs/nav_msgs/diagnostic_msgs. CI: both highway_runtime_test/local_planner_test. Docs: both launch entries; regenerated reference. gitignore: both patterns.\nOne aborted local attempt after resolver assertion; rebase aborted to original HEAD and retried, no conflict-marker commits in final history.\n",
+  "post_rebase_corrections": [
+    "Named buildContactPath entry for replayed semantic experiments: prevents implicit bool/double API conversion",
+    "Explicit legacy contact fixture decoder; immutable raw fixtures unchanged",
+    "Hash-only camera launch test stubs new backend diagnostic; geometry hash remains real"
+  ],
+  "validation_run": "aimdrive-main-rebase-20261029-r01",
+  "local_only": true
+}

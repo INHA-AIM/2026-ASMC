@@ -11,6 +11,7 @@ MPCOutput MPCProcess(const MPCState& ego_state,
 bool MPCPlannerStopSteering(const MPCState& ego, double brake_pedal,
                             double& steering);
 void ResetMPCOnFailSafe();
+void ResetMPCForHandoff(double applied_steering, double measured_acceleration);
 void ResetMPCForPlannerStop(double published_steering);
 const MPCParams& GetMPCParams();
 

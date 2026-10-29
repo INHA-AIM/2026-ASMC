@@ -39,6 +39,7 @@ std::uint64_t emergency_generation=0;
 void PublishControl(const morai_msgs::CtrlCmd& command) {
     g_control.last_published_brake=command.brake;
     g_control.control_pub.publish(command);
+    if(g_control.output_observer)g_control.output_observer(command);
     if(!g_control.binding_enabled || !g_control.control_status_pub || !g_control.binding_gate.has_request())return;
     const auto& gate=g_control.binding_gate;
     const auto& pending=gate.pending();
@@ -274,6 +275,7 @@ void PublishStop(const char* reason) {
 }
 
 void ControlProcess(const ros::SteadyTimerEvent&) {
+    g_control.handoff_solved=false;
     if(g_control.binding_enabled) {
         auto& gate=g_control.binding_gate;
         const auto now=ros::SteadyTime::now();
@@ -465,7 +467,17 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
             GetMPCParams().accel_min,GetMPCParams().accel_max);
         acceleration_limit=std::isfinite(acceleration_limit) ? std::min(acceleration_limit,recovery_limit) : recovery_limit;
     }
+    const double speed_cap=CombinedSpeedCap(g_control.validation_speed_cap_mps,
+        g_control.localization_approach_speed_mps,g_control.localization_approaching);
+    if(speed_cap>0) {
+        const double trial_limit=RecoveryAccelerationLimit(speed_cap,
+            current_state.vx,g_control.latest_vehicle_state.acceleration,.5,
+            GetMPCParams().accel_min,GetMPCParams().accel_max);
+        acceleration_limit=std::isfinite(acceleration_limit)?std::min(acceleration_limit,trial_limit):trial_limit;
+    }
+    if(g_control.before_solve)g_control.before_solve();
     const MPCOutput output = MPCProcess(current_state, reference,acceleration_limit);
+    g_control.handoff_solved=output.success;
     if (output.stuck_event ==
         StuckEvent::RECOVERY_STARTED) {
         ROS_WARN("MPC stuck recovery start: ego_v=%.2f max_ref_v=%.2f "

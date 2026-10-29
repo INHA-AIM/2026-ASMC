@@ -739,6 +739,13 @@ bool FrenetPlanner::ProjectEgoToS(const CartesianState& ego, double& out_s) cons
     return true;
 }
 
+bool FrenetPlanner::ReferencePoseAt(double s, CartesianState& pose) const {
+    if (!ref_loaded_ || ref_.points.empty() || !std::isfinite(s)) return false;
+    const auto p = Interpolate(ref_, s);
+    pose = {p.x, p.y, p.theta, p.kappa, 0., 0.};
+    return std::isfinite(p.x+p.y+p.theta+p.kappa);
+}
+
 namespace {
 
 // 외부 command로 실제 열려 있는 모드. MERGE/LANE_CHANGE는 FSM 계약이

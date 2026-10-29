@@ -3,6 +3,18 @@
   <arg name="dashboard" default="true"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="open_dashboard" default="false"/>
+  <arg name="shadow_planner" default="main" doc="main or localization; exactly one JAMMING controller"/>
+  <arg name="shadow_static_avoidance" default="$(eval arg('shadow_planner') == 'localization')" doc="research M3 preview; pending closed-loop acceptance"/>
+  <arg name="shadow_dynamic_obstacles" default="$(eval arg('shadow_planner') == 'localization')" doc="unaccepted observed-motion research preview"/>
+  <arg name="shadow_lane_rules" default="$(eval arg('shadow_planner') == 'localization')" doc="verified shadow zone paint exemption; physical road stays hard"/>
+  <arg name="shadow_run_id" default="localization-autonomy"/>
+  <arg name="shadow_speed_cap_kph" default="15"/>
+  <arg name="shadow_journal_path" default=""/>
+  <arg name="shadow_start_motion" default="true"/>
+  <arg name="shadow_motion_yaw_source" default="orientation"/>
+  <arg name="shadow_motion_reference_offset_m" default="1.4"/>
+  <arg name="shadow_motion_turn_gain_m2ps" default="1.54"/>
+  <arg name="shadow_motion_topic" default="/planning/localization/motion"/>
   <!-- Integrated planner, input adapters and controller. Bridges and asmc_lidar
        remain separately managed. This wrapper currently supports LiDAR input. -->
   <arg name="state_source" default="competition" doc="competition, gps_imu or external"/>
@@ -47,6 +59,9 @@
        플래너가 먼저 보고 회피 후보 없음으로 정지하지 않도록 재밍 회피가 맡게 한다. -->
   <arg name="shadow_zone_start_m" default="1847.744798966"/>
   <group ns="planning_mode">
+    <param name="smooth_handoff" value="$(eval arg('shadow_planner') == 'localization')"/>
+    <param name="localization_approach_speed_kph" value="$(eval float(arg('shadow_speed_cap_kph')) if arg('shadow_planner') == 'localization' else 0.0)"/>
+    <param name="recovery_ready_topic" value="$(eval {'main': '', 'localization': '/planning/localization/recovery_ready'}[arg('shadow_planner')])"/>
     <param name="shadow_zone/path_file"
            value="$(find asmc_planner)/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"/>
     <param name="shadow_zone/station_start_m" value="$(arg shadow_zone_start_m)"/>
@@ -87,12 +102,17 @@
   </include>
   <include file="$(find asmc_controller)/launch/controller.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>
+    <arg name="suspend_in_jamming" value="$(eval arg('shadow_planner') == 'localization')"/>
+    <arg name="smooth_handoff" value="$(eval arg('shadow_planner') == 'localization')"/>
+    <arg name="localization_approach_speed_kph" value="$(eval float(arg('shadow_speed_cap_kph')) if arg('shadow_planner') == 'localization' else 0.0)"/>
   </include>
   <node pkg="asmc_planner" type="asmc_control_selector_node"
-        name="asmc_control_selector" output="screen" required="true"/>
+        name="asmc_control_selector" output="screen" required="true">
+    <param name="smooth_handoff" value="$(eval arg('shadow_planner') == 'localization')"/>
+  </node>
   <!-- 재밍 BBOX 입력은 camera_bbox_frame_bridge가 /perception/camera/objects를 직접 받는다
        (별도 YOLO 변환 어댑터 없음, 소비 cutoff는 bbox_conf_thres 0.7). -->
-  <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
+  <include if="$(eval arg('shadow_planner') == 'main')" file="$(find lane_boundary_adapter)/launch/camera_bbox_lane_change.launch">
     <arg name="enable_control" value="true"/>
     <!-- PR127 recovery is intentional; PR128 highway/dashboard ownership above stays unchanged. -->
     <arg name="return_to_entry_lane" value="true"/>
@@ -121,6 +141,23 @@
     <arg name="speed_ki" value="0.1"/>
     <arg name="max_accel_pedal" value="0.5"/>
     <arg name="max_brake_pedal" value="0.5"/>
+  </include>
+  <include if="$(eval arg('shadow_planner') == 'localization')" file="$(find asmc_planner)/launch/shadow_localization.launch">
+    <arg name="run_id" value="$(arg shadow_run_id)"/>
+    <arg name="speed_cap_kph" value="$(arg shadow_speed_cap_kph)"/>
+    <arg name="journal_path" value="$(arg shadow_journal_path)"/>
+    <arg name="enable_control" value="true"/>
+    <arg name="mode_gated" value="true"/>
+    <arg name="static_avoidance" value="$(arg shadow_static_avoidance)"/>
+    <arg name="dynamic_obstacles" value="$(arg shadow_dynamic_obstacles)"/>
+    <arg name="shadow_lane_rules" value="$(arg shadow_lane_rules)"/>
+    <arg name="smooth_handoff" value="true"/>
+    <arg name="integrated_normal_controller" value="/mpc_controller"/>
+    <arg name="start_motion" value="$(arg shadow_start_motion)"/>
+    <arg name="motion_yaw_source" value="$(arg shadow_motion_yaw_source)"/>
+    <arg name="motion_reference_offset_m" value="$(arg shadow_motion_reference_offset_m)"/>
+    <arg name="motion_turn_gain_m2ps" value="$(arg shadow_motion_turn_gain_m2ps)"/>
+    <arg name="state_topic" value="$(arg shadow_motion_topic)"/>
   </include>
   <include if="$(arg dashboard)" file="$(find asmc_planner)/launch/dashboard.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>

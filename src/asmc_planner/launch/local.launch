@@ -1,0 +1,26 @@
+<launch>
+  <!-- Independent LOCAL-1 experiment. No normal controller, old follower,
+       selector, camera inference or LiDAR producer is started here.
+       Control trials must not also start autonomy_no_bridges_v2.launch.
+       /ctrl_cmd/jamming is only the existing selector routing slot; local
+       control uses one MPC instance, not the old jamming follower. -->
+  <arg name="enable_control" default="false"/>
+  <arg name="run_id" default="local-preview"/>
+  <arg name="journal_path" default=""/>
+  <arg name="speed_cap_kph" default="25"/>
+  <arg name="recovery" default="true"/>
+  <arg name="near_blind_assist" default="false"/>
+  <node pkg="asmc_planner" type="asmc_local_planner_node" name="local_planner" output="screen" required="true">
+    <rosparam command="load" file="$(find asmc_planner)/config/local_planner.yaml"/>
+    <param name="run_id" value="$(arg run_id)"/>
+    <param name="journal_path" value="$(arg journal_path)"/>
+    <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
+    <param name="recovery" value="$(arg recovery)"/>
+    <param name="near_blind_assist" value="$(arg near_blind_assist)"/>
+  </node>
+  <node pkg="asmc_controller" type="asmc_local_controller_node" name="local_controller" output="screen" required="true">
+    <rosparam command="load" file="$(find asmc_controller)/config/local_controller.yaml"/>
+    <param name="enable_control" value="$(arg enable_control)"/>
+    <param name="controller_config" value="$(find asmc_controller)/config/controller.yaml"/>
+  </node>
+</launch>

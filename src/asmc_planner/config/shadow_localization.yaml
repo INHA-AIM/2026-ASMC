@@ -1,0 +1,29 @@
+# M2 experiment only; not included by production or independent LOCAL launch.
+# Candidate ramp for the new 5/10/15 km/h sequence, not a validated actuator tune.
+# Braking bounds and the shared pedal calibration remain unchanged.
+# Canonical v3 sensor GPS mount. The full roll/pitch/yaw lever arm is removed
+# only by Localization; the main GPS/IMU estimator configuration is unchanged.
+gps_sensor_offset:
+  x: 0.35
+  y: 0.0
+  z: 1.25
+# Validate the source-aligned one-second GPS candidate before applying any
+# correction. Candidate innovation remains <=0.25m / 2deg; gross jumps stop.
+validate_recovery_window: true
+# Only the opt-in Localization owner applies this while JAMMING is selected;
+# physical road containment remains hard. Known-zone exit has a bounded 3s tail.
+# These research policies remain off until separate closed-loop qualification.
+shadow_lane_rules: false
+dynamic_obstacles: false
+# Retry a recent committed spatial path only after full current map/OBB/time
+# validation. No cached command, validity, speed profile or solver is replayed.
+reuse_verified_path: true
+# Body-edge target for a measured same-direction leader; shared map/OBB,
+# uncertainty, braking and watchdog checks may demand a larger actual gap.
+following_bumper_gap_m: 3.0
+# Discard bounded out-of-order packets without accepting their data or clock.
+# This is not an age/watchdog allowance; larger regressions still reset epochs.
+input_reorder_tolerance_s: 0.10
+longitudinal:
+  acceleration_limit_mps2: 1.0
+  jerk_limit_mps3: 2.0

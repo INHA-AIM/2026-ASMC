@@ -4,12 +4,20 @@
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 #include <ros/ros.h>
+#include <morai_msgs/CtrlCmd.h>
+#include <functional>
 #include <asmc_msgs/control_binding.hpp>
 #include "Util/EmergencySteering.hpp"
 #include "Util/BrakeResponseWatchdog.hpp"
 
 struct ControlContext {
     ros::Publisher control_pub;
+    std::function<void(const morai_msgs::CtrlCmd&)> output_observer;
+    std::function<void()> before_solve;
+    double validation_speed_cap_mps=0; // private trial fixture; production disabled
+    double localization_approach_speed_mps=0; // opt-in known-zone handoff only
+    bool localization_approaching=false;
+    bool handoff_solved=false;
     asmc_msgs::Trajectory latest_trajectory;
     bool has_trajectory = false;
     ros::SteadyTime trajectory_received_at;

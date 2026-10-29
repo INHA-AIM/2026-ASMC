@@ -1,0 +1,11 @@
+<launch>
+  <node pkg="asmc_controller" type="asmc_local_controller_node" name="localization_controller" required="true">
+    <param name="enable_control" value="false"/>
+    <param name="smooth_handoff" value="true"/>
+    <param name="speed_cap_kph" value="5"/>
+    <param name="speed_cost" value="24"/>
+    <param name="integrated_normal_controller" value="/mpc_controller"/>
+    <param name="controller_config" value="$(find asmc_controller)/config/controller.yaml"/>
+  </node>
+  <test pkg="asmc_planner" type="localization_seed_test.py" test-name="localization_seed" time-limit="30"/>
+</launch>

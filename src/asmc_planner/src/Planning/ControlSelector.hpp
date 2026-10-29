@@ -4,6 +4,9 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <std_msgs/UInt8.h>
+#include <std_msgs/Bool.h>
+#include <asmc_msgs/control_handoff.hpp>
+#include <array>
 
 #include "Planning/PlanningMode.hpp"
 
@@ -19,6 +22,9 @@ class ControlSelector final {
   void watchdogCallback(const ros::SteadyTimerEvent&);
   void publishStop();
   bool commandFresh() const;
+  void handoffRequest(const asmc_msgs::ControlHandoff::ConstPtr&);
+  void handoffCandidate(const asmc_msgs::ControlHandoff::ConstPtr&);
+  bool completeHandoff();
   void publishDiagnostics();
 
   ros::NodeHandle nh_;
@@ -33,5 +39,13 @@ class ControlSelector final {
   bool has_mode_ = false;
   bool normal_received_ = false;
   bool jamming_received_ = false;
+  bool smooth_handoff_=false,pending_handoff_=false;
+  bool initial_anchor_ready_=true;
+  PlanningMode pending_mode_=PlanningMode::NORMAL;
+  ros::Subscriber request_sub_,candidate_sub_,anchor_sub_;
+  ros::Publisher handoff_trace_pub_;
+  asmc_msgs::ControlHandoff request_;
+  std::array<asmc_msgs::ControlHandoff,2> candidates_;
+  ros::SteadyTime pending_started_,request_received_;
 };
 }  // namespace asmc_planner

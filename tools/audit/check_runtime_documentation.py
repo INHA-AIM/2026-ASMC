@@ -95,19 +95,32 @@ def check_commands(root, config):
         path = root/rel
         for cmd in shell_commands(path.read_text()):
             count += 1
-            if len(cmd) < 3:
+            if len(cmd) < 2:
                 errors.append(f'{rel}: incomplete roslaunch example')
                 continue
-            pkg, launch = cmd[1:3]
-            if '$' in pkg or '<' in launch:
-                continue
-            matches = [p for base in package_paths.get(pkg, []) for p in base.rglob(launch)]
+            if cmd[1].endswith('.launch'):
+                # roslaunch also accepts a file outside a ROS package. Map the
+                # documented container workspace to this checkout, never exec.
+                pkg, launch = 'file', cmd[1]
+                relative = launch[len('/root/ws/'):] if launch.startswith('/root/ws/') else launch
+                target = (root / relative).resolve()
+                matches = [target] if (target == root.resolve() or root.resolve() in target.parents) and target.is_file() else []
+                arguments = cmd[2:]
+            else:
+                if len(cmd) < 3:
+                    errors.append(f'{rel}: incomplete roslaunch example')
+                    continue
+                pkg, launch = cmd[1:3]
+                if '$' in pkg or '<' in launch:
+                    continue
+                matches = [p for base in package_paths.get(pkg, []) for p in base.rglob(launch)]
+                arguments = cmd[3:]
             if not matches:
                 errors.append(f'{rel}: missing roslaunch target {pkg}/{launch}')
                 continue
             declared = launch_args(matches[0])
             supplied = set()
-            for token in cmd[3:]:
+            for token in arguments:
                 if ':=' not in token or token.startswith('['):
                     continue
                 name = token.split(':=',1)[0]

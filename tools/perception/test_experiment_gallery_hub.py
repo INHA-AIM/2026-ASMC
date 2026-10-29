@@ -7,6 +7,14 @@ from build_experiment_gallery_hub import catalogue, number_pages
 
 
 class GalleryChronologyTest(unittest.TestCase):
+    def test_explicit_browser_cache_exclusion_keeps_real_review(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);cache=root/'browser-profile';cache.mkdir()
+            (cache/'.gallery-ignore').write_text('automation cache')
+            (cache/'cache.html').write_text('<title>Cache</title>')
+            child=cache/'nested';child.mkdir();(child/'index.html').write_text('<title>Cache child</title>')
+            (root/'review.html').write_text('<title>Review</title>')
+            self.assertEqual(['review.html'],[p['path'] for p in catalogue(root,root/'index.html')])
     def test_identifiers_and_dates_survive_regeneration_and_removal(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp); (root/'old').mkdir();(root/'new').mkdir()

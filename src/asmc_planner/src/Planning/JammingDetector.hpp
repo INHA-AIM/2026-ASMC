@@ -135,6 +135,8 @@ class ShadowZone {
       const double dx = xs[i + 1] - xs[i], dy = ys[i + 1] - ys[i];
       if (station >= station_start_m && station <= station_end_m)
         points_.push_back({xs[i], ys[i], std::atan2(dy, dx), station});
+      if(station>=station_start_m-250. && station<=station_start_m)
+        approach_points_.push_back({xs[i],ys[i],std::atan2(dy,dx),station});
       station += std::hypot(dx, dy);
     }
     if (points_.empty())
@@ -161,10 +163,34 @@ class ShadowZone {
     return true;
   }
 
+  bool Approaching(double x,double y,double yaw,double distance) const {
+    const auto& p=points_.front();
+    const double dx=x-p.x,dy=y-p.y;
+    const double along=dx*std::cos(p.yaw)+dy*std::sin(p.yaw);
+    const double lateral=-dx*std::sin(p.yaw)+dy*std::cos(p.yaw);
+    return along<=0 && along>=-distance && std::abs(lateral)<=lateral_tolerance_m_ &&
+      std::abs(std::remainder(yaw-p.yaw,2*M_PI))<=heading_tolerance_rad_;
+  }
+
+  // Curved upstream approach for the opt-in speed handoff. The legacy tangent
+  // method and zone containment remain unchanged for ordinary main callers.
+  bool ApproachingAlongRoute(double x,double y,double yaw,double distance) const {
+    const Point* nearest=nullptr;double best=lateral_tolerance_m_;
+    for(const auto& p:approach_points_){
+      const double d=std::hypot(x-p.x,y-p.y);
+      if(d<=best){nearest=&p;best=d;}
+    }
+    if(!nearest||std::abs(std::remainder(yaw-nearest->yaw,2*M_PI))>heading_tolerance_rad_)return false;
+    const double along=(x-nearest->x)*std::cos(nearest->yaw)+(y-nearest->y)*std::sin(nearest->yaw);
+    const double gap=points_.front().station-nearest->station-along;
+    return gap>=0&&gap<=distance;
+  }
+
  private:
   static constexpr double kPointSpacingM = 0.5;  // 전역경로 점 간격
   struct Point { double x, y, yaw, station; };
   std::vector<Point> points_;
+  std::vector<Point> approach_points_;
   double lateral_tolerance_m_;
   double heading_tolerance_rad_;
 };

@@ -120,3 +120,6 @@ src/link_node/out/*
 # Source for the workspace build wrapper (not generated build output)
 !tools/build/
 !tools/build/*.py
+
+# Isolated Localization build/runtime caches.
+/.runtime/position-b*/

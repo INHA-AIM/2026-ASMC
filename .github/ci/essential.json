@@ -25,7 +25,13 @@
         "planning_gps_recovery_test",
         "stop_brake_response_test",
         "reference_validator_test",
-        "asmc_mode_detector_test"
+        "asmc_mode_detector_test",
+        "asmc_local_planner_node",
+        "asmc_shadow_localization_node",
+        "asmc_local_controller_node",
+        "localization_input_test",
+        "shadow_localization_test",
+        "control_binding_test"
       ],
       "script": ".github/ci/essential-planning.sh"
     },

@@ -42,7 +42,7 @@ bool AvoidRoadMap::IntersectsDrivable(const geometry::Polygon2D& footprint) cons
 
 bool AvoidRoadMap::Load(const std::string& areas, const std::string& lines,
                         std::string& error) {
-  enabled_ = false; areas_.clear(); protected_lines_.clear(); line_bins_.clear();
+  enabled_ = false; paint_exempt_=false; areas_.clear(); protected_lines_.clear(); line_bins_.clear();
   try {
     const auto product = YAML::LoadFile(areas), markings = YAML::LoadFile(lines);
     if (product["frame_id"].as<std::string>() != "map" ||
@@ -226,7 +226,7 @@ bool AvoidRoadMap::TouchesPaint(double x,double y,double yaw,const VehicleShape&
 }
 
 bool AvoidRoadMap::PoseClear(double x,double y,double yaw,const VehicleShape& shape) const {
-  return !enabled_ || (DrivablePoseClear(x,y,yaw,shape) && !TouchesPaint(x,y,yaw,shape));
+  return !enabled_ || (DrivablePoseClear(x,y,yaw,shape) && (paint_exempt_||!TouchesPaint(x,y,yaw,shape)));
 }
 
 AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluatePath(
@@ -297,7 +297,7 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
       if(settled_travel>=.5)recovered=true;
       if(!recovered)result.recovery_seconds=elapsed_total;
     }
-    const bool contact=TouchesPaint(x,y,yaw,shape,budget_paint);
+    const bool contact=!paint_exempt_&&TouchesPaint(x,y,yaw,shape,budget_paint);
     if(first_sample){
       initial_contact=contact;
       first_sample=false;
@@ -345,7 +345,7 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
 
 bool AvoidRoadMap::PoseTouchesSolidPaint(double x,double y,double yaw,
                                          const VehicleShape& shape) const {
-  return enabled_&&TouchesPaint(x,y,yaw,shape,true);
+  return enabled_&&!paint_exempt_&&TouchesPaint(x,y,yaw,shape,true);
 }
 
 bool AvoidRoadMap::PathClear(const CartesianPath& path,const VehicleShape& shape) const {

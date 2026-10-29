@@ -1,0 +1,15 @@
+<launch>
+  <group ns="planning_mode">
+    <param name="smooth_handoff" value="true"/>
+    <param name="localization_approach_speed_kph" value="15"/>
+    <param name="gps_timeout_s" value="0"/>
+    <param name="shadow_zone/path_file" value="$(find asmc_planner)/tests/fixtures/localization_approach_path.txt"/>
+    <param name="shadow_zone/station_start_m" value="50"/>
+    <param name="shadow_zone/station_end_m" value="70"/>
+  </group>
+  <node pkg="asmc_planner" type="gps_mode_source_test_node" name="gps_mode_source_test_node" required="true"/>
+  <include file="$(find asmc_controller)/launch/controller.launch">
+    <arg name="localization_approach_speed_kph" value="15"/>
+  </include>
+  <test pkg="asmc_planner" type="localization_approach_test.py" test-name="localization_approach" time-limit="25"/>
+</launch>

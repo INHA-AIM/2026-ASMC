@@ -169,6 +169,13 @@ int main(){
   const auto prolonged=map.EvaluatePath(long_contact,shape,.1,true);
   Expect(!prolonged.drivable&&prolonged.longest_paint_contact_seconds>3,
          "prolonged solid-paint contact cannot become a planned route");
+  map.SetPaintExemption(true);
+  Expect(map.EvaluatePath(long_contact,shape,.1,true).drivable,
+         "scoped shadow policy exempts paint on verified physical pavement");
+  Expect(!map.PoseClear(1e9,1e9,0,shape),"paint exemption never admits unknown/outside physical road");
+  map.SetPaintExemption(false);
+  Expect(!map.EvaluatePath(long_contact,shape,.1,true).drivable,
+         "clearing shadow scope restores the original paint contract");
   Expect(!map.EvaluatePath(long_contact,shape,.1,true,.3).drivable,
          "an over-budget stationary path cannot keep the body on paint");
   Expect(AvoidRoadMap::PaintCost(prolonged)>AvoidRoadMap::PaintCost(brief)+200,

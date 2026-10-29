@@ -5,14 +5,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
-  planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs geometry_msgs
+  planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs nav_msgs diagnostic_msgs geometry_msgs
   sensor_msgs visualization_msgs)
 find_package(yaml-cpp REQUIRED)
 find_package(Boost REQUIRED)
 catkin_package(INCLUDE_DIRS src
   LIBRARIES asmc_signal_policy_core asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_core
     asmc_planner_execution_core asmc_planner_behavior_module asmc_planner_ros_adapters
-  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs
+  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs nav_msgs diagnostic_msgs
     geometry_msgs sensor_msgs visualization_msgs)
 
 # Shared reference preparation/execution. Production uses the existing highway
@@ -331,6 +331,11 @@ if(CATKIN_ENABLE_TESTING)
   add_dependencies(gps_mode_source_test_node ${catkin_EXPORTED_TARGETS})
   target_link_libraries(gps_mode_source_test_node ${catkin_LIBRARIES})
   add_rostest(tests/gps_mode_source.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/shadow_recovery_gate.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/localization_handoff.test DEPENDENCIES gps_mode_source_test_node asmc_control_selector_node)
+  add_rostest(tests/localization_seed.test)
+  add_rostest(tests/localization_approach.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/localization_motion_order.test DEPENDENCIES asmc_local_planner_node)
 
   add_executable(highway_runtime_test tests/behavior/highway_runtime_test.cpp)
   target_include_directories(highway_runtime_test PRIVATE src ${catkin_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS})
@@ -993,3 +998,64 @@ endif()
 configure_file(scripts/dashboard_startup.py
   ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_startup.py COPYONLY)
 install(FILES scripts/dashboard_startup.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+configure_file(scripts/dashboard_localization.py
+  ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_localization.py COPYONLY)
+install(FILES scripts/dashboard_localization.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+# LOCAL-1 is opt-in; reuse the existing pure geometry/speed implementation.
+add_library(asmc_local_planner_core src/local/planner.cpp)
+target_include_directories(asmc_local_planner_core PUBLIC src)
+target_compile_options(asmc_local_planner_core PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(asmc_local_planner_core asmc_planner_frenet_core)
+add_library(asmc_shadow_localization_core src/shadow_localization/static_planner.cpp src/shadow_localization/position_reference.cpp)
+target_include_directories(asmc_shadow_localization_core PUBLIC src)
+target_compile_options(asmc_shadow_localization_core PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(asmc_shadow_localization_core asmc_local_planner_core)
+add_executable(asmc_local_planner_node src/local/node.cpp)
+add_dependencies(asmc_local_planner_node ${catkin_EXPORTED_TARGETS})
+target_include_directories(asmc_local_planner_node PRIVATE src ${catkin_INCLUDE_DIRS})
+target_compile_options(asmc_local_planner_node PRIVATE -O2)
+target_link_libraries(asmc_local_planner_node asmc_shadow_localization_core ${catkin_LIBRARIES} pthread)
+add_executable(asmc_shadow_localization_node src/shadow_localization/position_node.cpp)
+add_dependencies(asmc_shadow_localization_node ${catkin_EXPORTED_TARGETS})
+target_include_directories(asmc_shadow_localization_node PRIVATE src ${catkin_INCLUDE_DIRS})
+target_compile_options(asmc_shadow_localization_node PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(asmc_shadow_localization_node asmc_shadow_localization_core ${catkin_LIBRARIES} pthread)
+install(TARGETS asmc_local_planner_core asmc_shadow_localization_core asmc_local_planner_node asmc_shadow_localization_node
+ ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+ LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+ RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+if(CATKIN_ENABLE_TESTING)
+ add_executable(local_planner_test tests/local_planner_test.cpp)
+ target_include_directories(local_planner_test PRIVATE src)
+ target_link_libraries(local_planner_test asmc_local_planner_core pthread)
+ add_test(NAME local_planner_regression COMMAND local_planner_test)
+ add_executable(shadow_localization_test tests/shadow_localization_test.cpp)
+ target_include_directories(shadow_localization_test PRIVATE src)
+ target_compile_definitions(shadow_localization_test PRIVATE SHADOW_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+ target_link_libraries(shadow_localization_test asmc_shadow_localization_core)
+ add_test(NAME shadow_localization_regression COMMAND shadow_localization_test)
+endif()
+
+# Observer-only exact-stamp raster cache shared by dashboard source/install runs.
+configure_file(scripts/local_debug_cache.py
+  ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/local_debug_cache.py COPYONLY)
+install(FILES scripts/local_debug_cache.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+# Isolated Localization M2 input boundaries and independent native-pose evaluator.
+add_executable(localization_evaluate tools/localization_evaluate.cpp)
+target_include_directories(localization_evaluate PRIVATE src)
+target_link_libraries(localization_evaluate asmc_planner_frenet_core)
+add_executable(localization_static_scenarios tools/localization_static_scenarios.cpp)
+target_include_directories(localization_static_scenarios PRIVATE src)
+target_compile_definitions(localization_static_scenarios PRIVATE SHADOW_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(localization_static_scenarios asmc_shadow_localization_core)
+if(CATKIN_ENABLE_TESTING)
+ add_executable(localization_input_test tests/localization_input_test.cpp)
+ add_test(NAME localization_static_scenarios_regression COMMAND localization_static_scenarios 15 --require-completion)
+ add_test(NAME localization_dashboard_payload COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/behavior/dashboard_localization_test.py)
+ target_include_directories(localization_input_test PRIVATE src ${catkin_INCLUDE_DIRS})
+ add_dependencies(localization_input_test ${catkin_EXPORTED_TARGETS})
+ target_link_libraries(localization_input_test asmc_local_planner_core)
+ add_test(NAME localization_input_regression COMMAND localization_input_test)
+endif()

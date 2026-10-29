@@ -4,6 +4,7 @@
 
 #include <asmc_msgs/FrenetFeedback.h>
 #include <asmc_msgs/VehicleState.h>
+#include <asmc_msgs/control_handoff.hpp>
 #include <morai_msgs/GPSMessage.h>
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
@@ -34,6 +35,19 @@ class GpsModeSource final {
   ros::Subscriber gps_sub_;
   ros::Subscriber state_sub_;
   ros::Subscriber feedback_sub_;
+  ros::Subscriber recovery_ready_sub_;
+  bool require_recovery_ready_=false,recovery_ready_=false;
+  ros::SteadyTime recovery_ready_received_;
+  bool recoveryReady() const;
+  void beginHandoff(PlanningMode);
+  void candidateCallback(const asmc_msgs::ControlHandoff::ConstPtr&);
+  void publishPrepare();
+  bool smooth_handoff_=false,handoff_pending_=false,approaching_=false;
+  double approach_speed_mps_=0,approach_distance_m_=0;
+  asmc_msgs::ControlHandoff handoff_request_;
+  ros::SteadyTime handoff_started_;
+  ros::Publisher handoff_request_pub_,prepare_pub_;
+  ros::Subscriber candidate_sub_;
   ros::Publisher mode_pub_;
   ros::Publisher status_pub_;
   ros::Publisher lidar_pause_pub_;

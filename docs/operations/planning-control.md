@@ -41,6 +41,102 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 `external`은 외부 `/planning/vehicle/state` producer를 요구합니다.
 객체 입력은 `/perception/lidar/planning_observations_map`의 공용 추적 관측으로 단일화했습니다. 속도/4단계 운동·원본 OBB·세대/시각/상태를 검사하고 인지 필터·classifier·JSON join을 다시 실행하지 않습니다. [연결 의미와 복구](../../src/asmc_lidar/docs/planning-runtime.md)를 따릅니다.
 
+## Localization 음영 위치 추종 연구 옵션
+
+`shadow_planner:=main`이 기본값이며 기존 카메라 BBox 음영 처리를 유지합니다.
+`shadow_planner:=localization`는 이 연구 checkout의 위치측위 기반 M2 경로 추종기를
+선택합니다. 별도 LOCAL 작업트리의 로컬 탐색 플래너와 구분합니다.
+기본 연구 실행은 M2 지도 경로 추종과 OBB 정지 검사를 사용합니다.
+M3 정적 회피·복귀 코드는 `shadow_static_avoidance:=true` 실험 인자로 연결했으나
+실제 장애물 반복 수락 전이므로 기본은 꺼져 있습니다. 이상 추종 조건의 15km/h
+정적 회피·복귀와 일방 도로 경계 검사는 통과했으며 실차량 성능 보장은 아닙니다.
+
+| 구간 | 계산·제어 소유자 |
+|---|---|
+| NORMAL | 기존 main planner와 NORMAL MPC. Localization는 odometry/anchor를 준비하고 경로·MPC 계산은 대기 |
+| JAMMING | Localization 위치 추종과 연구 MPC. NORMAL MPC 계산·발행 중지 |
+| NORMAL 복귀 | 신선하고 검증된 GPS anchor + 새 정상 경로 2개 확인 후 selector 전환 |
+
+두 옵션 모두 main의 `GpsModeSource`가 `/planning/mode`를 발행하고 selector 하나가
+`/ctrl_cmd`를 발행합니다. Localization 선택 시 기존 `camera_bbox_*` 세 노드는 실행되지 않습니다.
+검증되지 않은 anchor는 기본 경로의 4초 복귀 timeout으로 우회하지 않습니다.
+LiDAR의 실제 GPS validity·터널 벽/천장 전처리와 카메라 추론은 변경하지 않습니다.
+
+수동 실행에서는 `asmc-ros-noetic`의 공용 master `11311`과 브릿지만 공유합니다.
+카메라·LiDAR·판제·제어·시각화는 선택한 작업트리의 컨테이너에서 실행합니다.
+현재 전용 컨테이너는 `asmc-shadow-localization`, 작업트리는
+`2026-ASMC-shadow-localization`, 브랜치는 `research/shadow-localization`입니다.
+GPU·host networking·2GiB shared memory를 사용하고 전용 `/build`, `/devel`을 빌드합니다.
+
+새 대화형 Bash는 `.bashrc`가 ROS·해당 `/devel`·공용 master를 적용합니다.
+별도 env 파일을 source하거나 점검 도구를 먼저 실행할 필요가 없습니다.
+노드와 master는 bashrc에서 자동 시작하지 않습니다.
+
+```bash
+docker exec -it asmc-shadow-localization bash
+roslaunch asmc_camera camera.launch
+```
+
+같은 컨테이너의 다른 터미널에서 각각 실행합니다.
+
+```bash
+roslaunch asmc_lidar lidar.launch
+roslaunch asmc_lidar view.launch
+roslaunch asmc_planner autonomy_no_bridges_v2.launch shadow_planner:=localization
+```
+
+GPS가 정상인 전역경로상의 현재 위치에서 초기화합니다. 동일한 공용 master에서는
+인지·주행 전체 파이프라인을 한 작업트리씩 실행합니다. 컨테이너만 달라도 같은
+ROS 이름으로 실행하면 다른 작업의 노드를 교체할 수 있습니다.
+
+에이전트의 자동 시험은 `ASMC_ROS_PROFILE=isolated`와 전용 master `11371`을 사용합니다.
+비대화형 실행기는 `/root/localization-env.sh`로 환경을 명시하며, 이 helper의 기본은 격리입니다.
+호스트의 저장소 관리용 `.storage/env.sh`와는 별개입니다. 자동 bag 평가는 독립적이며,
+실제 차량을 움직일 때는 공용 physical lease와 endpoint·UDP·제어 소유권을 모두 확인합니다.
+공용 브릿지를 끄거나 다른 작업의 노드를 종료해서 시험 자리를 만들지 않습니다.
+`check_shared_autonomy.py`와 자동 runner는 에이전트 검증 도구입니다.
+
+GPS·IMU·Ego와 자체 LiDAR의 `/perception/lidar/tracks_local`,
+`planning_observations_map`이 필요합니다. LiDAR 기본 융합과 실제 GPS 기반
+터널 벽·천장·지면 처리는 유지하며, 추정 위치를 GPS 입력에 되먹이지 않습니다.
+적분기는 하나이며 Localization의 상대 yaw는 유효한 원본 IMU quaternion의 변화로
+측정합니다. 일반 LOCAL의 기본 gyro-rate 적분은 유지합니다. `shadow_motion_yaw_source:=rate`는
+이전 연구 방식과 비교할 때만 지정합니다. 준비 구간에서만 다음 경로와 MPC를 잠시 예열합니다.
+MolitComp03 연구 조합은 곡선 이동의 실측 오차를 속도 의존 항으로 보정합니다.
+`shadow_motion_turn_gain_m2ps:=1.54`를 측정 속도(최소 1m/s)로 나눈 계수를
+인접 IMU 방위 변화에 적용합니다. 속도 변화만으로 위치를 이동시키지 않으며,
+물리적인 GPS 장착점이 바뀐다는 뜻도 아닙니다. native 실제 위치는 보정값 학습에 사용하지 않았습니다.
+보정값은 `config/localization_motion_calibration.json`의 GNSS·IMU·속도 기록으로 재현합니다.
+5·10km/h 정상 GPS 기록으로 선택했습니다. 현재 조합은 별도 실제 15km/h 3회와
+±20cm·±2° 시작 오프셋 시험을 통과했습니다. 이는 장애물 없는 MolitComp03 조건이며,
+반복 시험의 주행 화면은 800×666으로 줄였다가 회차마다 복원했습니다. 센서 영상은
+앞 1280×720, 나머지 세 대 640×480 그대로인지 출발 전에 확인했습니다.
+옛 고정 보정은 gain을 0으로 하고 `shadow_motion_reference_offset_m:=1.4`를 지정하면
+재현됩니다. gyro-rate 비교도 gain·고정 보정 여부를 함께 명시합니다.
+26.R1로의 일반화는 검증 전입니다. 독립 LOCAL의 기본 gain·고정 보정값은 모두 0입니다.
+이전 반복에서 원본 IMU 시각과 커널 수신 모두 약 207ms 끊긴 회차는 실패로 보존합니다.
+수신 지연으로 오인해 브릿지를 바꾸거나 150ms motion epoch·250ms watchdog을
+완화하지 않았습니다. 작은 주행 화면이 모든 송신 공백을 없앤다는 뜻은 아닙니다.
+전환 세대·입력·경로 시각이 맞는 후보 명령을 받은 뒤 selector가 제어를 넘깁니다.
+정상 인계에는 일괄 정지 명령을 삽입하지 않으며, 무효 입력·준비 실패·250ms watchdog은 유지합니다.
+
+초기 anchor는 최소 1초·10개 정렬 GPS를 요구합니다. 실측 5Hz 입력에서는 약 1.8초 이상입니다.
+GPS 장착 높이 1.25m까지 정렬된 IMU roll/pitch/yaw로 보정합니다. 복구 때는 DR을
+유지하며 1초간 정렬한 GPS 후보를 검증하고, 후보 오차가 25cm·2° 이내일 때만
+1초 동안 연결합니다. 50cm 이상 원시 점프·불안정한 후보는 정지합니다. 원시 표본
+오차와 검증 후보 오차는 trace의 `raw_gps_innovation_m`, `innovation_m`으로 구분합니다.
+GPS가 계속 들어오는 동안에도 25cm를 넘는 단일 표본은 같은 후보 검증을 거칩니다.
+직전 검증 위치를 유지하며, 1초 후보가 계속 25cm를 넘으면 정지합니다. 검증 중인
+표본으로 120초·250m DR 한계를 갱신하지 않습니다. `recovery_verify`는 소실 전
+잡음 검사에도 나타날 수 있습니다.
+100ms 이내 역순 센서 표본은 사용하지 않고 폐기합니다. 마지막 유효 입력의 시각이나
+freshness를 갱신하지 않으며, 큰 시각 역행·입력 단절·250ms 제어 watchdog은 유지합니다.
+연구 MPC는 실제 속도와 가속도를 기존 가속 상한에 반영해 보호 정지 후 재출발의
+속도 초과를 억제합니다. 이 설정들은 Localization에만 켜며 main·독립 LOCAL 기본값은 유지합니다.
+trace는 `/planning/localization/trace`, 제어 진단은 `/planning/localization/control_trace`입니다.
+파일 기록은 기본 꺼져 있으며, 저장 규약에 따라 등록한 고유 run과 출력 경로만
+`shadow_run_id`, `shadow_journal_path`로 지정합니다.
+
 ## 개별 실행
 
 통합 실행과 개별 실행을 동시에 켜지 않습니다. 각 항목은 다른 입력/소비자가 준비돼 있어야 합니다.

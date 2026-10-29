@@ -396,6 +396,24 @@ int main() {
                stationary_path, {uncertain_margin_object}, ego_shape,
                growing_margin_cfg, 0.1),
            "uncertain motion keeps time-growing safety margin");
+    auto missing_static=static_margin_object;missing_static.velocity_unavailable=true;
+    Expect(!CartesianTrajectoryClear(stationary_path,{missing_static},ego_shape,
+               growing_margin_cfg,.1),
+           "missing velocity and a static label alone retain growing uncertainty");
+    missing_static.stationary_observed=true;
+    Expect(CartesianTrajectoryClear(stationary_path,{missing_static},ego_shape,
+               growing_margin_cfg,.1) && missing_static.velocity_unavailable,
+           "observed multi-scan rest uses fixed margin without claiming measured velocity");
+    missing_static.motion_state=ObjectMotionState::UNKNOWN;
+    Expect(!CartesianTrajectoryClear(stationary_path,{missing_static},ego_shape,
+               growing_margin_cfg,.1),
+           "rest evidence cannot override unknown or dynamic motion classification");
+    auto physically_blocked=MakeObstacle(1.5,0.);
+    physically_blocked.motion_state=ObjectMotionState::LOW_THREAT;
+    physically_blocked.velocity_unavailable=physically_blocked.stationary_observed=true;
+    Expect(!CartesianTrajectoryClear(stationary_path,{physically_blocked},ego_shape,
+               growing_margin_cfg,.1),
+           "observed rest never exempts physical overlap or base clearance");
 
     // Frenet과 Cartesian 진입점은 동일한 공용 판정 결과를 내야 한다.
     Expect(escaping.front().margin_recovery_used,

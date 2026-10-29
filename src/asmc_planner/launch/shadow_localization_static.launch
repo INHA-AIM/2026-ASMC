@@ -1,0 +1,39 @@
+<launch>
+  <!-- Explicit research stack. Reuses local perception alignment and MPC;
+       canonical GPS/LiDAR map output and normal launch remain unchanged. -->
+  <arg name="enable_control" default="false"/>
+  <arg name="run_id"/>
+  <arg name="journal_path" default=""/>
+  <arg name="speed_cap_kph" default="15"/>
+  <arg name="speed_callerid" default="/morai_udp_bridge"/>
+  <arg name="near_blind_assist" default="false"/>
+  <node pkg="planning_inputs" type="planning_vehicle_state_node" name="shadow_localization_gps_anchor" output="screen">
+    <rosparam command="load" file="$(find planning_inputs)/config/vehicle_state.yaml"/>
+    <param name="publish_topic" value="/planning/localization/gps_state"/>
+  </node>
+  <node pkg="asmc_planner" type="asmc_local_planner_node" name="shadow_localization_planner" output="screen" required="true">
+    <rosparam command="load" file="$(find asmc_planner)/config/local_planner.yaml"/>
+    <param name="shadow_localization/enabled" value="true"/>
+    <param name="shadow_localization/parameters" value="$(find asmc_planner)/config/frenet/params.yaml"/>
+    <param name="run_id" value="$(arg run_id)"/>
+    <param name="journal_path" value="$(arg journal_path)"/>
+    <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
+    <param name="speed_callerid" value="$(arg speed_callerid)"/>
+    <param name="recovery" value="false"/>
+    <param name="near_blind_assist" value="$(arg near_blind_assist)"/>
+    <remap from="/planning/local/odometry" to="/planning/localization/odometry"/>
+    <remap from="/planning/local/trajectory" to="/planning/localization/trajectory"/>
+    <remap from="/planning/local/path" to="/planning/localization/path"/>
+    <remap from="/planning/local/trace" to="/planning/localization/trace"/>
+    <remap from="/planning/local/diagnostics" to="/planning/localization/diagnostics"/>
+  </node>
+  <node pkg="asmc_controller" type="asmc_local_controller_node" name="shadow_localization_controller" output="screen" required="true">
+    <rosparam command="load" file="$(find asmc_controller)/config/local_controller.yaml"/>
+    <param name="enable_control" value="$(arg enable_control)"/>
+    <param name="controller_config" value="$(find asmc_controller)/config/controller.yaml"/>
+    <remap from="/planning/local/odometry" to="/planning/localization/odometry"/>
+    <remap from="/planning/local/trajectory" to="/planning/localization/trajectory"/>
+    <remap from="/planning/local/control_trace" to="/planning/localization/control_trace"/>
+    <remap from="/planning/local/control_diagnostics" to="/planning/localization/control_diagnostics"/>
+  </node>
+</launch>

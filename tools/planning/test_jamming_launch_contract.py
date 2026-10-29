@@ -72,6 +72,7 @@ def canonical_family_hash():
     constructor.body = constructor.body[:end + 1]
     inert = lambda *args, **kwargs: None
     scope = dict(threading=threading, FamilyFitPolicy=FamilyFitPolicy,
+                 association_backend_info=inert,  # runtime diagnostic, excluded from geometry hash
                  ImuTimeline=lambda **kwargs: SimpleNamespace(add_timing=inert),
                  Imu=object,SensorFrameTiming=object,rospy=Parameters(), hashlib=hashlib, json=json,
                  calibrations_from_dict=calibration.calibrations_from_dict,

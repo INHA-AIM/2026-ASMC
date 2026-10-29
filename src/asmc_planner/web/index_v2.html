@@ -11,6 +11,7 @@
   <header>
     <div><span class="logo">V2</span><b>Planning &amp; LiDAR Debug Console</b></div>
     <div class="header-right">
+      <span id="localStatus" class="chip">LOCAL-1 WAIT</span>
       <span id="lidarStatus" class="chip bad">LIDAR WAIT</span>
       <span id="motionStatus" class="chip bad">MOTION WAIT</span>
       <span id="mapStatus" class="chip">MAP LOADING</span>
@@ -21,7 +22,11 @@
     <section class="map-panel">
       <canvas id="map"></canvas>
       <div class="toolbar">
-        <select id="sceneMode" aria-label="좌표 보기"><option value="auto">자동 NORMAL/map · JAMMING/local</option><option value="local">음영 local/base_link</option><option value="map">일반 map</option></select>
+        <select id="sceneMode" aria-label="좌표 보기"><option value="auto">자동 · 활성 실험 우선</option><option value="localization">Localization map 후보·선택</option><option value="experiment">LOCAL-1 경로·노면·fusion</option><option value="local">음영 local/base_link</option><option value="map">일반 map</option></select>
+        <label><input id="showLocalRoad" type="checkbox" checked>추론 노면</label>
+        <label><input id="showLocalFamily" type="checkbox" checked>family·본차로 중심</label>
+        <label><input id="showLocalCandidates" type="checkbox" checked>로컬 후보</label>
+        <label><input id="showLocalSweep" type="checkbox" checked>차체 sweep</label>
         <button id="fit">전체 지도</button>
         <button id="follow">Ego 추적</button>
         <label><input id="showObjects" type="checkbox" checked>필터 통과 OBB</label>
@@ -59,6 +64,26 @@
       <div id="cursor" class="cursor"></div>
     </section>
     <aside>
+      <section id="experimentPanel" class="shadow-panel" hidden>
+        <h2>Localization 실험 모니터</h2>
+        <div id="experimentState" class="kv"></div>
+        <p>map: 측위로 변환한 위치·경로·관측 OBB. 시뮬 정답 위치가 아닙니다. LOCAL 보기는 base_link 기준입니다.</p>
+      </section>
+      <section id="localizationPanel" class="shadow-panel" hidden>
+        <h2>Localization · 후보와 MPC 입력 경로</h2>
+        <div id="localizationState" class="kv"></div>
+        <p>파랑: 통과 후보 · 빨강: 탈락 후보 · 청록: Localization 준비 경로 · 노랑: 선택 제어 소스의 유효 입력 경로. bag은 제어 미실행으로 표시합니다. 후보는 최대 24개를 표시합니다.</p>
+      </section>
+      <section id="localExperimentPanel" class="shadow-panel" hidden>
+        <h2>LOCAL-1 · 실제 계획 판단 <span id="localExperimentState"></span></h2>
+        <div id="localExperimentGrid" class="kv"></div>
+        <small>초록=관측 노면 확률≥0.60 · 적색=비노면(가림 포함) · 갈색=자차 가림 · 회색=미관측.
+        흰/황색=사용한 family 3경계 · 파랑 점선=오른쪽 본차로 중심 · 청록=선택 경로 · 회색/분홍 점선=후보 통과/탈락.
+        노면은 계획과 정확히 같은 source stamp입니다. OBB는 해당 계획 시각으로 정렬한 fusion 입력입니다.</small>
+        <h3>제약·감속 사유</h3><pre id="localExperimentReasons"></pre>
+        <details><summary>3뷰 YOLO 원본 관측 · fusion 입력</summary><pre id="localExperimentEvidence"></pre></details>
+        <details><summary>MPC 실제 추종·제어</summary><pre id="localExperimentControl"></pre></details>
+      </section>
       <section class="hero hero-v2">
         <div>
           <span class="label">NORMAL · BEHAVIOR SELECTED</span>
@@ -104,6 +129,7 @@
       <section><h2>Topic Health</h2><div id="health" class="kv"></div></section>
     </aside>
   </main>
-  <script src="dashboard_v2.js?v=v2-shadow-3"></script>
+  <script src="local_scene_renderer.js?v=local1-1"></script>
+  <script src="dashboard_v2.js?v=v2-local1-1"></script>
 </body>
 </html>

@@ -1,0 +1,13 @@
+<launch>
+  <group ns="planning_mode">
+    <param name="smooth_handoff" value="true"/>
+    <param name="exit_hold_s" value="0.05"/>
+    <param name="gps_timeout_s" value="0"/>
+    <param name="recovery_ready_topic" value="/planning/localization/recovery_ready"/>
+  </group>
+  <node pkg="asmc_planner" type="gps_mode_source_test_node" name="gps_mode_source_test_node" required="true"/>
+  <node pkg="asmc_planner" type="asmc_control_selector_node" name="asmc_control_selector" required="true">
+    <param name="smooth_handoff" value="true"/>
+  </node>
+  <test pkg="asmc_planner" type="localization_handoff_test.py" test-name="localization_handoff" time-limit="30"/>
+</launch>

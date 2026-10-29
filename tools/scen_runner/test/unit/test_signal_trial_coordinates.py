@@ -6,7 +6,11 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from scen_runner.morai.signal_trial_coordinates import Coordinates
 from scen_runner.runtime.signal_trial_oracle import Oracle
-from test_signal_trial_oracle import actor
+# Support both the README's whole-suite discovery and unit-only discovery.
+if __package__:
+    from .test_signal_trial_oracle import actor
+else:
+    from test_signal_trial_oracle import actor
 
 
 class CoordinateTest(unittest.TestCase):

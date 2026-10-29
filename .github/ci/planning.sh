@@ -15,3 +15,10 @@ done
   cd "$ASMC_CI_BUILD/asmc_planner"
   ctest --output-on-failure -R '^(command_avoid_target_test|roundabout_execution_test|avoid_road_constraints_test|polygon_collision_test|prepared_static_inputs_test|_ctest_asmc_planner_gtest_detected_msg_converter_test|_ctest_asmc_planner_gtest_feature_builder_avoid_test|_ctest_asmc_planner_gtest_dynamic_object_policy_test)$'
 )
+
+# Opt-in Localization reuses the existing build graph and physical core.
+"${ASMC_CI_DEVEL:-devel}/lib/asmc_planner/localization_input_test"
+"${ASMC_CI_DEVEL:-devel}/lib/asmc_planner/shadow_localization_test" 15
+python3 tools/scen_runner/test_localization_launch_graph.py
+rostest asmc_planner localization_handoff.test
+rostest asmc_planner localization_seed.test

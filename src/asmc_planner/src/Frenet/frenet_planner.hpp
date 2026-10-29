@@ -45,6 +45,23 @@ public:
     VehicleShape vehicle_shape() const { return vehicle_shape_; }
     double rear_overhang() const { return avoid_cfg_.rear_overhang; }
     CollisionCheckConfig collision_config() const { return collision_cfg_; }
+    // Caller-owned cooperative slice; reducing it changes search scheduling,
+    // never the candidate checks. Other callers retain their configured budget.
+    bool LimitAvoidSearchBudget(double seconds) {
+        if(ref_.points.empty() || avoid_committed() || !std::isfinite(seconds) ||
+           seconds<.005 || seconds>.25)return false;
+        avoid_cfg_.map_search_budget_s=std::min(seconds,avoid_cfg_.map_search_budget_s);return true;
+    }
+    // Opt-in caller envelope, before execution. Only conservative enlargement
+    // is accepted. Production callers keep their unchanged YAML geometry.
+    bool SetConservativeVehicleEnvelope(const VehicleShape& shape) {
+        if(ref_.points.empty() || avoid_committed() || !std::isfinite(shape.width+shape.length+shape.rear_overhang+shape.road_outer_width) ||
+           shape.width<vehicle_shape_.width || shape.length<vehicle_shape_.length ||
+           shape.rear_overhang<vehicle_shape_.rear_overhang ||
+           shape.length-shape.rear_overhang<vehicle_shape_.length-vehicle_shape_.rear_overhang ||
+           shape.road_outer_width<std::max(shape.width,vehicle_shape_.road_outer_width))return false;
+        vehicle_shape_=shape;return true;
+    }
     // Actual perception timestamp; empty frames carry time too.
     void SetObjectObservationTime(double time, double evaluation_time = -1) {
         object_observation_time_=time;
@@ -231,6 +248,9 @@ public:
     //
     // s가 reference line 범위를 벗어나거나 결과가 유한하지 않으면 false.
     bool ReferenceHeadingAt(double s, double& out_heading) const;
+    // Read-only guide for the isolated position-tracking baseline. Uses the
+    // same loaded reference/topology; does not run candidate generation.
+    bool ReferencePoseAt(double s, CartesianState& pose) const;
 
     // Plan()이 반환하는 CartesianPath의 샘플 간격 [s] (params.yaml의 planner.dt).
     // MPC 쪽에서 이 값을 알아야 시간 기준으로 재샘플링해 궤적 추종(time-aligned
@@ -376,6 +396,10 @@ public:
     }
 
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
+    void SetShadowPaintExemption(bool value) { avoid_road_map_.SetPaintExemption(value); }
+    // Private localization instance only, during a verified lane-exempt zone.
+    // Predictions and physical road/body checks remain enabled.
+    void SetShadowDynamicBypass(bool value) { shadow_dynamic_bypass_=value; }
     bool follow_release_pending() const { return v2_following_.release_pending; }
     const std::vector<CartesianPath>& last_candidate_paths() const {
         return last_candidate_paths_;
@@ -680,6 +704,7 @@ public:
     void ResetExternalLaneChange();
 
 private:
+    bool shadow_dynamic_bypass_ = false;
     bool PlanInternal(const CartesianState& ego,
                       const std::vector<TrackedObject>& obstacles,
                       const PlannerCommand* external_command,

@@ -113,7 +113,7 @@ def main():
     parser.add_argument("trial", type=Path, nargs="+")
     parser.add_argument("--lines", type=Path,
                         default=Path(__file__).resolve().parents[2] /
-                        "src/asmc_planner/config/hd_map/lines.json")
+                        "src/asmc_planner/config/frenet/hd_map/lines.json")
     parser.add_argument("--start", type=float, default=280.0)
     parser.add_argument("--end", type=float, default=350.0)
     parser.add_argument("--half-track-m", type=float, default=0.814)

@@ -1,0 +1,13 @@
+# LOCAL-1 simulator experiment only. NORMAL/jamming configurations are unchanged.
+# VehicleSpec width=1.892m; SDK bounding box width=2.1608348m. Until a contact
+# envelope test resolves the difference, use the larger physical test envelope.
+# No separate expansion of the LiDAR OBB: clearance is applied once here.
+vehicle_width: 2.160835
+vehicle_length: 4.635
+rear_axle_to_bumper: 0.790
+clearance_margin: 0.10
+planning_budget_ms: 40.0
+# Fresh semantic near-field recovery is explicitly capped at3km/h. It is a
+# soft-cost simulation trial and must not be reported as collision-free space.
+recovery: true
+near_blind_assist: false
