@@ -5,6 +5,7 @@
 #include "Behavior/Context/behavior_types.hpp"
 #include "Map/HighwayMergeRoute.hpp"
 #include "Execution/HighwayLaneChange.hpp"
+#include "Frenet/Geometry/GeometryTypes.hpp"
 namespace behavior_planner {
 struct EgoFeature { double x=0,y=0,yaw=0,speed=0,s=0,d=0,map_s=0; uint8_t source=0; bool state_valid=false,valid=false; };
 struct RouteFeature { std::string current_link_id,target_link_id,route_required_link_id; double speed_limit=0,distance_to_turn=1e9,distance_to_intersection=1e9; bool lane_change_left_allowed=false,lane_change_right_allowed=false,current_link_valid=false,left_target_pose_valid=false,right_target_pose_valid=false; std::string left_target_link_id,right_target_link_id; double left_target_x=0,left_target_y=0,left_target_yaw=0,right_target_x=0,right_target_y=0,right_target_yaw=0; };
@@ -14,7 +15,7 @@ struct SignalFeature { TrafficLightState light_state=TrafficLightState::UNKNOWN;
   double stop_target_x=0,stop_target_y=0,stop_target_yaw=0;
   bool stop_target_pose_valid=false;
 };
-struct ObjectFeature { ObjectType type=ObjectType::UNKNOWN; MotionState motion_state=MotionState::UNKNOWN; int id=-1; double x=0,y=0,yaw=0,vx=0,vy=0,speed=0,accel=0,length=0,width=0,s=0,d=0,link_s=0,gap=1e9,relative_speed=0,ttc=1e9; std::string link_id; bool valid=false; };
+struct ObjectFeature { ObjectType type=ObjectType::UNKNOWN; MotionState motion_state=MotionState::UNKNOWN; int id=-1; double x=0,y=0,yaw=0,vx=0,vy=0,speed=0,accel=0,length=0,width=0,s=0,d=0,link_s=0,gap=1e9,relative_speed=0,ttc=1e9; std::string link_id; bool valid=false; geometry::Corners8 corners{}; bool geometry_valid=false; };
 enum class DynamicAction { KEEP, FOLLOW, AVOID, STOP, EMERGENCY };
 // Current-frame diagnostic evidence only. It owns neither tracking nor action
 // state; the native execution feedback remains authoritative for maneuvers.
@@ -57,6 +58,6 @@ struct UrbanFeature { DynamicDecision dynamic; HighwayLaneChangeFeature lane_cha
 using EgoState = asmc_planner::EgoState;
 // Preserve original class/group for policy review; semantic identity alone does
 // not establish motion. Existing type and motion_state decisions remain separate.
-struct TrackedObject { int id=-1; ObjectType type=ObjectType::UNKNOWN; MotionState motion_state=MotionState::UNKNOWN; double x=0,y=0,yaw=0,vx=0,vy=0,speed=0,accel=0,length=4.5,width=1.8; bool velocity_unavailable=false; std::string classification, camera_class; };
+struct TrackedObject { int id=-1; ObjectType type=ObjectType::UNKNOWN; MotionState motion_state=MotionState::UNKNOWN; double x=0,y=0,yaw=0,vx=0,vy=0,speed=0,accel=0,length=4.5,width=1.8; bool velocity_unavailable=false; std::string classification, camera_class; geometry::Corners8 corners{}; bool geometry_valid=false; };
 struct PerceptionObjects { std::vector<TrackedObject> vehicles,pedestrians,obstacles; double source_stamp=0; };
 }

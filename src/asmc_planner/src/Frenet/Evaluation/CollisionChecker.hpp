@@ -112,13 +112,16 @@ struct CartesianCollisionCheckResult {
 // 실제 차체 OBB 충돌은 언제나 금지한다. margin_recovery_object_id는 첫
 // sample이 이미 확장 margin 안인 경우에만 실제 이격이 개선되는 탈출을
 // 허용하며, 밖에서 시작한 후보의 margin 진입과 탈출 후 재진입은 금지한다.
+// Additional IDs apply the same rule independently, only to confirmed static
+// occupancy. The caller retains initial eligibility/progress across cycles.
 CartesianCollisionCheckResult EvaluateCartesianTrajectorySafety(
     const CartesianPath& path,
     const std::vector<TrackedObject>& obstacles,
     const VehicleShape& ego_shape,
     const CollisionCheckConfig& cfg,
     double dt,
-    int margin_recovery_object_id = -1);
+    int margin_recovery_object_id = -1,
+    const std::vector<int>* static_margin_recovery_ids = nullptr);
 
 // 후보 실제 구간과 reactive coast 구간을 평행이동 polygon으로 검사한다.
 // AVOID recovery ID는 시작 시 이미 안전마진과 겹친 경우 실제 OBB 비충돌이며

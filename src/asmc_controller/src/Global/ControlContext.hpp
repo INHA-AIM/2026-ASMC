@@ -30,6 +30,9 @@ struct ControlContext {
     ros::SteadyTime last_successful_control_at;
     bool has_successful_control = false;
     bool emergency_stop_active = false;
+    bool collision_stop_active = false;
+    ros::SteadyTime collision_stop_at;
+    double collision_stop_state_stamp = 0;
     EmergencySteeringState emergency_steering;
     double braking_geometry_stamp=0;
     // Enabled by explicit wire binding. The legacy-only test gate also uses

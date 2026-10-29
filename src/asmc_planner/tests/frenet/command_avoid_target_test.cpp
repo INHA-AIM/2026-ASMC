@@ -1232,7 +1232,8 @@ int main() {
         FrenetPlanner planner;
         planner.Init(config);
         TrackedObject wide = MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0);
-        wide.width = 3.0;
+        wide = MakeMapObstacle(wide.id,wide.x,wide.y,wide.heading,wide.speed,
+                               wide.length,3.0,wide.height);
         CartesianPath path;
         planner.Plan(ego, {wide},
                      MakeAvoidCommand(21, LateralDirection::LEFT), path);
@@ -1266,7 +1267,9 @@ int main() {
         FrenetPlanner rotated_planner;
         rotated_planner.Init(config);
         TrackedObject rotated = aligned;
-        rotated.heading += 0.5 * 3.14159265358979323846;
+        rotated = MakeMapObstacle(rotated.id,rotated.x,rotated.y,
+            rotated.heading+0.5*3.14159265358979323846,rotated.speed,
+            rotated.length,rotated.width,rotated.height);
         rotated_planner.Plan(
             ego, {rotated},
             MakeAvoidCommand(21, LateralDirection::LEFT), path);

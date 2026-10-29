@@ -184,6 +184,8 @@ bool LoadParams(const std::string& yaml_path,
     if (root["planner"]["avoid"]["map_search_budget_s"]) {
         REQUIRE("planner/avoid/map_search_budget_s", avoid_cfg.map_search_budget_s);
     }
+    if(root["planner"]["avoid"]["bypass_accel_cap"])
+        REQUIRE("planner/avoid/bypass_accel_cap",avoid_cfg.bypass_accel_cap);
     REQUIRE("planner/avoid/detection_distance",         avoid_cfg.detection_distance);
     if (root["planner"]["avoid"]["bypass_speed_cap"]) {
         REQUIRE("planner/avoid/bypass_speed_cap", avoid_cfg.bypass_speed_cap);

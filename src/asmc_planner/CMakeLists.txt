@@ -91,6 +91,7 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Generator/BoundaryConditionPolicy.cpp
   src/Frenet/Generator/CartesianRetimer.cpp
   src/Frenet/Generator/SpatialStop.cpp
+  src/Frenet/Generator/StaticAvoidPath.cpp
   src/Frenet/Generator/CandidateCombiner.cpp
   src/Frenet/Generator/LateralGenerator.cpp
   src/Frenet/Generator/LongitudinalGenerator.cpp
@@ -102,6 +103,7 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Maneuver/Avoid/AvoidCompletion.cpp
   src/Frenet/Maneuver/Avoid/MapAvoidReconnection.cpp
   src/Frenet/Maneuver/Avoid/MapAvoid.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidCorridor.cpp
   src/Frenet/Maneuver/Follow.cpp
   src/Frenet/Maneuver/Keep.cpp
   src/Frenet/Maneuver/LaneChange/LaneChange.cpp
@@ -957,7 +959,7 @@ endif()
 
 
 if(CATKIN_ENABLE_TESTING)
-  foreach(regression avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
+  foreach(regression static_avoid_corridor_test avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
     add_executable(${regression} tests/frenet/${regression}.cpp)
     target_link_libraries(${regression} asmc_planner_frenet_core yaml-cpp)
     target_compile_definitions(${regression} PRIVATE

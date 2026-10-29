@@ -1,6 +1,7 @@
 #include "Parser/DetectedObjects.hpp"
 
 #include <cmath>
+#include "Frenet/Geometry/PolygonUtils.hpp"
 
 namespace behavior_planner {
 namespace {
@@ -47,12 +48,17 @@ bool DetectedMsgConverter::toTrackedObject(
   object->accel = 0.0;
   object->length = PositiveOr(message.length, 1.0);
   object->width = PositiveOr(message.width, 1.0);
+  for(std::size_t i=0;i<object->corners.size();++i) {
+    const auto& p=message.obb_corners[i];object->corners[i]={p.x,p.y,p.z};
+  }
+  object->geometry_valid=geometry::ValidateCorners8(object->corners).valid;
   return true;
 }
 
 PerceptionObjects DetectedMsgConverter::toPerceptionObjects(
     const planning_inputs::DetectedObjectArray& message) {
   PerceptionObjects result;
+  result.source_stamp=message.header.stamp.toSec();
   result.vehicles.reserve(message.objects.size());
   result.pedestrians.reserve(message.objects.size());
   result.obstacles.reserve(message.objects.size());

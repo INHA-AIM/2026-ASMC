@@ -190,5 +190,7 @@ int main(){
         "a complete road-safe bypass remains READY beyond the former paint-duration cutoff");
  Expect(painted_ready&&CartesianAvoidTrajectoryClear(r.candidate_path,objects,shape,margin,.1),
         "long paint contact never exempts the bypass from physical obstacle checks");
+ Expect(painted_ready&&!r.candidate_path.x.empty()&&r.candidate_path.x.back()>152,
+        "an open reference never wraps a distant forward blocker behind the vehicle");
  std::filesystem::remove_all(dir);return failures?1:0;
 }

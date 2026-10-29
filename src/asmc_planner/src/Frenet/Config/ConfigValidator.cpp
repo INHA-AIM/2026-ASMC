@@ -306,6 +306,10 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
     }
 
     // --- avoid ---
+    if(!IsFinite(avoid_cfg.bypass_accel_cap)||avoid_cfg.bypass_accel_cap<=0) {
+        error_message="planner/avoid/bypass_accel_cap must be finite and positive";
+        return false;
+    }
     if (!IsFinite(avoid_cfg.map_search_budget_s) || avoid_cfg.map_search_budget_s <= 0.0 ||
         avoid_cfg.map_search_budget_s > 0.15) {
         error_message = "planner/avoid/map_search_budget_s must be finite and in (0, 0.15]";

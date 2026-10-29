@@ -941,11 +941,13 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                        ? asmc_msgs::FrenetFeedback::COLLISION_BLOCKED
                        : asmc_msgs::FrenetFeedback::
                              TRANSIENT_GENERATION_FAILURE);
-            const std::string detail = terminal_target_lost
+            std::string detail = terminal_target_lost
                 ? "committed avoid target lost before lateral shift"
                 : (reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
                        ? "committed avoid path blocked by collision"
                        : "could not generate the committed avoid path");
+            if(committed.search_pending)detail+="; static corridor search pending";
+            if(!committed.rejection_stage.empty())detail+="; corridor rejection="+committed.rejection_stage;
             // TRACKING 중 target 장기 소실은 terminal이다. 그 외 post-COMMIT
             // 생성 실패는 기존대로 transaction/lock을 유지한다.
             port.command_manager_.NotifyPlanFailed(
@@ -1110,6 +1112,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             executing.detail = committed.maneuver_completed
                 ? "avoid maneuver completed"
                 : "executing committed avoid trajectory";
+            if(committed.retained_geometry)executing.detail+="; retained spatial corridor";
         }
         port.trajectory_pub_.publish(trajectory);
         port.publishDebugMarkersV2(trajectory, command);
@@ -1359,7 +1362,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             failed.detail = detail;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 port.stopReferenceVehicle(snapshot), port.trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_GENERATION);
+                code==asmc_msgs::FrenetFeedback::COLLISION_BLOCKED?
+                    asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED:asmc_msgs::Trajectory::FAILURE_GENERATION);
             port.trajectory_pub_.publish(stop);
             port.publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1823,7 +1827,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         }
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             port.stopReferenceVehicle(snapshot), port.trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_GENERATION);
+            failed.result_code==asmc_msgs::FrenetFeedback::COLLISION_BLOCKED?
+                asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED:asmc_msgs::Trajectory::FAILURE_GENERATION);
         port.trajectory_pub_.publish(stop);
         port.publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,

@@ -44,7 +44,7 @@ follow: {max_target_distance: 60.0, max_lateral_offset: 1.75, release_delay_s: 0
 avoid:
   max_target_distance: 120.0
   max_lateral_offset: 1.75
-  path_margin_m: 0.4
+  path_margin_m: 0.45
   min_physical_overlap_m: 0.10
   min_margin_overlap_m: 0.20
   min_overlap_ratio: 0.20
@@ -95,7 +95,7 @@ traffic_light:
   approach_margin_m: 25.0
   post_stopline_distance_m: 5.0
   mock_path: "$(find asmc_planner)/config/behavior/traffic_light_mock.yaml"
-vehicle: {length: 4.635, width: 1.892, wheelbase: 3.0}
+vehicle: {length: 4.635, width: 1.9, wheelbase: 3.0, rear_overhang: 0.79}
 lane: {default_width: 3.5}
 safety:
   front_min_gap: 8.0

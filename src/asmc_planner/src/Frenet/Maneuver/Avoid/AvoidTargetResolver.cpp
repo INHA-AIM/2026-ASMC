@@ -16,6 +16,7 @@
 
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
 #include "Frenet/Math/FrenetConverter.hpp"
+#include "Frenet/Geometry/AvoidanceGeometry.hpp"
 #include "Frenet/Math/Utils.hpp"
 
 double FrenetPlanner::EffectiveAvoidDetectionDistance() const {
@@ -60,8 +61,18 @@ const TrackedObject* FrenetPlanner::FindSpatialAvoidReplacement(
                              ref_config_.ego_projection_search_window);
         double gap = object_s - ego_s;
         if (gap <= 0.0 && track_length > 0.0) gap += track_length;
+        const RefPoint object_ref = Interpolate(ref_, object_s);
+        const auto bounds=ProjectAvoidFootprint(object.corners,object.x,object.y,object_ref.theta);
+        const bool static_footprint=avoid_road_map_.enabled()&&object.geometry_valid&&bounds.valid&&
+            object.motion_state!=ObjectMotionState::DYNAMIC_PENDING;
+        bool in_range=gap>0.0&&gap<=search_limit;
+        if(static_footprint) {
+            gap=ReferenceArcDistance(ref_, ego_s, object_s);
+            in_range=gap+bounds.far_s>=-vehicle_shape_.rear_overhang&&
+                gap+bounds.near_s<=search_limit;
+        }
         const double unwrapped_s = ego_s + gap;
-        if (!(gap > 0.0 && gap <= search_limit) ||
+        if (!in_range ||
             std::fabs(unwrapped_s - context.obstacle_s) > max_ds ||
             std::fabs(object_d - context.obstacle_d) > max_dd ||
             std::fabs(object.length - context.obstacle_length) > max_size_delta ||
@@ -69,14 +80,16 @@ const TrackedObject* FrenetPlanner::FindSpatialAvoidReplacement(
             continue;
         }
 
-        const RefPoint object_ref = Interpolate(ref_, object_s);
         const double heading_delta = object.heading - object_ref.theta;
         const double lateral_half_extent =
             0.5 * std::fabs(object.length * std::sin(heading_delta)) +
             0.5 * std::fabs(object.width * std::cos(heading_delta));
-        const double nearest_lateral_distance =
-            std::max(0.0, std::fabs(object_d) - lateral_half_extent);
-        if (nearest_lateral_distance > lane_width_ * 0.5) continue;
+        const double nearest_lateral_distance = static_footprint
+            ? std::max({0.0,object_d+bounds.min_d,-object_d-bounds.max_d})
+            : std::max(0.0, std::fabs(object_d) - lateral_half_extent);
+        const double corridor=static_footprint?std::max(lane_width_*.5,
+            vehicle_shape_.width*.5+collision_cfg_.safety_margin):lane_width_*.5;
+        if (nearest_lateral_distance > corridor) continue;
 
         // 여러 관측이 동시에 gate를 통과하면 잘못된 identity 결정을 하지 않는다.
         if (unique_match != nullptr) return nullptr;
@@ -92,17 +105,23 @@ void FrenetPlanner::RefreshAvoidObservation(
     ProjectObjectToFrenet(ref_, object, object_s, object_d, object_s_dot,
                          ref_config_.ego_projection_search_window);
 
-    const double track_length = ref_.points.empty() ? 0.0 : ref_.points.back().s;
-    const double gap = ForwardArcDistance(ego_s, object_s, track_length);
+    const double gap = ReferenceArcDistance(ref_, ego_s, object_s);
     const RefPoint object_ref = Interpolate(ref_, object_s);
     const double heading_delta = object.heading - object_ref.theta;
-    const double lateral_half_extent =
+    double lateral_half_extent =
         0.5 * std::fabs(object.length * std::sin(heading_delta)) +
         0.5 * std::fabs(object.width * std::cos(heading_delta));
-    const double longitudinal_half_extent =
+    double longitudinal_half_extent =
         0.5 * std::fabs(object.length * std::cos(heading_delta)) +
         0.5 * std::fabs(object.width * std::sin(heading_delta));
 
+    if(object.geometry_valid) {
+        const auto bounds=ProjectAvoidFootprint(object.corners,object.x,object.y,object_ref.theta);
+        if(bounds.valid) {
+            lateral_half_extent=std::max(std::fabs(bounds.min_d),std::fabs(bounds.max_d));
+            longitudinal_half_extent=std::max(std::fabs(bounds.near_s),std::fabs(bounds.far_s));
+        }
+    }
     double outward_sign = context.target_d - context.obstacle_d;
     if (std::fabs(outward_sign) <= 1e-6) {
         if (execution_->avoid.requested_direction == LateralDirection::LEFT) outward_sign = 1.0;
@@ -132,7 +151,7 @@ void FrenetPlanner::RefreshAvoidObservation(
     // Refresh geometry here; MapAvoid must freshly validate/select any change.
     if (refresh_committed_target && execution_->avoid.committed &&
         !context.dynamic_target &&
-        !context.has_requested_target_d) {
+        !context.has_requested_target_d && !avoid_road_map_.enabled()) {
         const double clearance =
             0.5 * vehicle_shape_.width + lateral_half_extent +
             collision_cfg_.safety_margin + avoid_cfg_.direction_extra_margin;
@@ -172,8 +191,8 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
 
         // 속도 조건(trigger_max_speed)을 적용하지 않는다 - 헤더 주석 참고.
         // 정지/저속/주행 중 어느 쪽이든 FSM이 AVOID를 지정했으면 대상이다.
-        const bool in_front = gap > 0.0;
-        const bool in_range = gap <= search_limit;
+        bool in_front = gap > 0.0;
+        bool in_range = gap <= search_limit;
         // geometry가 0이면 회피 오프셋을 계산할 수 없다. 후보 생성 단계에서
         // 0 폭 장애물을 비켜가는 target_d는 의미가 없다.
         const bool geometry_ok = it->width > 0.0 && it->length > 0.0;
@@ -182,8 +201,12 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
         // 경계에서 몇 cm 벗어났다는 이유로 Behavior는 AVOID, Frenet은 LOST가
         // 된다. OBB의 route-normal 반폭을 투영해 가장 가까운 외곽을 검사한다.
         double nearest_lateral_distance = std::fabs(object_d);
+        const RefPoint object_ref = Interpolate(ref_, object_s);
+        const auto bounds=ProjectAvoidFootprint(it->corners,it->x,it->y,object_ref.theta);
+        const bool static_footprint=avoid_road_map_.enabled()&&it->geometry_valid&&bounds.valid&&
+            (it->type==0||it->type==3)&&
+            (it->motion_state==ObjectMotionState::UNKNOWN||it->motion_state==ObjectMotionState::LOW_THREAT);
         if (geometry_ok) {
-            const RefPoint object_ref = Interpolate(ref_, object_s);
             const double heading_delta = it->heading - object_ref.theta;
             const double lateral_half_extent =
                 0.5 * std::fabs(it->length * std::sin(heading_delta)) +
@@ -191,8 +214,18 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
             nearest_lateral_distance =
                 std::max(0.0, nearest_lateral_distance - lateral_half_extent);
         }
+        if(static_footprint) {
+            // The acquisition reference is the rear axle. An object's center
+            // can already be behind it while its footprint still blocks the
+            // alongside margin. Use the same footprint gate as Behavior.
+            const double signed_gap=ReferenceArcDistance(ref_, ego_s, object_s);
+            in_front=signed_gap+bounds.far_s>=-vehicle_shape_.rear_overhang;
+            in_range=signed_gap+bounds.near_s<=search_limit;
+            nearest_lateral_distance=std::max({0.0,object_d+bounds.min_d,-object_d-bounds.max_d});
+        }
         const bool same_corridor =
-            nearest_lateral_distance <= lane_width_ * 0.5;
+            nearest_lateral_distance <= (static_footprint?std::max(lane_width_*.5,
+                vehicle_shape_.width*.5+collision_cfg_.safety_margin):lane_width_*.5);
 
         if (in_front && in_range && same_corridor && geometry_ok) {
             // Lane permission belongs to the bound maneuver, not the next

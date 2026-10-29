@@ -50,10 +50,7 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     // AVOID를 멀리서 확보/COMMIT해도 곧바로 옆으로 흐르지 않는다.
     // TRACKING에서 global path를 유지하다 장애물 기준 진입거리에 도달하면
     // SHIFT로 넘어간다.
-    const double track_length =
-        ref_.points.empty() ? 0.0 : ref_.points.back().s;
-    const double initial_gap = ForwardArcDistance(
-        last_s_, v2_avoidance_.obstacle_s, track_length);
+    const double initial_gap = ReferenceArcDistance(ref_, last_s_, v2_avoidance_.obstacle_s);
     // 이후 lifecycle과 동일하게 실제 ego 속도를 사용한다. 과거에는 planner
     // target speed를 써서 저속 차량도 고속 기준으로 너무 일찍 SHIFT했다.
     const double shift_distance = EffectiveAvoidShiftStartDistance(
@@ -63,7 +60,14 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.map_return_schedule_valid = result.map_return_schedule_valid;
     v2_avoidance_.map_return_start_s = result.map_return_start_s;
     v2_avoidance_.map_return_end_s = result.map_return_end_s;
-    const double entry_gap = ForwardArcDistance(last_s_, result.map_entry_s, track_length);
+    v2_avoidance_.map_group_valid=result.map_group_valid;
+    v2_avoidance_.map_group_end_s=result.map_group_end_s;
+    v2_avoidance_.map_spatial_geometry=result.spatial_geometry;
+    v2_avoidance_.map_recovery_path=result.candidate_path;
+    v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
+    v2_avoidance_.map_speed_profile_valid=!result.candidate_path.x.empty();
+    v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
+    const double entry_gap = ReferenceArcDistance(ref_, last_s_, result.map_entry_s);
     v2_avoidance_.shift_entry_distance = avoid_road_map_.enabled()
         ? initial_gap - std::max(0.0, entry_gap) : shift_distance;
     execution_.initializeAvoidEntry({std::isfinite(initial_gap) &&
@@ -141,11 +145,8 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
 
     constexpr double kProgressEpsilon = 1e-6;
     bool entered_pass_this_cycle = false;
-    const double track_length =
-        ref_.points.empty() ? 0.0 : ref_.points.back().s;
     // Resolver가 저장한 장애물 s와 ego s 사이의 signed arc 거리.
-    const double gap = ForwardArcDistance(
-        ego_s, v2_avoidance_.obstacle_s, track_length);
+    const double gap = ReferenceArcDistance(ref_, ego_s, v2_avoidance_.obstacle_s);
 
     if (execution_->avoid.phase == AvoidPhase::TRACKING && !avoid_road_map_.enabled()) {
         v2_avoidance_.shift_entry_distance = std::max(
@@ -154,7 +155,7 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     }
     if (execution_.observeAvoidEntry({std::isfinite(gap) &&
         (avoid_road_map_.enabled()
-             ? ForwardArcDistance(ego_s,v2_avoidance_.map_entry_s,track_length)<=0.0
+             ? ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_entry_s)<=0.0
              : gap <= v2_avoidance_.shift_entry_distance)})) {
         // 실제 SHIFT가 시작되는 횡위치를 진행률 기준으로 사용한다.
         if (std::isfinite(ego_d)) v2_avoidance_.start_d = ego_d;
@@ -168,13 +169,16 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
         avoid_cfg_.pass_clearance;
     const bool longitudinally_cleared =
         std::isfinite(gap) && std::isfinite(clear_distance) &&
-        clear_distance > kProgressEpsilon && gap < -clear_distance;
+        clear_distance > kProgressEpsilon && gap < -clear_distance &&
+        (!v2_avoidance_.map_group_valid ||
+         ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_group_end_s)<=0.0);
 
     // Follow the accepted spatial maneuver, not a newly observed obstacle rear
     // edge. A return is committed only after complete road/body validation.
     if (avoid_road_map_.enabled() && v2_avoidance_.map_return_schedule_valid &&
+        (!v2_avoidance_.map_group_valid||ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_group_end_s)<=0) &&
         (execution_->avoid.phase == AvoidPhase::SHIFT || execution_->avoid.phase == AvoidPhase::PASS) &&
-        ForwardArcDistance(ego_s,v2_avoidance_.map_return_start_s,track_length)<=0.0) {
+        ReferenceArcDistance(ref_, ego_s, v2_avoidance_.map_return_start_s)<=0.0) {
         execution_.observeEarlyReturnCandidate(true);
     }
 

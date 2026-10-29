@@ -487,6 +487,12 @@ public:
         bool map_return_schedule_valid = false;
         double map_return_start_s = 0.0;
         double map_return_end_s = 0.0;
+        bool map_group_valid = false;
+        double map_group_end_s = 0.0;
+        CartesianPath spatial_geometry;
+        bool retained_geometry = false;
+        bool search_pending = false;
+        std::string rejection_stage;
 
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
@@ -1041,6 +1047,10 @@ private:
         double speed, double initial_a, const std::vector<TrackedObject>& obstacles,
         bool committed, CartesianPath& output, AvoidPrepareResult& result,
         std::chrono::steady_clock::time_point deadline);
+    bool PlanStaticAvoidCorridor(const CartesianState& ego,double s,double d,
+        double speed,double initial_a,const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command,bool committed,AvoidPrepareResult& result,
+        std::chrono::steady_clock::time_point deadline);
     bool AvoidProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -1089,6 +1099,22 @@ private:
         bool map_return_schedule_valid = false;
         double map_return_start_s = 0.0;
         double map_return_end_s = 0.0;
+        bool map_group_valid = false;
+        double map_group_end_s = 0.0;
+        CartesianPath map_spatial_geometry;
+        std::size_t map_corridor_cursor = 0;
+        unsigned map_search_turn = 0;
+        // Only objects already inside the nominal margin at the beginning of
+        // this maneuver may use the static escape rule. Exit is irreversible.
+        bool margin_recovery_initialized = false;
+        std::vector<int> margin_recovery_ids;
+        struct MarginAnchor {
+            int id=-1;
+            double x=0,y=0,maximum=0;
+            bool physical=false,exited=false;
+        };
+        std::vector<MarginAnchor> margin_anchors;
+        double margin_axis_x=1,margin_axis_y=0;
         // Measured lateral motion, rather than the nominal SHIFT/PASS label,
         // locks the entry and side against changes during an actual bypass.
         // Before it starts, only NONE without a target pose may reselect a
@@ -1131,8 +1157,8 @@ private:
         //
         // true이면 회피 방향과 target_d / start_d가 확정되며, 후보 생성은
         // 현재 target_d를 **정확히** 겨냥한다(lateral tolerance 0).
-        // geometry 기반 target_d는 새 OBB가 커질 때 같은 방향 바깥쪽으로만
-        // 확장될 수 있다. PREPARE에서는 항상 false다.
+        // Map execution changes the target only with a fully checked replacement.
+        // Observation refresh never widens an accepted map path by itself.
 
         // 저속 SHIFT에서 공용 margin-recovery 판정을 사용한 후보가
         // 승인되었는가. 이 값은 충돌 예외를 켜는 phase gate가 아니라,

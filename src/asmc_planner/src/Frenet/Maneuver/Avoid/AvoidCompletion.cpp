@@ -4,6 +4,7 @@
 #include "Frenet/Math/FrenetConverter.hpp"
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
 #include "Frenet/Speed/CurveSpeed.hpp"
+#include "Frenet/Generator/SpatialStop.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -14,10 +15,12 @@ bool FrenetPlanner::CanHandoffAvoidToKeep(
         ref_.points.empty() || !std::isfinite(d) ||
         std::fabs(d) > avoid_cfg_.lateral_tolerance) return false;
     const double length = ref_.points.back().s;
-    const double gap = ForwardArcDistance(s,v2_avoidance_.obstacle_s,length);
+    const double gap = ReferenceArcDistance(ref_, s, v2_avoidance_.obstacle_s);
     const double clearance = avoid_cfg_.rear_overhang +
         v2_avoidance_.obstacle_longitudinal_half_extent + avoid_cfg_.pass_clearance;
     if (!std::isfinite(gap) || gap >= -clearance) return false;
+    if(v2_avoidance_.map_group_valid &&
+       ReferenceArcDistance(ref_, s, v2_avoidance_.map_group_end_s)>0.0)return false;
     const double heading_error = std::remainder(
         ego.yaw - Interpolate(ref_,s).theta,2.0*M_PI);
     // Heading must already be settled, including at standstill. Bound the
@@ -29,8 +32,8 @@ bool FrenetPlanner::CanHandoffAvoidToKeep(
 
     // A short, slow KEEP candidate can stop before a downstream obstacle. That
     // is not evidence that the remaining static avoidance is finished. Check
-    // every static/uncertain OBB against the reference body corridor over the
-    // same distance used to acquire AVOID targets. No ID or width approximation.
+    // every static/uncertain OBB against the finite response-and-stop body
+    // corridor. No ID or width approximation.
     std::vector<TrackedObject> stationary;
     for (auto o : obstacles) {
         if (o.motion_state == ObjectMotionState::DYNAMIC) continue;
@@ -40,7 +43,14 @@ bool FrenetPlanner::CanHandoffAvoidToKeep(
     }
     if (!stationary.empty()) {
         CartesianPath corridor;
-        const double distance=std::min(EffectiveAvoidDetectionDistance(),length*.5);
+        // Certify the finite handoff and its full stop, not an obstacle-free
+        // acquisition horizon. A distant next target belongs to a new command.
+        FrenetState motion{};motion.s_d=std::max(0.0,ego.v);motion.s_dd=ego.a;
+        const auto stop=GenerateBrakingContinuation(motion,
+            limits_.max_longitudinal_accel*.8,limits_.max_longitudinal_jerk,path_cfg_.dt);
+        if(stop.s.empty())return false;
+        const double response=ego.v*(.15+2*replanning_period_s_+.2);
+        const double distance=std::min(length*.5,std::max(1.0,stop.s.back()+response));
         constexpr double step=.25;
         for (double traveled=0.0;traveled<distance+step;traveled+=step) {
             const auto p=Interpolate(ref_,std::fmod(s+std::min(traveled,distance),length));

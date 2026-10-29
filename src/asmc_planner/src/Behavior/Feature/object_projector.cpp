@@ -18,6 +18,8 @@ ObjectFeature ObjectProjector::project(const TrackedObject& object,
   feature.accel = object.accel;
   feature.length = object.length;
   feature.width = object.width;
+  feature.corners = object.corners;
+  feature.geometry_valid = object.geometry_valid;
 
   std::string route_link;
   const bool route_valid = route.projectEgo(

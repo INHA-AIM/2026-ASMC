@@ -27,6 +27,10 @@ Do not rename them as part of ownership cleanup.
 
 ## Regression assets
 
+- [Static avoidance execution and MORAI acceptance](docs/static-avoid-execution.md):
+  retained paths, multiple blockers, gentle S corridors, standstill recovery and
+  collision-stop release.
+
 - `tests/behavior`: six registered Behavior tests and dashboard test.
 - `tests/frenet`: 36 registered Frenet tests, fixtures and explicit v2 ROS test.
 - `tests/equivalence`: frozen lifecycle/request/FSM comparisons and maneuver gate.

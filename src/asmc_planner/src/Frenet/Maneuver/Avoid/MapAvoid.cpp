@@ -3,6 +3,7 @@
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
 #include "Frenet/Math/Utils.hpp"
 #include "Frenet/Speed/AvoidSpeedMemory.hpp"
+#include "Frenet/Evaluation/KinematicFilter.hpp"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -26,8 +27,11 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             "[AVOID_DIAGNOSTIC] generated=%u kinematic=%u road=%u collision=%u clear=%u paint_only=%u boundary=%u least_overlap=%.6f least_paint=%.6f\n",
             generated,kinematic_rejected,road_rejected,collision_rejected,clear,paint_only,boundary,least_overlap,least_paint);}
     } diagnostic;
-    auto search_deadline=std::chrono::steady_clock::now()+
-        std::chrono::duration<double>(avoid_cfg_.map_search_budget_s);
+    const auto search_started=std::chrono::steady_clock::now();
+    const double slice=v2_avoidance_.dynamic_target?avoid_cfg_.map_search_budget_s:
+        std::min(avoid_cfg_.map_search_budget_s,replanning_period_s_*.7);
+    auto search_deadline=search_started+std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        std::chrono::duration<double>(slice));
     bool search_expired=false;
     std::size_t candidate_index=0;
     const std::size_t resume_at=v2_avoidance_.map_search_cursor;
@@ -35,10 +39,11 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     bool indexed_candidate_selected=false;
     std::set<std::tuple<double,double,double,double,double,bool,bool>> evaluated;
     const double length=ref_.points.back().s;
-    const double gap=ForwardArcDistance(s,v2_avoidance_.obstacle_s,length);
+    const double gap=ReferenceArcDistance(ref_, s, v2_avoidance_.obstacle_s);
     if(committed&&v2_avoidance_.map_return_schedule_valid&&
+       (!v2_avoidance_.map_group_valid||ReferenceArcDistance(ref_, s, v2_avoidance_.map_group_end_s)<=0)&&
        (execution_->avoid.phase==AvoidPhase::SHIFT||execution_->avoid.phase==AvoidPhase::PASS)&&
-       ForwardArcDistance(s,v2_avoidance_.map_return_start_s,length)<=0)
+       ReferenceArcDistance(ref_, s, v2_avoidance_.map_return_start_s)<=0)
         execution_.observeEarlyReturnCandidate(true);
     const bool returning=committed&&execution_->avoid.phase==AvoidPhase::RETURN;
     const auto target=std::find_if(obstacles.begin(),obstacles.end(),[&](const TrackedObject& o){
@@ -84,13 +89,14 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     const double clearance=front+v2_avoidance_.obstacle_longitudinal_half_extent+collision_cfg_.safety_margin;
     const double crawl=std::min(speed,avoid_cfg_.bypass_speed_cap);
     const double dt=path_cfg_.dt;
-    const VehicleShape map_shape=vehicle_shape_;
+    VehicleShape map_shape=vehicle_shape_;
+    map_shape.width=std::max(map_shape.width,map_shape.road_outer_width);
     const bool initial_inside=avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,map_shape);
     VehicleShape settled_shape=map_shape;
     settled_shape.width+=.10;settled_shape.length+=.10;settled_shape.rear_overhang+=.05;
     const bool initial_settled=avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,settled_shape);
     if(v2_avoidance_.map_recovery_active){
-        const double movement=std::fabs(ForwardArcDistance(v2_avoidance_.map_recovery_last_s,s,length));
+        const double movement=std::fabs(ReferenceArcDistance(ref_, v2_avoidance_.map_recovery_last_s, s));
         v2_avoidance_.map_recovery_travel_m+=movement;
         v2_avoidance_.map_recovery_last_s=s;
         v2_avoidance_.map_recovery_settled_travel_m=initial_settled
@@ -113,6 +119,11 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     const double jerk=limits_.max_longitudinal_jerk;
     const double initial_slope=std::tan(std::remainder(ego.yaw-Interpolate(ref_,s).theta,2*M_PI))
         *(1-Interpolate(ref_,s).kappa*d);
+    const auto initial_ref=Interpolate(ref_,s);
+    const double initial_heading=std::remainder(ego.yaw-initial_ref.theta,2*M_PI);
+    const double cosine=std::cos(initial_heading),metric0=1-initial_ref.kappa*d;
+    const double initial_second=(ego.kappa-initial_ref.kappa*cosine/metric0)*metric0*metric0/
+        (cosine*cosine*cosine)-(initial_ref.d_kappa*d+initial_ref.kappa*initial_slope)*std::tan(initial_heading);
     if(committed&&std::fabs(d-v2_avoidance_.map_lateral_origin_d)>=.20)
         v2_avoidance_.map_lateral_started=true;
     const bool may_retime=committed&&!returning&&!v2_avoidance_.map_lateral_started&&gap>clearance+4.0;
@@ -137,7 +148,11 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     const double initial_a=AvoidAccelerationSeed(ego.a,ego.v,crawl,
         bypass_active,v2_avoidance_.map_recovery_path.a,dt,elapsed,
         decel,limits_.max_longitudinal_accel,release_cap_unchanged,
-        v2_avoidance_.dynamic_target && release_cap_unchanged);
+        release_cap_unchanged);
+    const int recovery_object_id=v2_avoidance_.dynamic_target?execution_->avoid.obstacle_id:-1;
+    const auto* recovery_ids=v2_avoidance_.dynamic_target?nullptr:&v2_avoidance_.margin_recovery_ids;
+    const double forward_accel=v2_avoidance_.dynamic_target?limits_.max_longitudinal_accel:
+        std::min({limits_.max_longitudinal_accel,limits_.max_forward_accel,avoid_cfg_.bypass_accel_cap});
     const auto reaches_recovery_exit=[&](const CartesianPath& path) {
         if(!command.recovery_clear)return true;
         if(path.x.empty() || path.y.empty())return false;
@@ -157,9 +172,10 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         const double center_distance=std::max(2.0,LowSpeedLateralTransitionDistance(d,0.0)*1.25);
         const double shift_start=(maintenance||direct_return)?0.0:(delay<center_distance?0.0:delay);
         const double settle=maintenance ? std::max(10.0,std::min(25.0,ego.v*2.5)) : std::max(1.0,std::min(20.0,shift_start));
-        const auto approach=MakeQuintic(d,initial_slope,0,0,0,0,settle);
+        const auto approach=MakeQuintic(d,initial_slope,initial_second,0,0,0,settle);
         const double shift_initial=shift_start>0?0.0:d;
-        const auto shift=MakeQuintic(shift_initial,shift_start>0?0.0:initial_slope,0,target_d,0,0,transition);
+        const auto shift=MakeQuintic(shift_initial,shift_start>0?0.0:initial_slope,
+            shift_start>0?0.0:initial_second,target_d,0,0,transition);
         double nominal_pass=gap+v2_avoidance_.obstacle_longitudinal_half_extent+
             vehicle_shape_.rear_overhang+avoid_cfg_.pass_clearance-return_advance;
         if(shadow_dynamic_bypass_&&slow_dynamic&&target->length>2.) {
@@ -173,7 +189,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 nominal_pass+=leader_speed*std::max(0.,nominal_pass)/(crawl-leader_speed);
         }
         const double scheduled_pass=committed&&keep_return_schedule&&v2_avoidance_.map_return_schedule_valid
-            ? ForwardArcDistance(s,v2_avoidance_.map_return_start_s,length) : nominal_pass;
+            ? ReferenceArcDistance(ref_, s, v2_avoidance_.map_return_start_s) : nominal_pass;
         const double pass_end=std::max(shift_start+transition,scheduled_pass);
         if(return_start)*return_start=std::fmod(s+(direct_return?0.0:pass_end)+length,length);
         if(return_end)*return_end=std::fmod(s+(direct_return?transition:pass_end+return_distance)+length,length);
@@ -213,7 +229,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 v*v*std::fabs(point.kappa)>limits_.max_lateral_accel+1e-6)return false;
             path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
             path.kappa.push_back(point.kappa);path.v.push_back(v);path.a.push_back(a);
-            if(u>=total-.05 || (maintenance&&(n*dt>=3.0||v<.02)&&n>0))return path.x.size()>1;
+            if(u>=total-.05 || (maintenance&&(n*dt>=3.0||v<.02)&&n>0))
+                return path.x.size()>1&&PathObeysSteeringRate(path,dt,wheelbase_,limits_.steering);
             // Jerk ramp distance reserve begins deceleration before the lateral
             // transition. No instantaneous replacement of measured speed by cap.
             const double remaining=std::max(0.0,(maintenance?total:shift_start)-u);
@@ -223,7 +240,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             if(maintenance){
                 cap=std::min(cap,crawl); // Static classification is pending: brake immediately.
             }
-            const double desired=clip((cap-v)/.8,-decel,limits_.max_longitudinal_accel);
+            const double desired=clip((cap-v)/.8,-decel,forward_accel);
             const double next_a=clip(desired,a-jerk*dt,a+jerk*dt);
             const double next_v=std::max(0.0,v+(a+next_a)*.5*dt);
             u+=(v+next_v)*.5*dt/metric;v=next_v;a=next_a;
@@ -232,10 +249,18 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         return false;
     };
 
+    if(!v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
+       !result.direction_conflict&&!result.target_behind_ego) {
+        const bool reconnect_turn=v2_avoidance_.map_search_turn%2==1&&v2_avoidance_.map_corridor_cursor==0;
+        const auto corridor_deadline=reconnect_turn?search_started:search_deadline;
+        PlanStaticAvoidCorridor(ego,s,d,speed,initial_a,obstacles,command,committed,result,corridor_deadline);
+        if(reconnect_turn&&!result.candidate_valid)result.search_pending=false;
+    }
+
     // Keep the already accepted recovery/bypass curve while tracking it closely.
     // Re-fitting the same tiny boundary overlap each cycle can change the curve
     // enough to lose every candidate. This is never an unchecked stale-path fallback.
-    if(committed&&!v2_avoidance_.map_recovery_path.x.empty()&&
+    if(!result.candidate_valid&&committed&&!v2_avoidance_.map_recovery_path.x.empty()&&
        std::fabs(initial_a-clip(ego.a,-decel,limits_.max_longitudinal_accel))<1e-6){
         const auto& cached=v2_avoidance_.map_recovery_path;
         std::size_t nearest=0;double fraction=0,distance=INFINITY;
@@ -276,8 +301,9 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             const auto road=avoid_road_map_.EvaluateRecoveryPath(continuation,map_shape,dt,
                 recovery_budget,v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,v2_avoidance_.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_);
             int blocking=-1;bool margin_recovery=false;
+            kinematic=kinematic&&PathObeysSteeringRate(continuation,dt,wheelbase_,limits_.steering);
             const bool clear=kinematic&&road.drivable&&lane_clear(continuation)&&CartesianAvoidTrajectoryClear(continuation,obstacles,
-                vehicle_shape_,collision_cfg_,dt,&blocking,execution_->avoid.obstacle_id,&margin_recovery);
+                vehicle_shape_,collision_cfg_,dt,&blocking,recovery_object_id,&margin_recovery,recovery_ids);
             if(clear && reaches_recovery_exit(continuation)){
                 ++result.generated_candidate_count;++result.valid_candidate_count;
                 last_candidate_paths_.push_back(continuation);last_candidate_validity_.push_back(true);
@@ -301,14 +327,21 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         }
     }
 
-    const auto search_started=std::chrono::steady_clock::now();
-    const auto reconnection_deadline=search_started+std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(avoid_cfg_.map_search_budget_s));
-    search_deadline=search_started+std::chrono::duration<double>(avoid_cfg_.map_search_budget_s);
+    const auto reconnection_deadline=search_deadline;
     bool selected_fresh_entry=false;
     bool selected_direct_return=returning;
+    const bool pending_corridor=!committed&&result.search_pending&&v2_avoidance_.map_corridor_cursor>0;
+    if(!pending_corridor&&!result.candidate_valid&&!v2_avoidance_.dynamic_target&&
+       v2_avoidance_.map_search_turn%2==1) {
+        CartesianPath connected;
+        if(PlanAvoidReconnection(ego,s,d,speed,initial_a,obstacles,committed,connected,result,reconnection_deadline)) {
+            selected_fresh_entry=true;
+            selected_direct_return=returning||execution_->avoid.phase==AvoidPhase::PASS;
+        }
+    }
     double best=std::numeric_limits<double>::infinity();
     bool best_touches_paint=true;
-    if(!result.direction_conflict&&!result.target_behind_ego&&(committed||static_confirmed)) {
+    if(!pending_corridor&&!result.candidate_valid&&!result.direction_conflict&&!result.target_behind_ego&&(committed||static_confirmed)) {
         std::vector<double> targets;
         if(committed) targets.push_back(returning?0.0:v2_avoidance_.target_d);
         else for(int i=0;i<v2_avoid_targets_.count;++i)targets.push_back(v2_avoid_targets_.candidates[i]);
@@ -340,7 +373,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             const double natural=std::max(
                 transition_distance(d,target_d),heading_distance);
             const double scheduled_remaining=committed&&!fresh_entry&&v2_avoidance_.map_return_schedule_valid
-                ? ForwardArcDistance(s,v2_avoidance_.map_return_end_s,length) : natural;
+                ? ReferenceArcDistance(ref_, s, v2_avoidance_.map_return_end_s) : natural;
             const double base_transition=direct_return&&keep_return_schedule?std::max(natural,scheduled_remaining):natural;
             for(double delay:delays){
                 // The same shorter-distance option used by full bypass returns
@@ -353,7 +386,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 for(double scale=first_scale;scale<=3.0+1e-6;scale+=scale_step){
                     double transition=base_transition*scale;
                     if(committed&&!direct_return&&!fresh_entry)transition=std::max(natural,
-                        v2_avoidance_.map_transition_distance-std::max(0.0,-ForwardArcDistance(s,v2_avoidance_.map_entry_s,length)))*scale;
+                        v2_avoidance_.map_transition_distance-std::max(0.0,-ReferenceArcDistance(ref_, s, v2_avoidance_.map_entry_s)))*scale;
 
                     // Search return distance independently of entry length. The
                     // former long return remains a fallback; every shorter
@@ -367,8 +400,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                         const double center_distance=std::max(2.0,LowSpeedLateralTransitionDistance(d,0.0)*1.25);
                         const double entry=delay<center_distance?0.0:delay;
                         const double pass=std::max(entry+transition,
-                            ForwardArcDistance(s,v2_avoidance_.map_return_start_s,length));
-                        returns={std::max(1.0,ForwardArcDistance(s,v2_avoidance_.map_return_end_s,length)-pass)};
+                            ReferenceArcDistance(ref_, s, v2_avoidance_.map_return_start_s));
+                        returns={std::max(1.0,ReferenceArcDistance(ref_, s, v2_avoidance_.map_return_end_s)-pass)};
                     }
                     std::sort(returns.begin(),returns.end());
                     returns.erase(std::unique(returns.begin(),returns.end(),
@@ -410,7 +443,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                             }
                         }
                         const bool clear=generated&&road&&lane_clear(candidate)&&
-                            CartesianAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,dt,&blocking,execution_->avoid.obstacle_id,&margin_recovery);
+                            CartesianAvoidTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,dt,&blocking,recovery_object_id,&margin_recovery,recovery_ids);
                         if(clear)++diagnostic.clear;
                         else if(generated&&road)++diagnostic.collision_rejected;
                         if(!candidate.x.empty()){last_candidate_paths_.push_back(candidate);last_candidate_validity_.push_back(clear);}
@@ -440,7 +473,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             }
         };
         const double locked_delay=committed
-            ? std::max(0.0,ForwardArcDistance(s,v2_avoidance_.map_entry_s,length)):0.0;
+            ? std::max(0.0,ReferenceArcDistance(ref_, s, v2_avoidance_.map_entry_s)):0.0;
         std::vector<double> free_delays;
         const double latest_entry=std::max(0.0,std::min(40.0,gap-clearance-1.0));
         for(double delay=0;delay<=latest_entry+1e-6;delay+=2.0)free_delays.push_back(delay);
@@ -538,7 +571,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         }
 
     }
-    if(!result.candidate_valid&&!result.direction_conflict&&!result.target_behind_ego&&
+    if(!pending_corridor&&!result.candidate_valid&&!result.direction_conflict&&!result.target_behind_ego&&
        (committed||static_confirmed)){
         CartesianPath reconnected;
         if(PlanAvoidReconnection(ego,s,d,speed,initial_a,obstacles,committed,reconnected,result,reconnection_deadline)){
@@ -562,18 +595,31 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     else if(!search_expired)v2_avoidance_.map_search_cursor=0;
     if(committed){
         if(!result.candidate_valid){
+            ++v2_avoidance_.map_search_turn;
             v2_avoidance_.map_speed_profile_valid=false;
             last_failure_reason_=result.blocking_object_id>=0?
                 PlanFailureReason::COLLISION_BLOCKED:PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
             // A fresh checked braking trajectory, never the stale bypass, can
             // still be published while the next search slice remains pending.
             output=CartesianPath{};
-            PlanCollisionBrakingPath(ego,s,d,obstacles,output);
-            if(!output.x.empty()&&!CartesianAvoidTrajectoryClear(output,obstacles,
-                vehicle_shape_,collision_cfg_,dt))output=CartesianPath{};
+            const auto braking_clear=[&](const CartesianPath& path) {
+                return PathObeysSteeringRate(path,dt,wheelbase_,limits_.steering)&&
+                    avoid_road_map_.EvaluateRecoveryPath(path,map_shape,dt,recovery_budget,
+                        v2_avoidance_.map_recovery_overlap_limit_m,v2_avoidance_.map_recovery_active,
+                        v2_avoidance_.map_recovery_settled_travel_m,true,solid_paint_contact_elapsed_s_).drivable&&
+                    CartesianAvoidTrajectoryClear(path,obstacles,vehicle_shape_,collision_cfg_,dt,
+                        nullptr,v2_avoidance_.dynamic_target?execution_->avoid.obstacle_id:-1,
+                        nullptr,&v2_avoidance_.margin_recovery_ids);
+            };
+            PlanCollisionBrakingPathWithSafety(ego,s,d,obstacles,output,
+                limits_.max_longitudinal_accel*.8,0,0,false,braking_clear);
             return false;
         }
-        if(selected_direct_return){
+        if(!result.map_group_valid&&v2_avoidance_.map_group_valid&&
+           ReferenceArcDistance(ref_, s, v2_avoidance_.map_group_end_s)>0) {
+            result.map_group_valid=true;result.map_group_end_s=v2_avoidance_.map_group_end_s;
+        }
+        if(selected_direct_return&&(!result.map_group_valid||ReferenceArcDistance(ref_, s, result.map_group_end_s)<=0)){
             execution_.observeEarlyReturnCandidate(true);
         } else {
             if ((result.selected_target_d >= v2_avoidance_.obstacle_d) !=
@@ -582,7 +628,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             }
             v2_avoidance_.target_d=result.selected_target_d;
             if(may_retime||selected_fresh_entry){
-                const double entry_gap=ForwardArcDistance(s,result.map_entry_s,length);
+                const double entry_gap=ReferenceArcDistance(ref_, s, result.map_entry_s);
                 v2_avoidance_.map_entry_s=result.map_entry_s;
                 v2_avoidance_.map_transition_distance=result.map_transition_distance;
                 v2_avoidance_.shift_entry_distance=gap-std::max(0.0,entry_gap);
@@ -596,16 +642,36 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         v2_avoidance_.map_return_schedule_valid=result.map_return_schedule_valid;
         v2_avoidance_.map_return_start_s=result.map_return_start_s;
         v2_avoidance_.map_return_end_s=result.map_return_end_s;
+        v2_avoidance_.map_group_valid=result.map_group_valid;
+        v2_avoidance_.map_group_end_s=result.map_group_end_s;
+        v2_avoidance_.map_spatial_geometry=result.spatial_geometry.x.empty()?
+            result.candidate_path:result.spatial_geometry;
         v2_avoidance_.map_recovery_path=result.candidate_path;
         v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
         v2_avoidance_.map_speed_profile_valid=true;
         v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
+        v2_avoidance_.map_search_turn=0;
         output=result.candidate_path;UpdateCommittedAvoidLifecycle(s,d,ego.v,result,
                     CanHandoffAvoidToKeep(ego,s,d,obstacles));
         last_failure_reason_=PlanFailureReason::NONE;return true;
     }
     // PREPARE never publishes its bypass. Brake along the reference until static
     // classification and a complete road-constrained bypass are both available.
+    if(result.candidate_valid) {
+        // A PREPARE hint is revalidated, never executed before COMMIT. Retain
+        // its geometry so a late search result does not fall back to WAITING
+        // on each subsequent slice while approaching the same command.
+        v2_avoidance_.map_spatial_geometry=result.spatial_geometry.x.empty()?result.candidate_path:result.spatial_geometry;
+        v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
+        v2_avoidance_.map_entry_s=result.map_entry_s;
+        v2_avoidance_.map_transition_distance=result.map_transition_distance;
+        v2_avoidance_.map_return_schedule_valid=result.map_return_schedule_valid;
+        v2_avoidance_.map_return_start_s=result.map_return_start_s;
+        v2_avoidance_.map_return_end_s=result.map_return_end_s;
+        v2_avoidance_.map_group_valid=result.map_group_valid;
+        v2_avoidance_.map_group_end_s=result.map_group_end_s;
+        v2_avoidance_.map_search_turn=0;
+    } else if(!pending_corridor)++v2_avoidance_.map_search_turn;
     CartesianPath approach;
     const bool approach_generated=generate(0,0,1,1,0,false,true,approach);
     // The Controller can follow a WAITING approach only if the same checked

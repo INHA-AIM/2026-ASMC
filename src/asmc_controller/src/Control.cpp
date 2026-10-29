@@ -179,6 +179,19 @@ void BehaviorCommandCallback(
             g_control.pending_release_command=message->command_id;
         return;
     }
+    // Repeated AVOID heartbeats cannot release a collision stop. A genuinely
+    // new, failure-free moving reference is required on the legacy transport;
+    // bound transport continues to use the stronger request/plan proof above.
+    if(!emergency && g_control.collision_stop_active) {
+        PlannedPath check;
+        if(!g_control.has_trajectory ||
+           g_control.trajectory_received_at<=g_control.collision_stop_at ||
+           !IsMessageFresh(g_control.trajectory_received_at,ros::SteadyTime::now(),g_control.trajectory_timeout) ||
+           g_control.latest_trajectory.header.stamp.toSec()<=g_control.collision_stop_state_stamp ||
+           g_control.latest_trajectory.failure_reason!=asmc_msgs::Trajectory::FAILURE_NONE ||
+           ConvertTrajectory(g_control.latest_trajectory,check)!=TrajectoryStatus::OK)return;
+        g_control.collision_stop_active=false;
+    }
     if (emergency != g_control.emergency_stop_active) {
         ROS_WARN("MPC emergency brake override %s (command_id=%u)",
                  emergency ? "ACTIVE" : "RELEASED", message->command_id);
@@ -332,6 +345,7 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
             g_control.emergency_steering={};
         }
         g_control.emergency_stop_active=false;
+        g_control.collision_stop_active=false;
         if(!gate.request().brake_level)g_control.brake_watchdog.Released();
         g_control.latest_trajectory=gate.plan().trajectory;
         g_control.trajectory_received_at=g_control.binding_plan_received_at;
@@ -373,6 +387,11 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
         // needs maximum braking immediately; the ordinary hold uses only 0.3.
         if (g_control.latest_trajectory.failure_reason ==
             asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED) {
+            if(!g_control.collision_stop_active) {
+                g_control.collision_stop_active=true;
+                g_control.collision_stop_at=ros::SteadyTime::now();
+                g_control.collision_stop_state_stamp=g_control.latest_vehicle_state.header.stamp.toSec();
+            }
             g_control.emergency_stop_active = true;
             PublishEmergencyStop();
             ROS_WARN_THROTTLE(1.0, "Planner trajectory collision blocked: emergency brake");
@@ -459,6 +478,8 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
         g_control.binding_gate.request().signal.enabled && g_control.binding_gate.request().signal.braking_only;
     double acceleration_limit=signal_braking ? 0. : compensate ? response_config.acceleration_limit :
         std::numeric_limits<double>::quiet_NaN();
+    if(g_control.latest_trajectory.failure_reason!=asmc_msgs::Trajectory::FAILURE_NONE)
+        acceleration_limit=std::isfinite(acceleration_limit)?std::min(0.0,acceleration_limit):0.0;
     if(g_control.binding_enabled && g_control.binding_gate.has_request() &&
        g_control.binding_gate.request().recovery_release) {
         const auto& request=g_control.binding_gate.request();
