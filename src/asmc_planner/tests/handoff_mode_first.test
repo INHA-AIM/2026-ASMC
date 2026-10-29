@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="asmc_planner" type="asmc_control_selector_node" name="asmc_control_selector" required="true">
+    <param name="smooth_handoff" value="true"/>
+  </node>
+  <test pkg="asmc_planner" type="handoff_mode_first_test.py" test-name="handoff_mode_first" time-limit="10"/>
+</launch>

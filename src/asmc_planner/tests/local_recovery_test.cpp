@@ -13,8 +13,8 @@ int main(){
  motion.t=3;motion.x=251;a.motion(motion);
  check(!a.at(3,&failure).valid&&failure=="anchor_distance_limit","distance guard remains in force");
  LocalRecoveryPolicy p;
- check(!p.update(1,true,false,true,true,true,false),"does not switch on first stopped scan");
- check(!p.update(1.05,true,false,true,true,true,false),"requires a second planning interval");
+ check(p.update(1,true,false,true,true,true,false),"first native failure immediately selects validated LOCAL");
+ check(p.update(1.05,true,false,true,true,true,false),"no additional repeat-failure waiting interval");
  check(p.update(1.51,true,false,true,true,true,false),"fresh validated LOCAL recovers static blockage");
  check(p.update(1.6,true,false,true,true,false,false),"does not abandon recovery when vehicle starts moving");
  check(p.update(2,true,true,false,true,false,false),"native recovery debounced");
@@ -53,7 +53,7 @@ int main(){
  for(size_t i=0;i<in.points.size();++i){in.points[i].x=100+i*.02;in.points[i].velocity=.12;}
  check(bool(ReframeLocalRecovery(in,target,"local/native/1","test",10.1,.1)),"validated 0.8m slow recovery preserved without speed inflation");
  check(RecoverableAnchorFailure("anchor_time_limit")&&RecoverableAnchorFailure("anchor_distance_limit"),"map expiry permits independent fresh local recovery");
- p.reset();p.update(20,true,false,true,true,false,false);
+ p.reset();check(p.update(20,true,false,true,true,false,false),"moving vehicle switches on first failure before braking to stop");
  check(p.update(20.1,true,false,true,true,false,false),"recovery starts before complete standstill");
  for(auto& q:in.points)q.velocity=0;check(!ReframeLocalRecovery(in,target,"local/native/1","test",10.1,.1),"zero-speed valid wait is not recovery");
  return failures?1:0;

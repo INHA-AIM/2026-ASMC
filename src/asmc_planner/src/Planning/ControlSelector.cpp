@@ -49,9 +49,10 @@ void ControlSelector::modeCallback(const std_msgs::UInt8::ConstPtr& message) {
     return;
   }
   const auto next = static_cast<PlanningMode>(message->data);
-  if(smooth_handoff_ && has_mode_ && next!=mode_ && request_.valid &&
-     request_.target_mode==message->data &&
-     (ros::SteadyTime::now()-request_received_).toSec()<=.25) {
+  // Mode and preparation arrive on different topics. Allow the same bounded
+  // 100ms race when mode arrives first; otherwise it inserts full brake even
+  // when the prepared controller request/candidate follows immediately.
+  if(smooth_handoff_ && has_mode_ && next!=mode_) {
     pending_handoff_=true;pending_mode_=next;pending_started_=ros::SteadyTime::now();
     completeHandoff();publishDiagnostics();return;
   }
@@ -148,7 +149,10 @@ void ControlSelector::handoffCandidate(const asmc_msgs::ControlHandoff::ConstPtr
 
 bool ControlSelector::completeHandoff() {
   if(!pending_handoff_||!initial_anchor_ready_)return false;
-  const auto index=static_cast<uint8_t>(pending_mode_);const auto& c=candidates_[index];
+  const auto index=static_cast<uint8_t>(pending_mode_);
+  if(!request_.valid || request_.target_mode!=index || request_received_.isZero() ||
+      (ros::SteadyTime::now()-request_received_).toSec()>.25)return false;
+  const auto& c=candidates_[index];
   if(!asmc_msgs::handoff::Candidate(c,request_,ros::Time::now()))return false;
   morai_msgs::CtrlCmd cmd;cmd.longlCmdType=c.longl_cmd_type;
   cmd.steering=c.steering;cmd.accel=c.accel;cmd.brake=c.brake;

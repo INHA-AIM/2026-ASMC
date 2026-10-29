@@ -30,7 +30,7 @@ class LocalRecoveryPolicy {
   std::string reason="disabled";
   void reset(){active=false;blocked_since_=healthy_since_=last_=-1;blocked_count_=0;reason="reset";}
   bool update(double now,bool allowed,bool native_progress,bool recoverable,
-              bool candidate_valid,bool nearly_stopped,bool dynamic_risk) {
+              bool candidate_valid,bool /*nearly_stopped*/,bool dynamic_risk) {
     if(!std::isfinite(now)||now<last_){reset();reason="clock_reset";return false;}
     last_=now;
     if(!allowed||dynamic_risk){reset();reason=dynamic_risk?"dynamic_or_pending_yield":"input_or_mode_invalid";return false;}
@@ -41,8 +41,8 @@ class LocalRecoveryPolicy {
     } else {
       healthy_since_=-1;
       if(!recoverable){active=false;blocked_since_=-1;reason="nonrecoverable_native_failure";return false;}
-      // Fresh LOCAL can take over before a full stop. Require consecutive
-      // native failures and at least one nominal plan interval.
+      // A current validated LOCAL path takes over on the first recoverable
+      // failure. No repeat-failure delay or full-stop prerequisite.
       if(blocked_since_<0)blocked_since_=now;
       ++blocked_count_;
     }
@@ -53,8 +53,8 @@ class LocalRecoveryPolicy {
       if(!active){blocked_since_=-1;blocked_count_=0;}
       reason="local_candidate_unavailable";return false;
     }
-    if(!active&&blocked_since_>=0&&blocked_count_>=2&&now-blocked_since_>=.08)active=true;
-    reason=active?(native_progress?"local_recovery_return_debounce":"local_recovery_active"):"waiting_for_repeat_native_failure";
+    if(!active&&!native_progress&&recoverable)active=true;
+    reason=active?(native_progress?"local_recovery_return_debounce":"local_recovery_active"):"waiting_for_valid_local";
     return active;
   }
  private:
