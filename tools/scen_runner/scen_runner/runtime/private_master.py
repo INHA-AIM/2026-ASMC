@@ -60,6 +60,7 @@ class PrivateMaster:
     def __enter__(self):
         if self.strict_port:
             with socket.socket() as probe:
+                probe.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
                 try: probe.bind(('127.0.0.1',self.preferred))
                 except OSError as exc:
                     raise RuntimeError('Requested master port is already owned: %d; no existing master was reused' % self.preferred) from exc

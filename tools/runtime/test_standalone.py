@@ -31,6 +31,14 @@ class StandaloneOwnershipTest(unittest.TestCase):
     def test_disabled_stream_ports_are_not_reserved(self):
         self.assertEqual(ports_from_params({'/morai_udp_bridge/enable_object':False,
                                           '/morai_udp_bridge/object_port':7505},11413)['udp'],[])
+    def test_recently_closed_listener_is_not_a_live_owner(self):
+        with socket.socket() as server:
+            server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+            server.bind(('127.0.0.1',0));server.listen();port=server.getsockname()[1]
+            with socket.create_connection(('127.0.0.1',port),timeout=.2) as client:
+                accepted,_=server.accept();accepted.close()
+                self.assertEqual(client.recv(1),b'')
+        require_tcp_free([port])
     def test_strict_master_refuses_busy_port_before_launching_anything(self):
         with socket.socket() as s:
             s.bind(('127.0.0.1',0));s.listen();port=s.getsockname()[1]

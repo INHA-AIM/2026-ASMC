@@ -42,6 +42,9 @@ def require_tcp_free(ports, workspace=None, reclaim_idle=False):
     for port in ports:
         for attempt in range(21):
             with socket.socket() as probe:
+                # Match ROS/HTTP listeners: a recently closed session can
+                # leave TIME_WAIT sockets, which are not a live port owner.
+                probe.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
                 try:probe.bind(('0.0.0.0',port));break
                 except OSError as exc:
                     if attempt==0 and reclaim_idle and workspace is not None:
