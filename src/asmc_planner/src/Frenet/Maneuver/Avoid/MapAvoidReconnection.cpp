@@ -15,6 +15,9 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
     bool committed,CartesianPath& output,AvoidPrepareResult& result,
     std::chrono::steady_clock::time_point deadline,const StaticAvoidPolicy* policy) {
     const double length=ref_.points.back().s;
+    auto& progress=v2_avoidance_.static_search_cursors[std::clamp(policy?policy->search_level:0,0,5)];
+    if(!v2_avoidance_.dynamic_target&&progress.reconnection_exhausted)return false;
+    const double lateral_limit=v2_avoidance_.dynamic_target?4.0:avoid_cfg_.static_search_lateral_limit;
     const double gap=ReferenceArcDistance(ref_, s, v2_avoidance_.obstacle_s);
     const double pass=gap+v2_avoidance_.obstacle_longitudinal_half_extent+
         vehicle_shape_.rear_overhang+avoid_cfg_.pass_clearance;
@@ -24,7 +27,7 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
     const double delta=std::remainder(ego.yaw-initial_ref.theta,2*M_PI);
     const double slope=std::tan(delta)*(1-initial_ref.kappa*d);
     const double cosine=std::cos(delta);
-    if(std::fabs(cosine)<.2||!std::isfinite(slope))return false;
+    if(std::fabs(cosine)<.2||!std::isfinite(slope)){progress.reconnection_exhausted=true;return false;}
     auto second_for_curvature=[&](double curvature){
         const double metric=1-initial_ref.kappa*d;
         return (curvature-initial_ref.kappa*cosine/metric)*metric*metric/
@@ -36,6 +39,7 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
     std::vector<double> offsets{0.0,d,v2_avoidance_.target_d};
     std::vector<double> first_lengths;
     std::vector<TrackedObject> fixed_objects;
+    std::vector<std::pair<double,double>> primary_occupancy;
     for(const auto& object:obstacles) {
         if(!object.geometry_valid||object.motion_state!=ObjectMotionState::LOW_THREAT)continue;
         if(!object.velocity_unavailable)fixed_objects.push_back(object);
@@ -49,14 +53,25 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
             std::find(policy->object_ids.begin(),policy->object_ids.end(),object.id)!=policy->object_ids.end();
         const double safety=reduced?std::min(collision_cfg_.safety_margin,policy->margin):collision_cfg_.safety_margin;
         const double margin=.5*vehicle_shape_.width+safety+.05;
+        if(!v2_avoidance_.dynamic_target&&target_ahead&&
+           ahead+bounds.near_s-(vehicle_shape_.length-vehicle_shape_.rear_overhang)-safety<=gap&&
+           ahead+bounds.far_s+vehicle_shape_.rear_overhang+safety>=gap)
+            primary_occupancy.push_back({od+bounds.min_d-margin,od+bounds.max_d+margin});
         offsets.push_back(od+bounds.max_d+margin);offsets.push_back(od+bounds.min_d-margin);
         if(od+bounds.min_d<=d+margin&&od+bounds.max_d>=d-margin)
             first_lengths.push_back(ahead+bounds.far_s+vehicle_shape_.rear_overhang+avoid_cfg_.pass_clearance);
     }
-    for(double value=-4;value<=4.0001;value+=.25)offsets.push_back(value);
+    for(double value=-lateral_limit;value<=lateral_limit+1e-4;value+=.25)offsets.push_back(value);
     std::sort(offsets.begin(),offsets.end());
     offsets.erase(std::unique(offsets.begin(),offsets.end(),[](double a,double b){return std::fabs(a-b)<1e-6;}),offsets.end());
-    std::stable_sort(offsets.begin(),offsets.end(),[&](double a,double b){return std::fabs(a-d)<std::fabs(b-d);});
+    const auto blocked=[&](double value) {
+        return std::count_if(primary_occupancy.begin(),primary_occupancy.end(),
+            [&](const auto& interval){return value>interval.first&&value<interval.second;});
+    };
+    std::stable_sort(offsets.begin(),offsets.end(),[&](double a,double b){
+        const auto ba=blocked(a),bb=blocked(b);
+        return ba!=bb?ba<bb:std::fabs(a-d)<std::fabs(b-d);
+    });
     const double crawl=std::min(speed,avoid_cfg_.bypass_speed_cap);
     if(crawl<=.05)return false;
     std::size_t ordinal=0;
@@ -75,7 +90,7 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
     for(double first_length:first_lengths){
         if(first_length<pass)continue;
         for(double via:offsets){
-            if(std::fabs(via)>4.0)continue;
+            if(std::fabs(via)>lateral_limit)continue;
             if(v2_avoidance_.has_requested_target_d&&std::fabs(via-v2_avoidance_.requested_target_d)>1e-6)continue;
             for(double via_slope:{0.0,.25,-.25,.5,-.5})for(double curvature:curvatures)
             for(double last_length:{8.0,12.0,16.0}){
@@ -106,6 +121,19 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
                     const auto rp=Interpolate(ref_,s+station);
                     return FrenetToCartesian(rp,s+station,1,0,EvalPos(polynomial,z),EvalVel(polynomial,z),EvalAcc(polynomial,z));
                 };
+                // Reject impossible representatives before constructing and
+                // retiming hundreds of samples. These exact curve points are
+                // still included in the final complete validation.
+                if(!v2_avoidance_.dynamic_target&&(!policy||policy->mode!=StaticAvoidPolicy::CONTACT_PROGRESS)) {
+                    const auto endpoint=sample(first_length);
+                    if(!v2_avoidance_.map_recovery_active&&
+                       !avoid_road_map_.FootprintInside(endpoint.x,endpoint.y,endpoint.yaw,map_shape))continue;
+                    if(target_ahead&&v2_avoidance_.margin_recovery_ids.empty()) {
+                        const auto passage=sample(std::clamp(gap,0.0,total));
+                        CartesianPath probe;probe.x={passage.x};probe.y={passage.y};probe.yaw={passage.yaw};
+                        if(!StaticAvoidTrajectoryClear(probe,fixed_objects,vehicle_shape_,collision_cfg_,0,policy))continue;
+                    }
+                }
                 bool geometry_valid=true;double peak_curvature=0;
                 CartesianPath geometry;
                 // Spatial precheck prevents time sampling from jumping over a
@@ -197,5 +225,6 @@ bool FrenetPlanner::PlanAvoidReconnection(const CartesianState& ego,double s,dou
         }
     }
     if(accept_best())return true;
+    progress.reconnection_exhausted=true;
     v2_avoidance_.map_reconnection_cursor=0;return false;
 }

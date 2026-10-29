@@ -55,7 +55,7 @@ bool FrenetPlanner::PlanStaticAvoidCreep(const CartesianState& ego,double s,doub
     offsets.insert(offsets.end(),{d,0.0,d+.25,d-.25,d+.5,d-.5,d+1,d-1});
     if(context.has_requested_target_d)offsets.insert(offsets.begin(),context.requested_target_d);
     std::vector<double> unique;
-    for(double offset:offsets)if(std::isfinite(offset)&&std::fabs(offset)<=4&&
+    for(double offset:offsets)if(std::isfinite(offset)&&std::fabs(offset)<=avoid_cfg_.static_search_lateral_limit&&
         std::none_of(unique.begin(),unique.end(),[&](double v){return std::fabs(v-offset)<1e-6;}))unique.push_back(offset);
     VehicleShape road_shape=vehicle_shape_;
     road_shape.width=std::max(road_shape.width,road_shape.road_outer_width);

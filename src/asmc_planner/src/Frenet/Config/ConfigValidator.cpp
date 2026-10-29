@@ -319,6 +319,10 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         error_message="planner/avoid/bypass_accel_cap must be finite and positive";
         return false;
     }
+    if(!CheckPositiveFinite(avoid_cfg.static_search_lateral_limit,"planner/avoid/static_search_lateral_limit",error_message))return false;
+    if(avoid_cfg.static_search_lateral_limit>20.0) {
+        error_message="planner/avoid/static_search_lateral_limit must be in (0, 20]";return false;
+    }
     if (!IsFinite(avoid_cfg.map_search_budget_s) || avoid_cfg.map_search_budget_s <= 0.0 ||
         avoid_cfg.map_search_budget_s > 0.15) {
         error_message = "planner/avoid/map_search_budget_s must be finite and in (0, 0.15]";

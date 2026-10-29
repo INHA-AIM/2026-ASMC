@@ -29,6 +29,17 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     } diagnostic;
     const double requested_speed=speed;
     auto& speed_context=v2_avoidance_;
+    if(avoid_cfg_.static_margin_recovery_enabled&&!speed_context.dynamic_target&&
+       !speed_context.static_recovery_engaged) {
+        const auto initial_body=MakeEgoFootprint(ego,vehicle_shape_,0);
+        for(const auto& object:obstacles)if(geometry::ConvexPolygonDistance(
+            initial_body,PredictObstacleFootprint(object,0))<=collision_cfg_.safety_margin+1e-9) {
+            speed_context.static_recovery_engaged=true;
+            speed_context.static_speed.Enter(avoid_cfg_.static_recovery_speed_cap);
+            speed_context.static_speed_last_s=s;speed_context.static_speed_travel=0;
+            break;
+        }
+    }
     bool nominal_pose_clear=true;
     if(speed_context.static_recovery_engaged) {
         const double traveled=ReferenceArcDistance(ref_,speed_context.static_speed_last_s,s);
@@ -90,9 +101,6 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     auto search_deadline=search_started+std::chrono::duration_cast<std::chrono::steady_clock::duration>(
         std::chrono::duration<double>(slice));
     const auto recovery_deadline=search_deadline;
-    if(avoid_cfg_.static_margin_recovery_enabled&&!v2_avoidance_.dynamic_target)
-        search_deadline=search_started+std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-            std::chrono::duration<double>(slice*.55));
     bool search_expired=false;
     std::size_t candidate_index=0;
     const std::size_t resume_at=v2_avoidance_.map_search_cursor;
@@ -100,6 +108,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     bool indexed_candidate_selected=false;
     std::set<std::tuple<double,double,double,double,double,bool,bool>> evaluated;
     const double length=ref_.points.back().s;
+    const double search_lateral_limit=v2_avoidance_.dynamic_target?4.0:avoid_cfg_.static_search_lateral_limit;
     const double gap=ReferenceArcDistance(ref_, s, v2_avoidance_.obstacle_s);
     if(committed&&v2_avoidance_.map_return_schedule_valid&&
        (!v2_avoidance_.map_group_valid||ReferenceArcDistance(ref_, s, v2_avoidance_.map_group_end_s)<=0)&&
@@ -311,9 +320,12 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         return false;
     };
 
-    if(v2_avoidance_.static_progress_level>0)
+    const bool priority_search=avoid_cfg_.static_margin_recovery_enabled&&
+        !v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
+        !result.direction_conflict&&!result.target_behind_ego;
+    if(priority_search)
         PlanStaticAvoidRecovery(ego,s,d,speed,initial_a,obstacles,command,committed,result,recovery_deadline);
-    if(!result.candidate_valid&&!v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
+    if(!priority_search&&!result.candidate_valid&&!v2_avoidance_.dynamic_target&&(committed||static_confirmed)&&
        !result.direction_conflict&&!result.target_behind_ego) {
         const bool reconnect_turn=v2_avoidance_.map_search_turn%2==1&&v2_avoidance_.map_corridor_cursor==0;
         const auto corridor_deadline=reconnect_turn?search_started:search_deadline;
@@ -395,9 +407,10 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     }
 
     const auto reconnection_deadline=search_deadline;
-    bool selected_fresh_entry=false;
+    bool selected_fresh_entry=priority_search&&result.candidate_valid&&!result.retained_geometry;
     bool selected_direct_return=returning;
-    const bool pending_corridor=!committed&&result.search_pending&&v2_avoidance_.map_corridor_cursor>0;
+    const bool pending_corridor=priority_search||
+        (result.search_pending&&!v2_avoidance_.static_search_cursors[0].center_done);
     if(!pending_corridor&&!result.candidate_valid&&!v2_avoidance_.dynamic_target&&
        v2_avoidance_.map_search_turn%2==1) {
         CartesianPath connected;
@@ -591,7 +604,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                     const double expansion=std::min(2.0,std::max(0.0,avoid_cfg_.committed_recovery_max_expansion));
                     for(double extra=step;extra<=expansion+1e-6&&!result.candidate_valid&&!search_expired;extra+=step){
                         const double widened=alternative+(locked_left?-extra:extra);
-                        if(std::fabs(widened)<=4.0)evaluate_target(widened,free_delays,return_advance,false,true);
+                        if(std::fabs(widened)<=search_lateral_limit)evaluate_target(widened,free_delays,return_advance,false,true);
                     }
                     keep_return_schedule=saved_schedule;
                 }
@@ -614,7 +627,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                     for(double base:targets){
                         const double side=base>=v2_avoidance_.obstacle_d?1.0:-1.0;
                         const double widened=base+side*extra;
-                        if(std::fabs(widened)>4.0)continue;
+                        if(std::fabs(widened)>search_lateral_limit)continue;
                         evaluate_target(widened,may_retime?free_delays:nominal_delays,return_advance);
                     }
                 }
@@ -648,10 +661,17 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         }
     }
     if(result.candidate_valid && !lane_clear(result.candidate_path)) result.candidate_valid=false;
-    if(!result.candidate_valid)
+    if(!priority_search&&!result.candidate_valid)
         PlanStaticAvoidRecovery(ego,s,d,speed,initial_a,obstacles,command,committed,result,recovery_deadline);
+    if(!priority_search&&!result.candidate_valid&&
+       v2_avoidance_.static_search_cursors[0].corridor_exhausted&&
+       v2_avoidance_.static_search_cursors[0].reconnection_exhausted)
+        v2_avoidance_.static_search_cursors={};
     if(result.candidate_valid){
         retain_static_policy();
+        if(result.static_search_pending_level<0) {
+            v2_avoidance_.static_search_cursors={};
+        }
         result.blocking_object_id=-1;
         // Keep the successful search position for PREPARE -> EXECUTE
         // revalidation, including static obstacles. Restarting at zero can
@@ -665,6 +685,13 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     else if(!search_expired)v2_avoidance_.map_search_cursor=0;
     if(committed){
         if(!result.candidate_valid){
+            // A blocked committed nominal plan also loses its speed proof.
+            // This is a speed constraint only, not permission to lower margins.
+            if(priority_search&&!v2_avoidance_.static_recovery_engaged) {
+                v2_avoidance_.static_recovery_engaged=true;
+                v2_avoidance_.static_speed.Enter(avoid_cfg_.static_recovery_speed_cap);
+                v2_avoidance_.static_speed_last_s=s;v2_avoidance_.static_speed_travel=0;
+            }
             InvalidateStaticAvoidSpeedProof();
             ++v2_avoidance_.map_search_turn;
             v2_avoidance_.map_speed_profile_valid=false;
@@ -693,6 +720,11 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         if(selected_direct_return&&(!result.map_group_valid||ReferenceArcDistance(ref_, s, result.map_group_end_s)<=0)){
             execution_.observeEarlyReturnCandidate(true);
         } else {
+            // Reprojection can move a fixed OBB's derived target by microns.
+            // Keep the execution target stable; the selected curve itself has
+            // already passed the full checks at its newly computed geometry.
+            if(std::fabs(result.selected_target_d-v2_avoidance_.target_d)<1e-4)
+                result.selected_target_d=v2_avoidance_.target_d;
             if ((result.selected_target_d >= v2_avoidance_.obstacle_d) !=
                 (v2_avoidance_.target_d >= v2_avoidance_.obstacle_d)) {
                 v2_avoidance_.map_side_reselected = true;

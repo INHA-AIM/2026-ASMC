@@ -12,6 +12,8 @@ struct StaticAvoidPolicy {
     Mode mode=NORMAL;
     double margin=.45;
     std::vector<int> object_ids;
+    // Cooperative search state only; never changes collision eligibility.
+    int search_level=0;
 };
 
 bool IsStaticAvoidProgressObject(const TrackedObject& object);

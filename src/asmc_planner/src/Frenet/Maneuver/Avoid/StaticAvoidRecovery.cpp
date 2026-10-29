@@ -24,6 +24,9 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
         trial=result;trial.candidate_valid=false;trial.generated_candidate_count=trial.valid_candidate_count=0;
         trial.retained_geometry=false;trial.rejection_stage.clear();
         trial.static_progress_fresh=false;
+        trial.search_pending=false;trial.static_search_pending_level=-1;
+        trial.static_corridor_kind.clear();
+        policy.search_level=level;
         policy.mode=level==0?StaticAvoidPolicy::NORMAL:
             level==5?StaticAvoidPolicy::CONTACT_PROGRESS:StaticAvoidPolicy::REDUCED_MARGIN;
         policy.margin=level==5?0.0:margins[level];
@@ -50,9 +53,10 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
             context.map_spatial_geometry=context.last_nominal.spatial_geometry;
         }
         const auto now=std::chrono::steady_clock::now();
-        const auto budget=retained_only?now:std::min(deadline,now+std::chrono::milliseconds(6));
+        const auto budget=retained_only?now:level==0?deadline:
+            std::min(deadline,now+std::chrono::milliseconds(6));
         bool ok=false;
-        if(level!=5||!context.static_progress_fresh)
+        if(retained_only||level==0||!slot.corridor_exhausted)
             ok=PlanStaticAvoidCorridor(ego,s,d,cap,seed,objects,command,committed,trial,budget,&policy);
         if(old_nominal) {
             context.map_spatial_geometry=std::move(active_geometry);
@@ -77,7 +81,8 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
                 if(!ok&&!fresh.rejection_stage.empty())trial.rejection_stage=fresh.rejection_stage;
             }
         }
-        if(!retained_only&&std::chrono::steady_clock::now()<budget&&(!ok||level==5)) {
+        if(!retained_only&&slot.center_done&&!slot.reconnection_exhausted&&
+           std::chrono::steady_clock::now()<budget&&(!ok||level==5)) {
             AvoidPrepareResult alternative=trial;
             alternative.candidate_valid=false;alternative.generated_candidate_count=alternative.valid_candidate_count=0;
             CartesianPath connected;
@@ -94,13 +99,12 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
         generated+=trial.generated_candidate_count;valid+=trial.valid_candidate_count;
         if(ok) {
             trial.static_recovery_rejection.clear();
-            trial.static_execution_speed_cap=cap;
+            if(!trial.static_speed_retry)trial.static_execution_speed_cap=std::min(cap,avoid_cfg_.bypass_speed_cap);
             trial.static_progress_mode=policy.mode;trial.static_progress_level=level;
             trial.static_progress_margin=policy.margin;
-            // A newly generated body-clear route is preferable to contact.
-            if(level==5&&trial.static_contact_cost==0&&!trial.retained_geometry&&!trial.static_progress_fresh) {
-                trial.static_progress_mode=StaticAvoidPolicy::REDUCED_MARGIN;trial.static_progress_level=4;
-            }
+            // A contact prefix that happens to be clear for its short horizon
+            // is still a prefix. Only a complete tier-4 body-clear route may
+            // claim REDUCED_MARGIN and its higher speed cap.
         }
         if(!ok&&!trial.rejection_stage.empty())result.static_recovery_rejection=trial.rejection_stage;
         return ok;
@@ -111,29 +115,64 @@ bool FrenetPlanner::PlanStaticAvoidRecovery(const CartesianState& ego,double s,d
     };
     AvoidPrepareResult trial;
     const int active=context.static_progress_level;
+    AvoidPrepareResult incumbent;
+    const bool may_retain_active=active>0&&(active<5||avoid_cfg_.static_contact_progress_enabled);
+    bool have_incumbent=may_retain_active&&run(active,true,incumbent);
+    // Refresh a rolling prefix at its CURRENT already-authorized tier before
+    // background improvement search. This is not a new downgrade and prevents
+    // the stop endpoint of an old short prefix from becoming a deadlock.
+    if(may_retain_active&&!have_incumbent&&std::chrono::steady_clock::now()<deadline)
+        have_incumbent=run(active,false,incumbent);
+    const auto pending=[&](int level) {
+        result.search_pending=true;result.static_search_pending_level=level;
+        if(have_incumbent) {
+            incumbent.search_pending=true;incumbent.static_search_pending_level=level;
+            return accept(incumbent);
+        }
+        result.generated_candidate_count=generated;result.valid_candidate_count=valid;
+        return false;
+    };
+    const auto unfinished=[&](int level) {
+        const auto& cursor=context.static_search_cursors[level];
+        return !cursor.corridor_exhausted||!cursor.reconnection_exhausted;
+    };
     if(active>0) {
-        if(run(0,true,trial))++context.static_normal_clear_cycles;else context.static_normal_clear_cycles=0;
-        if(context.static_normal_clear_cycles>=3)return accept(trial);
-        // Keep the accepted reduced margin until a checked normal corridor is
-        // stable. Contact progress continues searching for a body-clear route.
-        if(active<5&&run(active,true,trial))return accept(trial);
+        if(run(0,true,trial)) {
+            if(++context.static_normal_clear_cycles>=3||!have_incumbent)return accept(trial);
+            return pending(0);
+        }
+        context.static_normal_clear_cycles=0;
     }
-    for(int level=std::max(1,active<5?active:1);level<=4;++level) {
+    // Search exhaustion, not a slice timeout, permits the next clearance tier.
+    // The current checked incumbent may continue while a better tier is pending.
+    if(unfinished(0)) {
+        if(std::chrono::steady_clock::now()>=deadline)return pending(0);
+        if(run(0,false,trial))return accept(trial);
+        if(unfinished(0))return pending(0);
+    } else if(std::chrono::steady_clock::now()<deadline) {
+        // A fresh observation may open the center while a lower-tier sweep is
+        // pending. Probe only that priority family; do not restart the entire
+        // outer enumeration on every LiDAR frame.
+        if(run(0,false,trial))return accept(trial);
+        if(trial.search_pending)return pending(0);
+    }
+    for(int level=1;level<=4;++level) {
         if(margins[level]>=collision_cfg_.safety_margin)continue;
         if(run(level,true,trial))return accept(trial);
-    }
-    for(int attempt=0;attempt<4&&std::chrono::steady_clock::now()<margin_deadline;++attempt) {
-        int level=context.static_search_level;
-        context.static_search_level=level==4?1:level+1;
-        if(margins[level]>=collision_cfg_.safety_margin)continue;
-        if(active>0&&active<5&&level<active)continue;
+        if(!unfinished(level))continue;
+        if(std::chrono::steady_clock::now()>=margin_deadline)return pending(level);
         if(run(level,false,trial))return accept(trial);
+        if(unfinished(level))return pending(level);
     }
     // A fresh rolling road-constrained prefix is also available during PREPARE,
     // before any nominal route exists. Execution still requires atomic COMMIT.
     if(avoid_cfg_.static_contact_progress_enabled) {
+        if(have_incumbent)return accept(incumbent);
         if(run(5,false,trial))return accept(trial);
     }
+    // A completed unsuccessful sweep may be retried on the next observations;
+    // a previously blocked topology must not become a permanent rejection.
+    context.static_search_cursors={};
     result.generated_candidate_count=generated;result.valid_candidate_count=valid;
     return false;
 }

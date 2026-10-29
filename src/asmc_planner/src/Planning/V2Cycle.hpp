@@ -947,6 +947,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                        ? "committed avoid path blocked by collision"
                        : "could not generate the committed avoid path");
             if(committed.search_pending)detail+="; static corridor search pending";
+            if(committed.static_search_pending_level>=0)
+                detail+="; static search pending level="+std::to_string(committed.static_search_pending_level);
             if(!committed.rejection_stage.empty())detail+="; corridor rejection="+committed.rejection_stage;
             if(!committed.static_recovery_rejection.empty())
                 detail+="; static recovery rejection="+committed.static_recovery_rejection;
@@ -1131,6 +1133,10 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 " next_speed_cap="+std::to_string(committed.static_next_speed_cap)+
                 " proof_frames="+std::to_string(committed.static_speed_proof_frames);
         if(committed.static_speed_retry)executing.detail+=" speed_retry=1";
+        if(!committed.static_corridor_kind.empty())executing.detail+="; corridor="+committed.static_corridor_kind;
+        if(committed.static_search_pending_level>=0)
+            executing.detail+="; static search pending level="+std::to_string(committed.static_search_pending_level);
+        if(committed.escape_recovery_required)executing.detail+="; initial_margin_escape=1";
         port.trajectory_pub_.publish(trajectory);
         port.publishDebugMarkersV2(trajectory, command);
         port.publishFeedbackV2(feedback_command_id, executing, &trajectory,
@@ -1523,6 +1529,10 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         if(prepare.candidate_valid&&prepare.static_progress_mode!=StaticAvoidPolicy::NORMAL)
             prepared.detail+="; static recovery policy="+std::to_string(int(prepare.static_progress_mode))+
                 " margin="+std::to_string(prepare.static_progress_margin);
+        if(prepare.static_search_pending_level>=0)
+            prepared.detail+="; static search pending level="+std::to_string(prepare.static_search_pending_level);
+        if(!prepare.static_corridor_kind.empty())prepared.detail+="; corridor="+prepare.static_corridor_kind;
+        if(prepare.escape_recovery_required)prepared.detail+="; initial_margin_escape=1";
 
         port.trajectory_pub_.publish(published);
         port.publishDebugMarkersV2(published, command);

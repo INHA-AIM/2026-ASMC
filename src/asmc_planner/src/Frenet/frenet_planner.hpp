@@ -509,6 +509,8 @@ public:
         CartesianPath spatial_geometry;
         bool retained_geometry = false;
         bool search_pending = false;
+        int static_search_pending_level=-1;
+        std::string static_corridor_kind;
         std::string rejection_stage;
         StaticAvoidPolicy::Mode static_progress_mode=StaticAvoidPolicy::NORMAL;
         int static_progress_level=0;
@@ -1158,7 +1160,10 @@ private:
         unsigned static_target_missing_cycles=0;
         int static_search_level=1;
         int static_normal_clear_cycles=0;
-        struct StaticSearchCursor { std::size_t corridor=0,reconnection=0; };
+        struct StaticSearchCursor {
+            std::size_t corridor=0,reconnection=0;
+            bool center_done=false,corridor_exhausted=false,reconnection_exhausted=false;
+        };
         std::array<StaticSearchCursor,6> static_search_cursors{};
         AvoidPrepareResult last_nominal;
         // Only objects already inside the nominal margin at the beginning of

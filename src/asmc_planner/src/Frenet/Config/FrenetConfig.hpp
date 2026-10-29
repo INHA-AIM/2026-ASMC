@@ -78,6 +78,7 @@ struct FollowingConfig {
 struct AvoidConfig {
     // Cooperative search slice; unfinished candidates resume from fresh inputs.
     double map_search_budget_s = 0.08;
+    double static_search_lateral_limit=6.0;
     // Map-aware bypass cruise speed; independent of KEEP's low-speed fallback.
     double bypass_speed_cap = 2.0; // [m/s]
     double bypass_accel_cap = 2.0; // [m/s^2], Controller's achievable positive response

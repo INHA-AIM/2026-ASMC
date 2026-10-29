@@ -137,6 +137,15 @@ void LostId(const std::string& config) {
         ego=State(frames[i]["ego"]);objects=Objects(frames[i]["objects"]);
         p.PlanCommittedAvoid(ego,objects,c,path,r);
     }
+    // New observations can require several bounded nominal/clearance search
+    // slices. Pending is not permission to immediately accept contact progress.
+    bool settled=false,pending_only=true;
+    for(int i=0;i<150&&!settled;++i) {
+        settled=p.PlanCommittedAvoid(ego,objects,c,path,r)&&path.x.size()>1;
+        if(!settled)pending_only&=r.search_pending;
+    }
+    Expect(settled&&pending_only,"ID-loss clearance search finishes in bounded slices before selecting recovery");
+    if(!settled)return;
     bool valid=true,phase=true,consumer=true,slow=true;
     for(int i=0;i<90;++i) {
         const bool ok=p.PlanCommittedAvoid(ego,objects,c,path,r);

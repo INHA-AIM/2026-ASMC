@@ -99,6 +99,44 @@ Candidate counts and one blocker ID do not describe every rejected candidate.
 
 ## MORAI progress recovery
 
+Static search uses one shared planning slice (at most 70% of the configured
+planning period), rather than reserving 45% for immediate clearance relaxation.
+An accepted incumbent is checked first. A new corridor follows this priority:
+
+1. A center interval computed from both sides of the overlapping occupancy,
+   with the nominal margin against every object.
+2. Bounded left/right and mixed-side nominal alternatives, ranked by lateral
+   effort; the configured right preference is only a tie-break.
+3. Complete body-clear routes at 0.30, 0.20, 0.10 and 0 m, in that order.
+4. Explicitly enabled 0.5 m/s contact-progress prefixes.
+
+The interval proposal includes side objects outside the original reference
+corridor. It does not replace dense spatial, timed collision, road-exterior,
+curvature, slew, acceleration, jerk or stop-tail checks. A certified center
+route wins immediately; finding every outside detour first is unnecessary.
+The search target bound is `planner/avoid/static_search_lateral_limit` (6 m).
+It is not a collision exemption or a replacement for the separate external
+target-pose projection limit. Configuration rejects nonpositive, nonfinite or
+over-20-m bounds to keep grid construction finite. Initial margin escape is separately diagnosed
+and does not authorize nominal speed recovery.
+
+Each clearance tier retains its enumeration cursors and completion flags.
+`static search pending level=N` means the higher-priority bounded family is
+unfinished, not infeasible. Time expiry alone cannot authorize a new lower
+tier. While a better tier is pending, an incumbent at its already authorized
+tier can continue only after fresh validation. Its rolling prefix is refreshed
+before reaching its stop endpoint. A completely unsuccessful sweep can start
+again on later observations; tracker IDs never grant recovery permission.
+Exact curve-point collision/road probes cheaply reject impossible reconnection
+representatives before full geometry construction. Surviving candidates still
+pass the entire checks. The deadline is cooperative; a validation already in
+progress can finish beyond the slice, so runtime tail latency still matters.
+
+Feedback adds `corridor=center/left/right/mixed/retained` and pending-tier
+diagnostics to PREPARE and execution. A short contact prefix with no immediate
+overlap keeps contact-prefix provenance and its 0.5 m/s cap; only a complete
+body-clear route may claim reduced-margin execution at 1 m/s.
+
 The MORAI `autonomy_no_bridges_v2.launch` now enables static recovery and
 explicit contact progress. Existing launch commands work unchanged. Set
 `static_avoid_contact_progress:=false` to keep physical contact blocked, or

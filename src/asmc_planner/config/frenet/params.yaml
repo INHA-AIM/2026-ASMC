@@ -146,6 +146,9 @@ planner:
 
   # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
+    # Static intermediate targets; full road/body/actuation checks still apply.
+    # External target-pose validation remains a separate input constraint.
+    static_search_lateral_limit: 6.0
     bypass_speed_cap: 4.2     # [m/s] C091: five recorded passes; higher caps need a new return-safety proof
     bypass_accel_cap: 2.0    # [m/s^2] asmc_controller accel_max; braking remains independent
     # The MORAI autonomy launch explicitly enables these policies. Core/offline
