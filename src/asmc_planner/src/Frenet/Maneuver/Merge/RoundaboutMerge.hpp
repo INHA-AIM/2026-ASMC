@@ -5,6 +5,25 @@
 #include "Frenet/Reference/Reference.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 
+enum class RoundaboutEntryStatus {
+    NOT_EVALUATED, OBSERVATION_UNVERIFIABLE, PATH_REJECTED, CONFIRMING,
+    OUTSIDE_ENTRY_ZONE, STALE_INPUT, WAITING_PATH_INVALID, PATH_CONVERSION_FAILED, READY
+};
+
+inline const char* RoundaboutEntryStatusName(RoundaboutEntryStatus status) {
+    switch(status) {
+        case RoundaboutEntryStatus::OBSERVATION_UNVERIFIABLE:return "observation_unverifiable";
+        case RoundaboutEntryStatus::PATH_REJECTED:return "departure_path_rejected";
+        case RoundaboutEntryStatus::CONFIRMING:return "confirming";
+        case RoundaboutEntryStatus::OUTSIDE_ENTRY_ZONE:return "outside_entry_zone";
+        case RoundaboutEntryStatus::STALE_INPUT:return "stale_input";
+        case RoundaboutEntryStatus::WAITING_PATH_INVALID:return "waiting_path_invalid";
+        case RoundaboutEntryStatus::PATH_CONVERSION_FAILED:return "path_conversion_failed";
+        case RoundaboutEntryStatus::READY:return "ready";
+        default:return "not_evaluated";
+    }
+}
+
 // A single map-defined roundabout entry. Highway merge/reference switching
 // remain separate callers of the transaction contract.
 struct RoundaboutMergeConfig {

@@ -22,6 +22,7 @@
 #include "Behavior/Feature/DynamicObjectPolicy.hpp"
 #include "Parser/StaticMissionPolicy.hpp"
 #include "Execution/IntentEncoder.hpp"
+#include "Execution/RoundaboutReadyNotice.hpp"
 #include "Behavior/Feature/feature_builder.hpp"
 #include "Output/Behavior/data_logger.hpp"
 #include "Behavior/Map/mgeo_loader.hpp"
@@ -120,6 +121,7 @@ class BehaviorInput {
   PerceptionObjects objects_;
   asmc_msgs::PlanFeedback feedback_;
   asmc_msgs::FrenetFeedback feedback_v2_;
+  RoundaboutReadyNotice roundabout_ready_notice_;
   ros::SteadyTime feedback_v2_received_at_;
   ros::SteadyTime objects_received_at_;
   ros::SteadyTime ego_received_at_;

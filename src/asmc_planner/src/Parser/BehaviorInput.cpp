@@ -801,8 +801,17 @@ void BehaviorInput::runOnce() {
   UrbanFeature decision_feature=feature;
   const bool signal_scoped=signal_active_ && signal_active_->enabled() && signal_active_->inScope();
   if(signal_scoped)decision_feature.signal.light_state=TrafficLightState::GREEN;
+  auto decision_feedback = NormalizeFeedback(feedback);
+  if (use_v2_interface_) {
+    std::lock_guard<std::mutex> lock(feedback_mutex_);
+    // Keep the actual latest feedback for arbitration and command sequencing.
+    // Only the maneuver lifecycle consumes the previously observed READY.
+    if (roundabout_ready_notice_.consume(feedback, ros::SteadyTime::now().toSec(),
+                                        feedback_v2_stale_seconds_))
+      decision_feedback.execution_state = PlannerExecutionState::READY;
+  }
   BehaviorContextData context = use_v2_interface_
-      ? decision_.decide(decision_feature, NormalizeFeedback(feedback),
+      ? decision_.decide(decision_feature, decision_feedback,
                          v2_command_manager_.activeCommandId())
       : decision_.decide(decision_feature, feedback_);
   if(signal_scoped) {
@@ -933,6 +942,10 @@ void BehaviorInput::runOnce() {
   if (use_v2_interface_) {
     const auto command = v2_command_manager_.update(
         context, feedback, ros::Time::now(), command_validity_seconds_);
+    {
+      std::lock_guard<std::mutex> lock(feedback_mutex_);
+      roundabout_ready_notice_.issuedCommand(command);
+    }
     command_v2_pub_.publish(command); // external compatibility mirror
     asmc_msgs::binding::Request request;
     if(control_binding_enabled_ && !controller_epoch_.empty()) {
@@ -1062,6 +1075,7 @@ void BehaviorInput::receiveFeedback(const asmc_msgs::FrenetFeedback& feedback) {
   feedback_v2_ = feedback;
   feedback_v2_received_at_ = ros::SteadyTime::now();
   feedback_v2_received_ = true;
+  roundabout_ready_notice_.observe(feedback, feedback_v2_received_at_.toSec());
 }
 
 }  // namespace behavior_planner
