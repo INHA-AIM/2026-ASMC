@@ -129,6 +129,18 @@ int main() {
     }
     expect(objects[0].motion_sweep.empty(),"recent prediction cannot renew itself after the object actually stops");
     history.clear();
+    for(int i=0;i<5;++i) {
+      Obstacle o;o.id=46;o.polygon=polygon(8.,2.);objects={o};
+      history.apply(objects,Pose{},40.+.08*i,2.);
+    }
+    expect(objects[0].motion_sweep.empty(),"a standing crossing actor is not forecast as moving");
+    for(int i=0;i<4;++i) {
+      objects[0].polygon=polygon(8.,2.-.16*(i+1));
+      history.apply(objects,Pose{},40.4+.08*i,2.);
+    }
+    expect(!objects[0].motion_sweep.empty() && objects[0].local_vy<-1.9,
+           "four actual moving observations do not remain diluted by a long stationary prefix");
+    history.clear();
     auto near=empty();Obstacle ob;ob.id=3;ob.polygon=polygon(2.,c.width*.5+.36);near.obstacles={ob};
     c.recovery_geometry=true;Result margin;
     expect(!CheckFootprint(near,c,Pose{},margin),"crawl retains ten centimetre minimum physical OBB margin");

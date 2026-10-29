@@ -47,6 +47,11 @@ public:
       if(!q.empty() && (stamp-q.back().t>.30 || std::hypot(a.x-q.back().x,a.y-q.back().y)>1.5)) {q.clear();recent_.erase(o.id);}
       if(q.empty() || stamp>q.back().t)q.push_back(a);
       while(q.size()>8 || (!q.empty() && stamp-q.front().t>.60))q.pop_front();
+      // Use the shortest window that still satisfies the original four
+      // unique observations/200ms rule. Mixing a long stationary prefix with
+      // a new crossing delayed/repeatedly invalidated the constant-speed fit.
+      // This is a causal window choice, not fewer confirmations or new time.
+      while(q.size()>4 && stamp-q[1].t>=.20)q.pop_front();
       if(q.size()<4 || q.back().t-q.front().t<.20)continue;
       // Shape/face jumps are not rigid motion. Do not let OBB growth turn a
       // guardrail/partial cluster into a confident moving obstacle.
