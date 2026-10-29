@@ -1,7 +1,8 @@
 # 세 재밍 방식의 책임과 파라미터
 
-2026-10-29 비교 통합 브랜치 기준. 진행 중인 LOCAL 후속 기능의 수입과 실제 비교 주행은
-사용자의 작업 완료 통보 이후에 수행한다. 아래 변경은 그 작업트리를 수정하지 않는다.
+2026-10-30 비교 통합 브랜치 기준. LOCAL 완료 checkpoint `5f9e1cfa`의 후보
+우선순위와 근거리 관측 기반 방향 비용을 선별했다. 원래 작업트리와 그 실험의
+차폭·복구 설정은 변경하지 않았다. 실험 후보를 전체 주행 수락으로 해석하지 않는다.
 
 ## 실행 책임
 
@@ -69,11 +70,12 @@ Frenet/LOCAL 시간 매개화도 검증 이력이 달라 공통 모듈 안에서
 |---|---|---|
 | `vehicle_width`, `vehicle_length`, `rear_axle_to_bumper` | 실제 차체 footprint와 차량 기준점 |1.892/4.635/0.790m |
 | `clearance_margin` | LOCAL의 차체 밖 추가 물체/노면 여유 |30cm, 셀 양자화·일부 속도 항목 별도 |
-| `preferred_clearance` | LOCAL에서 더 넓은 통로를 선호하는 비용 |55cm, 이 값 미만이라고 무조건 거절하지 않음 |
+| `preferred_clearance`, `maneuver_clearance` | LOCAL의 넓은 통로 선호 비용 / 근접 기동 감속 판정 |각55cm로 기존 동작 보존. 선호값 미만이라고 무조건 거절하지 않음 |
 | `Config.margin` | localization의 추가 최종 OBB 검사 |10cm. native Frenet 검사를 대체하지 않음 |
 | `collision_check.safety_margin` | native Frenet의 물체 충돌 여유 |45cm, 시간 증가율0.1m/s 유지 |
-| `vehicle_shape.road_outer_width` | Frenet의 도로 포함 검사 전용 총 폭 |2.161m 유지. 실제 차체 폭과 다른 추가 도로 여유 |
-| `wall_reserve_m` | 측정된 터널 벽/바닥 확장 폴리곤의 벽 여유 |최소65cm, 터널 station·지도 SHA 제한 |
+| `vehicle_shape.road_outer_width` | 일부 도로·실선·출발·정지선 검사에서 사용하는 보수적인 총 폭 |2.161m. 전 범용 footprint가 아니라 해당 호출에서만 사용 |
+| `boundary_reserve_each_side_m` | 위 외형 proxy를 실제 폭과 구분한 편측 차이 |13.45cm. 총 폭과 함께 있으면 `width+2*reserve=road_outer_width`를 검증 |
+| `wall_reserve_m` | 터널 확장 자산에 기록된 벽 여유의 선언·최소 검증값 |최소65cm. 로더가 폴리곤을 다시65cm 깎지는 않음. 작성 근거의 재확인은 별도 |
 | `jamming_avoid_clearance` | camera 회피선의 차체-장애물 횡간격 |통합20cm. LOCAL 작업트리에 남은5cm는 camera 전용 설정 |
 | `jamming_obstacle_lateral_margin` | camera 차체 모서리·도로 경계·일부 장애물 검사 |통합20cm. LOCAL 작업트리의5cm도 LOCAL 경로 알고리즘 값이 아님 |
 | `avoid_plan_margin` | camera 후보 선택 때 추가하는 계획 여유 |`반차폭 + avoid_clearance + avoid_plan_margin`으로 사용 |
@@ -82,6 +84,46 @@ Frenet/LOCAL 시간 매개화도 검증 이력이 달라 공통 모듈 안에서
 | `jamming_avoid_line_extra` | camera가 통과 가능한 회피선에서 더 바깥으로 미는 선 단위 값 |통합0.0. LOCAL 작업트리의1.0은1m라는 뜻이 아님 |
 | `avoid_max_shoulder`, `avoid_wall_margin` | camera가 LiDAR 벽을 확인한 쪽의 확장 한계/벽 여유 |통합 shoulder0m. overrun 및 localization 지도 확장과 별개 |
 | `uncertainty`, `source_age`, `extra_clearance` | 물체 나이/운동 불확실성과 취약 대상 여유 |실제 footprint 위의 별도 보수성, 무효 속도를0으로 바꾸지 않음 |
+
+### 실제 검사·계산 경로
+
+| 항목·분류 | 설정 로딩·사용 지점 | 계산·조절 효과 |
+|---|---|---|
+| 실제 제원 `width=1.892`, `length=4.635`, `rear=.790` [m] | `jamming_motion.yaml` → LOCAL/localization private parameter → `MakeEgoFootprint`; native는 `frenet/params.yaml`, camera는 자신의 launch | 전체 폭1.892, 반폭0.946. 앞 범퍼까지3.845; wheelbase3과 앞 overhang0.845는 별도 |
+| LOCAL 제원 일치 | 공통 YAML → 알고리즘 YAML → 명시 launch 값. `local/node.cpp`가 최종 제원을 검증 | 알고리즘 설정에서 다른 제원을 조용히 덮지 않고 시작을 거절. 정책 override는 명시 순서에 따름 |
+| 도로 외형 proxy | native `ConfigLoader` → `road_outer_width`; `TouchesPaint(all_solids)`, 출발·정지선 등 기존 호출 | `1.892+2×.1345=2.161`m. `DrivablePoseClear`는 전달받은 `shape.width`를 사용. 새 reserve를 모든 호출에 추가하지 않음 |
+| LOCAL 물체 하드 여유 | `clearance_margin=.30` → `CheckFootprint` | 현재 OBB에 대한 차체 polygon 거리 ≤ `.30+min(.25,.015v²)+uncertainty+extra`이면 거절. recovery의 현재 polygon에는 속도 항을 빼는 기존 정책이 따로 있음 |
+| LOCAL raster·셀 | `road_clearance_margin=.30`, grid 해상도 → `CheckFootprint`·탐색/복구 범위 | 비노면 하드 반폭 `.946+.30+resolution/√2`;0.1m 셀이면1.31671m. 속도 추가 띠는 일부 soft 비용 |
+| LOCAL 통로 선호·기동 감속 | `preferred_clearance=.55` → `SegmentQualityCost`; `maneuver_clearance=.55` → `BuildSpeedProfile` | 선호 비용과 근접 기동 속도 상한을 분리. 구 설정에서 새 값 미지정 시 기존 선호값을 따른다 |
+| 관측 불확실성 | LOCAL 입력의 `source_age`와 motion budget → `Obstacle.uncertainty` | 기본 `age×max(5m/s, 유효 속도 크기)`; 조용한 과거 형상 예외 등은 별도 조건. 유효하지 않은 속도를 유효0으로 바꾸지 않음 |
+| 취약 대상 | LOCAL 원본 class → `extra_clearance` | person·dog 등은 물체 하드 거리의 추가0.25m. 운동 여부와 무관 |
+| native 물체 검사 | `collision_check.safety_margin=.45`, `margin_growth_rate=.10` → `EffectiveSafetyMargin` | 예측 시각 t에서 미확정/동적 등은 `.45+.10t`m, LOW_THREAT 확정 등은 조건에 따라 기본값. 각각 독립 판단 |
+| localization 최종 물체 검사 | `Config.margin=.10` → `StaticPlanner::footprint` | native 후보 검사와 다른 단계. 일반 후보의 두 검사를 `.45+.10`으로 합산하지 않음. 탈출은 `max(.10,.45)` |
+| 벽 확장 | `tunnel_wall_corridor_molitcomp03.json` → `load_wall_corridor` | map SHA·frame·station·선언된 reserve 검증 후 원본 map에 국한해 추가. 실제 바닥·벽 원자료 확인 전 reserve 재설정 금지 |
+| camera 후보 | `avoid_clearance=.20`, `avoid_plan_margin=.05` → candidate offset 검사 | 반폭+.20+.05=1.196m. `obstacle_lateral_margin=.20`은 도로/차체·다른 물체 검사의 별도 조건 |
+| 속도·정지 공간 | `BuildSpeedProfile` | 경로 남은 거리에서0.10m를 뺀 뒤 제동·지연 계산; LOCAL의0.35m/s 추종 overshoot 보정은 길이 아님. native 시간 프로필은 별도 |
+| 위치·운동 보정 | `vehicle_state.yaml`, `shadow_localization.yaml`, controller 설정 | GPS 장착점(.35,0,1.25)m, wheelbase3m, steering gain .844. localization의 orientation yaw·경험 보정을 LOCAL rate yaw에 대입하지 않음 |
+
+실제 effective 값은 `rosparam get`으로 각 노드의 private namespace를 확인하고,
+정본 YAML·launch 인자·source revision SHA와 함께 기록한다. 컴파일 기본값은
+YAML 미지정 시의 fallback이다. 런타임 파일 SHA와 실제 실행파일 SHA도 별도다.
+
+객체 여유·도로 여유·셀 반경을 무조건 더하지 않는다. 동일 대상에서 단계별로
+독립 veto하는지, 하나의 거리식 안에서 누적하는지, 비용/감속에만 쓰는지 위
+표를 따른다. 원본 LiDAR hull과 후단 source-age 확장의 중복 여부는 아직 감사
+대상이며, 벽 reserve의 원시 측정 재검증도 미완료다.
+
+기존 LOCAL 근거리 복구의 첫4m에는 내부 비노면·일부 미관측을 완화하는 별도
+정책이 있다. 엄격한 관측 sweep과 동일하게 설명하지 않는다. 새 탈출 fan과
+기존 근거리 복구는 각각 trace와 실제 검증 결과를 구분한다.
+
+조절 기준: 물체 간격은 LOCAL `clearance_margin` 또는 native
+`collision_check.safety_margin`, LOCAL 비노면 여유는 `road_clearance_margin`,
+native 경계 proxy는 `boundary_reserve_each_side_m` 및 호환 총 폭을 함께,
+넓은 후보 선호는 `preferred_clearance`, 근접 기동 감속은
+`maneuver_clearance`, 속도는 순항·상한·곡률/제동 정책을 검토한다.
+수치를 바꿀 때는 동일 검사 영역을 보존하는 이름 분리와 독립된 실험으로
+기록한다. 차체 폭을 통로 튜닝에 사용하지 않는다.
 
 이 항목들은 전부 더해서 쓰는 단일 숫자가 아니다. 객체와 도로 검사가 서로 다르고,
 native 후보 검사와 마지막 sweep에서 각각 veto할 수 있다. 특히5cm와 overrun1.5m는

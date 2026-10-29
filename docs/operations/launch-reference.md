@@ -227,14 +227,15 @@
 | `cmd_ip` | `$(optenv MORAI_CMD_IP 127.0.0.1)` | — |
 | `cmd_port` | `9093` | — |
 | `invert_steer` | `false` | — |
-| `dashboard_port` | `8089` | — |
-| `lidar_dashboard_port` | `8097` | — |
+| `dashboard_port` | `8088` | — |
+| `lidar_dashboard_port` | `8091` | — |
 | `lidar_view` | `true` | — |
 | `lidar_debug` | `false` | — |
-| `jamming_speed_kph` | `$(eval {'camera':10.,'local':10.,'localization':15.}[arg('jamming_planner')])` | — |
+| `jamming_speed_kph` | `$(eval {'camera':10.,'local':20.,'localization':20.}[arg('jamming_planner')])` | — |
 | `local_run_id` | `$(optenv ASMC_RUNTIME_SESSION_ID standalone)` | — |
 | `local_journal_path` | `(빈 문자열)` | — |
 | `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
+| `local_forward_warning_weight` | `(빈 문자열)` | — |
 
 ## Integrated planning/control
 
@@ -246,14 +247,16 @@
 | `dashboard` | `true` | — |
 | `open_dashboard` | `false` | — |
 | `jamming_planner` | `camera` | camera: main follower, local: observed local road, localization: map localization |
-| `dashboard_port` | `8089` | — |
-| `jamming_speed_kph` | `$(eval {'camera':10.0,'local':10.0,'localization':15.0}[arg('jamming_planner')])` | — |
+| `dashboard_port` | `8088` | — |
+| `jamming_speed_kph` | `$(eval {'camera':10.0,'local':20.0,'localization':20.0}[arg('jamming_planner')])` | — |
 | `local_semantic_input` | `true` | — |
 | `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
+| `local_forward_warning_weight` | `(빈 문자열)` | — |
 | `shadow_static_avoidance` | `$(eval arg('jamming_planner') == 'localization')` | Localization comparison profile: measured static bypass and return; see documented failures |
 | `shadow_dynamic_obstacles` | `$(eval arg('jamming_planner') == 'localization')` | Localization comparison profile: observed-motion yield; not general dynamic acceptance |
 | `shadow_lane_rules` | `$(eval arg('jamming_planner') == 'localization')` | verified shadow zone paint exemption; physical road stays hard |
-| `shadow_run_id` | `localization-autonomy` | — |
+| `jamming_run_id` | `$(eval arg('jamming_planner') + '-autonomy')` | — |
+| `shadow_run_id` | `$(arg jamming_run_id)` | Legacy run-id override; current code may use jamming_run_id |
 | `shadow_speed_cap_kph` | `$(arg jamming_speed_kph)` | — |
 | `shadow_journal_path` | `(빈 문자열)` | — |
 | `shadow_start_motion` | `true` | — |
@@ -624,7 +627,8 @@
 | `run_id` | `local-preview` | — |
 | `journal_path` | `(빈 문자열)` | — |
 | `planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
-| `speed_cap_kph` | `25` | — |
+| `forward_warning_weight` | `(빈 문자열)` | — |
+| `speed_cap_kph` | `20` | — |
 | `recovery` | `true` | — |
 | `near_blind_assist` | `false` | — |
 | `semantic_input` | `false` | — |

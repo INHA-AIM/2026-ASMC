@@ -6,9 +6,8 @@
 다른 checkout을 빌드한 setup과 섞지 않습니다. 인자는 `name:=value`이며
 [실제 launch 인자/기본값](launch-reference.md)은 소스에서 자동 생성합니다.
 
-Localization 연구 컨테이너의 새 대화형 Bash에서는 ROS·전용 빌드·공용 master 환경이
-자동 적용됩니다. 브릿지만 공유하고 해당 컨테이너에서 네 launch를 실행하는 안내는
-[Localization 운영](planning-control.md#localization-음영-위치-추종-연구-옵션)을 따릅니다.
+운영은 한 컨테이너에서 ROS·bridge·인지·판제를 실행합니다. 세 방식과 기존 비교
+컨테이너의 차이는 [세 재밍 플래너 비교 실행](jamming-comparison.md)을 따릅니다.
 자동 시험은 별도 master와 공용 시뮬 lease를 사용합니다.
 
 ## 1. 개별 구성으로 전체 스택 실행
@@ -534,7 +533,8 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 - 기존 카메라 결과에서 IMU 정합 노면 probability/coverage를 만드는 입력도 시작한다.
   추가 모델 추론은 없다. 같은 `semantic_space_trial`을 이미 사용 중이면
   `local_semantic_input:=false`를 지정한다.
-- `local_speed_cap_kph` 기본은10이다. 관측·곡률·복구
+- `jamming_speed_kph`의 LOCAL 기본 상한은20이며 순항 목표는15km/h다.
+  동일 조건 비교에는 `jamming_speed_kph:=10`을 사용한다. 관측·곡률·복구
   제한은 그대로이며 속도/완주 수락을 보장하는 옵션이 아니다.
 - 웹은 동일한 `http://localhost:8088/web/index_v2.html`이다. LOCAL 경로·노면·family·
   OBB와 제어 trace를 표시한다. 별도 dashboard 서버를 켜지 않는다.

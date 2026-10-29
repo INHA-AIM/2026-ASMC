@@ -1,8 +1,42 @@
 # 세 재밍 플래너 비교 실행
 
-이 안내는 `integrate/jamming-three-way-20261029` 비교 브랜치용이다. 기존 main·LOCAL·localization 작업트리와 PR은 별도로 유지한다.
+이 안내는 `integrate/jamming-three-way-20261029` 비교 브랜치용이다. 현재 PR은
+미병합이므로 운영 main에 세 옵션이 이미 배포된 것은 아니다. 기존 main·LOCAL·
+localization 작업트리와 PR은 별도로 유지한다.
 
-## 선택과 실행
+## 운영 정본과 현재 비교 환경
+
+PR 병합 후 운영 정본은 `asmc-ros-noetic` 한 컨테이너의 해당 checkout·
+`11311` master, 판제 `http://localhost:8088/web/index_v2.html`, LiDAR
+`http://localhost:8091/`이다. 인지와 일반 제어는 한 번 실행하고 재밍 옵션을
+바꾸려면 autonomy만 종료한 뒤 재실행한다. 최종 `/ctrl_cmd` 소유자는 selector다.
+Windows 개인 포트 예외는 명시한 경우에만 적용한다.
+
+PR 병합 전에는 검증된 비교 checkout의 빌드/컨테이너를 사용한다. 현재 보존된
+대화형 비교 프로필은11373·8089·8097을 주입한다. 이는 옛 비교 환경이며 운영
+launch 자체의 기본값이 아니다. 공용 master11311에서 수동 조작할 때는 해당
+컨테이너의 source, bashrc 주입 포트와 실제 master를 먼저 확인한다. 자동 시험은
+별도의 master와 공용 physical lease를 사용한다.
+
+운영 진입은 main의 구성별 명령이다. 각 행은 별도 터미널이다.
+
+```bash
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+roscore -p 11311
+./scripts/udp_bridge.sh
+roslaunch asmc_camera camera.launch
+roslaunch asmc_lidar lidar.launch debug:=true
+roslaunch asmc_lidar view.launch
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=camera
+```
+
+같은 자리에서 `camera` 대신 `local` 또는 `localization`을 지정한다. camera는
+인자 생략 기본값이기도 하다. 되돌릴 때는 해당 autonomy를 종료한 뒤 camera를
+실행한다. 세 스택을 동시에 시작하지 않는다. `jamming_speed_kph:=10`은
+동일 상한 비교용이며 운영 방식별 속도 결과와 구분한다.
+
+## 병합 전 비교 프로필의 실행
 
 `asmc-jamming-compare` 컨테이너에 세 구현이 함께 빌드된다. 새 대화형 Bash는 이 워크트리의 `/devel`과 전용 master11373을 적용한다. 각 터미널에서 추가 env source 없이 실행한다.
 공식 지도 정본은 `ASMC_DATA=/workspace/data` 병합 뷰로 읽는다. `/data`의 과거 상대 링크를 지도 정본으로 사용하지 않는다. main #140의 정적 구간 UNKNOWN 정책도 이 정본의 SHA를 검증한다.
@@ -50,6 +84,32 @@ A448=`A2256W000448`, 시작 노드=`A1256W000456`, 정본 경로 station1859.641
 | local |순항15·상한20km/h|관측 노면/family/로컬 OBB와 상대이동|공통 LOCAL MPC|
 | localization |순항15·상한20km/h|GPS anchor·IMU 상대이동으로 map Frenet 회피|공통 LOCAL MPC|
 
+| 구분 | camera | local | localization |
+|---|---|---|---|
+| 필수 근거 | 카메라 family·LiDAR 물체, 일반 상태 |3뷰 관측 노면·family·LiDAR와 상대이동 |초기 GPS·IMU·속도 anchor, map·LiDAR |
+| 좌표 | 차량 기준 lane/물체 | epoch별 local odometry·차량 기준 관측 | map pose로 Frenet 검사, MPC에는 epoch별 local odometry 궤적 |
+| GPS 소실 | 재밍 중 카메라/라이다 기반 | 내부 로컬 경로는 GPS 독립 | 검증된 anchor에서 DR, 복귀 때 innovation 검사 |
+| 경로와 속도 | camera 회피선·자체 속도/곡률 추종 | raster·물체 sweep, 공통 물리 속도·MPC | HD맵/Frenet 후보와 최종 물체 검사, native 시간 프로필·공통 MPC |
+| 진입·복귀 | 세 방식 모두 A448 시작과 공통 selector·준비 인계. 진입 전 목표25km/h | 동일 | 동일. GPS 유효만으로 구간 안에서 NORMAL 복귀하지 않음 |
+| 바닥·벽 | camera corridor와 LiDAR 구조 | 관측 raster·보존된 근거리 복구 정책 | 지도와 터널 station에서만 측정 기반 확장 |
+| 부족·폐쇄 | main 정책에 따라 정지/creep | 새 관측으로 재탐색, 기존 근거리 완화는 별도 표시 | 현재 map/OBB 재검사·anchor 불량 정지 |
+| 회복 | main camera 정책 | 5초×2 뒤 공통 탈출 fan + 로컬 복구 | 같은 감시와 map/물체 검사를 거친 탈출 |
+
+`LocalTrajectory`는 map 메시지가 아니다. 생산자의 epoch별 local odometry
+frame과 같은 frame의 state를 MPC가 소비한다. localization의 map pose 표시는
+별도이며 유효하지 않은 anchor를 마지막 유효 위치로 표시하지 않는다.
+공통 MPC 구현을 쓰더라도 두 방식의 yaw·시간 매개화와 노면 근거는 다르다.
+
+현재 LOCAL의 기존 near-field 복구는 최초4m에서 일부 미관측·내부 비노면을
+완화한다. 엄격한 새 fan과 동일한 관측 보장으로 취급하지 않는다. 모든
+방식이 막힌 공간에서 완주한다고 보장하지 않으며, 움직이는 대상의 사각
+시야 소실을 포함한 전체 동적 대응은 미수락이다.
+
+기본 camera의 `jamming_creep_clear_distance=0`은 creep 경로에서 별도의
+정적 장애물 정지 검사를 끄는 기존 main 정책이다. 이동 대상·입력 timeout 등
+별도 hard stop과 추종 중 최종 경로 검사는 각자의 조건을 가진다. camera의
+모든 creep이 현재 물체 sweep을 통과한다고 간주하지 않는다.
+
 접근 중 선택한 방식만 준비한다. 인계 직전의 제한된 준비 시간에 현재 경로와 후보 명령을 만들고, 같은 epoch·생산자·시각·frame의 명령으로 넘긴다. 실제 속도25에서10/15 목표로 감속하므로 속도를 순간적으로 잘라 넣지 않는다. 후보가 준비된 정상 인계에 비상제동을 삽입하지 않는다. 선택된 명령 수신 watchdog250ms는 유지한다.
 
 `/planning/mode`와 최종 `/ctrl_cmd`의 발행자는 각각 하나다. 공통 준비·인계는 `/planning/jamming/*`, 방식별 geometry/trace는 기존 `/planning/local/*`, `/planning/localization/*`, camera 진단을 사용한다. `LocalTrajectory`와 `ControlHandoff`의 필드·MD5는 유지한다.
@@ -86,4 +146,6 @@ FOGGY13시, 동일 출발·배치·센서로 무장애 진입/복귀, 정차 차
 두 MPC 방식의 공통값은 `config/jamming_motion.yaml`이며 차체 폭1.892m·순항15·상한20km/h다.
 복구를3km/h로 고정하지 않는다. 동적 전방 충돌이 아닌5초 정지가 두 번 누적되면 별도
 좌우 탈출 후보를 우선 검사한다. 실제 공간·제동 조건과 탈출 상한5km/h가 적용된다.
-진행 중인 LOCAL 후속 기능 통합과 실제 비교는 사용자의 작업 완료 통보 이후 수행한다.
+LOCAL 완료 checkpoint에서 객체 우선순위와 비용 전용 관측 예고를 선별했다.
+비용은 기본0이며 `local_forward_warning_weight:=8`은 별도 비교 후보이다.
+20–40m 카메라 예고와 시야 소실 대응은 이 설정에 포함되지 않는다.

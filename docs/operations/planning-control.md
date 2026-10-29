@@ -69,7 +69,9 @@ LOCAL 코드를 가져오지 않았으며 `jamming_planner:=local` 같은 실행
 검증되지 않은 anchor는 기본 경로의 4초 복귀 timeout으로 우회하지 않습니다.
 LiDAR의 실제 GPS validity·터널 벽/천장 전처리와 카메라 추론은 변경하지 않습니다.
 
-수동 실행은 컨테이너별 독립 master와 브릿지를 사용합니다. 설치된 대화형 profile은
+아래 표와 명령은 기존 개별 연구 컨테이너의 복구 이력입니다. 현재 운영 정본은
+[세 방식 운영 안내](jamming-comparison.md)의 단일 컨테이너·11311·8088/8091입니다.
+과거 수동 실행은 컨테이너별 독립 master와 브릿지를 사용했습니다. 설치된 대화형 profile은
 자기 source/devel만 읽고, 노드나 master를 자동 시작하지 않습니다.
 
 | 컨테이너 | 수동 master | 판제 | LiDAR |
