@@ -50,6 +50,7 @@ class BuildGraphTest(unittest.TestCase):
         self.module = Path(__file__).resolve().parents[2]/'cmake/AsmcBuildProfiles.cmake'
         # Same names as runtime packages; only a tiny real executable is needed.
         self.runtime = ['mpc_controller_node','asmc_control_selector_node','asmc_competition_speed_state_node',
+                        'asmc_local_planner_node','asmc_shadow_localization_node','asmc_local_controller_node',
                         'planning_vehicle_state_node','planning_objects_adapter','lidar_pipeline_node','vehicle_state_node',
                         'camera_bbox_lane_node','camera_bbox_lane_change_node','_lane_association',
                         'asmc_camera_generate_messages','asmc_hd_map_generate_messages','lane_boundary_adapter_generate_messages']
