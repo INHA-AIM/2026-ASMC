@@ -16,9 +16,15 @@ int main(){
  check(!p.update(4.7,true,false,true,true,true,true),"moving or unresolved motion cancels recovery immediately");
  p.update(5,true,false,true,true,true,false);p.update(5.6,true,false,true,true,true,false);
  check(!p.update(5.7,true,false,true,false,true,false),"expired LOCAL never persists as a valid recovery");
+ check(p.update(5.8,true,false,true,true,false,false),"fresh recovery resumes after one missing path without stationary dwell");
  check(!p.update(6,true,false,false,true,true,false),"unknown contract failure is not recoverable");
  check(!p.update(5,true,false,true,true,true,false),"retrograde policy clock resets");
  check(RecoverableLocalFailure("localization_obb")&&!RecoverableLocalFailure("shadow_dynamic_yield")&&!RecoverableLocalFailure("position_imu_stale"),"explicit failure whitelist");
+ check(RecoverableAnchorFailure("motion_epoch_changed"),"map epoch loss can use independent LOCAL evidence");
+ check(!RecoverableAnchorFailure("position_imu_stale")&&!RecoverableAnchorFailure("position_objects_stale"),"map recovery never permits stale sensor inputs");
+ p.reset();p.update(10,true,false,RecoverableAnchorFailure("motion_epoch_changed"),true,true,false);
+ check(p.update(10.51,true,false,true,true,true,false),"fresh local path can recover after map anchor loss");
+ check(!p.update(10.6,true,false,true,true,true,true),"map loss does not waive observed dynamic hazard");
  asmc_msgs::LocalTrajectory in;in.valid=true;in.run_id="test";in.header.frame_id="local/test/1";
  in.header.stamp.fromSec(10);in.scene_stamp.fromSec(9.9);in.ego_at_plan.header=in.header;
  in.ego_at_plan.child_frame_id="base_link";in.ego_at_plan.pose.pose.position.x=100;

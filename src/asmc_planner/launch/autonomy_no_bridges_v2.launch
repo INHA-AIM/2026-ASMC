@@ -4,7 +4,7 @@
   <arg name="open_dashboard" default="false"/>
   <arg name="jamming_planner" default="camera" doc="camera: main follower, local: observed local road, localization: map localization"/>
   <arg name="dashboard_port" default="8088"/>
-  <arg name="jamming_speed_kph" default="$(eval {'camera':20.0,'local':20.0,'localization':20.0}[arg('jamming_planner')])"/>
+  <arg name="jamming_speed_kph" default="$(eval {'camera':20.0,'local':20.0,'localization':15.0}[arg('jamming_planner')])"/>
   <arg name="localization_local_recovery" default="false" doc="Experimental validated LOCAL path fallback; localization retains the single MPC"/>
   <arg name="local_semantic_input" default="true"/>
   <arg name="local_planner_config" default="$(find asmc_planner)/config/local_planner.yaml"/>
@@ -61,6 +61,7 @@
   <rosparam ns="planning_mode" command="load" file="$(find asmc_planner)/config/jamming_transition.yaml"/>
   <group ns="planning_mode">
     <param name="strategy" value="$(arg jamming_planner)"/>
+    <param name="zone_prepare_only" value="$(eval arg('jamming_planner') == 'localization')"/>
     <param name="links_file" value="$(find asmc_planner)/config/behavior/link_set.json"/>
     <param name="jamming_controller" value="$(eval {'camera':'/camera_bbox_lane_change','local':'/local_controller','localization':'/localization_controller'}[arg('jamming_planner')])"/>
     <param name="recovery_ready_topic" value="$(eval '/planning/localization/recovery_ready' if arg('jamming_planner') == 'localization' else '')"/>
@@ -104,12 +105,12 @@
     <arg name="state_topic" value="$(arg state_topic)"/>
     <arg name="suspend_in_jamming" value="true"/>
     <arg name="smooth_handoff" value="true"/>
-    <arg name="initial_ready_topic" value="$(eval '/planning/localization/anchor_ready' if arg('jamming_planner') == 'localization' else '')"/>
+    <arg name="initial_ready_topic" value="$(eval ('/planning/localization/control_ready' if arg('localization_local_recovery') else '/planning/localization/anchor_ready') if arg('jamming_planner') == 'localization' else '')"/>
   </include>
   <node pkg="asmc_planner" type="asmc_control_selector_node"
         name="asmc_control_selector" output="screen" required="true">
     <param name="smooth_handoff" value="true"/>
-    <param name="initial_ready_topic" value="$(eval '/planning/localization/anchor_ready' if arg('jamming_planner') == 'localization' else '')"/>
+    <param name="initial_ready_topic" value="$(eval ('/planning/localization/control_ready' if arg('localization_local_recovery') else '/planning/localization/anchor_ready') if arg('jamming_planner') == 'localization' else '')"/>
     <param name="jamming_controller" value="$(eval {'camera':'/camera_bbox_lane_change','local':'/local_controller','localization':'/localization_controller'}[arg('jamming_planner')])"/>
     <param name="jamming_frame_prefix" value="$(eval 'base_link' if arg('jamming_planner') == 'camera' else 'local/')"/>
   </node>

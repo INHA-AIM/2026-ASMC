@@ -47,7 +47,7 @@ class PositionNode {
     local_candidate_sequence=m->plan_sequence;local_candidate=m;
     local_candidate_received=ros::SteadyTime::now().toSec();
   }
-  ros::Publisher trajectory_pub,path_pub,trace_pub,recovery_ready_pub,anchor_ready_pub,debug_pub;
+  ros::Publisher trajectory_pub,path_pub,trace_pub,recovery_ready_pub,anchor_ready_pub,control_ready_pub,debug_pub;
   double last_debug_=-1;
   std::string trial_id;
   ros::SteadyTimer timer;
@@ -97,6 +97,12 @@ class PositionNode {
       x-=g->eastOffset+lever[0];
       y-=g->northOffset+lever[1];
       const auto generation=anchor.generation;
+      // While an independently validated LOCAL path owns motion, a lost map
+      // anchor can warm up again from fresh GPS without requiring a stop.
+      // This discards the old map transform; ordinary ten-fix validation and
+      // native path checks must pass before returning to localization.
+      if(local_recovery_enabled&&local_recovery.active&&anchor.state=="reanchor_stop")
+        anchor.reset();
       anchor.observe(*paired,x,y,yaw);gps_reason=anchor.reason;
       if(generation!=anchor.generation)planner->reset_reference();
       gps.pop_front();
@@ -269,12 +275,15 @@ class PositionNode {
         auto paired=alignment.pose_at(local_candidate->header.stamp.toSec());
         if(paired)candidate=ReframeLocalRecovery(*local_candidate,*paired,frame,run,now,steady-local_candidate_received);
       }
-      const bool risk=(computed&&(planner->moving_objects()||planner->pending_motion_objects()))||
+      const bool observed_dynamic=std::any_of(world_objects.begin(),world_objects.end(),
+          [](const auto& ob){return ob.observation.motion_state==ObjectMotionState::DYNAMIC;});
+      const bool anchor_failure=!transform.valid&&RecoverableAnchorFailure(r.reason);
+      const bool risk=(!computed&&observed_dynamic)||(computed&&(planner->moving_objects()||planner->pending_motion_objects()))||
           r.reason.find("dynamic")!=std::string::npos||r.reason.find("motion_pending")!=std::string::npos;
-      const bool allowed=selected&&fresh&&attitude_valid&&steady-imu_received<=.15&&transform.valid&&
+      const bool allowed=selected&&fresh&&attitude_valid&&steady-imu_received<=.15&&(transform.valid||anchor_failure)&&
           objects_valid&&steady-objects_received<=.3&&t-object_stamp>=-.05&&t-object_stamp<=.3;
       const bool progress=r.valid&&r.chosen_cap>.8&&r.path.size()>2;
-      const bool recoverable=RecoverableLocalFailure(r.reason)||r.valid;
+      const bool recoverable=anchor_failure||RecoverableLocalFailure(r.reason)||r.valid;
       selected_local=local_recovery.update(steady,allowed,progress,recoverable,bool(candidate),std::abs(origin->v)<.5,risk);
       if(selected_local){
         output=std::move(*candidate);output.plan_sequence=sequence;
@@ -359,12 +368,18 @@ class PositionNode {
       observer_bytes=debug.data.size();observer_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-observer_start).count();
     }
     std_msgs::Bool ready;
-    ready.data=!selected_local&&r.valid&&fresh&&transform.valid&&transform.source=="gps_anchored"&&anchor.state=="gps_anchored";
-    if(shadow_lane_rules&&static_avoidance&&planner->maneuver_active())ready.data=false;
+    // NORMAL validates its own two fresh paths and controller command. Do not
+    // deadlock exit on the retiring local/map planner's maneuver or path state.
+    ready.data=fresh&&attitude_valid&&steady-imu_received<=.15&&transform.valid&&
+        transform.source=="gps_anchored"&&anchor.state=="gps_anchored";
     recovery_ready_pub.publish(ready);
     std_msgs::Bool anchored;anchored.data=fresh&&attitude_valid&&steady-imu_received<=.15&&
         transform.valid&&transform.source=="gps_anchored"&&anchor.state=="gps_anchored";
     anchor_ready_pub.publish(anchored);
+    // Initial command ownership can be established by a checked local path,
+    // without falsely claiming that a GPS/map anchor exists.
+    std_msgs::Bool control_ready;control_ready.data=anchored.data||selected_local;
+    control_ready_pub.publish(control_ready);
     auto xy=transform.apply(origin->x,origin->y);
     double obb_xmin=0,obb_xmax=0;
     if(!world_objects.empty()) {
@@ -493,6 +508,7 @@ class PositionNode {
     debug_pub=nh.advertise<std_msgs::String>("/planning/localization/debug",1);
     recovery_ready_pub=nh.advertise<std_msgs::Bool>("/planning/localization/recovery_ready",1);
     anchor_ready_pub=nh.advertise<std_msgs::Bool>("/planning/localization/anchor_ready",1);
+    control_ready_pub=nh.advertise<std_msgs::Bool>("/planning/localization/control_ready",1);
     state_sub=nh.subscribe(state_topic,64,&PositionNode::on_state,this,ros::TransportHints().tcpNoDelay());
     gps_sub=nh.subscribe(gps_topic,32,&PositionNode::on_gps,this,ros::TransportHints().tcpNoDelay());
     imu_sub=nh.subscribe(imu_topic,64,&PositionNode::on_imu,this,ros::TransportHints().tcpNoDelay());

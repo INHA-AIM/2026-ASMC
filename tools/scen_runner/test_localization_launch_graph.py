@@ -22,17 +22,18 @@ for choice in ('camera','local','localization'):
         assert (name in names)==(choice=='localization'),names
     assert c.params['/mpc_controller/suspend_in_jamming'].value is True
     assert c.params['/planning_mode/approach_speed_kph'].value==25.
+    assert c.params['/planning_mode/zone_prepare_only'].value==(choice=='localization')
     assert abs(c.params['/planning_mode/shadow_zone/station_start_m'].value-1859.6415782400395)<1e-6
     assert ('local_planner' in names)==(choice=='local')
     assert ('local_controller' in names)==(choice=='local')
     assert ('semantic_space_trial' in names)==(choice=='local')
     owner={'camera':'camera_bbox_lane_change','local':'local_planner','localization':'localization'}[choice]
     cap_key={'camera':'target_speed_kph','local':'speed_cap_kph','localization':'speed_cap_kph'}[choice]
-    assert c.params['/'+owner+'/'+cap_key].value=={'camera':20.,'local':20.,'localization':20.}[choice]
+    assert c.params['/'+owner+'/'+cap_key].value=={'camera':20.,'local':20.,'localization':15.}[choice]
     if choice in ('local','localization'):
         for key,value in [('vehicle_width',1.892),('vehicle_length',4.635),('rear_axle_to_bumper',.790),('cruise_speed_kph',15.),('escape_speed_cap_kph',5.)]:
             assert c.params['/'+owner+'/'+key].value==value,(choice,key)
-        assert c.params['/'+{'local':'local_controller','localization':'localization_controller'}[choice]+'/speed_cap_kph'].value==20.
+        assert c.params['/'+{'local':'local_controller','localization':'localization_controller'}[choice]+'/speed_cap_kph'].value==(15. if choice=='localization' else 20.)
     assert c.params['/behavior_planner/maximum_speed_kph'].value==57.5
     assert bool(c.params['/planning_mode/recovery_ready_topic'].value)==(choice=='localization')
     if choice=='localization':
@@ -95,3 +96,8 @@ assert c.params['/local_planner/active_in_jamming_only'].value is True
 assert c.params['/asmc_control_selector/jamming_controller'].value=='/localization_controller'
 assert graph('localization').params['/localization/local_recovery_enabled'].value is False
 print('PASS optional LOCAL recovery is planner-only; one jamming MPC; baseline unchanged')
+
+recovery_graph=graph('localization',['localization_local_recovery:=true'])
+assert recovery_graph.params['/asmc_control_selector/initial_ready_topic'].value=='/planning/localization/control_ready'
+assert graph('localization').params['/asmc_control_selector/initial_ready_topic'].value=='/planning/localization/anchor_ready'
+print('PASS independent local readiness never fabricates map anchor readiness')

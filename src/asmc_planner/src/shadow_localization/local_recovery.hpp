@@ -15,6 +15,14 @@ inline bool RecoverableLocalFailure(const std::string& reason) {
       reason=="localization_obb" || reason=="localization_map_boundary" ||
       reason=="insufficient_stopping_space" || reason=="no_speed_geometry";
 }
+// Map anchoring is not a prerequisite for a fresh, aligned local trajectory.
+// Sensor/time/geometry failures are deliberately absent from this whitelist.
+inline bool RecoverableAnchorFailure(const std::string& reason) {
+  return reason=="motion_epoch_changed" || reason=="gps_innovation_exceeded" ||
+      reason=="gps_recovery_unstable" || reason=="reanchor_wait_stopped" ||
+      reason=="stopped_reanchor_warmup" || reason=="initial_anchor_warmup" ||
+      reason=="epoch_reset";
+}
 class LocalRecoveryPolicy {
  public:
   bool active=false;
@@ -35,7 +43,13 @@ class LocalRecoveryPolicy {
       if(nearly_stopped){if(blocked_since_<0)blocked_since_=now;}
       else if(!active)blocked_since_=-1;
     }
-    if(!candidate_valid){active=false;blocked_since_=-1;reason="local_candidate_unavailable";return false;}
+    if(!candidate_valid){
+      // Withhold output while stale, but retain selected recovery ownership.
+      // A subsequent fresh path can resume without first demanding a stop.
+      // Epoch/input/hazard changes above still revoke ownership immediately.
+      if(!active)blocked_since_=-1;
+      reason="local_candidate_unavailable";return false;
+    }
     if(!active&&blocked_since_>=0&&now-blocked_since_>=.5)active=true;
     reason=active?(native_progress?"local_recovery_return_debounce":"local_recovery_active"):"waiting_for_stationary_recovery";
     return active;
