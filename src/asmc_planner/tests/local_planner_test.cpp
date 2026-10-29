@@ -60,6 +60,10 @@ int main() {
     prediction.clear();
     for(int i=0;i<6;++i){auto o=sample(51,"static_obstacle","traffic_drum");o.source_age=.16;objects={o};prediction.apply(objects,Pose{},30.+.08*i,2.,true);}
     expect(!objects[0].quiescent_geometry_padding,"aged geometry cannot reduce the past-motion envelope");
+    prediction.clear();
+    for(int i=0;i<6;++i){auto o=sample(51,"static_obstacle","traffic_drum");o.velocity_floor=3.;objects={o};prediction.apply(objects,Pose{},40.+.08*i,2.,true);}
+    expect(objects[0].motion_budget>=3. && objects[0].uncertainty>=.3-1e-8,
+           "even quiet geometry cannot undercut a valid absolute-speed magnitude");
   }
   {
     auto s=empty();s.speed=1.;s.acceleration=1.;

@@ -19,6 +19,7 @@ struct Obstacle {
   std::string camera_class, classification;
   double source_age = 0, uncertainty = 0;
   double motion_budget = 5.;
+  double velocity_floor = 0.; // Preserve any valid absolute-speed magnitude as an envelope floor.
   bool retained = false, moving = false;
   // LOCAL short relative-pose evidence, independent of semantic group/map GPS.
   // Original measured polygon and public LiDAR motion/velocity remain intact.

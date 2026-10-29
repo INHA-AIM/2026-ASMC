@@ -857,7 +857,8 @@ class Node {
           invalid("object_velocity_nonfinite");
           return;
         }
-        budget = std::max(budget, std::hypot(v.x, v.y));
+        ob.velocity_floor=std::hypot(v.x, v.y);
+        budget = std::max(budget, ob.velocity_floor);
       }
       ob.uncertainty = object_age * budget;
       ob.motion_budget = budget;
@@ -1163,17 +1164,13 @@ public:
     p.param("low_speed_rate_floor_mps", config.low_speed_rate_floor, 1.);
     p.param("maneuver_reserve_m", config.maneuver_reserve, 0.);
     p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
-    // Future controller/transport/actuation allowance after causal scene
-    // alignment. Keep the old default until a trial profile is validated.
-    p.param("execution_delay_s", config.delay, .5);
     if (run.empty() || run.size() > 128 ||
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
                               "WXYZ0123456789-_.") != std::string::npos ||
         !std::isfinite(config.width + config.length + config.rear +
                        config.margin + config.budget_ms + config.speed_cap +
                        config.accel + config.controlled_decel + config.decel +
-                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve + config.delay) ||
-        config.delay<.25 || config.delay>1. ||
+                       config.preferred_clearance + config.low_speed_rate_floor + config.maneuver_reserve) ||
         config.maneuver_reserve<0. || config.maneuver_reserve>2. ||
         config.decel<1.5 || config.decel>3. ||
         config.preferred_clearance<config.margin || config.preferred_clearance>1. ||

@@ -693,7 +693,12 @@ def main():
         last_environment_check=time.monotonic()
         while time.monotonic() - started < args.seconds:
             if time.monotonic()-last_environment_check>=10.:
-                verify_environment();last_environment_check=time.monotonic()
+                try:verify_environment()
+                except Exception as error:
+                    reason='environment_changed'
+                    emit(dict(event='environment_trial_rejected',error=str(error)))
+                    break
+                last_environment_check=time.monotonic()
             section.tick()
             elapsed=time.monotonic()-started
             for action in list(actions):

@@ -62,8 +62,8 @@ public:
       // planning envelope. Known mobile groups never qualify. Raw KF velocity,
       // current polygon, physical margin and future-motion sweep stay intact.
       if(quiet_padding && quiet && !mobile && o.source_age>=0. && o.source_age<=.15 &&
-         o.motion_budget<=5. && !recent_.count(o.id)) {
-        o.motion_budget=2.;o.uncertainty=2.*o.source_age;o.quiescent_geometry_padding=true;
+         o.motion_budget<=5. && o.velocity_floor<5. && !recent_.count(o.id)) {
+        o.motion_budget=std::max(2.,o.velocity_floor);o.uncertainty=o.motion_budget*o.source_age;o.quiescent_geometry_padding=true;
       }
       auto q=history; // Keep the bounded longer evidence; fit the short causal window separately.
       // Use the shortest window that still satisfies the original four
