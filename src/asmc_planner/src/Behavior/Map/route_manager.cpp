@@ -81,6 +81,15 @@ bool RouteManager::initialize(const MGeoLoader& map,
   return reference_.size() > 1;
 }
 
+bool RouteManager::nextRouteLink(const std::string& id,LinkInfo* next,double* boundary,double* next_end) const {
+  if(!map_||!next||!boundary||!next_end)return false;
+  for(size_t i=0;i+1<link_spans_.size();++i)if(link_spans_[i].link_id==id){
+    *boundary=link_spans_[i].end_s;*next_end=link_spans_[i+1].end_s;
+    return map_->getLink(link_spans_[i+1].link_id,next);
+  }
+  return false;
+}
+
 bool RouteManager::projectEgo(double x, double y, double* out_s, double* out_d,
                               std::string* out_id) const {
   if (reference_.size() < 2) return false;

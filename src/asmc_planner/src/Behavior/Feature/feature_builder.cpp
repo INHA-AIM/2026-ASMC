@@ -230,6 +230,14 @@ UrbanFeature FeatureBuilder::build(
     }
   }
 
+  // Route-station distance, not nearest-link/Euclidean distance. A153 ends
+  // the highway policy; the successor retains its ordinary speed policy.
+  feature.route.route_generation=route_manager.generation();
+  LinkInfo successor;
+  feature.route.lower_boundary_valid=feature.ego.valid && route_manager.nextRouteLink(
+      "A2256W000153",&successor,&feature.route.lower_boundary_s,&feature.route.next_boundary_s);
+  if(feature.route.lower_boundary_valid){feature.route.next_speed_link=successor.id;
+    feature.route.next_speed_limit=successor.max_speed;}
   RouteSignalMovement signal_movement;
   if (route_manager.findNextSignalMovement(feature.ego.s, 200.0,
                                            &signal_movement)) {

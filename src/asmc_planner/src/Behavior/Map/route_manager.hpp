@@ -38,6 +38,7 @@ class RouteManager {
                                       double* out_distance) const;
   bool getCurrentLinkInfo(const std::string& current_link_id,
                           LinkInfo* out) const;
+  bool nextRouteLink(const std::string& id, LinkInfo* next, double* boundary, double* next_end) const;
   double getSpeedLimit(const std::string& current_link_id) const;
   bool getRoutePoint(double route_s, Point2D* out) const;
   bool getRoutePose(double route_s, Point2D* out, double* out_yaw) const;

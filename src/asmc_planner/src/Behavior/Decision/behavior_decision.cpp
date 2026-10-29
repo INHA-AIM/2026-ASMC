@@ -26,6 +26,14 @@ bool BehaviorDecision::setNormalCruiseConfig(const NormalCruiseConfig& config) {
   return true;
 }
 
+double BehaviorDecision::ordinarySpeedCeiling(const std::string& link,double map_cap) const {
+  double cap=map_cap;
+  const auto it=normal_cruise_.link_speed_caps.find(link);
+  if(normal_cruise_.enabled && (it!=normal_cruise_.link_speed_caps.end() || map_cap>=normal_cruise_.minimum_map_speed))
+    cap=it==normal_cruise_.link_speed_caps.end()?normal_cruise_.max_speed:it->second;
+  return std::min(cap,absolute_speed_limit_);
+}
+
 BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
                                              const asmc_msgs::PlanFeedback&) {
   // The v1 feedback contract has no PREPARE/READY/COMMITTED lifecycle.
@@ -329,8 +337,7 @@ BehaviorContextData BehaviorDecision::decide(
        feature.route.speed_limit >= normal_cruise_.minimum_map_speed) &&
       std::abs(context.hard.max_speed - feature.route.speed_limit) < 1e-6;
   if (ordinary_cruise) {
-    context.hard.max_speed = explicit_link ? link_cap->second
-                                          : normal_cruise_.max_speed;
+    context.hard.max_speed = ordinarySpeedCeiling(feature.route.current_link_id, feature.route.speed_limit);
     context.target.desired_speed = std::min(normal_cruise_.target_speed,
                                           context.hard.max_speed);
     context.extra_flags["normal_cruise_active"] = true;
@@ -350,7 +357,23 @@ BehaviorContextData BehaviorDecision::decide(
       context.extra_flags["highway_merge"] ||
       context.extra_flags["highway_lane_change"];
   const double selected_ceiling=highway_speed_policy?feature.highway.speed_cap_mps:absolute_speed_limit_;
+  // A153 exit preview only lowers a speed ceiling; it never creates STOP,
+  // signal approach or a permission to accelerate before a faster link.
+  const auto& route=feature.route;
+  if(feature.timestamp<boundary_last_time_ || route.route_generation!=boundary_generation_ ||
+     !feature.ego.valid || !route.lower_boundary_valid ||
+     feature.ego.s<route.lower_boundary_s-20. || feature.ego.s>route.next_boundary_s+1.)boundary_cap_=0;
+  boundary_last_time_=feature.timestamp;boundary_generation_=route.route_generation;
+  if(feature.ego.valid&&route.lower_boundary_valid&&std::isfinite(route.next_speed_limit)&&route.next_speed_limit>0&&
+     feature.ego.s>=route.lower_boundary_s-10. && feature.ego.s<=route.next_boundary_s+1.) {
+    const double next=ordinarySpeedCeiling(route.next_speed_link,route.next_speed_limit);
+    if(next<selected_ceiling)boundary_cap_=boundary_cap_>0?std::min(boundary_cap_,next):next;
+  }
   context.hard.max_speed=std::min(context.hard.max_speed,selected_ceiling);
+  if(boundary_cap_>0){context.hard.max_speed=std::min(context.hard.max_speed,boundary_cap_);
+    context.extra_flags["lower_next_link_speed_cap"]=true;
+    context.debug.hard_rule_reason+=";A153_lower_next_link_speed_cap";}
+
   context.target.desired_speed=std::min(context.target.desired_speed,context.hard.max_speed);
   if((context.selected_behavior==BehaviorType::LEFT_CHANGE||context.selected_behavior==BehaviorType::RIGHT_CHANGE)&&
       context.extra_flags["highway_lane_change"]) {
