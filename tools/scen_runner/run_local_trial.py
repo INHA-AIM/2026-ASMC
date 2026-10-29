@@ -141,7 +141,7 @@ def main():
             "src/asmc_planner/src/local/recovery.cpp",
             "src/asmc_planner/src/local/recovery.hpp",
             "src/asmc_planner/src/local/obstacle_memory.hpp",
-            "src/asmc_planner/src/local/object_motion.hpp",
+            "src/asmc_planner/src/local/object_prediction.hpp",
             "src/asmc_planner/src/local/road_memory.hpp",
             "src/asmc_planner/src/local/motion.hpp",
             "src/asmc_planner/src/Frenet/Speed/SpeedProfiler.cpp",

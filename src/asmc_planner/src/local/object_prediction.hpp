@@ -10,7 +10,7 @@ namespace local_planning {
 // Planning-only, short relative displacement evidence. Does not certify an
 // absolute velocity, classify a semantic group as moving/static, or publish
 // synthetic detections. Duplicated scans cannot accumulate confirmations.
-class ObjectMotion {
+class ObjectPrediction {
   struct Sample { double t,x,y,w,h; };
   std::map<int,std::deque<Sample>> history_;
 public:

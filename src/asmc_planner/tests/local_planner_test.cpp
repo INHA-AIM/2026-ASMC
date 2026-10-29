@@ -2,7 +2,7 @@
 #include "fixtures/local2f_stopped_barrier.hpp"
 #include "local/motion.hpp"
 #include "local/obstacle_memory.hpp"
-#include "local/object_motion.hpp"
+#include "local/object_prediction.hpp"
 #include "local/planner.hpp"
 #include "local/speed_profile.hpp"
 #include "local/road_memory.hpp"
@@ -33,7 +33,21 @@ Scene empty() {
 }
 int main() {
   {
-    ObjectMotion history;
+    auto s=empty();s.speed=.2;
+    Pose a;s.previous.push_back(a);
+    for(int i=0;i<90;++i) {
+      Pose b=a;b.k=.04;double turn=.5*(a.k+b.k)*.1;
+      b.x+=.1*std::cos(a.yaw+turn*.5);b.y+=.1*std::sin(a.yaw+turn*.5);
+      b.yaw+=turn;b.s+=.1;s.previous.push_back(b);a=b;
+    }
+    Config old;old.budget_ms=.0001;old.speed_cap=10./3.6;old.recovery=false;
+    auto rejected=Plan(s,old);
+    old.low_speed_rate_floor=.5;auto accepted=Plan(s,old);
+    expect(!rejected.valid && accepted.valid && accepted.path_source=="rechecked_previous",
+           "a feasible low-speed steering transition is not tested at an artificial1m/s");
+  }
+  {
+    ObjectPrediction history;
     auto polygon=[](double x,double y) {return geometry::Polygon2D{{x-.3,y-.3},{x+.3,y-.3},{x+.3,y+.3},{x-.3,y+.3}};};
     std::vector<Obstacle> objects;
     // Ego moves; a physically stationary person does not inherit ego motion.

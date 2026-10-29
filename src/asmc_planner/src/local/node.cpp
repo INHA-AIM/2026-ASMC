@@ -1,7 +1,7 @@
 #include "local/journal.hpp"
 #include "local/motion.hpp"
 #include "local/obstacle_memory.hpp"
-#include "local/object_motion.hpp"
+#include "local/object_prediction.hpp"
 #include "local/planner.hpp"
 #include "local/road_memory.hpp"
 #include "local/reference_prior.hpp"
@@ -49,7 +49,7 @@ class Node {
   MotionHistory motion;
   RoadMemory road_memory;
   ObstacleMemory obstacle_memory;
-  ObjectMotion object_motion;
+  ObjectPrediction object_motion;
   bool local_motion_prediction = false;
   bool retain_static_observations = false;
   ReferencePrior reference_prior;
