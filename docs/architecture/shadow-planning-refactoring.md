@@ -1,6 +1,13 @@
 # 음영구간 판제 개선: 현재 연결과 다음 작업
 
-## 현재 기준과 이번 변경
+## 최신 LOCAL 실험
+
+2026-10-29 LOCAL-2F의 구조·제동·복구·인지 입력 점검은
+[LOCAL-2F 기록](../records/planning/2026-10-29-local-braking-recovery.md)을 따른다.
+일반 제어와 기존 camera 기본 선택은 유지한다. 시험 소스와 profile, 성공·실패를
+구분하며 과거 기록의 수치와 계약을 현재 운영 수락으로 확대하지 않는다.
+
+## 기반 변경 (2026-10-28)
 
 2026-10-28, PR #122 병합 main `54f6bb9a`와 실행 일치 수정 `4932b7d6`를 기준으로 한다.
 3뷰 matching은 구현·기본 적용돼 있다. [3뷰 fusion](../../src/asmc_lidar/docs/three-view-fusion.md),
