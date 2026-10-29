@@ -14,6 +14,8 @@ end_radius_m: 3.0
 # and passing between ego samples are accepted; this does not change scene CPs.
 section_end_half_width_m: 10.0
 section_end_approach_m: 25.0
+# Planning-linked tunnel trials include the normal-controller recovery tail.
+planning_recovery_tail_m: 20.0
 # 구간별 검증에서만 적용. 해당 진입 방향이 초록인 교차로 단계를 주기적으로 갱신.
 # K-city 2025: 정적 IntTL7 첫 그룹, 동적 IntTL3 세 번째 그룹.
 # 개별 신호 고정은 교차로 단계 전환 때 풀리므로 그것만으로 유지하지 않는다.
@@ -34,6 +36,6 @@ section_traffic_lights:
 sections:
   static: {start_link: A2256W000213, lead_in_m: 15.0, end_link: A2256W000222}
   dynamic: {start_link: A2256W000728, lead_in_m: 30.0, end_link: A2256W000205}
-  roundabout: {start_link: A2256W000148, lead_in_m: 15.0, end_link: A2256W000151}
-  high_speed: {start_link: A2256W000846, lead_in_m: 0.0, end_link: A2256W000446}
+  roundabout: {start_link: A2256W000304, lead_in_m: 0.0, end_link: A2256W000151}
+  high_speed: {start_link: A2256W000866, start_anchor: end, lead_in_m: 0.0, end_link: A2256W000446, ego_start_delay_s: 8.0}
   tunnel: {start_link: A2256W000448, lead_in_m: 0.0, end_link: A2256W000126}

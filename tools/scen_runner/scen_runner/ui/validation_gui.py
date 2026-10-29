@@ -16,7 +16,7 @@ import uuid
 
 import numpy as np
 import grpc
-from PyQt5 import QtCore,QtWidgets
+from PyQt5 import QtCore,QtGui,QtWidgets
 from matplotlib.figure import Figure
 from matplotlib.collections import PolyCollection
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg,NavigationToolbar2QT
@@ -59,6 +59,35 @@ def use_korean_font() -> None:
             matplotlib.rcParams["font.family"] = font_manager.FontProperties(fname=path).get_name()
             matplotlib.rcParams["axes.unicode_minus"] = False
             return
+
+
+def show_on_current_screen(window):
+    """Keep the initial window, including its title bar, on one monitor."""
+    app=QtWidgets.QApplication.instance()
+    screen=app.screenAt(QtGui.QCursor.pos()) or app.primaryScreen()
+    if screen is None:
+        window.resize(1350,950);window.show();return
+    # Screen origins need not be (0, 0), especially with WSLg/mixed monitors.
+    # WSLg can add native borders and adjust placement asynchronously; keep
+    # clearance on every edge as well as accounting for Qt's frame below.
+    bounds=screen.availableGeometry().adjusted(48,48,-48,-48)
+    window.resize(min(1350,bounds.width()),min(950,bounds.height()))
+
+    def place():
+        frame=window.frameGeometry()
+        border_width=max(0,frame.width()-window.width())
+        border_height=max(0,frame.height()-window.height())
+        window.resize(min(window.width(),bounds.width()-border_width),
+                      min(window.height(),bounds.height()-border_height))
+        frame=window.frameGeometry();frame.moveCenter(bounds.center())
+        window.move(frame.topLeft())
+
+    place();window.show()
+    # X11/WSLg may add the title bar or override placement after show().
+    def settle():
+        if window.isVisible():place()
+    QtCore.QTimer.singleShot(0,settle)
+    QtCore.QTimer.singleShot(200,settle)
 
 
 
@@ -228,7 +257,8 @@ class ValidationRunner(QtCore.QThread):
             a=next((a for a in self.engine.adapters if a.name==name),None)
             selected=name in self.engine.names
             sections.append(dict(name=name,status='미선택' if not selected else '대기' if a is None else
-                                  a.status if a.prepared else '준비 중',count=len(a.owned()) if a else 0))
+                                  a.status if a.prepared else '준비 중',count=len(a.owned()) if a else 0,
+                                  spawn_period_s=getattr(a,'period',None) if a else None))
         details=self.engine.actor_details()
         vehicles=vehicle_records(self.engine.last_states,details,time.monotonic())
         crossings=crossing_records(self.engine.last_states,self.engine.crossing_details(),self.link.ego_id)
@@ -262,13 +292,16 @@ class ValidationRunner(QtCore.QThread):
         if self.speed_debug:
             self.speed_trace=SpeedTrace()
             self.engine.on_rpc_observation=self.speed_trace.write
-        self.monitor.start();initial=True
+        initial=True
         try:
             if self.save_collisions:
                 try:
                     self.archive=CollisionArchive(self.save_dir,notify=self.archive_message);self.archive.start()
                 except Exception as exc:
                     self.archive=None;self.archive_message('[충돌 저장 준비 실패] '+str(exc))
+            # Collect Git provenance before the monitor opens a gRPC channel;
+            # subprocess creation during active gRPC polling triggers fork warnings.
+            self.monitor.start()
             while True:
                 try:command=self.commands.get_nowait()
                 except queue.Empty:command=None
@@ -420,7 +453,11 @@ class ValidationWindow(QtWidgets.QMainWindow):
         self.table=QtWidgets.QTableWidget(5,3);self.table.setHorizontalHeaderLabels(['구간','준비 상태','관리 객체'])
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         self.table.setMaximumHeight(200)
-        right=QtWidgets.QVBoxLayout();right.addWidget(self.table)
+        right=QtWidgets.QVBoxLayout()
+        self.spawn_period_status=QtWidgets.QLabel('NPC 생성 주기: 회차 준비 중')
+        self.spawn_period_status.setWordWrap(True)
+        self.spawn_period_status.setVisible(mode=='scene' or section in ('roundabout','high_speed'))
+        right.addWidget(self.spawn_period_status);right.addWidget(self.table)
         right.addWidget(QtWidgets.QLabel('NPC 설정/실측 km/h · 가속·브레이크는 MORAI 조회값'))
         self.vehicle_table=QtWidgets.QTableWidget(0,7)
         self.vehicle_table.setHorizontalHeaderLabels(['ID','모델','설정','실측','가속','제동','생성후 초'])
@@ -558,9 +595,23 @@ class ValidationWindow(QtWidgets.QMainWindow):
             crossing_text.append(f'{LABELS[r["section"]]} {r["model"]} ID={r["id"]}: {r["status"]} · '
                                  f'생성점 거리 {distance} / Activation {r["activation_distance_m"]:.2f}m')
         self.crossing_status.setText('\n'.join(crossing_text) or '동적객체 없음 / 준비 중')
+        periods=[]
+        for s in frame['sections']:
+            if s['name'] not in ('roundabout','high_speed'):
+                continue
+            if frame['mode']=='section' and s['name']!=frame['section']:
+                continue
+            period=s.get('spawn_period_s')
+            context='에고 출발 대기 중' if frame['phase']=='ego_wait' and s['name']=='high_speed' else '이번 회차'
+            value=f'{period:g}초 ({context})' if period is not None else (
+                '저장 기록 기준' if frame.get('replay') else '회차 준비 중')
+            periods.append(f'{LABELS[s["name"]]} NPC 생성 주기: {value}')
+        self.spawn_period_status.setText('\n'.join(periods))
+        self.spawn_period_status.setVisible(bool(periods))
+        self.spawn_period_status.setToolTip('생성 위치의 안전거리·TTC 조건 때문에 실제 생성은 늦어질 수 있습니다.')
         for row,s in enumerate(frame['sections']):
             for col,text in enumerate([LABELS[s['name']],s['status'],str(s['count'])]):
-                self.set_cell(self.table,row,col,text)
+                self.set_cell(self.table,row,col,text,text)
         actual={r['id']:r for r in frame.get('vehicles',[])}
         details=frame.get('details',{})
         cars={aid:d for aid,d in details.items() if d['kind']==1}
@@ -693,7 +744,7 @@ def main():
                              replay,args.collision_log_dir,not args.no_save_collision,replay_runs,args.run_counts,
                              args.with_planning,args.stack_config)
     except (OSError,ValueError) as error:parser.error(str(error))
-    win.resize(1350,950);win.show()
+    show_on_current_screen(win)
     pending_close=[False]
     def request_signal_close(*_):pending_close[0]=True
     def poll_signal_close():

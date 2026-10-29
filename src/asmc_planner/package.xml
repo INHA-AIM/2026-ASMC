@@ -15,6 +15,7 @@
   <depend>visualization_msgs</depend>
   <depend>yaml-cpp</depend>
   <depend>boost</depend>
+  <depend>openssl</depend>
   <depend>asmc_msgs</depend>
   <depend>roscpp</depend>
   <exec_depend>asmc_controller</exec_depend>

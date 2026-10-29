@@ -1,5 +1,6 @@
 """Four process groups; all source/config changes stay in scen_runner."""
 import argparse
+import hashlib
 import http.client
 import json
 import os
@@ -12,7 +13,7 @@ import threading
 import time
 import xmlrpc.client
 
-from scen_runner.config import REPO_ROOT, TOOL_ROOT
+from scen_runner.config import REPO_ROOT, TOOL_ROOT, load_local_config
 from .control import RoleLease, alive, atomic_json, process_identity, read_json, runtime_dir, settings
 from .process import OwnedProcess
 from .readiness import Readiness
@@ -117,6 +118,17 @@ def launch_configuration(role, config):
     return launch_config
 
 
+def planning_configuration(launch_config):
+    """Resolved runtime values, rather than defaults inferred from source files."""
+    parameters = {key: value.value for key, value in sorted(launch_config.params.items())}
+    nodes = [dict(name=node.namespace+node.name, package=node.package, executable=node.type)
+             for node in launch_config.nodes]
+    fingerprint = hashlib.sha256(json.dumps(dict(parameters=parameters, nodes=nodes),
+                                           sort_keys=True).encode()).hexdigest()
+    return dict(process=process_identity(), created=time.time(), sha256=fingerprint,
+                parameters=parameters, nodes=nodes)
+
+
 def guarded_command(command, owner, stopping):
     group = OwnedProcess(command)
     try:
@@ -130,14 +142,30 @@ def guarded_command(command, owner, stopping):
         group.stop()
 
 
+def bridge_command():
+    script = load_local_config().get('bridge', {}).get('script')
+    if script is None:
+        path = REPO_ROOT/'scripts/udp_bridge.sh'
+    else:
+        if not isinstance(script, str) or not script.strip() or not Path(script).is_absolute():
+            raise ValueError('local.yaml의 bridge.script에는 컨테이너 내부 절대경로를 입력하세요.')
+        path = Path(script)
+    if not path.is_file():
+        raise ValueError('브릿지 실행 파일 없음: '+str(path))
+    return ['bash', str(path), '--transport', 'local']
+
+
 def worker(role, config, check=False, owner=None):
     stopping = [False]
     def stop(*_):
         stopping[0] = True
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, stop)
-    if role == 'bridge' and not check:
-        return guarded_command(['bash', str(REPO_ROOT/'scripts/udp_bridge.sh'), '--transport', 'local'], owner, stopping)
+    if role == 'bridge':
+        command = bridge_command()
+        print('[브릿지 실행 명령] '+shlex.join(command), flush=True)
+        if not check:
+            return guarded_command(command, owner, stopping)
     import roslaunch
     import roslaunch.parent
     launch_config = launch_configuration(role, config)
@@ -146,6 +174,10 @@ def worker(role, config, check=False, owner=None):
                               executable=node.type, python=node.launch_prefix)
                           for node in launch_config.nodes], ensure_ascii=False, indent=2))
         return 0
+    if role == 'planning':
+        resolved = planning_configuration(launch_config)
+        atomic_json(runtime_dir(config)/'planning_resolved.json', resolved)
+        print('[판제 설정] autonomy_no_bridges_v2.launch · SHA256='+resolved['sha256'], flush=True)
     graph = master_graph()
     if role == 'planning':
         # A SIGTERM during node initialization can leave ROS registrations
@@ -197,9 +229,11 @@ class PlanningServer:
     def publish(self):
         identity=getattr(self.group,'identity',None)
         worker_pid=identity.get('pid') if isinstance(identity,dict) else None
+        messages=getattr(self.probe,'messages',{})
+        mode=messages.get('mode') if isinstance(messages,dict) else None
         atomic_json(self.directory/'server.json', dict(process=self.process, heartbeat=self.clock(),
                     phase=self.phase, detail=self.detail,
-                    worker_pid=worker_pid,
+                    worker_pid=worker_pid,selected_mode=mode[0].data if mode else None,
                     generation=self.active['id'] if self.active and self.active['operation'] == 'start' else None))
 
     def stop(self):
@@ -278,7 +312,9 @@ class RosProbe(Readiness):
         self.lock = threading.RLock()
         super().__init__(config)
         import rospy
-        from asmc_msgs.msg import Trajectory, VehicleState
+        from asmc_msgs.msg import LidarObservation, Trajectory, VehicleState
+        from diagnostic_msgs.msg import DiagnosticArray
+        from std_msgs.msg import String, UInt8
         from planning_inputs.msg import DetectedObjectArray
         from morai_msgs.msg import CtrlCmd
         self.subscribers = []
@@ -286,6 +322,11 @@ class RosProbe(Readiness):
                 ('state', '/planning/vehicle/state', VehicleState),
                 ('objects', '/planning/objects', DetectedObjectArray),
                 ('trajectory', '/planning/trajectory', Trajectory),
+                ('mode', '/planning/mode', UInt8),
+                ('selector', '/planning/control_selector/diagnostics', String),
+                ('lidar', '/perception/lidar/observations_local', LidarObservation),
+                ('jamming', '/planning/camera_bbox_lane_change/diagnostics', DiagnosticArray),
+                ('jamming_control', '/ctrl_cmd/jamming', CtrlCmd),
                 ('control', '/ctrl_cmd', CtrlCmd)):
             self.subscribers.append(rospy.Subscriber(topic, kind,
                 lambda message, key=name: self.observe(key, message, time.monotonic()), queue_size=1))

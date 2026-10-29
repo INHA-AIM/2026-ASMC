@@ -29,6 +29,9 @@ PREPARE_ORDER=['static','dynamic','tunnel','roundabout','high_speed']
 class EpisodeRoute:
     def __init__(self,sample_json=None):
         self.cfg=load_yaml(TOOL_ROOT/'config/validation.yaml');base=load_config()
+        self.planning_recovery_tail=float(self.cfg.get('planning_recovery_tail_m',0.))
+        if not math.isfinite(self.planning_recovery_tail) or not 0<=self.planning_recovery_tail<=100:
+            raise ValueError('판제 복귀 검증 거리는 0~100m이어야 합니다.')
         self.curve=Curve(np.loadtxt(repo_path(base['map']['global_path']))[:,:3])
         doc=json.loads(repo_path(base['map']['drivable_map']).read_text())
         self.lanes={l['link_id']:l for l in doc['lanes'] if l.get('route_station_start_m') is not None}
@@ -43,7 +46,9 @@ class EpisodeRoute:
     def section(self,name):
         if name in self._sections:return self._sections[name]
         c=self.cfg['sections'][name]
-        start=max(0.,self.lanes[c['start_link']]['route_station_start_m']-c['lead_in_m'])
+        anchor=c.get('start_anchor','start')
+        if anchor not in ('start','end'):raise ValueError('start_anchor는 start/end여야 합니다.')
+        start=max(0.,self.lanes[c['start_link']][f'route_station_{anchor}_m']-c['lead_in_m'])
         end=self.lanes[c['end_link']]['route_station_end_m']
         x,y,z,h=self.curve.pose(start)
         pose=dict(x=x,y=y,z=z+self.cfg['section_height_offset_m'],roll=0.,pitch=0.,yaw=math.degrees(h))
@@ -58,8 +63,15 @@ class EpisodeRoute:
         if section not in LABELS:raise ValueError('지원하지 않는 구간')
         return dict(self.scene_start) if mode=='scene' else self.section(section)['pose']
 
-    def prepare_section_end(self,section):
-        tracker=SectionCompletion(self.section(section),
+    def prepare_section_end(self,section,tail_m=0.):
+        definition=self.section(section)
+        if tail_m:
+            start=definition['start'];end=min(self.curve.length,definition['end']+tail_m)
+            stations=np.r_[np.arange(start,end,.25),end]
+            end_pose=self.curve.pose(end)
+            definition=dict(definition,curve=Curve([self.curve.pose(s)[:3] for s in stations]),
+                            end_xy=end_pose[:2],end_heading=end_pose[3])
+        tracker=SectionCompletion(definition,
             half_width_m=float(self.cfg.get('section_end_half_width_m',10.)),
             approach_m=float(self.cfg.get('section_end_approach_m',25.)),
             arrival_radius_m=float(self.cfg['end_radius_m']))
@@ -175,6 +187,8 @@ class EpisodeController:
         self.on_stagnation=None
         self.lease=lease if lease is not None else ValidationLease(self.base['morai']['host'],self.base['morai']['port'])
         self.planning=None  # Optional external supervisor; keyboard validation stays independent.
+        self.section_finish_pending=False
+        self.ego_start_delay_s=0.;self.ego_release_at=None
 
     def claim_simulator(self):
         self.lease.acquire()
@@ -244,6 +258,11 @@ class EpisodeController:
         # GUI selection changes are committed only after the previous planner
         # and objects have been stopped/cleaned. All restarts share this path.
         if selection:self.mode,self.section=selection
+        self.ego_start_delay_s=(float(self.route.cfg.get('sections',{}).get(self.section,{}).get('ego_start_delay_s',0.))
+                               if self.mode=='section' and self.replay_seed is None else 0.)
+        if not math.isfinite(self.ego_start_delay_s) or self.ego_start_delay_s<0:
+            raise ValueError('ego 출발 대기 시간은 0 이상의 유한한 초 단위 값이어야 합니다.')
+        self.ego_release_at=None
         if reset_budget and self.run_budget:self.run_budget.reset(self.mode,self.section)
         self.current_operation=dict(section=None,action='reset')
         self.pose=self.route.start(self.mode,self.section);self.link.reset(self.pose)
@@ -257,7 +276,7 @@ class EpisodeController:
         self.completion.reset()
         if self.stagnation:self.stagnation.reset()
         self.pending=list(self.names);self.cancelled.clear();self.error=None
-        self.phase='preparing';self.status='ego 정지 · 객체 배치 준비 중'
+        self.phase='preparing';self.status='ego 정지 · 객체 배치 준비 중';self.section_finish_pending=False
         self.record_lifecycle('episode_begin',pose=dict(self.pose),traffic_lights=self.signals.snapshot())
         print(f'[검증 {self.episode}] {self.mode} · {LABELS[self.section] if self.mode=="section" else "전체 씬"} · seed={self.seed}',flush=True)
 
@@ -352,13 +371,80 @@ class EpisodeController:
             if self.cancelled.is_set():return None
             if self.collision_requested:reason='collision'
             self.phase='transition'
+        self.record_lifecycle('episode_end',reason=reason,
+                              elapsed_s=max(0.,self.clock()-self.run_started),owned_ids=sorted(self.owned))
         if self.run_budget is not None and not self.run_budget.can_start:
             label={'collision':'충돌','scene_end':'완주','section_end':'구간 종료','stagnation':'정체'}[reason]
             self.finish_runs(label,already_held=True);return None
         return reason
 
+    def pause_prepared_traffic(self):
+        errors=[]
+        for adapter in self.adapters:
+            pause=getattr(adapter,'pause_prepared',None)
+            if pause is None:continue
+            try:pause()
+            except Exception as error:errors.append(f'{adapter.name}: {error}')
+        if errors:raise RuntimeError('NPC 준비 정지 복구 실패: '+'; '.join(errors))
+
+    def release_prepared_ego(self,states):
+        recovery=bool(self.planning) and self.section=='tunnel'
+        section_end=(self.route.prepare_section_end(self.section,
+            self.route.planning_recovery_tail if recovery else 0.)
+            if self.mode=='section' and (self.replay_seed is None or recovery) else None)
+        self.link.release()
+        if self.phase=='ego_wait':
+            now=self.clock()
+            for adapter in self.adapters:
+                set_wait=getattr(adapter,'set_ego_wait',None)
+                if set_wait is not None:set_wait(False,now)
+        with self.contact_lock:
+            if self.run_budget is not None:self.run_budget.start_run()
+            self.run_started=self.clock();self.phase='running';self.ego_release_at=None
+            self.completion.reset((self.pose['x'],self.pose['y']),self.run_started)
+            if section_end is not None:section_end.reset((self.pose['x'],self.pose['y']),self.run_started)
+            if self.stagnation:self.stagnation.reset((self.pose['x'],self.pose['y']),self.run_started)
+            if self.on_episode_ready:self.on_episode_ready(self,states)
+        self.status='주행 허용 · '+('판제·MPC 준비 확인' if self.planning else '기존 주행 코드 입력 사용')
+        count='' if self.run_budget is None else f' · 주행 {self.run_budget.started}/{self.run_budget.limit}'
+        print('[검증 준비 완료] ego 주행 허용'+count,flush=True)
+        configuration=self.planning.configuration() if self.planning else {}
+        self.record_lifecycle('driving_ready',owned_ids=sorted(self.owned),
+                              planning_configuration=configuration if isinstance(configuration,dict) else {})
+
+    def wait_for_ego_departure(self):
+        """Keep the GUI responsive and NPC traffic live during the ego hold."""
+        try:
+            self.current_operation=dict(section=self.section,action='ego_start_delay')
+            self.signals.check()
+            if self.planning:self.planning.check()
+            if not self.link.held_at(self.pose):
+                raise RuntimeError('출발 대기 중 ego 위치 또는 속도가 정지 조건을 벗어났습니다.')
+            for adapter in self.adapters:
+                if self.cancelled.is_set():break
+                adapter.tick();self.refresh_owned()
+            states=self.read_states()
+            if self.cancelled.is_set():
+                self.pause_prepared_traffic();return None
+            remaining=max(0.,self.ego_release_at-self.clock())
+            self.status=f'NPC 선출발 · ego 정지 · 출발까지 {remaining:.1f}초'
+            if remaining>0:return None
+            self.signals.verify()
+            if self.planning:self.planning.check()
+            if self.cancelled.is_set():
+                self.pause_prepared_traffic();return None
+            self.release_prepared_ego(states)
+        except Exception:
+            try:self.pause_prepared_traffic()
+            finally:self.link.hold()
+            raise
+        return None
+
     def step(self):
-        if self.cancelled.is_set():return None
+        if self.cancelled.is_set():
+            if self.phase=='ego_wait':self.pause_prepared_traffic()
+            return None
+        if self.phase=='ego_wait':return self.wait_for_ego_departure()
         if self.phase in ('preparing','running'):
             try:self.signals.check()
             except Exception:
@@ -393,22 +479,29 @@ class EpisodeController:
             if self.planning and not self.planning.ready(self.pose,self.episode):
                 self.status='ego 정지 · '+self.planning.status
                 return None
-            section_end=self.route.prepare_section_end(self.section) if self.mode=='section' and self.replay_seed is None else None
-            now=self.clock()
-            for adapter in self.adapters:adapter.resume_schedule(now)
             self.signals.verify()
-            self.link.release()
-            with self.contact_lock:
-                if self.run_budget is not None:self.run_budget.start_run()
-                self.run_started=self.clock();self.phase='running'
-                self.completion.reset((self.pose['x'],self.pose['y']),self.run_started)
-                if section_end is not None:section_end.reset((self.pose['x'],self.pose['y']),self.run_started)
-                if self.stagnation:self.stagnation.reset((self.pose['x'],self.pose['y']),self.run_started)
-                if self.on_episode_ready:self.on_episode_ready(self,states)
-            self.status='주행 허용 · '+('판제·MPC 준비 확인' if self.planning else '기존 주행 코드 입력 사용')
-            count='' if self.run_budget is None else f' · 주행 {self.run_budget.started}/{self.run_budget.limit}'
-            print('[검증 준비 완료] ego 주행 허용'+count,flush=True)
-            self.record_lifecycle('driving_ready',owned_ids=sorted(self.owned))
+            now=self.clock()
+            try:
+                for adapter in self.adapters:
+                    if self.cancelled.is_set():break
+                    adapter.resume_schedule(now)
+                if self.cancelled.is_set():
+                    self.pause_prepared_traffic();return None
+                if self.ego_start_delay_s>0:
+                    wait_started=self.clock()
+                    for adapter in self.adapters:
+                        set_wait=getattr(adapter,'set_ego_wait',None)
+                        if set_wait is not None:set_wait(True,wait_started)
+                    self.ego_release_at=wait_started+self.ego_start_delay_s
+                    self.phase='ego_wait'
+                    self.status=f'NPC 선출발 · ego 정지 · 출발까지 {self.ego_start_delay_s:.1f}초'
+                    self.record_lifecycle('npc_head_start',ego_delay_s=self.ego_start_delay_s)
+                    return None
+                self.release_prepared_ego(states)
+            except Exception:
+                try:self.pause_prepared_traffic()
+                finally:self.link.hold()
+                raise
         if self.phase=='running':
             if self.planning:
                 try:self.planning.check()
@@ -432,12 +525,17 @@ class EpisodeController:
                         action='총 주행 횟수 완료' if self.phase=='runs_done' else '다음 반복 요청'
                         print('[검증 완주] 체크포인트 14 통과 후 START/END 복귀 · '+action,flush=True)
                     return reason
-            if self.mode=='section' and now-self.run_started>.5 and self.route.finished(self.section,ego,now):
-                reason=self.end_run('section_end')
-                if not self.collision_requested and (reason=='section_end' or self.phase=='runs_done'):
-                    action='총 주행 횟수 완료' if self.phase=='runs_done' else '다음 반복 요청'
-                    print(f'[구간 종료] {LABELS[self.section]} · 도착/통과 확인 · {action}',flush=True)
-                return reason
+            if self.mode=='section' and now-self.run_started>.5 and (
+                    self.section_finish_pending or self.route.finished(self.section,ego,now)):
+                self.section_finish_pending=True
+                if self.planning and self.section=='tunnel' and not self.planning.recovery_ready():
+                    self.link.hold();self.status='터널 종료선 통과 · 일반 모드 복귀 확인 대기'
+                else:
+                    reason=self.end_run('section_end')
+                    if not self.collision_requested and (reason=='section_end' or self.phase=='runs_done'):
+                        action='총 주행 횟수 완료' if self.phase=='runs_done' else '다음 반복 요청'
+                        print(f'[구간 종료] {LABELS[self.section]} · 도착/통과 확인 · {action}',flush=True)
+                    return reason
             evidence=self.stagnation.update(ego,now) if self.stagnation else None
             if evidence:
                 self.current_operation=dict(section=None,action='save_stagnation')

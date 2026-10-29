@@ -1,12 +1,14 @@
 // 카메라 BBOX로 내 차로 점유를 확인하면 옆 차로로 변경. 거리/라이다 입력 없음.
 // 이 파일에 파라미터, ROS callback, 주행 함수, main을 함께 둔다.
 #include "lane_boundary_adapter/boundary_family_adapter.hpp"
+#include "lane_boundary_adapter/dynamic_obstacle_risk.hpp"
 
 #include <ros/ros.h>
 #include <lane_boundary_adapter/CameraBBoxLaneResult.h>
 #include <std_msgs/Int8.h>
 #include <asmc_msgs/LaneBoundaryFamily.h>
 #include <asmc_msgs/LidarObjectArray.h>
+#include <asmc_msgs/LidarObservation.h>
 #include <limits>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
@@ -307,7 +309,14 @@ struct LaneChangeState {
     double maximum_path_curvature = 0.0;
     // 최신 유효 BBOX frame의 차로 점유 박스 지면 접점(base_link, BBOX 시각 기준).
     // x~x_far 종방향 범위. 카메라는 길이를 모르므로 avoid_obstacle_length를 가정한다.
-    struct MeasuredObstacle { double x, x_far, y_min, y_max; bool lidar; bool person = false; };
+    struct MeasuredObstacle {
+        double x, x_far, y_min, y_max; bool lidar; bool person = false;
+        // LiDAR만: track ID, 운동(절대 속도 또는 연속 위치 추정), OBB XY 윤곽.
+        int track_id = -1;
+        bool predicted = false;               // 이번 스캔에서 미관측, 예측 형상만 있다.
+        lane_boundary_adapter::dynamic_risk::Motion motion{};
+        std::vector<lane_boundary_adapter::dynamic_risk::Point> footprint{};
+    };
     std::vector<MeasuredObstacle> measured;
     bool measured_complete = false;       // 모든 점유 박스가 측정되었을 때만 회피 판단에 사용.
 } change_state;
@@ -335,6 +344,7 @@ struct LidarObstacles {
     ros::SteadyTime received_at;
     ros::Time stamp;
     unsigned long sequence = 0;
+    std::string source;                  // 관측 envelope의 session/generation 또는 legacy 토픽.
     double arrival_age = 0.0;            // [s] 도착 시점의 측정 지연(처리 지연 포함).
     std::vector<LaneChangeState::MeasuredObstacle> objects;     // 장애물 후보(길이·점 수 필터).
     std::vector<LaneChangeState::MeasuredObstacle> structures;  // 주행 가능 영역 한계(벽 등, 길이 무관).
@@ -342,6 +352,8 @@ struct LidarObstacles {
     ros::SteadyTime structures_received_at;
     bool structures_received = false;
 } lidar_state;
+// 같은 source+track ID의 연속 LiDAR 위치로 운동을 추정한다(재밍으로 절대 속도가 무효일 때).
+lane_boundary_adapter::dynamic_risk::MotionHistory lidar_motion;
 
 // 이번 제어 주기의 회피 입력: 카메라 측정 + 차도 위 LiDAR 물체.
 std::vector<LaneChangeState::MeasuredObstacle> planning_obstacles;
@@ -360,6 +372,8 @@ struct LineObstacle {
     double odom_at;
     int hits;                             // 서로 다른 관측 frame에서 확인한 횟수.
     bool lidar = false;                   // LiDAR 측정. 매 LiDAR 스캔의 형상으로 교체한다(합치지 않음).
+    int track_id = -1;                    // LiDAR track ID. 같은 source+ID만 확인 횟수를 이어받는다.
+    std::string source;
     bool person = false;                  // 카메라 사람 박스. 움직이므로 합치지 않고 최신 관측으로 교체한다.
 };
 struct LineState {
@@ -460,6 +474,8 @@ void modeCallback(const std_msgs::UInt8::ConstPtr& message);
 void egoCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& message);
 bool egoSpeedFresh();
 void lidarCallback(const asmc_msgs::LidarObjectArray::ConstPtr& message);
+void lidarObservationCallback(const asmc_msgs::LidarObservation::ConstPtr& message);
+void ingestLidar(const asmc_msgs::LidarObjectArray::ConstPtr& message, const std::string& source);
 void imuCallback(const sensor_msgs::Imu::ConstPtr& message);
 bool imuFresh();
 bool applyLaneHold();
@@ -630,6 +646,7 @@ void resetActuationLifecycle() {
     line_state = LineState{};
     line_mode_active = false;
     person_state = PersonStopState{};
+    lidar_motion.clear();
     // The classifier may still hold a recently published reference lane from
     // the previous driving episode. Discard labels made against that reference.
     change_state.bbox_valid = false;
@@ -743,12 +760,25 @@ unsigned long observationSequence() {
 }
 
 void lidarCallback(const asmc_msgs::LidarObjectArray::ConstPtr& message) {
+    ingestLidar(message, "legacy_objects_local");
+}
+
+// 관측 envelope: producer 재시작(session/generation 변경) 때 이전 track ID·시각과 섞지 않는다.
+void lidarObservationCallback(const asmc_msgs::LidarObservation::ConstPtr& message) {
+    if (!message || message->producer_session_id.empty()) return;
+    ingestLidar(asmc_msgs::LidarObjectArray::ConstPtr(message, &message->objects),
+                message->producer_session_id + "/" + std::to_string(message->generation));
+}
+
+void ingestLidar(const asmc_msgs::LidarObjectArray::ConstPtr& message, const std::string& source) {
+    namespace dynamic_risk = lane_boundary_adapter::dynamic_risk;
     if (!message) return;
     // 관측 결과만 사용한다. 입력 무효/pose 불가는 빈 관측이 아니다.
     if (message->header.frame_id != "base_link" ||
         (message->status != asmc_msgs::LidarObjectArray::OBSERVED &&
          message->status != asmc_msgs::LidarObjectArray::OBSERVED_EMPTY) ||
-        message->header.stamp.isZero() || (lidar_state.received && message->header.stamp <= lidar_state.stamp)) {
+        message->header.stamp.isZero() ||
+        (!lidar_state.stamp.isZero() && source == lidar_state.source && message->header.stamp <= lidar_state.stamp)) {
         // 장애물 판단은 끊긴 것으로 본다. 정적 구조물은 lidar_structure_hold 동안 유지한다.
         lidar_state.received = false;
         lidar_state.objects.clear();
@@ -756,8 +786,12 @@ void lidarCallback(const asmc_msgs::LidarObjectArray::ConstPtr& message) {
     }
     std::vector<LaneChangeState::MeasuredObstacle> objects, structures;
     const double behind = -(params.vehicle_rear + params.avoid_pass_margin);
+    const bool ego_valid = egoSpeedFresh() && imuFresh();
     for (const auto& object : message->objects) {
-        if (object.height < params.lidar_min_height) continue;
+        // 현재 관측과 예측 형상만 쓴다. 예측 track의 속도는 실측으로 보지 않는다.
+        if (object.observation_state != asmc_msgs::LidarObject::OBSERVED &&
+            object.observation_state != asmc_msgs::LidarObject::PREDICTED) continue;
+        if (!std::isfinite(object.height) || object.height < params.lidar_min_height) continue;
         double x0 = std::numeric_limits<double>::infinity(), x1 = -x0, y0 = x0, y1 = -x0;
         bool finite = true;
         for (const auto& corner : object.obb_corners) {
@@ -770,8 +804,27 @@ void lidarCallback(const asmc_msgs::LidarObjectArray::ConstPtr& message) {
         structures.push_back({x0, x1, y0, y1, true});
         if (object.length > params.lidar_max_length ||
             static_cast<int>(object.source_point_count) < params.lidar_min_points) continue;
-        objects.push_back({x0, x1, y0, y1, true});
+        const bool predicted = object.observation_state == asmc_msgs::LidarObject::PREDICTED || object.miss_count;
+        LaneChangeState::MeasuredObstacle measured{x0, x1, y0, y1, true};
+        measured.track_id = object.track_id;
+        measured.predicted = predicted;
+        for (const auto& corner : object.obb_corners) measured.footprint.push_back({corner.x, corner.y});
+        if (predicted) {
+            measured.motion = lidar_motion.predict(source, object.track_id, message->header.stamp.toSec(),
+                                                   dead_reckoning.yaw_rate, ego_valid);
+        } else {
+            // 유효한 LiDAR 절대 속도를 우선 쓰고, 재밍으로 무효면 연속 위치와 자차 속도·IMU로 추정한다.
+            const dynamic_risk::Point velocity{object.absolute_velocity_mps.x, object.absolute_velocity_mps.y};
+            const bool velocity_valid = object.absolute_velocity_valid && object.dynamic_valid &&
+                std::isfinite(velocity.x) && std::isfinite(velocity.y);
+            measured.motion = lidar_motion.update(source, object.track_id, message->header.stamp.toSec(),
+                {(x0 + x1) / 2.0, (y0 + y1) / 2.0}, ego_speed.speed, dead_reckoning.yaw_rate, ego_valid,
+                velocity_valid ? &velocity : nullptr, &measured.footprint);
+        }
+        measured.footprint = dynamic_risk::hull(std::move(measured.footprint));
+        objects.push_back(std::move(measured));
     }
+    lidar_state.source = source;
     lidar_state.objects = objects;
     lidar_state.structures = structures;
     lidar_state.structures_stamp = message->header.stamp;
@@ -862,12 +915,23 @@ void refreshPlanningObstacles() {
         planning_obstacles.insert(planning_obstacles.end(), change_state.measured.begin(), change_state.measured.end());
     }
     if (lidar_ok) {
-        // 측정 이후 이동한 거리만큼 물체를 가깝게 옮긴다(정지 장애물 가정, 보수적).
-        const double travelled = egoSpeedFresh() ?
-            ego_speed.speed * std::max(0.0, (ros::Time::now() - lidar_state.stamp).toSec()) : 0.0;
+        namespace dynamic_risk = lane_boundary_adapter::dynamic_risk;
+        // 측정 이후의 자차 이동·IMU 회전과 물체 운동을 보정해 현재 base_link 위치로 옮긴다.
+        const double age = std::max(0.0, (ros::Time::now() - lidar_state.stamp).toSec());
         for (auto object : lidar_state.objects) {
-            object.x -= travelled;
-            object.x_far -= travelled;
+            dynamic_risk::Object aligned{{object.x, object.x_far, object.y_min, object.y_max},
+                                         object.motion, object.track_id};
+            aligned.footprint = object.footprint;
+            aligned = dynamic_risk::alignToEgo(std::move(aligned), age,
+                egoSpeedFresh() ? ego_speed.speed : 0.0, imuFresh() ? dead_reckoning.yaw_rate : 0.0);
+            if (aligned.motion.extrapolated) {
+                aligned.motion.age += age;
+                if (aligned.motion.age > 0.5) aligned.motion.valid = aligned.motion.stationary = false;
+            }
+            object.x = aligned.box.x0; object.x_far = aligned.box.x1;
+            object.y_min = aligned.box.y0; object.y_max = aligned.box.y1;
+            object.motion = aligned.motion;
+            object.footprint = std::move(aligned.footprint);
             double left = 0.0, right = 0.0;
             if (!roadIntervalAt(std::max(object.x, -params.vehicle_rear), left, right)) continue;
             if (std::min(object.y_max, left) - std::max(object.y_min, right) < params.lidar_road_min_overlap) continue;
@@ -1804,6 +1868,10 @@ void publishDiagnostics(bool tracking, const std::string& reason, const morai_ms
     addDiagnosticValue(status, "corridor_at_lookahead_m", corridor_ok ?
         "[" + std::to_string(corridor_right) + "," + std::to_string(corridor_left) + "]" : "unavailable");
     addDiagnosticValue(status, "lidar_objects", std::to_string(lidar_state.objects.size()));
+    addDiagnosticValue(status, "lidar_source", lidar_state.source);
+    addDiagnosticValue(status, "lidar_snapshot_sequence", std::to_string(lidar_state.sequence));
+    addDiagnosticValue(status, "lidar_predicted_objects", std::to_string(std::count_if(lidar_state.objects.begin(),
+        lidar_state.objects.end(), [](const auto& object) { return object.predicted; })));
     addDiagnosticValue(status, "road_obstacles", std::to_string(std::count_if(planning_obstacles.begin(),
         planning_obstacles.end(), [](const auto& obstacle) { return obstacle.lidar; })));
 
@@ -1856,7 +1924,23 @@ void initializeRosInterface(ros::NodeHandle& nh) {
         imu_subscriber = nh.subscribe(params.imu_topic, 5, imuCallback);
     }
     if (params.straddle_avoidance && params.use_lidar_obstacles) {
-        lidar_subscriber = nh.subscribe(params.lidar_objects_topic, 1, lidarCallback);
+        // 관측 envelope(session/generation + track ID)가 이미 발행 중이면 그것을 쓴다.
+        // 없으면(단독 시험·기존 producer) objects_local 배열을 그대로 쓴다.
+        std::string envelope = params.lidar_objects_topic;
+        const auto suffix = envelope.rfind("objects_local");
+        bool available = false;
+        if (suffix != std::string::npos && suffix + 13 == envelope.size()) {
+            envelope.replace(suffix, 13, "observations_local");
+            ros::master::V_TopicInfo topics;
+            if (ros::master::getTopics(topics)) {
+                for (const auto& topic : topics) {
+                    available |= topic.name == envelope && topic.datatype == "asmc_msgs/LidarObservation";
+                }
+            }
+        }
+        if (available) lidar_subscriber = nh.subscribe(envelope, 1, lidarObservationCallback);
+        else lidar_subscriber = nh.subscribe(params.lidar_objects_topic, 1, lidarCallback);
+        ROS_INFO("Jamming LiDAR obstacle input: %s", (available ? envelope : params.lidar_objects_topic).c_str());
     }
     follower_state.last_control_time = ros::SteadyTime::now();
 
@@ -2866,16 +2950,17 @@ void rememberLineObstacles(bool new_scan) {
         if (obstacle.lidar) {
             if (!lidar_scan) continue;  // 같은 LiDAR 스캔을 여러 제어 주기에 다시 반영하지 않는다.
             measured.lidar = true;
-            // 겹치는 이전 LiDAR 물체의 확인 횟수를 이어받는다. 사람 때문에 서 있는 동안 본 물체는 바로 피할 대상이다.
+            measured.track_id = obstacle.track_id;
+            measured.source = lidar_state.source;
+            // 같은 source+track ID의 확인 횟수만 이어받는다. 예측 형상은 확인 횟수를 늘리지 않는다.
+            const auto old = std::find_if(line_state.obstacles.begin(), line_state.obstacles.end(), [&](const auto& o) {
+                return o.lidar && o.source == measured.source && o.track_id == measured.track_id;
+            });
+            const int step = obstacle.predicted ? 0 : 1;
+            measured.hits = old != line_state.obstacles.end() ?
+                std::min(old->hits + step, params.obstacle_confirm_frames) : step;
+            // 사람 때문에 서 있는 동안 본 물체는 바로 피할 대상이다.
             if (stopped_for_person) measured.hits = params.obstacle_confirm_frames;
-            for (const auto& old : line_state.obstacles) {
-                if (!old.lidar) continue;
-                const double old_x = lineObstacleX(old);
-                if (old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
-                    old.line_left < measured.line_right && measured.line_left < old.line_right) {
-                    measured.hits = std::max(measured.hits, std::min(old.hits + 1, params.obstacle_confirm_frames));
-                }
-            }
             lidar_scan_obstacles.push_back(measured);
             continue;
         }
@@ -2905,15 +2990,9 @@ void rememberLineObstacles(bool new_scan) {
     if (lidar_scan) {
         line_state.lidar_sequence = lidar_state.sequence;
         auto& stored = line_state.obstacles;
-        stored.erase(std::remove_if(stored.begin(), stored.end(), [&](const auto& old) {
-            if (!old.lidar) return false;
-            if (stopped_for_person) return true;
-            const double old_x = lineObstacleX(old);
-            return std::any_of(lidar_scan_obstacles.begin(), lidar_scan_obstacles.end(), [&](const auto& measured) {
-                return old_x < measured.x + measured.length + 1.0 && measured.x < old_x + old.length + 1.0 &&
-                    old.line_left < measured.line_right && measured.line_left < old.line_right;
-            });
-        }), stored.end());
+        // 유효한 새 스캔이면 LiDAR 기억 전체를 최신 스냅샷으로 교체한다. 과거 OBB·빠진 ID를 쌓지 않는다.
+        stored.erase(std::remove_if(stored.begin(), stored.end(), [](const auto& old) { return old.lidar; }),
+                     stored.end());
         stored.insert(stored.end(), lidar_scan_obstacles.begin(), lidar_scan_obstacles.end());
     }
     if (camera_scan) {

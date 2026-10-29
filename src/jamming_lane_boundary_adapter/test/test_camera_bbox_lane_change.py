@@ -836,10 +836,9 @@ class LaneChangeTest(unittest.TestCase):
         self.assertEqual(status['road_obstacles'],'1')
         # The wall at -3.0 m keeps the right side to the wall: line 3 (centre line) instead of line 5.
         self.assertAlmostEqual(line,3.0)
-        # Measured LiDAR length is used for passing.
+        # A valid empty scan is the latest snapshot: the remembered LiDAR obstacle is released.
         self.feed(shift=-1.75,speed=8.,lidar=[],duration=1.5)
-        self.assertAlmostEqual(self.line_status()[0],3.0)
-        self.feed(shift=-1.75,speed=8.,lidar=[],duration=1.5)
+        self.assertEqual(self.line_status()[1]['line_obstacles'],'0')
         self.assertAlmostEqual(self.line_status()[0],4.0)
 
     def test_straddle_lidar_memory_follows_latest_scan_in_narrow_gap(self):

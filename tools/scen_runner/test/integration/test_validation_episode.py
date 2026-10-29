@@ -20,6 +20,28 @@ class FakeSection:
 
 
 class EpisodeTest(unittest.TestCase):
+    def test_tunnel_finish_waits_for_selected_normal_mode(self):
+        e,l,r=self.engine('section','tunnel');e.planning=Mock();e.planning.ready.return_value=True
+        e.planning.recovery_ready.return_value=False;r.planning_recovery_tail=20.
+        e.begin(1);self.prepare(e);self.now=2.;r.finished.return_value=True
+        l.hold.reset_mock()
+        self.assertIsNone(e.step());self.assertTrue(e.section_finish_pending)
+        l.hold.assert_called_once()
+        r.finished.return_value=False;e.planning.recovery_ready.return_value=True
+        self.assertEqual(e.step(),'section_end')
+
+    def test_episode_end_records_stagnation_separately_from_completion(self):
+        e,l,r=self.engine('section','tunnel')
+        events=[];e.on_lifecycle_observation=events.append
+        e.begin(1);self.prepare(e)
+        self.now=160.
+        self.assertEqual(e.end_run('stagnation'),'stagnation')
+        ended=[event for event in events if event['event']=='episode_end']
+        self.assertEqual(len(ended),1)
+        self.assertEqual(ended[0]['reason'],'stagnation')
+        self.assertEqual(ended[0]['episode'],1)
+        self.assertGreater(ended[0]['elapsed_s'],150.)
+
     def test_background_signal_failure_holds_ego_during_driving(self):
         e,l,r=self.engine('section','dynamic')
         e.begin(1);self.prepare(e)

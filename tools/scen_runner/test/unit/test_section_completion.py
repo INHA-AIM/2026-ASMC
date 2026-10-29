@@ -15,6 +15,14 @@ def ego(x,y=0.,speed=25.):
 
 
 class SectionCompletionTest(unittest.TestCase):
+    def test_planning_recovery_tail_keeps_scene_geometry_but_extends_finish(self):
+        from scen_runner.runtime.validation_episode import EpisodeRoute
+        route=EpisodeRoute();original=route.section('tunnel');old_length=original['curve'].length
+        tracker=route.prepare_section_end('tunnel',20.)
+        self.assertAlmostEqual(tracker.curve.length-old_length,20.,delta=.1)
+        self.assertEqual(route.section('tunnel')['end_xy'],original['end_xy'])
+        self.assertGreater(math.dist(tracker.end_xy,original['end_xy']),19.)
+
     def tracker(self,width=10.):
         curve=Curve([[0.,0.,0.],[100.,0.,0.]])
         tracker=SectionCompletion(dict(curve=curve,end_xy=(100.,0.),end_heading=0.),half_width_m=width)
