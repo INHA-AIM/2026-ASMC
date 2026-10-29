@@ -163,6 +163,7 @@ public:
     bool highway_merge_committed() const { return highway_committed_; }
     struct HighwayMergeResult {
         bool candidate_valid=false,ready=false,maneuver_completed=false;
+        bool forward_mitigation=false;
         std::uint64_t epoch=0;
         std::size_t generated=0,valid=0;
         double progress=0,transition_terminal_s=0;
@@ -1002,6 +1003,7 @@ private:
     std::shared_ptr<const asmc_planner::lane_reference::HdLaneMap> highway_prediction_map_;
     std::vector<std::shared_ptr<const asmc_planner::lane_reference::LaneReference>> highway_traffic_lanes_;
     bool highway_committed_=false;
+    std::unordered_map<const RefLine*,double> highway_lane_entry_times_;
     bool highway_returning_to_source_=false;
     int highway_unresolved_return_object_=-1;
     double highway_unresolved_return_stamp_=-1;
@@ -1437,6 +1439,12 @@ private:
                                  CartesianPath& out_path, double service_decel,
                                  double target_d, double lateral_distance,
                                  bool recover_initial_state) const;
+    // A caller-owned collision certificate for the generated braking path.
+    // Ordinary STOP callers retain the original checker and road/kinematics.
+    bool PlanCollisionBrakingPathWithSafety(const CartesianState& ego,double s,double d,
+        const std::vector<TrackedObject>& obstacles,CartesianPath& out_path,
+        double service_decel,double target_d,double lateral_distance,bool recover_initial_state,
+        const std::function<bool(const CartesianPath&)>& safety) const;
 
     bool GenerateDecelToZeroPath(double s, double d, double s_dot,
                                  CartesianPath& out_path) const;

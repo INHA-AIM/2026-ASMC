@@ -267,19 +267,37 @@ CartesianCollisionCheckResult EvaluateRoundaboutExecutionSafety(
         }
         if(along>0&&closest<(shape.width+aligned.width)*.5+collision.safety_margin&&
            (aligned.vx*std::cos(heading)+aligned.vy*std::sin(heading))>.7*std::hypot(aligned.vx,aligned.vy))return original;
-        // Require a same-direction following relationship on the supplied map.
-        // Side-by-side, crossing and unresolved map continuations stay strict.
+        // Determine the resulting relationship under the SAME bounded response
+        // that is checked below. Requiring the unreacted car to be a follower
+        // first is circular: yielding is precisely what makes it fall behind.
+        highway_rear_response::State response;
+        response.enabled=true;response.start=age+reaction;
+        const double speed=std::hypot(mapped.vx,mapped.vy);
+        response.low=std::isfinite(mapped.prediction_min_speed)?mapped.prediction_min_speed:speed;
+        response.high=std::isfinite(mapped.prediction_max_speed)?mapped.prediction_max_speed:speed;
+        response.floor=0;
+        response.required_decel=response.maximum_decel=cfg.execution_max_rear_decel;
         bool following=false;
         for(std::size_t i=0;i<path.x.size();++i) {
-            const double time=age+i*dt,speed=std::hypot(mapped.vx,mapped.vy);
-            if(mapped.prediction_lane_s+speed*time>mapped.prediction_lane->length)break;
-            const auto actor=PredictTrackedObjectPose(mapped,time);const auto velocity=PredictTrackedObjectVelocity(mapped,time);
-            const double x=actor.x-path.x[i],y=actor.y-path.y[i];
-            const double longitudinal=x*std::cos(path.yaw[i])+y*std::sin(path.yaw[i]);
-            const double lateral=-x*std::sin(path.yaw[i])+y*std::cos(path.yaw[i]);
-            if(longitudinal<-(shape.rear_overhang+mapped.length*.5+collision.safety_margin)&&
-               std::fabs(lateral)<(shape.width+mapped.width)*.5+collision.safety_margin&&
-               (velocity.first*std::cos(path.yaw[i])+velocity.second*std::sin(path.yaw[i]))>.7*std::hypot(velocity.first,velocity.second)) {following=true;break;}
+            const double time=age+i*dt;
+            const auto distances=response.distances(time);
+            if(mapped.prediction_lane_s+distances.second>
+               std::min(mapped.prediction_lane->length,mapped.prediction_lane_end_s))break;
+            const auto frame=Interpolate(*mapped.prediction_lane,mapped.prediction_lane_s+distances.second);
+            if(std::cos(frame.theta-path.yaw[i])<=.7)continue;
+            const auto body=response.footprint(mapped,time);
+            double front=-INFINITY,lo=INFINITY,hi=-INFINITY;
+            for(const auto& p:body) {
+                const double x=p.x-path.x[i],y=p.y-path.y[i];
+                front=std::max(front,x*std::cos(path.yaw[i])+y*std::sin(path.yaw[i]));
+                const double lateral=-x*std::sin(path.yaw[i])+y*std::cos(path.yaw[i]);
+                lo=std::min(lo,lateral);hi=std::max(hi,lateral);
+            }
+            const double rear=shape.rear_overhang<0?shape.length*.5:shape.rear_overhang;
+            if(body.size()>=3&&front < -rear-collision.safety_margin&&
+               lo<shape.width*.5+collision.safety_margin&&hi>-shape.width*.5-collision.safety_margin) {
+                following=true;break;
+            }
         }
         if(!following||!merge_response::Clear(path,mapped,shape,collision,dt,reaction,
              cfg.execution_max_rear_decel,path.x.size(),std::chrono::steady_clock::time_point::max(),age))return original;

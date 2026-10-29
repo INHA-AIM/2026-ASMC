@@ -16,6 +16,12 @@ struct HighwayMergeRoute {
         struct FollowingLane {
             std::shared_ptr<const RefLine> reference;
             std::shared_ptr<const asmc_planner::lane_reference::LaneRegion> region;
+            // Per-call execution fact. Prepared/admission zones keep the full
+            // allowance; a runtime copy subtracts observed physical entry age.
+            double reaction_remaining_s=1.0;
+            // Candidate-local response may use known incoming lane geometry
+            // only up to its first unresolved successor. Zero means no hint.
+            double response_lane_end_s=0;
         };
         HighwayMergeZone config;
         RefLine target_reference;

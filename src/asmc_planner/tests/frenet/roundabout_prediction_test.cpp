@@ -323,9 +323,18 @@ int main(){
     object.velocity_unavailable=false;object.type=2;
     expect(!history.ExecutionMappedMotion(object,{supplied_lane},2).prediction_lane,
         "pedestrians do not inherit a partial-vehicle execution lane");
+    object.type=0;object.vy=0;object.vx=5;
+    object.x=3.4;observe(1200.4,1);
+    const auto retained=history.ExecutionMappedMotion(object,{supplied_lane},2);
+    expect(bool(retained.prediction_lane)&&retained.corners[0].x==object.corners[0].x&&
+        !history.MappedMotion(object,{supplied_lane},2).prediction_lane,
+        "continuous fragment-centre jitter retains recent execution lane evidence without granting PREPARE confidence");
     object.type=0;object.vy=5;object.vx=0;
     expect(!history.ExecutionMappedMotion(object,{supplied_lane},2).prediction_lane,
         "a fresh crossing velocity cannot inherit the previous straight history");
+    object.vx=5;object.vy=0;object.x=30;observe(1200.5,1);
+    expect(!history.ExecutionMappedMotion(object,{supplied_lane},2).prediction_lane,
+        "a discontinuous same ID destroys retained execution evidence");
     return failures?1:0;
 }
 

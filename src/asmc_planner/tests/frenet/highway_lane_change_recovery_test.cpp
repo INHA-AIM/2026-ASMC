@@ -118,6 +118,42 @@ void exercise(const HighwayReferenceStatus& status,std::shared_ptr<const Highway
         t.step({obstacle});expect(!t.result.returning_to_source,"fully established target occupancy never triggers a late ordinary abort");
     }
     {
+        // Isolate policy from wall-clock test-host contention. Production
+        // remains 30 ms and is measured separately in recorded-input replay.
+        auto fixture=std::make_shared<HighwayMergeRoute>(*route);fixture->config.planning_budget_ms=1000;
+        Trial t(status,fixture,left);t.partial(1.2);
+        std::string error;auto ids=t.source->lanes();
+        for(const auto& id:t.target->lanes())if(std::find(ids.begin(),ids.end(),id)==ids.end())ids.push_back(id);
+        t.zone.following_region=route->map->corridor(ids,error);
+        const auto target_region=route->map->corridor(t.target->lanes(),error);
+        t.zone.following_lanes={{std::shared_ptr<const RefLine>(t.target,&t.target->line()),target_region}};
+        t.zone.following_lanes.front().response_lane_end_s=t.target->line().length;
+        t.zone.following_road_body={route->vehicle.length-route->vehicle.rear_overhang,
+            route->vehicle.rear_overhang,route->vehicle.width*.5};
+        t.zone.following_road_footprint=[&](double x,double y,double yaw){return t.core.RuntimeRoadFootprintClear(x,y,yaw);};
+        const auto projection=ProjectOnLaneReference(*t.target,t.ego.x,t.ego.y,t.ego.yaw,t.ego.v);
+        bool moving_mitigation=false;
+        for(double speed:{26.,28.,30.}) {
+            auto rear=box(at(t.target->line(),projection.s-30,speed),int(91+speed-26),speed);
+            rear.type=int(asmc_planner::ObjectType::UNKNOWN);rear.motion_state=ObjectMotionState::UNKNOWN;
+            const bool ok=t.step({rear});
+            std::cerr<<"rear fixture speed="<<speed<<" ok="<<ok<<" candidate="<<t.result.candidate_valid
+                <<" mitigation="<<t.result.forward_mitigation<<" check="<<t.result.check.reason
+                <<" rear="<<t.result.check.rear_response_unverified<<" detail="<<t.result.detail<<'\n';
+            if(ok&&t.result.forward_mitigation) {
+                moving_mitigation=!t.result.candidate_valid&&!t.result.ready&&
+                    !t.result.maneuver_completed&&t.path.x.size()>1&&
+                    *std::max_element(t.path.v.begin(),t.path.v.end())>1;
+                break;
+            }
+        }
+        expect(moving_mitigation,"rear-only response failure retains a moving checked path without READY or handover");
+        expect(t.core.highway_merge_committed(),"forward mitigation keeps the committed execution owner");
+        const auto contact=box(t.ego,92,0,6,3);
+        expect(!t.step({contact})&&!t.result.forward_mitigation,
+            "mitigation arbitration never overrides an actual current collision");
+    }
+    {
         Trial t(status,route,left);t.partial(.3);auto overlap=box(t.ego,74,0,6,3);
         expect(!t.step({overlap})&&!t.result.candidate_valid&&!t.result.returning_to_source,"current physical collision is not exempted by following or return");
         auto timeout=*route;timeout.config.planning_budget_ms=0;t.now+=.05;

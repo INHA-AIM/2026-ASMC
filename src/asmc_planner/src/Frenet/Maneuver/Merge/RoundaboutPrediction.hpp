@@ -26,6 +26,10 @@ class RoundaboutPrediction {
         TrackedObject last{};
         double body_stamp=-1, body_x=0, body_y=0;
         double half_length=0, half_width=0;
+        // Execution evidence lives inside the same bounded continuity track.
+        // Reset/expiry/ID discontinuity destroys it with that track.
+        mutable std::shared_ptr<const RefLine> execution_lane;
+        mutable double execution_lane_stamp=-1,execution_low=NAN,execution_high=NAN;
     };
     std::unordered_map<int,Track> tracks_;
     double stamp_=-1;
@@ -214,21 +218,50 @@ public:
         const auto found=tracks_.find(input.id);
         if(found==tracks_.end()||!GeometryUsable(input)||InspectPredictionVelocity(input)!=PredictionInputStatus::MEASURED||
            input.motion_state==ObjectMotionState::LOW_THREAT||(input.type!=0&&input.type!=1))return input;
-        auto strict=MappedMotion(input,references,horizon);if(strict.prediction_lane)return strict;
-        const auto& track=found->second;double vx=0,vy=0,error=0;
-        if(!PositionVelocity(track,vx,vy,error,3,.2))return input;
+        const auto& track=found->second;
+        const auto remember=[&](TrackedObject mapped) {
+            if(mapped.prediction_lane) {
+                track.execution_lane=mapped.prediction_lane;track.execution_lane_stamp=track.stamp;
+                track.execution_low=mapped.prediction_min_speed;track.execution_high=mapped.prediction_max_speed;
+            }
+            return mapped;
+        };
+        const auto retained=[&]() {
+            if(!track.execution_lane||track.samples.empty()||
+               track.execution_lane_stamp<track.samples.front().t||
+               stamp_-track.stamp>1e-6||!track.moving||
+               std::find(references.begin(),references.end(),track.execution_lane)==references.end())return input;
+            // Retain a previously position-supported lane only while CURRENT
+            // measured direction, three recent positions and map coverage agree.
+            // A transient fragment fit may fail without erasing that evidence.
+            const auto point=Interpolate(*track.execution_lane,FindClosestS(*track.execution_lane,input.x,input.y,nullptr,1e6));
+            if(std::cos(std::atan2(input.vy,input.vx)-point.theta)<std::cos(.20))return input;
+            auto bounded=input;const auto range=ObservedSpeedRange(input.id,std::hypot(input.vx,input.vy));
+            bounded.prediction_min_speed=std::min(range.first,
+                std::isfinite(track.execution_low)?track.execution_low:range.first);
+            bounded.prediction_max_speed=std::max(range.second,
+                std::isfinite(track.execution_high)?track.execution_high:range.second);
+            if(std::isfinite(input.prediction_min_speed))bounded.prediction_min_speed=std::min(bounded.prediction_min_speed,input.prediction_min_speed);
+            if(std::isfinite(input.prediction_max_speed))bounded.prediction_max_speed=std::max(bounded.prediction_max_speed,input.prediction_max_speed);
+            auto mapped=MapExecutionMotion(bounded,{track.execution_lane},horizon,nullptr);
+            // Reusing evidence must never renew its original observation age.
+            return mapped;
+        };
+        auto strict=MappedMotion(input,references,horizon);if(strict.prediction_lane)return remember(strict);
+        double vx=0,vy=0,error=0;
+        if(!PositionVelocity(track,vx,vy,error,3,.2))return retained();
         const double speed=std::hypot(input.vx,input.vy),position=std::hypot(vx,vy);
-        if(speed<.5||position<.5||(vx*input.vx+vy*input.vy)/(speed*position)<std::cos(.20))return input;
+        if(speed<.5||position<.5||(vx*input.vx+vy*input.vy)/(speed*position)<std::cos(.20))return retained();
         const auto& samples=track.samples;double mt=0,ma=0,tt=0,ta=0;
         for(const auto& q:samples){mt+=q.t-track.stamp;ma+=q.direction;}mt/=samples.size();ma/=samples.size();
         for(const auto& q:samples){const double t=q.t-track.stamp-mt;tt+=t*t;ta+=t*(q.direction-ma);}
-        if(tt<=1e-9||std::fabs(ta/tt-track.rate)>1e-6)return input;
-        for(const auto& q:samples)if(std::fabs(q.direction-ma-ta/tt*(q.t-track.stamp-mt))>.20)return input;
+        if(tt<=1e-9||std::fabs(ta/tt-track.rate)>1e-6)return retained();
+        for(const auto& q:samples)if(std::fabs(q.direction-ma-ta/tt*(q.t-track.stamp-mt))>.20)return retained();
         input.prediction_min_speed=std::max(0.0,std::min(speed,position-error));
         input.prediction_max_speed=std::max(speed,position+error);
         if(std::isfinite(object.prediction_min_speed))input.prediction_min_speed=std::min(input.prediction_min_speed,object.prediction_min_speed);
         if(std::isfinite(object.prediction_max_speed))input.prediction_max_speed=std::max(input.prediction_max_speed,object.prediction_max_speed);
-        return MapExecutionMotion(input,references,horizon,nullptr);
+        return remember(MapExecutionMotion(input,references,horizon,nullptr));
     }
 private:
     TrackedObject MapExecutionMotion(const TrackedObject& object,
