@@ -34,6 +34,28 @@ Scene empty() {
 }
 int main() {
   {
+    // Four roadside obstacles preceded the actual19m barrier in the source
+    // array. A verified bypass should still be proposed, not starved by order.
+    auto s=empty();
+    for(int i=0;i<4;++i) {
+      Obstacle o;o.id=i;
+      o.polygon={{6.+i,5.},{6.5+i,5.},{6.5+i,5.5},{6.+i,5.5}};
+      s.obstacles.push_back(o);
+    }
+    Obstacle far;far.id=100;
+    far.polygon={{19.,-.6},{19.5,-.6},{19.5,.6},{19.,.6}};
+    s.obstacles.push_back(far);
+    Config c;c.budget_ms=200.;
+    auto r=Plan(s,c);
+    expect(r.valid && r.path.back().x>15. && std::abs(r.path.back().y)>1.,
+           "roadside seeds cannot starve a relevant19m barrier");
+    for(size_t i=1;i<r.path.size();++i) {
+      Result check;
+      expect(CheckSweep(s,c,r.path[i-1],r.path[i],check),
+             "prioritized seed still passes the same full-body sweep");
+    }
+  }
+  {
     auto s=empty();Config c;c.recovery=true;c.recovery_speed=5./3.6;c.speed_cap=10./3.6;
     Result r;expect(BuildRecoveryPath(s,c,r) && BuildSpeedProfile(s,c,r) && r.chosen_cap<=5./3.6,
       "5kmh recovery target still passes actual-state speed and collision validation");

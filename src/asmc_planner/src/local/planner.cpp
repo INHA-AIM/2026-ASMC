@@ -183,10 +183,24 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
   // Full-body goal probes can all fail across an object's semantic occlusion
   // before a usable bypass is even tried. Add measured OBB-face guidance;
   // these are search seeds only, and every connecting body sweep is unchanged.
-  for(const auto &o:s.obstacles) {
+  // Prioritize objects intersecting the navigation reference before roadside
+  // clutter can consume the bounded seed list. This only proposes goals: the
+  // existing full-body sweep and observed-road checks still decide validity.
+  std::vector<const Obstacle*> guidance;
+  for(const auto &o:s.obstacles) guidance.push_back(&o);
+  auto priority=[&](const Obstacle& o) {
+    double x=1e9,lo=1e9,hi=-1e9;
+    for(const auto& p:o.polygon) {x=std::min(x,p.x);lo=std::min(lo,p.y);hi=std::max(hi,p.y);}
+    const double home=ReferenceAt(s,std::clamp(x,0.,horizon));
+    const double pad=c.width*.5+c.margin+o.uncertainty;
+    return std::make_tuple(home>=lo-pad && home<=hi+pad ? 0 : 1,x);
+  };
+  std::stable_sort(guidance.begin(),guidance.end(),[&](const auto* a,const auto* b){return priority(*a)<priority(*b);});
+  for(const auto *source:guidance) {
+    const auto &o=*source;
     double minx=1e9,lo=1e9,hi=-1e9;
     for(auto p:o.polygon) {minx=std::min(minx,p.x);lo=std::min(lo,p.y);hi=std::max(hi,p.y);}
-    if(minx<4. || minx>18.)continue;
+    if(minx<4. || minx>s.grid.xmax)continue;
     double gx=std::min(minx,horizon),pad=c.width*.5+c.margin+o.uncertainty+o.extra_clearance+.25;
     if(gx<4.)continue;
     for(double side:{hi+pad,lo-pad}) {
@@ -195,10 +209,12 @@ static Result PlanPrepared(const Scene &s, const Config &c) {
       int row=std::lround((s.grid.xmax-q[0])/s.grid.resolution),col=std::lround((s.grid.ymax-q[1])/s.grid.resolution);
       if(row<0 || row>=s.grid.rows || col<0 || col>=s.grid.cols)continue;
       auto i=row*s.grid.cols+col;
-      if(s.grid.coverage[i]==255 && s.grid.probability[i]>=166)
-        lateral_targets.push_back(side-ReferenceAt(s,gx));
+      const double target=side-ReferenceAt(s,gx);
+      if(s.grid.coverage[i]==255 && s.grid.probability[i]>=166 &&
+         std::none_of(lateral_targets.begin(),lateral_targets.end(),[&](double y){return std::abs(y-target)<.10;}))
+        lateral_targets.push_back(target);
     }
-    if(lateral_targets.size()>=4)break;
+    if(lateral_targets.size()>=6)break;
   }
   for (auto &goal : out.goals)
     if (std::none_of(
