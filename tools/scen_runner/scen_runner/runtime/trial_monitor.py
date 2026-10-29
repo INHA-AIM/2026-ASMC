@@ -109,8 +109,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         path = urllib.parse.urlsplit(self.path)
         if path.path == '/api/monitor-health':
-            with self.server.metrics_lock: metrics = dict(self.server.metrics)
-            self.reply(dict(protocol=PROTOCOL, workspace=str(self.server.workspace), metrics=metrics)); return
+            instance=read_json(self.server.state).get('instance_id')
+            with self.server.metrics_lock:
+                if self.server.metrics_instance!=instance:
+                    self.server.metrics_instance=instance
+                    self.server.metrics=dict(requests=0,errors=0,bytes=0,elapsed_ms=0.)
+                metrics = dict(self.server.metrics)
+            self.reply(dict(protocol=PROTOCOL, workspace=str(self.server.workspace),instance_id=instance,metrics=metrics)); return
         if path.path not in ('/api/snapshot','/api/local-scene'):
             # Assets/map are always from this worktree, never another backend.
             super().do_GET(); return
