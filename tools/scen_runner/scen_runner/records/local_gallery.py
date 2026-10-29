@@ -215,6 +215,9 @@ def gallery(root, name="local-gallery", output=None, bag_root=None):
                 (230, 130, 200) if ob.get("retained_measurement") else (0, 100, 255),
                 2,
             )
+            if ob.get('motion_sweep'):
+                cv2.polylines(image,[np.asarray([pt(*q) for q in ob['motion_sweep']],np.int32)],
+                              True,(255,170,65),1)
         stem = "case-%02d" % len(cases)
         cv2.imwrite(str(out / (stem + ".png")), image)
         (out / (stem + ".jpg")).write_bytes(rgb[source])
