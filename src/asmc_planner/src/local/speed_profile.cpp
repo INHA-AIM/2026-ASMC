@@ -88,7 +88,8 @@ bool BuildSpeedProfile(const Scene &s, const Config &c, Result &out) {
       .9*c.max_steer_rate/steering_gradient : c.speed_cap;
   out.raw_cap = c.speed_cap;
   out.maneuver_cap=c.speed_cap;
-  if(c.maneuver_speed_cap>0.) {
+  if(c.maneuver_speed_cap>0. && c.maneuver_speed_cap<c.speed_cap && !out.recovery &&
+     !(out.assisted && c.maneuver_speed_cap>=5./3.6)) {
     for(const auto &o:s.obstacles) {
       double near=1e9,far=-1e9;
       for(auto p:o.polygon){near=std::min(near,p.x);far=std::max(far,p.x);}
