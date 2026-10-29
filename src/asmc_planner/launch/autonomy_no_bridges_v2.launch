@@ -115,6 +115,8 @@
     <arg name="initial_ready_topic" value="$(eval ('/planning/localization/control_ready' if arg('localization_local_recovery') else '/planning/localization/anchor_ready') if arg('jamming_planner') == 'localization' else '')"/>
     <arg name="allow_static_contact_progress" value="$(arg static_avoid_contact_progress)"/>
   </include>
+  <!-- A451 preparation only; A448 takeover and LiDAR 30m/10m scope stay unchanged. -->
+  <param name="planning_mode/prepare_distance_m" value="$(eval 117.920589 if arg('jamming_planner') == 'localization' else 0.0)"/>
   <node pkg="asmc_planner" type="asmc_control_selector_node"
         name="asmc_control_selector" output="screen" required="true">
     <param name="smooth_handoff" value="true"/>

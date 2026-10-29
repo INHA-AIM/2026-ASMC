@@ -21,41 +21,45 @@ inline bool RecoverableAnchorFailure(const std::string& reason) {
   return reason=="motion_epoch_changed" || reason=="gps_innovation_exceeded" ||
       reason=="gps_recovery_unstable" || reason=="reanchor_wait_stopped" ||
       reason=="stopped_reanchor_warmup" || reason=="initial_anchor_warmup" ||
-      reason=="epoch_reset";
+      reason=="epoch_reset" || reason=="anchor_time_limit" ||
+      reason=="anchor_distance_limit" || reason=="anchor_no_past_sample";
 }
 class LocalRecoveryPolicy {
  public:
   bool active=false;
   std::string reason="disabled";
-  void reset(){active=false;blocked_since_=healthy_since_=last_=-1;reason="reset";}
+  void reset(){active=false;blocked_since_=healthy_since_=last_=-1;blocked_count_=0;reason="reset";}
   bool update(double now,bool allowed,bool native_progress,bool recoverable,
               bool candidate_valid,bool nearly_stopped,bool dynamic_risk) {
     if(!std::isfinite(now)||now<last_){reset();reason="clock_reset";return false;}
     last_=now;
     if(!allowed||dynamic_risk){reset();reason=dynamic_risk?"dynamic_or_pending_yield":"input_or_mode_invalid";return false;}
     if(native_progress){
-      blocked_since_=-1;
+      blocked_since_=-1;blocked_count_=0;
       if(healthy_since_<0)healthy_since_=now;
       if(!active||now-healthy_since_>=1.0){active=false;reason="localization_ready";return false;}
     } else {
       healthy_since_=-1;
       if(!recoverable){active=false;blocked_since_=-1;reason="nonrecoverable_native_failure";return false;}
-      if(nearly_stopped){if(blocked_since_<0)blocked_since_=now;}
-      else if(!active)blocked_since_=-1;
+      // Fresh LOCAL can take over before a full stop. Require consecutive
+      // native failures and at least one nominal plan interval.
+      if(blocked_since_<0)blocked_since_=now;
+      ++blocked_count_;
     }
     if(!candidate_valid){
       // Withhold output while stale, but retain selected recovery ownership.
       // A subsequent fresh path can resume without first demanding a stop.
       // Epoch/input/hazard changes above still revoke ownership immediately.
-      if(!active)blocked_since_=-1;
+      if(!active){blocked_since_=-1;blocked_count_=0;}
       reason="local_candidate_unavailable";return false;
     }
-    if(!active&&blocked_since_>=0&&now-blocked_since_>=.5)active=true;
-    reason=active?(native_progress?"local_recovery_return_debounce":"local_recovery_active"):"waiting_for_stationary_recovery";
+    if(!active&&blocked_since_>=0&&blocked_count_>=2&&now-blocked_since_>=.08)active=true;
+    reason=active?(native_progress?"local_recovery_return_debounce":"local_recovery_active"):"waiting_for_repeat_native_failure";
     return active;
   }
  private:
   double blocked_since_=-1,healthy_since_=-1,last_=-1;
+  unsigned blocked_count_=0;
 };
 
 // Both origins are at EXACTLY the candidate header time. Source timestamps,
@@ -92,8 +96,10 @@ inline std::optional<asmc_msgs::LocalTrajectory> ReframeLocalRecovery(
     progress=std::max(progress,std::hypot(x,y));
     point.x=target.x+c*x-s*y;point.y=target.y+s*x+c*y;point.yaw+=delta;
   }
-  // A valid zero-speed wait is not a recovery path.
-  if(progress<1.||std::none_of(out.points.begin(),out.points.end(),[](const auto& p){return p.velocity>.3;}))return {};
+  // Producer already validated footprint, stopping space and speed. Do not
+  // discard its short recovery solely for being below 1m / 0.3m/s. Never
+  // increase its speed or convert a valid zero-speed wait to movement.
+  if(progress<.2||std::none_of(out.points.begin(),out.points.end(),[](const auto& p){return p.velocity>.01;}))return {};
   return out;
 }
 } // namespace shadow_localization

@@ -220,12 +220,13 @@ class PositionNode {
     if(!state)return;
     const double now=ros::Time::now().toSec(),steady=ros::SteadyTime::now().toSec();
     const double t=state->header.stamp.toSec();auto origin=alignment.pose_at(t);if(!origin)return;
-    Result r;bool computed=false;auto transform=anchor.at(t);
+    Result r;bool computed=false;std::string anchor_query_failure;
+    auto transform=anchor.at(t,&anchor_query_failure);
     const bool fresh=steady-state_received<=.15&&now-t>=0&&now-t<=.15;
     if(mode_gated&&!selected&&!preparing)r.reason="inactive_normal";
     else if(!fresh)r.reason="position_state_stale";
     else if(!attitude_valid || steady-imu_received>.15)r.reason="position_imu_stale";
-    else if(!transform.valid)r.reason=anchor.reason;
+    else if(!transform.valid)r.reason=anchor_query_failure;
     else if(!objects_valid||steady-objects_received>.3||t-object_stamp>.3||object_stamp-t>.05)
       r.reason="position_objects_stale";
     else if(state->header.stamp.toNSec()==last_state_stamp)return;
@@ -461,7 +462,7 @@ class PositionNode {
       throw std::runtime_error("invalid bounded source reorder tolerance");
     if(mode_gated) {
       mode_sub=nh.subscribe<std_msgs::UInt8>("/planning/mode",1,
-        [this](const std_msgs::UInt8::ConstPtr& m){selected=m->data==1;if(!selected){local_recovery.reset();local_candidate.reset();}});
+        [this](const std_msgs::UInt8::ConstPtr& m){selected=m->data==1;if(!selected){local_recovery.reset();}});
       prepare_sub=nh.subscribe<std_msgs::Bool>("/planning/jamming/prepare",1,
         [this](const std_msgs::Bool::ConstPtr& m){preparing=m->data;});
     }

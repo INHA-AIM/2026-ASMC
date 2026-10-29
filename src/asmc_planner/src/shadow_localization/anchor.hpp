@@ -99,16 +99,22 @@ class Anchor {
     }
     collect(raw);auto q=mean();q.source=state="gps_anchored";reason="gps_tracking";remember(q);return true;
   }
-  Transform at(double t) const {
-    if (blocked_)return {};
-    for (auto i=history_.rbegin();i!=history_.rend();++i)if (i->value.stamp<=t) {
+  Transform at(double t,std::string* failure=nullptr) const {
+    const auto unavailable=[&](const std::string& why){if(failure)*failure=why;return Transform{};};
+    if(!std::isfinite(t)||t<=0)return unavailable("anchor_query_time_invalid");
+    if(blocked_)return unavailable(reason);
+    if(history_.empty())return unavailable(reason);
+    for(auto i=history_.rbegin();i!=history_.rend();++i)if(i->value.stamp<=t){
+      if(t-i->validated_stamp>120.)return unavailable("anchor_time_limit");
+      if(travel_-i->validated_distance>250.)return unavailable("anchor_distance_limit");
       auto q=value_at(*i,t);
-      if (t-i->validated_stamp>120. || travel_-i->validated_distance>250.)return {};
-      if (t-q.stamp>.6)q.source="dead_reckoning";
+      if(t-q.stamp>.6)q.source="dead_reckoning";
+      if(failure)failure->clear();
       return q;
     }
-    return {};
+    return unavailable("anchor_no_past_sample");
   }
+
  private:
   local_planning::Motion last_motion_;
   double travel_=0,last_fix_=0,window_start_=0,blend_start_=0,recovery_start_=0;

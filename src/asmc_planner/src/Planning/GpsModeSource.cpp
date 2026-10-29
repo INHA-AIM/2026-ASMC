@@ -41,6 +41,7 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   if(!std::isfinite(approach_speed_mps_)||approach_speed_mps_<0||approach_speed_mps_>60.)
     throw std::runtime_error("invalid localization approach speed");
   approach_speed_mps_/=3.6;
+  params.param("prepare_distance_m",prepare_distance_m_,0.);
   params.param<std::string>("jamming_controller",jamming_controller_,"/localization_controller");
   if(smooth_handoff_) {
     handoff_request_pub_=nh_.advertise<asmc_msgs::ControlHandoff>("/planning/jamming/handoff_request",1,true);
@@ -120,6 +121,9 @@ void GpsModeSource::stateCallback(const asmc_msgs::VehicleState::ConstPtr& messa
   double station = -1.0;
   const bool inside = zone_->Contains(message->x, message->y, message->yaw, &station);
   if(smooth_handoff_) {
+    // Preparation only: does not move the mode boundary or LiDAR scope.
+    preparing_early_=prepare_distance_m_>0 && (inside ||
+        zone_->ApproachingAlongRoute(message->x,message->y,message->yaw,prepare_distance_m_));
     const double lookahead=ShadowApproachDistance(message->speed,approach_speed_mps_,approach_distance_m_,message->acceleration);
     approaching_=inside||(approach_speed_mps_>0
         ?zone_->ApproachingAlongRoute(message->x,message->y,message->yaw,lookahead)
@@ -248,7 +252,7 @@ void GpsModeSource::candidateCallback(const asmc_msgs::ControlHandoff::ConstPtr&
 void GpsModeSource::publishPrepare() {
   if(!smooth_handoff_)return;
   std_msgs::Bool approach;approach.data=approaching_ && mode_==PlanningMode::NORMAL;approach_pub_.publish(approach);
-  std_msgs::Bool prepare;prepare.data=approaching_ || mode_==PlanningMode::JAMMING ||
+  std_msgs::Bool prepare;prepare.data=preparing_early_ || approaching_ || mode_==PlanningMode::JAMMING ||
       (handoff_pending_&&handoff_request_.target_mode==1);
   prepare_pub_.publish(prepare);
 }
