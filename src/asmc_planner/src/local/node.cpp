@@ -15,6 +15,7 @@
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <morai_msgs/EgoVehicleStatus.h>
 #include <mutex>
@@ -1204,6 +1205,14 @@ public:
     double maneuver_cap_kph=0.;p.param("maneuver_speed_cap_kph", maneuver_cap_kph, 0.);
     config.maneuver_speed_cap=maneuver_cap_kph/3.6;
     p.param("controlled_braking_limit_mps2", config.controlled_decel, 1.5);
+    if (!std::isfinite(config.width+config.length+config.rear) ||
+        std::abs(config.width - Config{}.width) > 1e-9 ||
+        std::abs(config.length - Config{}.length) > 1e-9 ||
+        std::abs(config.rear - Config{}.rear) > 1e-9) {
+      throw std::runtime_error("vehicle geometry conflicts with the canonical model: width/length/rear=" +
+          std::to_string(config.width) + "/" + std::to_string(config.length) + "/" +
+          std::to_string(config.rear) + " m; expected 1.892/4.635/0.790 m");
+    }
     if (run.empty() || run.size() > 128 ||
         run.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
                               "WXYZ0123456789-_.") != std::string::npos ||
@@ -1220,9 +1229,7 @@ public:
         config.maneuver_clearance<0. || config.maneuver_clearance>1. ||
         config.low_speed_rate_floor<.1 || config.low_speed_rate_floor>1. ||
         config.controlled_decel<config.decel || config.controlled_decel>3. ||
-        std::abs(config.width - Config{}.width) > 1e-9 ||
-        std::abs(config.length - Config{}.length) > 1e-9 ||
-        std::abs(config.rear - Config{}.rear) > 1e-9 || config.rear <= 0 ||
+        config.rear <= 0 ||
         config.rear >= config.length || config.margin < 0 ||
         config.budget_ms <= 0 || config.budget_ms > 100 ||
         config.speed_cap <= 0 || config.speed_cap > 20. / 3.6 || config.cruise_speed <= 0 || config.cruise_speed > 20./3.6 ||
@@ -1297,6 +1304,9 @@ int main(int argc, char **argv) {
     spinner.start();
     ros::waitForShutdown();
   } catch (const std::exception &e) {
+    // A fatal startup error may exit before rosout flushes. Keep the concrete
+    // configuration failure visible in the launching terminal as well.
+    std::cerr << "LOCAL: " << e.what() << std::endl;
     ROS_FATAL("LOCAL: %s", e.what());
     return 1;
   }
