@@ -37,3 +37,5 @@ PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/t
   cd "$ASMC_CI_BUILD/asmc_controller"
   ctest --output-on-failure -R 'local_execution_history_test'
 )
+
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_trial_monitor.py'

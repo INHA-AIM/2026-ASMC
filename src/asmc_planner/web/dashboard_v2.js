@@ -35,6 +35,30 @@
   const view = {scale: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0, follow: false};
   const tracks = new Map();
   let bounds = null, localPanelOpened=false;
+  let monitorInstance=null;
+  function clearTrialObservations() {
+    for(const key of ['command','feedback','feature','trajectory','ego','lidarObjects','lidarMotionDebug',
+      'planningMarkers','recentPlanningIssue','localExperiment','localControl','localDetail','localLastGood','localLastDetail'])data[key]=null;
+    data.receivedAt={};data.shadow={};data.localReceiveAge=Infinity;data.localLastTime=0;
+    tracks.clear();previousObjects=new Map();motionDebugById=new Map();
+    lidarFrameKey=null;lidarFrameIndex=0;lidarChanges={appeared:[],disappeared:[],typeChanged:[]};
+  }
+  function applyTrialMonitor(meta) {
+    const node=$('trialMonitor');
+    if(!meta) {if(node)node.hidden=true;return;}
+    if(monitorInstance!==meta.instance_id || !meta.data_available)clearTrialObservations();
+    monitorInstance=meta.instance_id;
+    const phases={preparing:'준비 중',driving:'실험 주행 중',finishing:'종료 정리 중',ended:'실험 종료',
+      interrupted:'실험 프로세스 종료',stale:'실험 heartbeat 지연',idle:'실험 대기'};
+    if(node) {
+      node.hidden=false;
+      node.textContent=[phases[meta.phase]||meta.phase,meta.run_id||'대기',
+        (meta.branch||'')+' @ '+(meta.revision||'').slice(0,8)+(meta.dirty?' +미커밋':''),
+        meta.master_uri||'',meta.data_available?'현재 관측 연결':'현재 관측 없음 · 과거 경로 숨김',meta.reason||''].filter(Boolean).join(' | ');
+      node.className='trial-monitor '+(meta.data_available?'live':'waiting');
+    }
+  }
+
   let lidarFrameKey = null;
   let lidarFrameIndex = 0;
   let previousObjects = new Map();
@@ -940,12 +964,13 @@
       let snapshot;
       try { snapshot = await fetch('../api/snapshot', {cache: 'no-store', signal: abort.signal}).then(response => response.json()); }
       finally { clearTimeout(timer); }
+      applyTrialMonitor(snapshot.trial_monitor);
       data.localExperiment=snapshot.local_experiment||null;
       data.localControl=snapshot.local_control||null;
       data.localReceived=performance.now();
       data.localReceiveAge=snapshot.local_receive_age_s??Infinity;
       if(data.localExperiment && data.localDetail?.plan_sequence!==data.localExperiment.plan_sequence){
-        const response=await fetch('../api/local-scene?sequence='+data.localExperiment.plan_sequence,{cache:'no-store'});
+        const response=await fetch('../api/local-scene?sequence='+data.localExperiment.plan_sequence+(monitorInstance?'&monitor_instance='+encodeURIComponent(monitorInstance):''),{cache:'no-store'});
         data.localDetail=response.ok?{...await response.json(),plan_sequence:data.localExperiment.plan_sequence}:null;
       }
       if((data.localExperiment?.scene_valid||data.localExperiment?.valid) && data.localDetail?.raster_available){
@@ -972,11 +997,15 @@
         motionDebugById = new Map(
           (snapshot.lidar_motion_debug.objects || []).map(object => [Number(object.id), object]));
       }
-      $('rosStatus').textContent = 'ROS CONNECTED';
-      $('rosStatus').className = 'chip ok';
+      $('rosStatus').textContent = snapshot.trial_monitor && !snapshot.trial_monitor.data_available?'RUN '+(snapshot.trial_monitor.phase||'WAIT').toUpperCase():'ROS CONNECTED';
+      $('rosStatus').className = 'chip '+(snapshot.trial_monitor && !snapshot.trial_monitor.data_available?'bad':'ok');
       updatePanel();
       draw();
     } catch (error) {
+      if(monitorInstance) {
+        clearTrialObservations();draw();
+        const monitor=$('trialMonitor');if(monitor)monitor.textContent='관측 연결 끊김 · 과거 경로 숨김';
+      }
       $('rosStatus').textContent = 'ROS OFFLINE';
       $('rosStatus').className = 'chip bad';
       console.warn('dashboard snapshot unavailable', error);

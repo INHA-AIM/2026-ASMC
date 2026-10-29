@@ -8,7 +8,7 @@ const element = id => {
 };
 let source = fs.readFileSync(path.join(__dirname,'../../web/dashboard_v2.js'),'utf8');
 const hook = "  canvas.addEventListener('wheel',";
-source = source.replace(hook, '  globalThis.probe={data,sceneEntry,localView,updateShadowPanel,localExperimentFresh,localExperimentView,updateLocalExperimentPanel}; return;\n'+hook);
+source = source.replace(hook, '  globalThis.probe={data,sceneEntry,localView,updateShadowPanel,localExperimentFresh,localExperimentView,updateLocalExperimentPanel,applyTrialMonitor}; return;\n'+hook);
 const sandbox = {window:{},document:{getElementById:element},console,Date,performance:{now:()=>now}};
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(__dirname,"../../web/local_scene_renderer.js"),"utf8"),sandbox); vm.runInContext(source,sandbox);
@@ -56,3 +56,13 @@ p.updateLocalExperimentPanel();
 assert(element('localExperimentGrid').innerHTML.includes('현재 관측 표시'));
 assert(element('localExperimentGrid').innerHTML.includes('independent_source_to_plan_once'));
 console.log('PASS reverse observations remain independent of forward plan validity');
+
+p.data.localLastGood={valid:true};p.data.command={maneuver_type:1};
+p.applyTrialMonitor({instance_id:'new',data_available:false,phase:'preparing',run_id:'trial-new',branch:'own',revision:'12345678',master_uri:'http://127.0.0.1:11403'});
+assert.equal(p.data.localLastGood,null);assert.equal(p.data.command,null);
+assert(element('trialMonitor').textContent.includes('11403'));
+p.data.localExperiment={valid:true};p.data.localDetail={plan_sequence:1};
+p.applyTrialMonitor({instance_id:'new',data_available:false,phase:'ended'});
+assert.equal(p.data.localExperiment,null);assert.equal(p.data.localDetail,null);
+assert(element('trialMonitor').textContent.includes('실험 종료'));
+console.log('PASS trial monitor identity reset and ended-run geometry removal');

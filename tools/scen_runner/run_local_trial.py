@@ -72,6 +72,8 @@ def main():
     p.add_argument("--master-port", type=int, default=11348)
     p.add_argument("--lease-wait-seconds", type=float, default=0,
                    help="bounded wait before SDK/UDP startup; never stop another owner")
+    p.add_argument("--no-dashboard", action="store_true", help="observer-OFF cost baseline; control is unchanged")
+    p.add_argument("--dashboard-port", type=int, default=8088, help="preferred stable observer URL; never replace another listener")
     p.add_argument("--integrated", action="store_true", help="exercise real NORMAL/JAMMING mode transitions")
     p.add_argument("--bridge-invert-steer", choices=("true", "false"), default="false")
     p.add_argument("--distance", type=float, default=35)
@@ -161,6 +163,10 @@ def main():
             "src/asmc_planner/src/Frenet/Speed/SpeedProfiler.cpp",
             "src/asmc_controller/src/local/node.cpp",
             "src/asmc_planner/launch/local.launch",
+            "src/asmc_planner/scripts/behavior_dashboard_server.py",
+            "src/asmc_planner/web/dashboard_v2.js",
+            "src/asmc_planner/web/index_v2.html",
+            "tools/scen_runner/scen_runner/runtime/trial_monitor.py",
             "src/asmc_planner/config/local_planner.yaml",
             "src/asmc_controller/config/controller.yaml",
             "src/asmc_controller/config/local_controller.yaml",
@@ -257,6 +263,8 @@ def main():
         definition = dict(definition, baseline=[], events=[], allow_empty_scene=True)
     section = None
     children = []
+    observer_pids = set()
+    monitor = None
     child_names = {}
     handles = []
     fixture = StaticFixture(link, emit)
@@ -340,14 +348,15 @@ def main():
         rospy.Subscriber('/planning/local/trajectory', LocalTrajectory, delivery, queue_size=100),
         rospy.Subscriber('/planning/local/diagnostics', DiagnosticArray, diagnostics, queue_size=10)]
 
-    def start(cmd, name):
+    def start(cmd, name, env=None, observer=False):
         f = (root / (name + ".log")).open("x")
         handles.append(f)
         proc = subprocess.Popen(
-            cmd, stdout=f, stderr=subprocess.STDOUT, start_new_session=True
+            cmd, stdout=f, stderr=subprocess.STDOUT, start_new_session=True, env=env
         )
         children.append(proc)
         child_names[proc.pid]=name
+        if observer: observer_pids.add(proc.pid)
         return proc
 
     reason = "preparation_failed"
@@ -362,6 +371,30 @@ def main():
     try:
         from scen_runner.runtime.private_master import require_udp_ports_free
         require_udp_ports_free([9099, 9798, 7505, 9092, 9291, 9293, 9295, 9297, 9299, 9301, 9303])
+        if not args.no_dashboard:
+            try:
+                from scen_runner.runtime.trial_monitor import TrialMonitor
+                import socket
+                monitor = TrialMonitor(workspace, root, args.dashboard_port)
+                # Backend reserves its own HTTP listener before ROS registration.
+                # Identity verification also rejects a reused/raced socket.
+                with socket.socket() as reservation:
+                    reservation.bind(('127.0.0.1',0)); backend_port=reservation.getsockname()[1]
+                observer = start(['rosrun','asmc_planner','behavior_dashboard_server.py',
+                    '--port',str(backend_port),'__name:=local_trial_dashboard',
+                    '_port:='+str(backend_port),'_package_path:='+str(workspace/'src/asmc_planner'),
+                    '_interface_version:=v2','/vehicle/state:=/planning/vehicle/state'],
+                    'dashboard',env=monitor.environment(),observer=True)
+                monitor.update(backend_port=backend_port,backend_pid=observer.pid)
+                resources.register_observer(observer.pid,'dashboard_backend')
+                resources.register_observer(monitor.endpoint['pid'],'dashboard_frontend')
+                emit(dict(event='monitor_started',url=monitor.endpoint['url'],
+                          master_uri=os.environ['ROS_MASTER_URI'],backend_pid=observer.pid))
+                print('Live trial dashboard: '+monitor.endpoint['url'],flush=True)
+            except Exception as exc:
+                # Observation startup cannot create a new control failure path.
+                emit(dict(event='monitor_error',error=str(exc)))
+                (root/'monitor-startup-error.json').write_text(json.dumps(dict(error=str(exc))))
         start(["roslaunch", "asmc_bridge", "bridge.launch", "transport_profile:=local",
                "invert_steer:=" + args.bridge_invert_steer], "bridge")
         rospy.wait_for_message("/Ego_topic", __import__("morai_msgs.msg", fromlist=["EgoVehicleStatus"]).EgoVehicleStatus, timeout=15)
@@ -399,7 +432,7 @@ def main():
             # Warm all inference workers before moving the fixture. Cold-start
             # gaps remain in camera/lidar logs, not mixed with a driving trial.
             time.sleep(8.0)
-            if any(child.poll() is not None for child in children):
+            if any(child.poll() is not None for child in children if child.pid not in observer_pids):
                 raise RuntimeError("owned perception exited during warmup")
         missing = set(args.park_prop) - {s.actor_info.id.value for s in states}
         if missing:
@@ -552,7 +585,7 @@ def main():
             # A valid NORMAL feedback can precede the selector's latched mode
             # (drive14). Never enable AUTO on that advertisement alone.
             if (local_ready or normal_ready) and selected_command_ready(latest,time.monotonic()): break
-            if any(child.poll() is not None for child in children):
+            if any(child.poll() is not None for child in children if child.pid not in observer_pids):
                 raise RuntimeError('owned producer exited before control readiness')
             if time.monotonic() > ready_until:
                 reason = 'input_or_plan_not_ready'
@@ -595,6 +628,7 @@ def main():
         initial=actor_state(next(x for x in snapshot if x.actor_info.id.value==link.ego_id))
         last=(initial['pose']['x'],initial['pose']['y'])
         started = time.monotonic()
+        if monitor: monitor.update(phase='driving')
         last_udp_evaluation=started
         emit(dict(event='driving_started'))
         emit(dict(event='native_sample',phase='pre_release',ego=initial,travel_m=0.,
@@ -628,7 +662,7 @@ def main():
                 emit(dict(event='scripted_actor_action',definition=action,actor_id=actor.native_id))
                 actions.remove(action)
             child_exits=[dict(name=child_names[x.pid],returncode=x.returncode)
-                         for x in children if x.poll() is not None]
+                         for x in children if x.pid not in observer_pids and x.poll() is not None]
             if child_exits:
                 emit(dict(event='child_exit',processes=child_exits))
                 reason = "child_exit"
@@ -691,6 +725,7 @@ def main():
             time.sleep(0.1)
     finally:
         driving_finished=time.monotonic()
+        if monitor: monitor.update(phase='finishing')
         if started is not None: emit(dict(event='driving_ended'))
         resources.close()
         if mutated:
@@ -758,6 +793,7 @@ def main():
                 cleanup_errors.append("environment: " + str(e))
         link.disconnect()
         lease.release()
+        if monitor: monitor.close(reason)
         emit(dict(event="finish", reason=reason, cleanup_errors=cleanup_errors))
         events.close()
         for f in handles:

@@ -11,18 +11,19 @@
   <header>
     <div><span class="logo">V2</span><b>Planning &amp; LiDAR Debug Console</b></div>
     <div class="header-right">
-      <span id="localStatus" class="chip">LOCAL-1 WAIT</span>
+      <span id="localStatus" class="chip">LOCAL WAIT</span>
       <span id="lidarStatus" class="chip bad">LIDAR WAIT</span>
       <span id="motionStatus" class="chip bad">MOTION WAIT</span>
       <span id="mapStatus" class="chip">MAP LOADING</span>
       <span id="rosStatus" class="chip bad">ROS OFFLINE</span>
     </div>
+    <div id="trialMonitor" class="trial-monitor" role="status" hidden></div>
   </header>
   <main>
     <section class="map-panel">
       <canvas id="map"></canvas>
       <div class="toolbar">
-        <select id="sceneMode" aria-label="좌표 보기"><option value="auto">자동 NORMAL/map · JAMMING/local</option><option value="experiment">LOCAL-1 경로·노면·fusion</option><option value="local">음영 local/base_link</option><option value="map">일반 map</option></select>
+        <select id="sceneMode" aria-label="좌표 보기"><option value="auto">자동 NORMAL/map · JAMMING/local</option><option value="experiment">LOCAL 경로·노면·fusion</option><option value="local">음영 local/base_link</option><option value="map">일반 map</option></select>
         <label><input id="showLocalRoad" type="checkbox" checked>추론 노면</label>
         <label><input id="showLocalFamily" type="checkbox" checked>family·본차로 중심</label>
         <label><input id="showLocalCandidates" type="checkbox" checked>로컬 후보</label>
@@ -65,7 +66,7 @@
     </section>
     <aside>
       <section id="localExperimentPanel" class="shadow-panel" hidden>
-        <h2>LOCAL-1 · 실제 계획 판단 <span id="localExperimentState"></span></h2>
+        <h2>LOCAL · 실제 계획 판단 <span id="localExperimentState"></span></h2>
         <div id="localExperimentGrid" class="kv"></div>
         <small>초록=관측 노면 확률≥0.60 · 적색=비노면(가림 포함) · 갈색=자차 가림 · 회색=미관측.
         흰/황색=사용한 family 3경계 · 파랑 점선=오른쪽 본차로 중심 · 청록=선택 경로 · 회색/분홍 점선=후보 통과/탈락.

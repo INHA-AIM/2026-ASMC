@@ -6,6 +6,7 @@ import sys
 import functools
 import http.server
 import json
+import os
 import threading
 import time
 from urllib.parse import parse_qs, urlsplit
@@ -77,6 +78,7 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
                 "planning_markers": None, "recent_planning_issue": None,
                 "received_at": {}}
     snapshot_lock = threading.Lock()
+    trial_identity = os.environ.get("ASMC_TRIAL_MONITOR_IDENTITY", "")
 
     def guess_type(self, path):
         # Explicit UTF-8 for Korean labels in HTML/CSS/JS; keep binary MIME types.
@@ -86,6 +88,8 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
         return kind
 
     def end_headers(self):
+        if self.trial_identity:
+            self.send_header("X-ASMC-Trial-Identity", self.trial_identity)
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")

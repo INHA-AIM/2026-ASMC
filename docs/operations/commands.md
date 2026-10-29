@@ -525,6 +525,31 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 후속 실험 profile·반복 회피 결과는 [LOCAL-2E 기록](../records/planning/2026-10-29-local-avoidance-continuity.md)을 따른다.
 기본 camera 선택과 LOCAL10km/h 상한은 유지하며, 실험용 노면 reference는 기본 OFF다.
 
+## 자동 LOCAL 시나리오의 실시간 대시보드
+
+이 worktree의 `tools/scen_runner/run_local_trial.py`는 통합(`--integrated`)·LOCAL 단독
+시험 모두 관측 서버를 자동으로 시작한다. 시험 중에는 다음 주소만 열거나 새로고침한다.
+별도 roscore·autonomy 실행이나 master 포트 입력은 필요 없다.
+
+**http://localhost:8088/web/index_v2.html**
+
+기본 `자동 NORMAL/map · JAMMING/local` 보기는 통합 전환을 따라간다. LOCAL 후보·선택
+경로·노면·family·fusion·정지 사유·MPC를 집중 확인하려면 **LOCAL 경로·노면·fusion**을
+선택한다. 상단에 branch/revision(+미커밋 여부)·run·실제 master·준비/주행/종료·연결
+상태가 표시된다. run 변경·시험 종료·heartbeat 만료 때 과거 관측/경로를 비운다.
+원본 노면은 기존 source-exact API로 받으며 새 추론·영상 인코딩을 추가하지 않는다.
+
+8088이 다른 실행에 점유돼 있으면 해당 실행을 유지하고18088부터 빈 포트를 선택한다.
+정확한 주소는 시험 `run.log`의 `Live trial dashboard`와 `monitor.json`에서 확인한다.
+이후 같은 worktree의 시험은 그 주소를 재사용한다. 실제 ROS 관측 서버는 시험 소유
+master에만 연결되고 종료 때 정리한다. 작은 HTTP 입구만 다음 시험/종료 안내를 위해
+남는다. 이후 같은 worktree에서 수동 dashboard를 시작하면 **종료된 관측 입구만**
+자동 반환한다. 진행 중인 시험이나 다른 worktree의 포트는 반환하지 않는다.
+
+`--no-dashboard`는 관측 비용 OFF 대조용이다. `resources.jsonl`에 관측 프로세스의
+별도 RSS/CPU 표본, `monitor.json`에 실제 주소·master·identity·HTTP 수량/시간을 남긴다.
+웹을 여는 부하와 계획/제어 지연을 섞어서 성능 향상으로 보고하지 않는다.
+
 ## LOCAL 실험 계산과 모니터
 
 아래는 통합 주행 대신 계산만 보는 독립 preview 방법이다. 현재 운영 기본이나
