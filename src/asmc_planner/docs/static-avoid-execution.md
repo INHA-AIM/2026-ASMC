@@ -20,6 +20,8 @@ actionable even when its center is behind the axle.
 Frenet acquisition and unique spatial re-identification use that same footprint
 gate. Open reference routes use signed station differences; only closed loops
 wrap their longitudinal distance.
+Both production launch defaults also use 0.45 m; the launch-margin regression
+checks their overrides and forwarding as well as the YAML defaults.
 
 ## Incumbent path and actuator limits
 
@@ -103,6 +105,8 @@ including six ROS integration registrations. `catkin_test_results` reports
 873 tests with zero errors, failures or skips. These two counts are different
 views of the same run, not additive coverage. MORAI closed-loop physics has
 not been run as part of this verification.
+The subsequent launch-default correction passes the separately registered
+`static_avoid_launch_margin_test` as well (125 CTest registrations total).
 
 `static_avoid_corridor_test` covers:
 

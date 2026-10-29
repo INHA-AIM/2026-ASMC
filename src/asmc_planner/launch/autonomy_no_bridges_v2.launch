@@ -26,7 +26,7 @@
   <arg name="state_topic" default="/planning/vehicle/state"/>
   <arg name="canonical_objects_topic" default="/planning/objects"/>
   <arg name="lidar_input_topic" default="/perception/lidar/planning_observations_map"/>
-  <arg name="avoid_path_margin_m" default="0.4"/>
+  <arg name="avoid_path_margin_m" default="0.45"/>
   <arg name="static_obstacle_unknown" default="true"/>
   <!-- 신호등 추론·발행은 카메라 담당의 asmc_camera/camera.launch가 단독 소유한다.
        판제는 /perception/traffic_light/detection을 소비하며 별도 ResNet을 시작하지 않는다.

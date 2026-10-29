@@ -6,7 +6,7 @@
   <arg name="behavior_objects_topic" default="/Object_topic"/>
   <arg name="objects_input_type" default="morai"/>
   <arg name="planning_objects_topic" default="/planning/objects"/>
-  <arg name="avoid_path_margin_m" default="0.4"/>
+  <arg name="avoid_path_margin_m" default="0.45"/>
   <arg name="static_obstacle_unknown" default="true"/>
   <rosparam ns="behavior_planner" command="load"
             file="$(find asmc_planner)/config/behavior/behavior_params.yaml"
