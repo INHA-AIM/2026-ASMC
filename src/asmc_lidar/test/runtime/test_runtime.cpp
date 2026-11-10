@@ -39,9 +39,7 @@ using Array = asmc_msgs::LidarObjectArray;
 // ---------------------------------------------------------------------------
 
 std::string PackageDir() {
-  std::string file = __FILE__;  // <pkg>/test/runtime/test_runtime.cpp (absolute)
-  for (int i = 0; i < 3; ++i) file = file.substr(0, file.find_last_of('/'));
-  return file;
+  return ASMC_LIDAR_TEST_PACKAGE_DIR;
 }
 std::string ShippedConfig() { return PackageDir() + "/config/lidar_pipeline.yaml"; }
 

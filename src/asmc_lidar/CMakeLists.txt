@@ -249,6 +249,8 @@ if(ASMC_LIDAR_PIPELINE_ACTIVE)
       if(TARGET ${name})
         target_link_libraries(${name} asmc_lidar_runtime)
         target_include_directories(${name} PRIVATE src src/experimental/tunnel_filter)
+        target_compile_definitions(${name} PRIVATE
+          ASMC_LIDAR_TEST_PACKAGE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
         set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL FALSE)
         add_dependencies(${name} ${pipeline_msg_targets})
       endif()

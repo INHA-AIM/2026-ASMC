@@ -17,6 +17,7 @@ from validate_p1b_contract import (  # noqa: E402
     load_message_specs,
     ros1_md5,
     validate_contract,
+    _validate_messages,
 )
 
 
@@ -51,11 +52,25 @@ class P1BContractTest(unittest.TestCase):
         self.assertEqual(md5s["DetectedObjectArray"], "14fbd9679c2d87ae7498e4269d9678da")
         self.assertEqual(md5s["LaneBoundaryFamily"], "70ac79f98ca1244c782ea4067becd6af")
 
-    def test_local_trajectory_uses_ros_odometry_without_changing_map_contract(self):
+    def test_local_and_revised_map_trajectory_hashes(self):
         self.assertEqual(ros1_md5("LocalTrajectory", self.specs),
                          "d95a161dd0c92f0250a150ed1bbc40c3")
         self.assertEqual(ros1_md5("Trajectory", self.specs),
-                         "38657ba74f761a20afb310b0265cb085")
+                         "d2861f02be7f35ccfaad88f88cafb3a9")
+
+    def test_explicit_revision_does_not_allow_unregistered_wire_drift(self):
+        contract = yaml.safe_load(self.contract.read_text())
+        revisions = yaml.safe_load((REPO_ROOT / 'config/contracts/legacy_message_revisions_v1.yaml').read_text())['messages']
+        _validate_messages(contract, self.specs, self.baseline, set(self.specs), revisions)
+        with self.assertRaisesRegex(ContractError, 'legacy MD5 changed'):
+            _validate_messages(contract, self.specs, self.baseline, set(self.specs))
+        changed = dict(self.specs)
+        changed['Trajectory'] = replace(changed['Trajectory'], fields=changed['Trajectory'].fields + (Field('bool', 'drift'),))
+        with self.assertRaisesRegex(ContractError, 'legacy MD5 changed'):
+            _validate_messages(contract, changed, self.baseline, set(changed), revisions)
+        revisions['asmc_msgs/Trajectory']['previous_md5'] = '0' * 32
+        with self.assertRaisesRegex(ContractError, 'baseline mismatch'):
+            _validate_messages(contract, self.specs, self.baseline, set(self.specs), revisions)
 
     def test_sensor_timing_contract_matches_source_and_requires_exact_join(self):
         contract = yaml.safe_load((REPO_ROOT / 'config/contracts/sensor_frame_timing_v1.yaml').read_text())

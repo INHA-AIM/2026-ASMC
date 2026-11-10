@@ -1,8 +1,8 @@
 # ASMC 실행 명령
 
 > 2026-11-10 PR #141 병합 이후 main의 기본 음영 선택은 localization+LOCAL 복구입니다.
-> 세 방식·속도·전환·콘솔은 [세 재밍 플래너 실행](jamming-comparison.md), 보존·아직 남은 재빌드는
-> [대회 종료 기록](../records/repository/2026-11-10-postcompetition-preservation.md)을 따릅니다.
+> 세 방식·속도·전환·콘솔은 [세 재밍 플래너 실행](jamming-comparison.md), 정본 재빌드·연구 환경 정리 결과는
+> [정본 실행 확인](../records/repository/2026-11-10-canonical-runtime-closeout.md)을 따릅니다.
 
 `asmc-ros-noetic`의 `/root/ws`는 실행할 checkout입니다. 현재 worktree를 유지하고
 다른 checkout을 빌드한 setup과 섞지 않습니다. 인자는 `name:=value`이며
@@ -174,6 +174,15 @@ private 메시지 갱신 후에는 위 전체 빌드를 수행하고 adapter·�
 |---|---|---|
 | 판제 웹 콘솔 | 통합 `autonomy_no_bridges_v2.launch`에 포함; 별도 launch 불필요 | `http://127.0.0.1:8088/web/index_v2.html` |
 | LiDAR 웹 시각화 | `roslaunch asmc_lidar view.launch` | `http://127.0.0.1:8091/` |
+
+Docker Desktop host network에서 Windows 브라우저로 LiDAR 웹을 열 때는 다음처럼 실행합니다.
+기본 `bind_address:=127.0.0.1`은 컨테이너 내부에서만 응답할 수 있습니다.
+포트는8091 그대로이며 이 옵션은 HTTP 서버의 수신 주소만 바꿉니다. 외부 인터페이스에도 바인딩되므로
+Windows 방화벽의 접근 범위를 유지합니다. 판제 웹8088과 동시에 HTTP200을 확인했습니다.
+
+```bash
+roslaunch asmc_lidar view.launch bind_address:=0.0.0.0
+```
 
 판제는 통합 launch에서 서버가 기본 ON이고 브라우저 자동 열기는 OFF입니다.
 별도 dashboard launch 없이 터미널에 출력된 주소를 눌러 패널을 엽니다.
@@ -645,7 +654,7 @@ main 포트 ROS11311·판제8088·LiDAR8091과 기존 bridge UDP를 그대로 �
 컨테이너별로 포트를 분리하지 않으므로 다른 브랜치의 전체 실행은 종료한 뒤 교대한다.
 다른 실행이 있으면 시작을 거부하며 임의로 종료하거나 다른 master에 붙지 않는다.
 
-컨테이너 내부 `/root/ws`에서 기본 카메라 재밍 방식:
+컨테이너 내부 `/root/ws`에서 기본 localization+LOCAL 복구 방식:
 
 ```bash
 ./scripts/drive.sh
@@ -672,9 +681,10 @@ roslaunch asmc_lidar lidar.launch
 roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 ```
 
-LOCAL 목표 상한10km/h, 저속 회복 목표5km/h다. 정지하지 않으려면 검증 가능한 대체 경로가
+LOCAL 명시 선택은 상한20·순항15km/h, 기본 localization은 상한15km/h이며 LOCAL 대체 경로 상한은5km/h다. 정지하지 않으려면 검증 가능한 대체 경로가
 필요하며 입력 무효·실제 충돌·물리적으로 불가능한 곡률에 속도만5로 덮어쓰지 않는다.
-기본 재밍 방식은 camera로 유지한다. LOCAL에서만 새 planner/MPC/노면 입력을 시작한다.
+기본 localization에서는 LOCAL planner·노면 입력과 localization MPC 하나를 시작한다.
+`local` 명시 선택에서만 독립 LOCAL MPC를 사용한다.
 
 판제: <http://localhost:8088/web/index_v2.html>. 자동 보기 또는 `LOCAL 경로·노면·fusion`.
 LiDAR: <http://localhost:8091/>. 전체 실행에는 두 웹이 포함되고 GUI를 자동으로 열지 않는다.
@@ -690,7 +700,8 @@ LiDAR 단계별 상세 점군이 필요할 때만 전체 실행에 `lidar_debug:
 
 ### 2026-10-30 비교 컨테이너 실행
 
-`asmc-jamming-compare`의 기존 master11373·브릿지·인지·콘솔을 쓰는 경우:
+아래는 삭제된 `asmc-jamming-compare`의 과거11373·8089/8097 재현 기록이다.
+현재는 위 정본 컨테이너와11311·8088/8091을 사용한다. 당시 별도 콘솔이 켜진 경우 사용한 명령:
 
 ```bash
 roslaunch asmc_planner autonomy_no_bridges_v2.launch dashboard:=false

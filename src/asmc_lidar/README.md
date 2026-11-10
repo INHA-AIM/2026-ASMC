@@ -1,6 +1,6 @@
 # asmc_lidar
 
-- [실측점 기반 차량·벽면·steel 정제와 프로필](docs/camera-point-refinement.md) · [저상 장애물 임시 근거](docs/low-obstacle-camera-evidence.md). 새 기능은 기본 OFF이며 main의 3뷰·mission15 소비를 유지한다.
+- [실측점 기반 차량·벽면·steel 정제와 프로필](docs/camera-point-refinement.md) · [저상 장애물 임시 근거](docs/low-obstacle-camera-evidence.md). 기본 `lidar_wall_vehicle.yaml`에서 점군 정제·저상 근거가 켜져 있고, 점군 분리·관련 벽 정리는 터널 경로 범위에 제한한다. 3뷰·mission15 분류는 전 구간 유지한다. [실제 기본값과 책임](docs/planning-runtime.md#대회-최종-프로필)을 따른다.
 
 ROI → voxel → roll/pitch 수평화 → 지면 분리 → 군집 → OBB → 추적 → 3뷰 카메라 fusion → local/map 객체를 처리한다. 공용 추적 관측을 판제가 직접 소비할 수 있다. 판제·수집·시나리오는 이 패키지를 정본으로 사용하며 nested Main/Msg 빌드·source는 폐기했다.
 
@@ -130,7 +130,7 @@ OBB 통과가 점군 미달을 보완하지 않는다. 유효 YOLO 보호와 지
 ```bash
 roslaunch asmc_lidar lidar.launch rviz:=true
 # 다른 namespace나 터널 필터를 지정해도 RViz가 해당 결과를 자동으로 구독한다.
-roslaunch asmc_lidar lidar.launch namespace:=/migration/lidar_tunnel experimental_tunnel_filter:=true rviz:=true
+roslaunch asmc_lidar lidar.launch namespace:=/test/lidar_tunnel experimental_tunnel_filter:=true rviz:=true
 ```
 
 두 명령은 대안이며 하나만 실행한다. 이미 같은 처리가 켜져 있으면 두 번째 처리를 시작하지 않는다.

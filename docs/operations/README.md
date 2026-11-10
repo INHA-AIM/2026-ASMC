@@ -2,7 +2,8 @@
 
 > **대회 종료 정본 — 2026-11-10:** PR #141의 최종 주행 소스가 main에 병합됐습니다.
 > 현재 실행은 [명령 모음](commands.md)과 [세 음영 방식](jamming-comparison.md),
-> 연구 WIP·런타임 보존 및 남은 재빌드는 [종료 기록](../records/repository/2026-11-10-postcompetition-preservation.md)을 따릅니다.
+> 연구 WIP·런타임은 [보존 기록](../records/repository/2026-11-10-postcompetition-preservation.md),
+> 완료한 재빌드·연구 환경 정리는 [정본 실행 확인](../records/repository/2026-11-10-canonical-runtime-closeout.md)을 따릅니다.
 > 아래 날짜가 붙은 검증 설명은 당시 근거이며 새 실행 수락으로 해석하지 않습니다.
 
 > **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.

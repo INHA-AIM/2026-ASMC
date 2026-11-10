@@ -1,5 +1,8 @@
 # LiDAR 구조·관측 계약 정리
 
+> 이 문서는 날짜가 명시된 이관 당시 설계 기록이다. Main/시험 namespace 관련 문구는
+> 당시 상태이며 현재 실행·기본값은 [LiDAR 실행 정본](planning-runtime.md)을 따른다.
+
 2026-10-23. 안승현이 구조와 공용 계약을 정리하고 손재호가 검토할 작업 단위다.
 기준선은 `config/baselines/lidar_structure_contract_v1.json`을 따른다.
 PR #103의 계산 결과를 보존하며 기존 Main의 판제 출력을 전환하지 않는다.

@@ -2,7 +2,8 @@
 
 현재 코드의 실행·소비 규칙과 대회 종료 후 재현·보존·후속 개발을 안내합니다. 과거 실험값은 `records/`에서 시점과 조건을 확인합니다.
 
-대회 종료 후 현재 실행과 연구 자료 보존 상태는 [2026-11-10 종료 기록](records/repository/2026-11-10-postcompetition-preservation.md),
+대회 종료 후 현재 실행은 [정본 재빌드·정리 결과](records/repository/2026-11-10-canonical-runtime-closeout.md),
+연구 자료는 [2026-11-10 보존 기록](records/repository/2026-11-10-postcompetition-preservation.md),
 실제 선택·기본값·포트는 [세 음영 방식 실행](operations/jamming-comparison.md)을 따릅니다.
 
 | 하려는 작업 | 시작점 |

@@ -1,20 +1,19 @@
 # 대회 완료 로드맵
 
-목표는 허용 센서로 전체 미션을 반복 완주하고, 충돌·규정 위반·인지/제어 공백을 줄이면서
-주행 시간을 개선하는 것입니다. 모델 점수나 패키지 이전 완료만으로 대회 준비를 판정하지 않습니다.
-담당은 [현재 ownership](../onboarding/ownership.md)을 유지하며 아래는 기존 역할에 따른 다음 작업 제안입니다.
-LiDAR 후속 책임은 [M0–M5 인수안](../../src/asmc_lidar/docs/improvement-milestones.md)를 반영하며 수락 완료와 구분합니다.
+대회 최종 실행은 PR #141로 main에 병합됐다. 마지막 주행 소스는 `competition/2026-final`
+(`a62360ec`)이며 [현재 실행](../operations/commands.md), [세 방식 선택](../operations/jamming-comparison.md),
+[보존·정리 결과](../records/repository/2026-11-10-canonical-runtime-closeout.md)를 정본으로 사용한다.
+아래 담당별 목록은 재개할 품질 검토 과제다. 대회 종료를 모든 실패의 해결이나 전체 수락으로 해석하지 않는다.
+후속 담당·시점은 [ownership](../onboarding/ownership.md)과 각 인수 작업표에서 다시 확인한다.
 
 ## 현재 기준선
 
-- PR #85: 전방960·TwinLite TensorRT·family 공급 최적화, 사용자 직접 시각화 확인 후 병합.
-- PR #87: YOLO를 카메라로 단일화, 기존 Main의 전방 어댑터·판제 wire 유지.
-- PR #86: `tools/scen_runner` 전체 씬/구간 검증·판제 재시작·충돌/정체 저장·재현.
-- PR #89: UTM 방향 정합·고속 추종·조건부 순항/곡선 속도·명령 watchdog.
-- 문서 구조 변경 #88과 이번 현행화는 코드 완료 상태와 별도입니다. 병합 전 문서를 main 적용으로 오인하지 않습니다.
-
-- B4 정본화·구 Main/Msg 폐기와 C0 좌표/시각 수정, PR #118 F1 전방 연결 검증은 병합됐다.
-  [현행 인계](../handoffs/lidar-migration.md)의 제한을 함께 본다. 위 초기 PR은 역사적 기준선이다.
+- `asmc_lidar` 단일 실행, 공용 관측 소비, 3뷰 fusion 기본 적용. 구 Main/Msg는 폐기됐다.
+- YOLO 기본은 E3 mission15이며 TwinLite Large E8·lane family와 공용 보정/시각 계약을 사용한다.
+- 기본 음영 선택은 localization+LOCAL 복구다. `local`·`camera`도 명시적으로 비교할 수 있다.
+- LiDAR 점군 분리·관련 벽 보완은 터널 경로 범위로 제한한다. 일반 3뷰 분류와 HD맵 보호는 유지한다.
+- PR #85–#89, B4/C0/F1/M1의 초기 검증은 [기록 목록](../records/README.md)에 남긴다.
+  현재 정본 재빌드와 센서 없는 기동 확인은 실주행·전체 미션 수락과 구분한다.
 
 ## 담당별 다음 결과와 완료 증거
 
@@ -34,12 +33,12 @@ LiDAR 후속 책임은 [M0–M5 인수안](../../src/asmc_lidar/docs/improvement
 L0–L8/A1·B4의 이전 기록과 현재 개선 계획을 분리한다. `asmc_lidar`는 판제·수집·시나리오 정본이며
 구 Main/Msg는 폐기됐다. C0/F1은 병합됐지만 원본 clock 대응·독립 위치/속도 GT·전체 공급 수락은
 완료되지 않았다. [공동 작업표](../../src/asmc_lidar/docs/migration-tasks.md)를 따른다.
-재호의 PR #119 터널 처리는 10/27 확인 시점에 오프라인 검증 후 미병합이다. F1과 통합·실시간
-검증을 남기며 승현의 M1 3뷰 fusion과 병행한다. TTC·추종·정지·회피는 판제 정책으로 유지한다.
+PR #119 터널 및 PR #122의 3뷰 처리는 병합됐고, 이후 벽/차량 분리와 적용 구간 보완도 대회 소스에 포함됐다.
+남은 실제 객체 보존·혼합 군집·사각·공급 검증은 별도 과제로 유지한다. TTC·추종·정지·회피는 판제 정책으로 유지한다.
 
 카메라 TensorRT가 기본이어도 family 순간 공백250ms 기준과 freshness350ms의 남은 실패는 추적합니다.
 YOLO는 전 조건 모든 에셋 지원을 검증한 상태가 아닙니다. 장원태가 detect 추가학습을 진행하며 seg는 별도 라벨/실행 pilot 이후 판단합니다.
-`asmc_lidar`는 검출·추적·3뷰 fusion·공용 관측·전달 필터와 기본 판제 입력을 제공합니다. 기본 `/perception/lidar`, 병행 비교 `/migration/lidar`이며 PR #122에서 3뷰 실제 matching을 기본 적용했습니다. 전 미션·공급 수락과는 구분합니다. 손재호는 터널 통합 뒤 관측 위치/OBB·추적/속도/운동 상태를, 안승현은 3뷰 연결 유지·HD맵·카메라 지원과 음영 판제 기반 정리를 진행합니다. 흰선 밖의 여유 공간에 놓인 객체를 일괄 제거하지 않습니다.
+`asmc_lidar`는 검출·추적·3뷰 fusion·공용 관측·전달 필터와 기본 판제 입력을 제공합니다. 기본 `/perception/lidar`, 시험 비교 `/test/lidar`이며 PR #122에서 3뷰 실제 matching을 기본 적용했습니다. 전 미션·공급 수락과는 구분합니다. 후속 인수 범위는 관측 위치/OBB·추적/속도/운동 상태와 3뷰 연결·HD맵·음영 판제 품질입니다. 흰선 밖의 여유 공간에 놓인 객체를 일괄 제거하지 않습니다.
 
 판제의 최신 주행 개선과 전체 회귀 통과는 다릅니다. 이전 이관 기록의 AVOID/link 실패와
 #89가 보고한 `roundabout_execution_test` 실패는 시점별로 구분해 해결·재검증합니다.
@@ -48,7 +47,7 @@ YOLO는 전 조건 모든 에셋 지원을 검증한 상태가 아닙니다. 장
 
 현재 지도 products와 판제 local map은 자동 일치하지 않습니다. 전체 지도 재생성 검사에 남은
 route source 경로 provenance 차이는 [현행화 검토 기록](../records/repository/2026-10-16-documentation-refresh.md)에 남깁니다.
-현재 CompetitionInfoPublisher는9099→`/Ego_topic`으로 실측 확인했습니다([정정](../records/bridge/2026-10-23-competition-channel-audit.md)). 주행 부호·본선 LAN2LAN 수락은 남았습니다.
+현재 CompetitionInfoPublisher는9099→`/Ego_topic`으로 실측 확인했습니다([정정](../records/bridge/2026-10-23-competition-channel-audit.md)). 이후 주행 부호 수정·LAN2LAN 정본화와 대회 실행이 반영됐습니다. 현재 네트워크 파일은 [브릿지 운영](../operations/commands.md)의 같은 버전 조합을 사용하며, 당시 수신 측정을 새 조건의 수락으로 확대하지 않습니다.
 
 ## 단계별 변경 규칙
 
@@ -58,7 +57,7 @@ LiDAR 이전·모델 재학습·속도 튜닝·공용 계약 변경을 한 실�
 평균Hz만으로 순간 공백을 면제하거나 그룹 F1으로 차량 위치 누락을 숨기지 않습니다.
 
 필수 수락이 끝나기 전에는 추가 seg 학습, 공통 BEV 재설계, RF-DETR 재비교, LBC 연구를 우선하지 않습니다.
-GPU·디스크 최적화는 계측으로 확인한 병목에 적용합니다. E드라이브 이전은 복사·해시·링크·컨테이너 검증 뒤 원본을 정리합니다.
+GPU·디스크 최적화는 계측으로 확인한 병목에 적용합니다. 실험 데이터·복구본은 개인 저장 규약을 따르며 승인 없이 옮기거나 지우지 않습니다.
 
 [현재 실행](../operations/commands.md) · [카메라 로드맵](perception-roadmap.md) ·
 [LiDAR 이전 상세](../handoffs/lidar-migration.md) · [이전 단계별 계획](../records/repository/consolidation-roadmap-through-pr87.md)

@@ -1,11 +1,24 @@
 # 음영구간 판제 개선: 현재 연결과 다음 작업
 
+## 현재 운영 기준 (2026-11-11)
+
+PR #141에 대회 최종 `a62360ec`가 통합됐다. 기본은 localization+LOCAL 복구이며,
+LOCAL planner는 대체 경로를 만들고 localization MPC 하나가 native/LOCAL 경로를 선택해 추종한다.
+명시적 `local`과 `camera` 선택도 유지한다. [실행·전환·제약 정본](../operations/jamming-comparison.md)과
+[현재 명령](../operations/commands.md)을 따른다. 연구 컨테이너와 worktree는 정리됐고 정본은
+`2026-ASMC` / `asmc-ros-noetic`이다.
+
+아래 LOCAL-1/2 및 S1–S3의 분석·설계·수치는 **10월28–29일 단계별 기록**이다.
+`camera 기본`, `local 미소비`, `별도 worktree 비교 예정`은 그 시점의 상태이며 현재 기본값이 아니다.
+역사적 anchor와 실패 근거는 보존한다. 후속 품질 개선은 새 run에서 검증하고,
+과거의 제한적 통과를 현재 전체 주행 수락으로 합산하지 않는다.
+
 ## 최신 LOCAL 실험
 
 2026-10-29 LOCAL-2G의 정적·동적 시나리오, 여유·조향/속도와 자동 실험 웹 연결은
 [LOCAL-2G 기록](../records/planning/2026-10-29-local-obstacle-campaign.md)을 따른다.
 이전 [LOCAL-2F 기록](../records/planning/2026-10-29-local-braking-recovery.md)은 당시 결과다.
-일반 제어와 기존 camera 기본 선택은 유지한다. 시험 소스와 profile, 성공·실패를
+당시에는 일반 제어와 camera 기본 선택을 유지했다. 시험 소스와 profile, 성공·실패를
 구분하며 과거 기록의 수치와 계약을 현재 운영 수락으로 확대하지 않는다.
 
 ## 기반 변경 (2026-10-28)
@@ -45,7 +58,7 @@ PR #124의 기반 변경은 아래와 같다. 이어진 PR #125에서는 사용�
 ## 실제 음영 실행과 정지 문제
 
 폴더는 `src/jamming_lane_boundary_adapter`, ROS 패키지 이름은 `lane_boundary_adapter`다.
-현재 autonomy launch가 family→영상 경계→bbox 차로 분류→차선변경/추종을 실행한다.
+이 절의 10월28일 camera 경로는 family→영상 경계→bbox 차로 분류→차선변경/추종을 실행했다. 현재는 `camera` 명시 선택에서 사용한다.
 일반 MPC는 `/ctrl_cmd/normal`, 음영 추종기는 `/ctrl_cmd/jamming`을 제공하고,
 **ControlSelector만 /ctrl_cmd를 발행**한다. 별도 제어 launch를 추가하지 않는다.
 
@@ -55,7 +68,7 @@ PR #124의 기반 변경은 아래와 같다. 이어진 PR #125에서는 사용�
 | `/perception/lane/boundary_family` | base_link의3경계·observed/inferred/invalid support |
 | `/planning/camera_bbox_lane/result` | 전방16종 bbox의 차로 기하 분류. confidence 기본0.7; 카메라 생산자0.40과 다름 |
 | `/planning/camera_bbox_lane_change/markers` | 후보 중심선과 실제 선택/차선변경 경로. 화면이 별도 경로를 계산하지 않음 |
-| `/perception/lidar/tracks_local` | GPS 무효에도 제공 가능한 local 기하. **운영 기본은 미소비; S1 내부 실험에서만 동일 시각 관측 OBB를 사용** |
+| `/perception/lidar/tracks_local` | GPS 무효에도 제공 가능한 local 기하. **당시 기본은 미소비; 현재 localization/LOCAL은 소비** |
 | `/perception/lidar/planning_observations_map` | 일반 판제 정본. GPS 무효 때 map 사용 불가를 전달하며 정상 빈 배열로 위장하지 않음 |
 
 사용자 로그의 `map_observation_unavailable`와 일반 MPC의 `INVALID_EGO`는 GPS 무효와
@@ -74,7 +87,7 @@ source age 약0.1–0.19초인 로그만으로 stale 또는3뷰 계산 지연을
 `roslaunch asmc_planner dashboard.launch` → `http://127.0.0.1:8088/web/index_v2.html`.
 자동/음영 local/일반 map을 선택할 수 있다. local 화면은 X 전방=위, Y 좌측=왼쪽이다.
 family의 실제 관측은 실선, inferred는 점선, invalid support는 끊는다.
-운영 기본의 local OBB는 참조용이다. S1 실험에서는 diagnostics의 contact_clearance/local 입력 상태로
+당시 camera 기본의 local OBB 표시는 참조용이었다. S1 실험에서는 diagnostics의 contact_clearance/local 입력 상태로
 실제 사용 여부를 구분하며, 시각화만 보고 제어 입력 사용을 추정하지 않는다.
 
 - source age는 ROS clock끼리, 수신 age는 monotonic끼리 계산한다. 브라우저 clock과 ROS stamp를 빼지 않는다.

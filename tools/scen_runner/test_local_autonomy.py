@@ -18,17 +18,23 @@ def check_launches():
     def load(*args):
         return roslaunch.config.load_config_default([(path, list(args))], None)
     baseline = load('dashboard:=false')
+    camera = load('jamming_planner:=camera', 'dashboard:=false')
     local = load('jamming_planner:=local', 'dashboard:=false')
-    for config in (baseline, local):
+    for config in (baseline, camera, local):
         names = [n.namespace + n.name for n in config.nodes]
         assert len(names) == len(set(names)), names
         assert names.count('/asmc_control_selector') == 1
         assert names.count('/mpc_controller') == 1
         assert not any(n.type in ('lidar_pipeline_node', 'morai_udp_bridge.py',
                                  'morai_sensor_bridge.py') for n in config.nodes)
-    assert not any(n.name in ('local_planner', 'local_controller', 'semantic_space_trial')
-                   for n in baseline.nodes)
-    assert any(n.package == 'lane_boundary_adapter' for n in baseline.nodes)
+    baseline_names = [n.name for n in baseline.nodes]
+    for name in ('localization', 'localization_controller', 'local_planner', 'semantic_space_trial'):
+        assert baseline_names.count(name) == 1, baseline_names
+    assert 'local_controller' not in baseline_names
+    assert baseline.params['/localization/local_recovery_enabled'].value is True
+    assert not any(n.package == 'lane_boundary_adapter' for n in baseline.nodes)
+    assert any(n.package == 'lane_boundary_adapter' for n in camera.nodes)
+    assert not any(n.name in ('local_planner', 'local_controller', 'localization_controller') for n in camera.nodes)
     assert not any(n.package == 'lane_boundary_adapter' for n in local.nodes)
     assert sum(n.name == 'local_controller' for n in local.nodes) == 1
     assert sum(n.name == 'local_planner' for n in local.nodes) == 1
@@ -53,7 +59,8 @@ def check_launches():
     else:
         raise AssertionError('unknown mode was accepted')
     full_path = rospkg.RosPack().get_path('asmc_planner') + '/launch/autonomy.launch'
-    for args in ([], ['jamming_planner:=local']):
+    for choice, args in (('localization', []), ('local', ['jamming_planner:=local']),
+                         ('camera', ['jamming_planner:=camera'])):
         full = roslaunch.config.load_config_default([(full_path,args)],None)
         names = [n.namespace+n.name for n in full.nodes]
         assert len(names) == len(set(names)), names
@@ -65,8 +72,10 @@ def check_launches():
         assert '/gps_imu_vehicle_state_adapter' not in names
         assert full.params['/behavior_dashboard_server/port'].value == 8088
         assert full.params['/perception/lidar/lidar_monitor/port'].value == 8091
-        assert ('/local_controller' in names) == bool(args)
-        assert any(n.package == 'lane_boundary_adapter' for n in full.nodes) == (not args)
+        assert ('/localization_controller' in names) == (choice == 'localization')
+        assert ('/local_planner' in names) == (choice != 'camera')
+        assert ('/local_controller' in names) == (choice == 'local')
+        assert any(n.package == 'lane_boundary_adapter' for n in full.nodes) == (choice == 'camera')
     print('Full single-container composition: canonical ports and exactly one stack PASS')
     print('Expanded autonomy: exclusive follower/LOCAL, semantic input, defaults and typo rejection PASS')
 

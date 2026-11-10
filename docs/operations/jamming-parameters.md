@@ -128,8 +128,8 @@ native 경계 proxy는 `boundary_reserve_each_side_m` 및 호환 총 폭을 함�
 
 이 항목들은 전부 더해서 쓰는 단일 숫자가 아니다. 객체와 도로 검사가 서로 다르고,
 native 후보 검사와 마지막 sweep에서 각각 veto할 수 있다. 특히5cm와 overrun1.5m는
-**LOCAL 연구 작업트리의 camera 옵션**에 남은 값이며 LOCAL/localization에 적용되지 않는다.
-진행 중인 LOCAL 실행 설정을 통째로 복사해 최신 camera 기본값을 되돌리지 않는다.
+**camera 명시 선택**에 남은 값이며 LOCAL/localization에 적용되지 않는다.
+camera 선택의 값을 localization+LOCAL 기본 설정과 혼합하지 않는다.
 
 ## 경로·속도·시간 설정
 

@@ -2,12 +2,16 @@
 
 **현재 후속:** 3뷰 matching은 PR #122에서 기본 적용됐다. 이제 구 패키지 이관을 다시 하지 않는다.
 [클래스·시각 전달/음영 콘솔과 다음 작업](../architecture/shadow-planning-refactoring.md)을 따른다.
-음영 local 객체는 별도 LOCAL 실험 planner가 충돌 검사에 소비한다. 기존 bbox 방식과
-동시에 제어하지 않으며 운영 기본 전환·전체 음영 주행 수락과는 구분한다.
+음영 local 객체는 현재 기본 localization+LOCAL 복구 및 명시적 LOCAL 경로에서 소비한다.
+`camera`는 별도 선택이다. 경로·제어 소유권과 속도/전환은 [현재 운영 계약](../operations/jamming-comparison.md)을 따른다.
+대회 최종 소스는 PR #141로 main에 병합됐으며, 문서 정리를 새 전 구간 수락으로 해석하지 않는다.
 
-LOCAL-2C에서 재호에게 인계할 [긴 노면 OBB 원인·fitting 후보·실제 barrier 대조](../records/planning/2026-10-28-local-speed-continuity.md)를 추가했다.
-기본 지면 설정은 유지하고 planner의 길이/나이 기반 일괄 삭제는 도입하지 않았다.
-노면 평면 아래 잔류점과 낮은 실제 장애물의 구분이 다음 품질 검토 대상이다.
+LOCAL-2C의 [긴 노면 OBB·fitting 후보·barrier 대조](../records/planning/2026-10-28-local-speed-continuity.md)는 당시 근거다.
+이후 지면 아래 점 제거·벽/차량 분리 수정이 반영됐다. 현재 기본은 `lidar_wall_vehicle.yaml`이며
+YOLO 점군 분리·차량 이력·관련 벽 처리는 터널 경로와 진입 전30m·출구10m 범위에 한정한다.
+구간 밖에서는 해당 분리를 끄고, 일반 3뷰 클래스 fusion과 HD맵 전달 보호는 계속한다.
+GPS 소실은 확인된 구간 상태만 이어받으며, 구간 밖 GPS 소실만으로 활성화하지 않는다.
+[현재 구현·시험](../../src/asmc_lidar/docs/planning-runtime.md#대회-최종-프로필)을 따른다.
 
 `asmc_lidar`가 판제·수집·시나리오의 LiDAR 정본이다. 브릿지와 카메라는 각각 실행하고,
 판제는 `/perception/lidar/planning_observations_map`의 공용 추적 관측을 직접 소비한다. 구 Main/Msg/nested workspace는

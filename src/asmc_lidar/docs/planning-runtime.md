@@ -1,7 +1,7 @@
 # 판제가 사용하는 LiDAR 실행 정본
 
 B4에서 `asmc_lidar`를 판제·수집·시나리오의 단일 LiDAR 실행으로 확정했다. 구 Main/Msg·wire bridge·
-motion JSON 결합과 전용 필터/빌드 경로를 제거한다. 사용자와 판제가 새 경로 주행을 확인했으며,
+motion JSON 결합과 전용 필터/빌드 경로를 제거했다. 사용자와 판제가 새 경로 주행을 확인했으며,
 전체 미션·터널 구조물 제거·속도 정확도 수락은 이후 공동 작업이다.
 
 ## 실행
@@ -13,7 +13,7 @@ LiDAR 처리 노드의 필수 의존성이 빠지면 실패한다. 수신 라이
 ```bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
-./scripts/build_ws.sh -j2 -l2
+./scripts/build_ws.sh runtime -j2 -l2
 source devel/setup.bash
 ```
 
@@ -31,7 +31,7 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 RViz 추가는 `rviz:=true`, 병행 비교는 `namespace:=/test/lidar`를 사용한다.
 
 웹의 단계별 점군을 보려면 기존 LiDAR 실행 대신 `roslaunch asmc_lidar lidar.launch debug:=true`로
-시작하고 별도 터미널에서 `roslaunch asmc_lidar view.launch` 후 `http://127.0.0.1:8091/`에 접속한다.
+시작하고 별도 터미널에서 `roslaunch asmc_lidar view.launch bind_address:=0.0.0.0` 후 `http://localhost:8091/`에 접속한다.
 `view.launch`는 구독만 하며 새 처리 노드를 시작하지 않는다. debug OFF에서도 판제 출력은 제공된다.
 
 `debug`는 중간 점군·웹 scan 표현만 제어한다. 검출·추적·카메라 fusion·HD맵/높이 전달 필터와
@@ -56,7 +56,9 @@ PR #114에서 검증한 `LidarPlanningObservation`의 KF 속도 품질·미확�
 세션별 private ID 분리를 유지한다. 별도 companion 실행·source 선택·JSON 중계는 없다.
 `tracks_local/map`은 기존 `LidarTrackingObservation` 계약과 classifier 적용 추정값을 유지하는
 분석용 출력이며, 판제용 KF 속도와 서로 다른 추정값이다. topic 이름만 remap해 두 타입을 섞지 않는다.
-기존 공용 메시지 MD5는 유지하며 PR #114의 private `velocity_unavailable` 필드 때문에 전체 재빌드한다.
+LiDAR 공용 메시지의 MD5와 private 판제 메시지의 변경 이력은 별개다. 현재 private 객체에는
+`velocity_unavailable` 및 `classification/camera_class`가 있으므로 전체 생산자·소비자를 함께 빌드한다.
+판제 `Trajectory.execution_policy`의 별도 wire 변경은 [제어 계약](../../../docs/contracts/control-binding-v1.md)을 따른다.
 
 ## 좌표·시간·무효 처리
 
@@ -78,7 +80,8 @@ UNKNOWN/LOW_THREAT/DYNAMIC_PENDING/DYNAMIC을 구분하고 측정된 LOW_THREAT�
 속도 정확도·후진·터널 입력의 추가 수락은 후속이며 일반 tracking 출력의 의미는 바꾸지 않았다.
 
 카메라 vehicle/dynamic_obstacle/static_obstacle 그룹은 실제 운동 상태와 별개다. 원본 문자열은
-공용 관측에 있고 private numeric enum은 vehicle/person/unknown만 표현한다. unknown도 충돌 기하를 유지한다.
+공용 관측에서 private `classification/camera_class`까지 같은 관측으로 전달한다. numeric enum은
+기존 행동 호환용 vehicle/person/unknown이며 원본 분류 문자열을 대체하지 않는다. unknown도 충돌 기하를 유지한다.
 
 ## 전달 필터와 책임
 
@@ -92,8 +95,23 @@ HD맵 v7·안쪽10cm·점군3점/10% AND OBB10%·높이 ROI/상부 제외, 관�
 
 ## 최신 main 통합
 
-PR #114의 속도 품질·GPS/재밍 복구를 이 정본에 통합했다. 판제 담당의 변경 대응표와
-이번 재빌드·debug OFF 제한 주행은 [통합 기록](../../../docs/records/lidar/2026-10-26-pr114-canonical-integration.md)에 있다.
+PR #114의 속도 품질·GPS 복구 검증은 [10월26일 기록](../../../docs/records/lidar/2026-10-26-pr114-canonical-integration.md)이다.
+대회 최종 소스는 `competition/2026-final`(`a62360ec`)로 보존되고 PR #141을 통해 main에 병합됐다.
+현재 빌드·웹 접속·연구 환경 정리는 [11월 정본 확인](../../../docs/records/repository/2026-11-10-canonical-runtime-closeout.md)을 따른다.
+
+## 대회 최종 프로필
+
+기본 `lidar.launch`의 `pipeline_config`는 `config/lidar_wall_vehicle.yaml`이다.
+`lidar_pipeline.yaml`만 수정해 기본 실행이 바뀌었다고 판단하지 않는다. 시작 로그의 실제 설정과
+runtime/config 식별자를 확인한다. `fusion.views=all`, original tunnel 경로, semantic 정적 보조 OFF다.
+
+카메라 bbox 안의 모든 점을 차량으로 보호하지 않고 점 지지·분리 결과·차량 이력을 사용한다.
+`tunnel_only_updates=true`와 `pre_entry_wall`의 경로 게이트가 점군 분리·steel 추출·관련 벽 정리를
+터널 진입 전30m·출구10m 범위로 제한한다. 전 구간 3뷰 분류 fusion과 HD맵 보호는 유지한다.
+이 범위 제한은 플래너의 톨게이트 사전 준비와 독립적이다.
+회귀는 `test/runtime/test_tunnel_runtime.cpp`, `test/experimental/test_tunnel_filter_core.cpp`,
+`test/refinement_profile_test.py`에 있다. 카메라 사각의 혼합 군집과 모든 실제 차량 보존까지
+새로 검증 완료했다는 뜻은 아니다. 역사적 원인·실패 자료는 그대로 보존한다.
 
 ## 검증과 복구
 
