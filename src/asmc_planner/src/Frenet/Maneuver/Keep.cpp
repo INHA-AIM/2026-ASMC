@@ -166,6 +166,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         cmd.merge_type == MergeType::ROUNDABOUT &&
         cmd.source_link_id == roundabout_merge_cfg_.source_link &&
         cmd.target_link_id == roundabout_merge_cfg_.target_link;
+    const bool partial_departure=external_stop_mode&&!roundabout_waiting&&
+        departure_road_recovery_.active;
     const CartesianGeometryMode geometry_mode =
         external_stop_mode
             ? CartesianGeometryMode::GEOMETRIC_YAW_CURVATURE
@@ -385,6 +387,18 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                                        cfg.limits.near_low_speed_fallback_v);
     const double lateral_cost_target = keep_departure_hold ? d :
         (cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0);
+    if(partial_departure) {
+        request.stop.complete_profile=true;
+        // Existing d(s) generator: preserve the measured starting pose even
+        // when v=0. Normal STOP and the shared Cartesian converter stay intact.
+        double ps,pv,pa,pd,slope,second;
+        CartesianToFrenet(ref_,ego,ps,pv,pa,pd,slope,second,&s,
+                         ref_config_.ego_projection_search_window);
+        request.lateral.initial_slope=slope;
+        request.lateral.initial_second=second;
+        request.lateral.settle_distance=LowSpeedLateralTransitionDistance(
+            d,request.lateral.target_d);
+    }
     const double base_resolved_target_speed = cmd.target_speed;
     const double previous_profiled_target = speed_profiler_.initialized()
         ? speed_profiler_.speed() : std::max(0.0, ego.v);
@@ -606,16 +620,31 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         prev_mode_ = cmd.mode;
     }
 
+    std::vector<double> departure_costs;
     if (external_stop_mode) {
         const auto filter_stop_road = [&]() {
-            for (auto& candidate : candidates) {
+            if(partial_departure)departure_costs.resize(candidates.size());
+            for (std::size_t index=0;index<candidates.size();++index) {
+                auto& candidate=candidates[index];
                 if (!candidate.valid) continue;
                 const auto cart = ConvertToCartesianPath(candidate, ref_, geometry_mode);
-                if (!avoid_road_map_.EvaluateRecoveryPath(
-                        cart, vehicle_shape_, cfg.path.dt).drivable) {
+                auto exterior=vehicle_shape_;
+                exterior.width=std::max(exterior.width,exterior.road_outer_width);
+                const auto road=partial_departure
+                    ? avoid_road_map_.EvaluateDepartureRecoveryPath(cart,exterior,cfg.path.dt,
+                        true,departure_road_recovery_.settled_travel_m)
+                    : avoid_road_map_.EvaluateRecoveryPath(cart,vehicle_shape_,cfg.path.dt);
+                const bool pose_preserved=!cart.x.empty()&&
+                    std::hypot(cart.x.front()-ego.x,cart.y.front()-ego.y)<1e-6&&
+                    std::fabs(normalizeAngle(cart.yaw.front()-ego.yaw))<1e-6;
+                if (!road.drivable || (partial_departure&&
+                    (!candidate.spatial_lateral.enabled||!pose_preserved||
+                     !PathObeysSteeringRate(cart,cfg.path.dt,wheelbase_,cfg.limits.steering)))) {
                     candidate.valid = false;
                     candidate.rejection_reason = RejectionReason::ROAD_BOUNDARY;
                 }
+                if(partial_departure)
+                    departure_costs[index]=AvoidRoadMap::DepartureRecoveryCost(road);
             }
         };
         filter_stop_road();
@@ -637,6 +666,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             EvaluateCosts(candidates, cfg.cost_weights, lateral_cost_target);
         }
     }
+    if(partial_departure)for(std::size_t i=0;i<candidates.size();++i)
+        if(candidates[i].valid)candidates[i].cost_total+=departure_costs[i];
 
     // 안전성 필터를 통과한 후보만 valid로 남아 있다. 외부 STOP에서는 그
     // 안전 집합 안에서 목표점에 가장 가까운 종점을 우선하고, 같은 종점의

@@ -94,6 +94,16 @@ def configure_nodes(config, launch_config):
 
 
 def launch_configuration(role, config):
+    # PR127 owns the current BBOX follower. Old S1/S2/S3 flags must not silently
+    # run that different algorithm; the original experiments have a pinned ref.
+    historical = ('CONTACT_CLEARANCE', 'LOCAL_CONTACT', 'SEMANTIC',
+                  'NEAR_EGO_LIDAR', 'APPROACH_CAP', 'BEV_MODE')
+    if role == 'planning' and any(
+            os.environ.get('ASMC_SHADOW_' + key, '').lower()
+            not in ('', '0', 'false', 'off') for key in historical):
+        raise ValueError('S1/S2/S3 runtime retired: reproduce at '
+                         'archive/local-before-rebase-20261029; '
+                         'current GPS-free trials use run_local_trial.py.')
     import roslaunch.config
     import roslaunch.rlutil
     if role == 'bridge':
@@ -312,12 +322,18 @@ class RosProbe(Readiness):
         self.lock = threading.RLock()
         super().__init__(config)
         import rospy
-        from asmc_msgs.msg import LidarObservation, Trajectory, VehicleState
+        from asmc_msgs.msg import LidarObservation, Trajectory, VehicleState, LaneBoundaryFamily, LidarTrackingObservation
         from diagnostic_msgs.msg import DiagnosticArray
         from std_msgs.msg import String, UInt8
         from planning_inputs.msg import DetectedObjectArray
-        from morai_msgs.msg import CtrlCmd
+        from morai_msgs.msg import CtrlCmd, GPSMessage, EgoVehicleStatus
+        from std_msgs.msg import UInt8
         self.subscribers = []
+        if self.profile=='shadow_local':
+            for name,topic,kind in [('family','/perception/lane/boundary_family',LaneBoundaryFamily),
+                    ('local','/perception/lidar/tracks_local',LidarTrackingObservation),
+                    ('gps','/gps',GPSMessage),('speed','/Ego_topic',EgoVehicleStatus),('mode','/planning/mode',UInt8)]:
+                self.subscribers.append(rospy.Subscriber(topic,kind,lambda message,key=name:self.observe(key,message,time.monotonic()),queue_size=1))
         for name, topic, kind in (
                 ('state', '/planning/vehicle/state', VehicleState),
                 ('objects', '/planning/objects', DetectedObjectArray),

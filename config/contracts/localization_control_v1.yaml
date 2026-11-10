@@ -1,0 +1,26 @@
+schema_version: 1
+contract_id: asmc_localization_control_v1
+status: frozen
+compatibility_policy: additive_only
+scope: opt-in Localization; existing main message MD5s remain unchanged
+messages:
+  asmc_msgs/LocalTrajectory:
+    md5: d95a161dd0c92f0250a150ed1bbc40c3
+    required_fields: [header, valid, reason, run_id, plan_sequence, scene_stamp, ego_at_plan, dt, points]
+  asmc_msgs/ControlHandoff:
+    md5: 51dfecdc62c2d50090bf1006f5c885f5
+    required_fields: [header, epoch, target_mode, valid, reason, state_stamp, trajectory_stamp, trajectory_sequence, state_frame, longl_cmd_type, steering, accel, brake]
+frames:
+  local_trajectory: producer session/epoch odometry frame; never relabel as map
+  map_reference_projection: performed by the Localization producer before local conversion
+  handoff_header: producer node identity; state_frame identifies the evidence frame
+units:
+  points_and_ego_position: meters
+  yaw_and_steering: radians
+  velocity: meters_per_second
+  dt: seconds
+  accel_and_brake: existing morai_msgs/CtrlCmd normalized pedal contract
+validity:
+  path: source epoch, run, scene stamp, state stamp and full footprint checked before use
+  handoff: matching current request epoch/target and fresh state/path/command required
+  stale: retains existing 250ms watchdog; cannot authorize an old command

@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "role": "shadow_localization",
+  "branch": "integrate/localization-compare-20261029",
+  "worktree": "2026-ASMC-shadow-localization",
+  "runtime_container": "asmc-localization-compare",
+  "build_container": "asmc-localization-compare-build",
+  "base_image": "asmc/localization:campaign-base-20261029",
+  "workspace": "/root/ws",
+  "build": "/build",
+  "devel": "/devel",
+  "network": "host",
+  "gpu": "all",
+  "shared_memory_bytes": 2147483648,
+  "runtime_memory_bytes": 12884901888,
+  "build_cpus": 2,
+  "build_memory_bytes": 6442450944,
+  "interactive_ros_master": "http://127.0.0.1:11372",
+  "automatic_ros_master": "http://127.0.0.1:11371",
+  "automatic_profile": "isolated",
+  "automatic_campaign": {
+    "runtime_container": "asmc-localization-compare",
+    "build_container": "asmc-localization-compare-build",
+    "run_mount": "/validation",
+    "dashboard_url": "http://localhost:8089/web/index_v2.html",
+    "dashboard_role": "persistent observer on the experiment private master; autonomy child dashboard remains false",
+    "identity_guard": [
+      "master URI",
+      "master PID",
+      "clock mode",
+      "worktree",
+      "branch",
+      "revision",
+      "backend and helper SHA"
+    ],
+    "trace_geometry_hz": 5,
+    "record_raw_sensors": true,
+    "storage_floor_source": "workspace .storage/policy.json minimum_free_bytes; user-selected 10 GiB"
+  },
+  "interactive_profile": "standalone",
+  "bashrc_starts_nodes": false,
+  "source_helper": "/root/localization-env.sh",
+  "physical_lease_mount": "/validation-lease",
+  "physical_endpoint": "host.docker.internal:7789",
+  "same_endpoint_loopback_alias": "127.0.0.1:7789",
+  "perception_owner": "selected worktree container",
+  "manual_shared_services": [],
+  "private_recovery_profile": ".storage/manifests/localization-comparison-20261029-r1/create-compare-runtime.py",
+  "model_selection": "latest main camera_runtime manifest plus exact engine SHA and TensorRT/GPU compatibility",
+  "git_path_aliases": {
+    "scope": "container-only symlinks under the canonical host workspace prefix",
+    "targets": [
+      "2026-ASMC",
+      "2026-ASMC-shadow-localization",
+      "external"
+    ],
+    "preserve_existing_image_data": true
+  },
+  "localization_motion": {
+    "yaw_source": "orientation",
+    "velocity_reference_offset_m": 1.4,
+    "calibration": "src/asmc_planner/config/localization_motion_calibration.json",
+    "validated_simulator_scope": "25.S4.MolitComp03 canonical v3 sensor/vehicle; 26.R1 unverified",
+    "velocity_turn_gain_m2ps": 1.54,
+    "velocity_turn_speed_floor_mps": 1.0,
+    "model": "inverse-speed incremental turn correction; constant-offset fallback when gain=0"
+  },
+  "build_root": ".runtime/localization-compare-20261029",
+  "lidar_dashboard_url": "http://localhost:8097",
+  "manual_ports": {
+    "planning": 8089,
+    "lidar": 8097
+  },
+  "manual_bridge_policy": "one physical MORAI bridge at a time; shared endpoint lease and UDP preflight",
+  "interactive_install": "tools/runtime/install_container_profiles.py"
+}

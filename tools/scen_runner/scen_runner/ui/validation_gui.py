@@ -2,6 +2,7 @@
 import argparse
 import atexit
 import json
+import hashlib
 import math
 import os
 from pathlib import Path
@@ -98,10 +99,25 @@ class ValidationRunner(QtCore.QThread):
 
     def __init__(self,mode,section,seed,sample_json=None,collision_debug=False,speed_debug=False,
                  replay=None,save_dir=None,save_collisions=True,replay_runs=(),run_counts=None,
-                 with_planning=False,stack_config=None):
+                 with_planning=False,stack_config=None,recording_spec=None,tunnel_profile=None,
+                 continue_on_static_contact=False):
         super().__init__();base=load_config();self.route=EpisodeRoute(sample_json)
         self.link=EpisodeLink(base);self.link.client_key='validation_ego_'+uuid.uuid4().hex
         self.engine=EpisodeController(self.link,self.route,mode,section,seed)
+        self.engine.continue_on_static_contact=continue_on_static_contact
+        self.tunnel_profile=None
+        if tunnel_profile:
+            from scen_runner.config import load_yaml
+            from scen_runner.planning.tunnel_plan import TunnelPlan
+            raw=Path(tunnel_profile).read_bytes();profile=load_yaml(tunnel_profile)
+            if not isinstance(profile,dict) or set(profile)-{'scene_type','cross_pattern','static_models'}:
+                raise ValueError('터널 프로필은 scene_type/cross_pattern/static_models만 지정합니다.')
+            if profile.get('static_models') and profile.get('scene_type') not in ('static','both'):
+                raise ValueError('모델 지정 시 scene_type은 static 또는 both여야 합니다.')
+            TunnelPlan(0,**profile)  # Validate before simulator mutation, no placement/spawn.
+            self.engine.base['tunnel_profile']=profile
+            self.tunnel_profile=dict(path=str(tunnel_profile),sha256=hashlib.sha256(raw).hexdigest(),values=profile)
+            if replay or replay_runs:raise ValueError('재현 파일과 새 터널 프로필을 동시에 적용할 수 없습니다.')
         if with_planning:
             from scen_runner.orchestration.control import PlanningClient,settings
             self.engine.planning=PlanningClient(settings(stack_config))
@@ -133,9 +149,17 @@ class ValidationRunner(QtCore.QThread):
         self.last_native_contact=None
         self.engine.on_contact_observation=self.record_contact
         self.engine.on_lifecycle_observation=self.record_lifecycle
+        self.recording=None
+        if recording_spec:
+            from scen_runner.records.sensor_recording import SensorRecording
+            self.recording=SensorRecording(recording_spec,notify=self.archive_message)
+            if not self.save_collisions:raise ValueError('센서 기록에는 장면 저장도 필요합니다.')
+            self.save_dir=self.recording.directory.parent/'scenes'
 
     def archive_ready(self,engine,states):
-        if self.archive:self.archive.begin(engine,states)
+        if self.archive:
+            self.archive.begin(engine,states)
+            if self.recording:self.archive.checkpoint(engine,'ready')
 
     def archive_observe(self,engine,states):
         if self.archive:self.archive.observe(engine,states)
@@ -160,9 +184,22 @@ class ValidationRunner(QtCore.QThread):
             self.speed_trace.record_contact(evidence,[state_evidence(s) for s in sample.get('actor_states',())])
 
     def record_lifecycle(self,record):
-        if self.archive:self.archive.event(record)
+        if self.archive:
+            self.archive.event(record)
+            if self.recording and record.get('event')=='cleanup_requested':
+                self.archive.checkpoint(self.engine,'before_cleanup')
 
     def receive_contact(self,sample):
+        # Reuse the existing native query. Record background contacts as well as
+        # owned actors; the scenario collision oracle deliberately owns only its
+        # actors, so its silence alone is not an all-scene collision proof.
+        if self.recording and self.archive and sample['epoch']==self.engine.contact_epoch:
+            self.archive.event(dict(event='native_contact_sample',epoch=sample['epoch'],
+                query_started_utc=sample.get('query_started_utc'),
+                received_at_utc=sample.get('received_at_utc'),query_s=sample.get('query_s'),
+                native_timestamp=sample.get('native_timestamp'),native_tick_count=sample.get('native_tick_count'),
+                contacts=list(sample.get('contacts',())),error=sample.get('error'),
+                actor_states=[state_evidence(s) for s in sample.get('actor_states',())]))
         self.engine.contact(sample)
         current=self.engine.last_contact_evidence
         if (sample['epoch']==self.engine.contact_epoch and current is not None and
@@ -220,7 +257,8 @@ class ValidationRunner(QtCore.QThread):
         for name,close in (('판제 실행 정리',self.engine.planning.close if self.engine.planning else None),
                            ('실행 잠금',self.engine.lease.release),
                            ('속도 기록',self.speed_trace.close if self.speed_trace else None),
-                           ('재현 기록',self.archive.close if self.archive else None)):
+                           ('재현 기록',self.archive.close if self.archive else None),
+                           ('센서 기록',self.recording.close if self.recording else None)):
             if close is None:continue
             try:close()
             except Exception as error:self.archive_message(f'[{name} 종료 오류] '+str(error))
@@ -233,7 +271,7 @@ class ValidationRunner(QtCore.QThread):
         self.engine.cleanup()
         configure_replay(self.engine,definition);self.replay=definition
         self.replay_run_index=run_index;self.replay_case_index=case_index;self.replay_done_reason=None
-        kind='정체' if case.event_type=='stagnation' else '충돌'
+        kind={'trial':'장면','stagnation':'정체'}.get(case.event_type,'충돌')
         print(f'[{kind} 재현] {case_index+1}/{len(self.replay_runs[run_index].cases)} · '
               f'{LABELS[case.section]} · {case.path.name}',flush=True)
         self.engine.begin(self.monitor.reset_context())
@@ -294,11 +332,16 @@ class ValidationRunner(QtCore.QThread):
             self.engine.on_rpc_observation=self.speed_trace.write
         initial=True
         try:
+            if self.recording:self.recording.start()
             if self.save_collisions:
                 try:
-                    self.archive=CollisionArchive(self.save_dir,notify=self.archive_message);self.archive.start()
+                    self.archive=CollisionArchive(self.save_dir,notify=self.archive_message)
+                    if self.tunnel_profile:self.archive.metadata['tunnel_profile']=self.tunnel_profile
+                    if self.recording:self.archive.metadata['sensor_run_id']=self.recording.spec['run_id']
+                    self.archive.start()
                 except Exception as exc:
                     self.archive=None;self.archive_message('[충돌 저장 준비 실패] '+str(exc))
+                    if self.recording:raise
             # Collect Git provenance before the monitor opens a gRPC channel;
             # subprocess creation during active gRPC polling triggers fork warnings.
             self.monitor.start()
@@ -309,6 +352,8 @@ class ValidationRunner(QtCore.QThread):
                     # A close request has priority over reconnection and queued resets.
                     if self.close_requested.is_set() or command and command[0]=='close':
                         self.shutdown();return
+                    if self.recording:self.recording.check()
+                    if self.recording and self.archive.error:raise RuntimeError('장면 저장 실패: '+self.archive.error)
                     if not self.link.connected:
                         self.link.connect()
                         self.engine.observe_ego_link()
@@ -383,6 +428,12 @@ class ValidationRunner(QtCore.QThread):
                     print('[통합 검증 오류] '+self.engine.status,flush=True)
                     self.message.emit(self.engine.status);self.snapshot();initial=False
                 self.msleep(200)
+        except Exception as exc:
+            # Startup recording/archive failure must be visible and terminate
+            # before begin() can release Ego. Preserve partial evidence.
+            self.engine.phase='error';self.engine.error=str(exc)
+            self.archive_message('[검증 시작 실패] '+str(exc))
+            self.closing=True
         finally:
             self.close_resources()
             if self.closing:self.finished_clean.emit()
@@ -391,10 +442,12 @@ class ValidationRunner(QtCore.QThread):
 class ValidationWindow(QtWidgets.QMainWindow):
     def __init__(self,mode='scene',section='static',seed=None,sample_json=None,collision_debug=False,speed_debug=False,
                  replay=None,save_dir=None,save_collisions=True,replay_runs=(),run_counts=None,
-                 with_planning=False,stack_config=None):
+                 with_planning=False,stack_config=None,recording_spec=None,tunnel_profile=None,
+                 continue_on_static_contact=False):
         super().__init__();self.runner=ValidationRunner(mode,section,seed,sample_json,collision_debug,speed_debug,
                                                      replay,save_dir,save_collisions,replay_runs,run_counts,
-                                                     with_planning,stack_config)
+                                                     with_planning,stack_config,recording_spec,tunnel_profile,
+                                                     continue_on_static_contact=continue_on_static_contact)
         replay=self.runner.replay
         if replay:mode='section';section=replay['section']
         self.pending=None;self.pending_ego=None;self.last=None;self.allow_close=False;self.view='ego'
@@ -411,7 +464,7 @@ class ValidationWindow(QtWidgets.QMainWindow):
         reset=QtWidgets.QPushButton('다음 반복 · 다시 준비');reset.clicked.connect(self.restart_selected);controls.addWidget(reset)
         if replay:
             self.mode.setEnabled(False);self.section.setEnabled(False);apply.setEnabled(False)
-            kind='정체' if replay.get('event_type')=='stagnation' else '충돌'
+            kind={'trial':'장면','stagnation':'정체'}.get(replay.get('event_type'),'충돌')
             reset.setText('저장된 구간 다시 재현');self.setWindowTitle(f'scen_runner · {kind} 구간 재현')
         close=QtWidgets.QPushButton('객체 정리·조종 복귀 후 종료');close.clicked.connect(self.close);controls.addWidget(close)
         layout.addLayout(controls)
@@ -550,7 +603,7 @@ class ValidationWindow(QtWidgets.QMainWindow):
             self.section.setCurrentIndex(list(LABELS).index(frame['section']))
             self.replay_previous.setEnabled(case['case_index']>0)
             self.replay_next.setEnabled(case['case_index']+1<case['count'])
-            kind='정체' if case.get('event_type')=='stagnation' else '충돌'
+            kind={'trial':'장면','stagnation':'정체'}.get(case.get('event_type'),'충돌')
             self.header.setText(f'{kind} 재현 {case["case_index"]+1}/{case["count"]} · {LABELS[frame["section"]]} · '
                                 f'반복 {frame["episode"]}')
             stamp=case['time_kst'].replace('T',' ')[:19]
@@ -701,6 +754,8 @@ def main():
     parser.add_argument('--section',choices=list(LABELS),default='static')
     parser.add_argument('--seed',type=int)
     parser.add_argument('--collision-debug',action='store_true',help='gRPC ego 접촉 목록이 바뀔 때만 출력')
+    parser.add_argument('--continue-on-static-contact',action='store_true',
+                        help='등록된 정적 미션 고정 장애물 접촉은 기록하고 주행 계속; 차량·보행자 접촉은 기존 종료')
     parser.add_argument('--speed-debug',action='store_true',help='NPC 목표/실측·가속·브레이크·링크를 JSONL에 저장')
     parser.add_argument('--sample-json',help='시작 위치를 읽을 JSON 경로; 기본은 사용자 예시의 저장된 시작 좌표')
     replay_mode=parser.add_mutually_exclusive_group()
@@ -712,6 +767,8 @@ def main():
     parser.add_argument('--run-counts',type=Path,help='총 주행 횟수 YAML; 기본 tools/scen_runner/config/run_counts.yaml')
     parser.add_argument('--with-planning',action='store_true',help='판제 실행기의 종료/새 위치 입력 준비를 확인하고 주행')
     parser.add_argument('--stack-config',type=Path,help='4개 실행기 연동 설정; 기본 config/stack.yaml')
+    parser.add_argument('--recording-spec',type=Path,help='등록된 실험 run의 ROS 센서·판단 녹화 JSON')
+    parser.add_argument('--tunnel-profile',type=Path,help='터널 반복 시험의 씬/정적 모델 선택 YAML; 배치 검사는 유지')
     args=parser.parse_args()
     try:require_morai_endpoint(load_config()['morai'])
     except (OSError,ValueError) as error:parser.error(str(error))
@@ -742,7 +799,8 @@ def main():
     try:
         win=ValidationWindow(args.mode,args.section,args.seed,args.sample_json,args.collision_debug,args.speed_debug,
                              replay,args.collision_log_dir,not args.no_save_collision,replay_runs,args.run_counts,
-                             args.with_planning,args.stack_config)
+                             args.with_planning,args.stack_config,args.recording_spec,args.tunnel_profile,
+                             continue_on_static_contact=args.continue_on_static_contact)
     except (OSError,ValueError) as error:parser.error(str(error))
     show_on_current_screen(win)
     pending_close=[False]

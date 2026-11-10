@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <asmc_lidar/tracking/track.hpp>
+#include <asmc_lidar/fusion/fusion_policy.hpp>
 // Shadow runtime: sensor input gates and the per-scan sequence of Main's
 // TemporalThread (common geometry), transport-free (see shadow/runtime.hpp).
 #include <asmc_lidar/ros/runtime.hpp>
@@ -189,6 +190,13 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
   }
   // Main ScanTime(raw) after the wait (FrameBoundary.cpp:141-145).
   pipeline::ScanInput input = scan;
+  if(config_.pipeline.camera_point_refinement.enabled&&config_.pipeline.camera_point_refinement.vehicle_history_enabled)
+    input.current_sensor_from_past_sensor=[this,scan_stamp](std::int64_t past)->std::optional<asmc::lidar::Pose> {
+      const auto transform=tunnel_motion_history_.CameraFromScan(past,scan_stamp,
+          pipeline::ScanFrame::SensorMount(config_.pipeline.vehicle),200000000LL,.2);
+      if(!transform)return {};
+      return transform->inverse();
+    };
   input.time = asmc::lidar::Observation{scan_stamp, times.receipt_ns, times.processing_ns, "ros",
                                         config_.stamp_provenance, "steady"};
   const auto map = pose_.MapAt(input.time, local);
@@ -260,10 +268,10 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
       }
     }
     if(config_.fusion.views=="all") {
-      selected->views.clear(); // Retain front evidence metadata for bounded refinement.
+      selected->views.clear();
       ScanTimes now=times;if(times.refresh_before_fusion)times.refresh_before_fusion(now);
       const auto limit=static_cast<std::int64_t>(protection.max_time_offset_s*1e9);
-      const auto snapshot=camera_?camera_->Read(scan_stamp,limit,now.ros_now_ns,now.steady_now_ns):pipeline::fusion::CameraSnapshot{};
+      const auto snapshot=camera_?camera_->Read(scan_stamp,need_causal?350000000LL:limit,now.ros_now_ns,now.steady_now_ns):pipeline::fusion::CameraSnapshot{};
       for(const auto& c:calibrations_) {
         pipeline::TunnelCameraView v;v.calibrated=true;v.calibration=c.second;v.common_projection=true;
         auto found=snapshot.by_view.find(c.first);
@@ -281,12 +289,37 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
           }
         }
         selected->views.push_back(std::move(v));
+        if(config_.pipeline.camera_point_refinement.enabled||config_.pipeline.camera_point_refinement.steel_fragment_merge) {
+          auto evidence=std::make_shared<pipeline::TunnelCameraInput>();
+          evidence->camera_id=c.first;evidence->calibrated=true;evidence->calibration=c.second;
+          const auto age=config_.pipeline.camera_point_refinement.steel_fragment_merge?250000000LL:150000000LL;
+          const pipeline::fusion::CameraFrame* causal=nullptr;
+          if(snapshot.gate_active&&found!=snapshot.by_view.end())for(const auto& f:found->second) {
+            const auto dt=scan_stamp-f.stamp_ns;
+            if(dt>=0&&dt<=age&&(!causal||f.stamp_ns>causal->stamp_ns))causal=&f;
+          }
+          if(causal&&camera_->Current(*causal,now.ros_now_ns,now.steady_now_ns)) {
+            evidence->available=true;evidence->boxes=causal->boxes;evidence->stamp_ns=causal->stamp_ns;
+            evidence->identity=causal->identity;evidence->camera_epoch=causal->epoch;
+            evidence->image_width=causal->width;evidence->image_height=causal->height;
+            const auto transform=tunnel_motion_history_.CameraFromScan(causal->stamp_ns,scan_stamp,
+                pipeline::ScanFrame::SensorMount(config_.pipeline.vehicle),age);
+            if(transform){evidence->motion_compensated=true;evidence->image_sensor_from_scan_sensor=*transform;}
+            if(scan_stamp!=causal->stamp_ns&&!transform)evidence->available=false;
+            const auto frame=*causal;
+            evidence->still_current=[this,frame,times]() {ScanTimes current=times;
+              if(times.refresh_before_fusion)times.refresh_before_fusion(current);
+              return camera_->Current(frame,current.ros_now_ns,current.steady_now_ns);};
+          }
+          selected->refinement_views.push_back(std::move(evidence));
+        }
       }
     }
     input.tunnel_camera=std::move(selected);
   }
   const bool tunnel_motion_enabled=config_.pipeline.tunnel.enabled &&
-      config_.pipeline.tunnel_route.original_pipeline && config_.pipeline.tunnel_route.integrated_motion && !map.valid;
+      config_.pipeline.tunnel_route.original_pipeline && config_.pipeline.tunnel_route.integrated_motion &&
+      (!map.valid || config_.pipeline.shadow_wall.enabled);
   if(tunnel_motion_enabled) {
     std::lock_guard<std::mutex> input_commit(tunnel_motion_input_mutex_);
     const auto motion=tunnel_motion_history_.Between(tunnel_motion_anchor_stamp_,scan_stamp,
@@ -320,6 +353,16 @@ ScanOutput LidarRuntime::ProcessScan(const pipeline::ScanInput& scan, double wai
                                     out.result.objects, pipeline_.tracker().LastFrame(), *camera_,
                                     now.ros_now_ns, now.steady_now_ns);
       out.fusion_ran = true;
+    }
+    if(config_.pipeline.camera_point_refinement.vehicle_history_enabled) {
+      for(auto& object:out.result.objects)if(object.tracking.s32_MissCount==0&&
+          object.detection.measured_vehicle_track_id==object.tracking.s32_Id&&
+          (object.camera.observed_class=="unknown"||object.camera.observed_class=="vehicle")&&!object.camera.group_conflict) {
+        // Historical semantics are not a new camera observation: do not reset
+        // image stamps, miss counters, protection evidence or confirmations.
+        object.camera.str_ObjectClass="vehicle";object.camera.str_YoloClass="car";
+      }
+      if(auto* history=pipeline_.tracker().LastFrame())pipeline::fusion_state::Persist(out.result.objects,*history);
     }
     pipeline_.FinalizeMotion(out.result);
     UpdateAABB(out.result.objects);

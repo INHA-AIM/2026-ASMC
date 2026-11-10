@@ -11,6 +11,9 @@
 struct SpatialStopOptions {
     bool braking_only = false;
     bool allow_partial_horizons = false;
+    // Explicit partial-departure witness through the existing stop endpoint.
+    // Ordinary STOP retains its configured receding horizon.
+    bool complete_profile = false;
 };
 
 std::vector<FrenetPath> GenerateSpatialStoppingCandidates(

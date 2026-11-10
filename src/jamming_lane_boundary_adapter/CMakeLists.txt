@@ -1,3 +1,4 @@
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../asmc_geometry/include)
 cmake_minimum_required(VERSION 3.0.2)
 project(lane_boundary_adapter)
 
@@ -20,7 +21,7 @@ find_package(yaml-cpp REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 add_message_files(FILES CameraBBox.msg CameraBBoxFrame.msg CameraBBoxLaneResult.msg)
-generate_messages(DEPENDENCIES std_msgs sensor_msgs)
+generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -78,19 +79,23 @@ target_link_libraries(camera_bbox_lane_change_node lane_boundary_adapter ${catki
 catkin_install_python(PROGRAMS scripts/camera_bbox_crop.py scripts/camera_bbox_frame_bridge.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
-  catkin_add_gtest(decision_guard_test test/decision_guard_test.cpp)
-  catkin_add_gtest(line_plan_resume_test test/line_plan_resume_test.cpp)
-  if(TARGET line_plan_resume_test)
-    add_dependencies(line_plan_resume_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-    target_link_libraries(line_plan_resume_test lane_boundary_adapter ${catkin_LIBRARIES})
+  add_executable(local_support_probe EXCLUDE_FROM_ALL test/local_support_probe.cpp)
+  add_dependencies(local_support_probe ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(local_support_probe lane_boundary_adapter ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp OpenSSL::Crypto)
+  # Historical S1/S2/S3 ROS fixtures use the archived wire/runtime, not PR127.
+  catkin_add_gtest(contact_clearance_test test/contact_clearance_test.cpp)
+  catkin_add_gtest(local_obstacle_support_test test/local_obstacle_support_test.cpp)
+  if(TARGET local_obstacle_support_test)
+    add_dependencies(local_obstacle_support_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(local_obstacle_support_test ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
   endif()
-  catkin_add_gtest(dynamic_obstacle_risk_test test/dynamic_obstacle_risk_test.cpp)
-  catkin_add_gtest(obstacle_memory_test test/obstacle_memory_test.cpp)
+
   catkin_add_nosetests(test/test_rviz_launch_contract.py)
   find_package(rostest REQUIRED)
   add_rostest(test/camera_frame_bridge.test)
   add_rostest(test/camera_bbox_lane_change.test DEPENDENCIES camera_bbox_lane_change_node camera_bbox_lane_node)
   add_rostest(test/camera_bbox_inactive_lifecycle.test DEPENDENCIES camera_bbox_lane_change_node camera_bbox_lane_node)
+  add_rostest(test/camera_handoff_integration.test DEPENDENCIES camera_bbox_lane_change_node camera_bbox_lane_node)
   add_rostest(test/camera_bbox_clipped.test DEPENDENCIES camera_bbox_lane_node)
   add_rostest(test/camera_bbox_ego_mask.test DEPENDENCIES camera_bbox_lane_node)
   add_rostest(test/camera_bbox_lane.test DEPENDENCIES camera_bbox_lane_node)

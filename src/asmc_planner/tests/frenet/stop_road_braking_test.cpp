@@ -28,7 +28,9 @@ int main() {
     expect(LoadReferenceLine(FRENET_TEST_WAYPOINT_FILE,ref,{.05,10,.5,300,.3,30},.23),"real reference loads");
     AvoidRoadMap road; std::string error;
     expect(road.Load((map_dir/"drivable.json").string(),(map_dir/"lines.json").string(),error),"real whole-body road boundary loads");
-    const VehicleShape shape{1.9,4.635,.79};
+    const auto vehicle=config["planner"]["vehicle_shape"];
+    const VehicleShape shape{vehicle["width"].as<double>(),vehicle["length"].as<double>(),
+        vehicle["rear_overhang"].as<double>()};
     // Regression poses from curved STOP: temporal centering bulged out of the
     // corridor. Distance-based alternatives must keep the same stop target.
     const CartesianState poses[] = {

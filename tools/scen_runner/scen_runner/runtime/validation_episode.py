@@ -144,13 +144,34 @@ class EpisodeLink(SceneLink):
             self.check(self._require()._actor_stub.SetTransform(r,timeout=3),'ego 차체 방향 보정 실패')
             self.hold()
 
+    @staticmethod
+    def body_heading_consistent(state):
+        """IONIQ5 reset check: rear-axle -> box center must point forward.
+
+        A 2026-10-30 native reset returned a plausible yaw while the body
+        center and subsequent travel were approximately 180 degrees opposite.
+        Do not repair IMU yaw from this diagnostic or alter planner inputs.
+        This check is specific to this runner's rear-axle ego reference.
+        """
+        try:
+            p=state.transform.location;b=state.bounding_box.location
+            dx,dy=b.x-p.x,b.y-p.y
+            yaw=math.radians(state.transform.rotation.z)
+            length=math.hypot(dx,dy)
+            return (all(math.isfinite(v) for v in (dx,dy,yaw)) and length>.25 and
+                    (dx*math.cos(yaw)+dy*math.sin(yaw))/length>.7)
+        except AttributeError:
+            return False
+
     def held_at(self,pose):
         s=self.ego();p=s.transform.location;v=s.velocity
         yaw_error=abs((s.transform.rotation.z-pose['yaw']+180)%360-180)
-        return (math.dist((p.x,p.y),(pose['x'],pose['y']))<=.25 and abs(p.z-pose['z'])<=.75 and
+        return (self.body_heading_consistent(s) and math.dist((p.x,p.y),(pose['x'],pose['y']))<=.25 and abs(p.z-pose['z'])<=.75 and
                 yaw_error<=1. and math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z)<=.1)
 
     def release(self):
+        if not self.body_heading_consistent(self.ego()):
+            raise RuntimeError('ego reset 차체/보고 방향 불일치: 출발 차단, 시뮬 자세 재설정 필요')
         self.zero_ego();self.gear_ego(True);self.pause_ego(False)
 
 
@@ -163,6 +184,7 @@ class EpisodeController:
         self.phase='idle';self.adapters=[];self.pending=[];self.owned={};self.pose=None
         self.status='준비 중';self.cancelled=threading.Event();self.contact_lock=threading.Lock()
         self.collision_requested=False;self.contact_epoch=0;self.run_started=0.;self.error=None
+        self.continue_on_static_contact=False
         self.base=load_config();self.names=[];self.last_states=[]
         self.id_owners={}
         self.on_progress=None
@@ -338,6 +360,15 @@ class EpisodeController:
             if self.on_collision:
                 try:self.on_collision(self,self.last_contact_evidence,sample,hits)
                 except Exception as exc:print('[충돌 저장 실패] '+str(exc),flush=True)
+            live_fixed={s.actor_info.id.value for s in sample.get('actor_states',())
+                        if getattr(s.actor_info,'object_type',None)==3}
+            fixed={aid for aid in hits if aid in live_fixed and aid in self.id_owners and
+                   self.id_owners[aid].name=='static' and
+                   any(a.native_id==aid and a.kind==3 for a in getattr(self.id_owners[aid],'actors',()))}
+            if self.continue_on_static_contact and fixed==hits:
+                self.record_lifecycle('static_contact_continued',contact_ids=sorted(hits))
+                print('[정적 접촉 기록 · 주행 계속] '+','.join(sorted(hits)),flush=True)
+                return False
             self.collision_requested=True
         action='다음 반복 요청' if self.run_budget is None or self.run_budget.can_start else '설정 주행 종료 요청'
         print('[검증 충돌] ego ↔ 생성 객체 '+','.join(sorted(hits))+' · '+action,flush=True)
@@ -359,6 +390,7 @@ class EpisodeController:
             if attempt==5:raise RuntimeError('최종 시작점 복귀 또는 ego 정지 상태를 확인하지 못했습니다.')
             time.sleep(.1)
         self.phase='runs_done'
+        self.record_lifecycle('runs_finished',reason=reason,ego_held=True)
         budget=self.run_budget
         label='전체 씬' if self.mode=='scene' else LABELS[self.section]
         self.status=f'총 주행 {budget.started}/{budget.limit}회 완료 · 시작점 복귀 · ego 정지 · 자동 종료'

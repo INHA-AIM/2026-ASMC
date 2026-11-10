@@ -1,0 +1,10 @@
+<launch>
+  <node pkg="asmc_planner" type="asmc_local_planner_node" name="localization_motion" required="true">
+    <param name="odometry_only" value="true"/>
+    <param name="run_id" value="motion_order_fixture"/>
+    <param name="yaw_source" value="orientation"/>
+    <param name="input_reorder_tolerance_s" value="0.10"/>
+    <param name="speed_callerid" value="/localization_motion_order"/>
+  </node>
+  <test pkg="asmc_planner" type="localization_motion_order_test.py" test-name="localization_motion_order" time-limit="30"/>
+</launch>

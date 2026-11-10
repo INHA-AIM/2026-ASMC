@@ -6,6 +6,8 @@
   <maintainer email="autonav@todo.todo">Autonav</maintainer>
   <license>MIT</license>
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>nav_msgs</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>planning_inputs</depend>
   <depend>morai_msgs</depend>
   <depend>std_msgs</depend>
@@ -17,6 +19,7 @@
   <depend>boost</depend>
   <depend>openssl</depend>
   <depend>asmc_msgs</depend>
+  <depend>asmc_geometry</depend>
   <depend>roscpp</depend>
   <exec_depend>asmc_controller</exec_depend>
   <exec_depend>asmc_hd_map</exec_depend>
@@ -26,7 +29,6 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>rospkg</exec_depend>
   <exec_depend>rosgraph_msgs</exec_depend>
-  <exec_depend>diagnostic_msgs</exec_depend>
   <test_depend>rostest</test_depend>
   <test_depend>gtest</test_depend>
   <export/>

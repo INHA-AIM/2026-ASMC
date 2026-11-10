@@ -181,11 +181,22 @@ std::size_t StaticMissionPolicy::remapObjects(planning_inputs::DetectedObjectArr
   if (objects.header.frame_id != "map" || objects.header.stamp.isZero()) return 0;
   std::size_t changed = 0;
   for (auto& object : objects.objects) {
-    // Planner wire categories: 1=vehicle, 2=person, 0=unknown. Motion is
-    // intentionally independent; PENDING/DYNAMIC never become static here.
-    if ((object.type == 1 || object.type == 2) && contains(object.center.x, object.center.y)) {
-      object.type = 0;
-      ++changed;
+    // Competition mission prior (2026-10-30 user-approved): every observed
+    // footprint INSIDE this verified static mission is stationary for planning.
+    // This is a private effective copy shared by Behavior/Frenet, not a change
+    // to LiDAR measurements. Raw vx/vy, semantics and availability survive.
+    if (object.motion_state > planning_inputs::DetectedObject::MOTION_DYNAMIC ||
+        !std::isfinite(object.vx) || !std::isfinite(object.vy) ||
+        (object.velocity_unavailable &&
+         (object.motion_state != planning_inputs::DetectedObject::MOTION_UNKNOWN ||
+          object.vx != 0.0 || object.vy != 0.0))) continue;
+    if (contains(object.center.x, object.center.y)) {
+      const auto motion = object.velocity_unavailable
+          ? planning_inputs::DetectedObject::MOTION_UNKNOWN
+          : planning_inputs::DetectedObject::MOTION_LOW_THREAT;
+      if (object.type != 3 || object.motion_state != motion) ++changed;
+      object.type = 3;  // STATIC_OBSTACLE policy, including semantic person/car props.
+      object.motion_state = motion;
     }
   }
   return changed;

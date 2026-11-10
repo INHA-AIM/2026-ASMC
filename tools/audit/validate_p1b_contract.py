@@ -46,7 +46,9 @@ BUILTIN_TYPES = {
 
 # Dependencies used by asmc_msgs v1. These are the canonical ROS1 MD5 sums.
 EXTERNAL_MESSAGE_MD5 = {
+    "nav_msgs/Odometry": "cd5e73d190d741a2f92e81eda573aca7",
     "std_msgs/Header": "2176decaecbce78abc3b96ef049fabed",
+    "nav_msgs/Odometry": "cd5e73d190d741a2f92e81eda573aca7",
     "geometry_msgs/Point": "4a842b65f413084dc2b10fb484ea7f17",
     "geometry_msgs/Point32": "cc153912f1453b708d221682bc23d9ac",
     "geometry_msgs/Pose": "e45d45a5a1ce597b249e23fb30fc871f",

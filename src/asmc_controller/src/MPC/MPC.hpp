@@ -6,11 +6,13 @@
 void InitMPC(const MPCParams& params);
 MPCOutput MPCProcess(const MPCState& ego_state,
                      const ReferencePath& reference,
-                     double acceleration_limit = std::numeric_limits<double>::quiet_NaN());
+                     double acceleration_limit = std::numeric_limits<double>::quiet_NaN(),
+                     double acceleration_rise_rate = 0.0);
 // Returns false when no usable geometry exists; caller retains scalar fallback.
 bool MPCPlannerStopSteering(const MPCState& ego, double brake_pedal,
                             double& steering);
 void ResetMPCOnFailSafe();
+void ResetMPCForHandoff(double applied_steering, double measured_acceleration);
 void ResetMPCForPlannerStop(double published_steering);
 const MPCParams& GetMPCParams();
 

@@ -6,8 +6,17 @@ import sys
 import functools
 import http.server
 import json
+import os
 import threading
 import time
+import socket
+import subprocess
+import hashlib
+from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
+from sensor_msgs.msg import Image
+from asmc_msgs.msg import CameraObjectObservation
+from local_debug_cache import LocalDebugCache
 
 import rospy
 from asmc_msgs.msg import (BehaviorCommand, BehaviorContext,
@@ -24,10 +33,15 @@ from std_msgs.msg import UInt8
 from asmc_msgs.msg import LaneBoundaryFamily, LidarTrackingObservation
 from lane_boundary_adapter.msg import CameraBBoxLaneResult
 from dashboard_startup import run_on_port
+from dashboard_localization import LocalizationView,ExperimentView,map_trajectory_fresh
+import dashboard_localization
 from dashboard_observation import (LocalScene, StaticPolicyObservations, family_payload,
                                    markers_payload, objects_payload, stamp_ns)
 
 local_scene = LocalScene()
+local_debug = LocalDebugCache()
+localization_view = LocalizationView()
+experiment_view = ExperimentView(localization_view)
 static_policy = StaticPolicyObservations()
 
 
@@ -74,6 +88,8 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
                 "planning_markers": None, "recent_planning_issue": None,
                 "received_at": {}}
     snapshot_lock = threading.Lock()
+    received_steady = {}
+    trial_identity = os.environ.get("ASMC_TRIAL_MONITOR_IDENTITY", "")
 
     def guess_type(self, path):
         # Explicit UTF-8 for Korean labels in HTML/CSS/JS; keep binary MIME types.
@@ -83,25 +99,68 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
         return kind
 
     def end_headers(self):
+        if self.trial_identity:
+            self.send_header("X-ASMC-Trial-Identity", self.trial_identity)
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")
         super().end_headers()
 
     def do_GET(self):
+        if urlsplit(self.path).path == "/api/observer":
+            with self.snapshot_lock:observer=dict(self.snapshot.get('observer') or {})
+            body=json.dumps(dict(observer=observer,experiment=experiment_view.snapshot())).encode()
+            self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body);return
+        if urlsplit(self.path).path == "/api/local-scene":
+            args = parse_qs(urlsplit(self.path).query)
+            with self.snapshot_lock:
+                plan = self.snapshot.get("local_experiment") or {}
+            wanted = args.get("sequence", [""])[0]
+            requested_frame=args.get('frame',[None])[0]
+            requested_run=args.get('run_id',[None])[0]
+            try:
+                selected_stamp=local_debug.plan_stamp(int(wanted),requested_run,requested_frame)
+            except ValueError:selected_stamp=None
+            # Older clients without an epoch may request the current plan only.
+            if requested_frame is None and wanted==str(plan.get('plan_sequence')):
+                selected_stamp=plan.get('scene_stamp_ns',0)
+            if selected_stamp is None:
+                self.send_error(409, "plan epoch changed or no longer cached")
+                return
+            body = json.dumps(local_debug.snapshot(selected_stamp), separators=(",", ":")).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if self.path.split("?", 1)[0] == "/api/snapshot":
             with self.snapshot_lock:
                 # Encoding candidate paths must not block high-rate ROS callbacks.
                 snapshot = dict(self.snapshot)
                 snapshot["received_at"] = dict(self.snapshot["received_at"])
+                steady_received=dict(self.received_steady)
             # Receive age uses server monotonic time, source age uses ROS time.
             # Browser/Windows clocks never decide ROS observation freshness.
+            received = snapshot.get("received_at", {}).get("local_experiment")
+            snapshot["local_receive_age_s"] = time.time()-received if received else None
             snapshot["shadow"] = local_scene.snapshot(rospy.Time.now().to_nsec())
+            snapshot["localization"] = localization_view.snapshot(rospy.Time.now().to_sec())
+            snapshot["experiment"] = experiment_view.snapshot()
+            if snapshot['experiment']:
+                snapshot['jamming_strategy']=snapshot['experiment'].get('conditions',{}).get('planner',snapshot.get('jamming_strategy','camera'))
+            snapshot['jamming_transition_fresh']=0<=time.monotonic()-steady_received.get('jamming_transition',-float('inf'))<=1.5
+            if snapshot['localization'] and snapshot['experiment'] and not snapshot['experiment']['heartbeat_fresh']:
+                snapshot['localization'].update(fresh=False,valid=False,ego=None,candidates=[],selected=[],obstacles=[],reason='experiment_heartbeat_stale')
+            snapshot['localization_handoff_fresh']=0<=time.monotonic()-steady_received.get('localization_handoff',-float('inf'))<=.6
+            snapshot['normal_path_fresh']=map_trajectory_fresh(snapshot.get('trajectory') or {},
+                rospy.Time.now().to_sec(),time.monotonic()-steady_received.get('trajectory',-float('inf')))
             objects, policy = static_policy.paired_snapshot(snapshot.get("lidar_objects"))
             snapshot["lidar_objects"] = objects
             snapshot["static_mission_policy"] = policy
             if policy.get("display_wait_ms", 0) > 0:
                 snapshot["received_at"]["lidar_objects"] = time.time()-policy["object_age_ms"]/1000.
+            dashboard_localization.mask_inactive_experiment(snapshot)
             body = json.dumps(snapshot, separators=(",", ":")).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -114,8 +173,35 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         # Avoid printing one line for every 10 Hz snapshot request.
-        if not self.path.startswith("/api/snapshot"):
+        if not self.path.startswith("/api/"):
             super().log_message(fmt, *args)
+
+
+def set_local_experiment(key, message):
+    """Optional LOCAL-1 observer; no control or map pose fallback."""
+    if len(message.data) > 256 * 1024:
+        return
+    try:
+        value = json.loads(message.data)
+    except (TypeError, ValueError):
+        return
+    if not isinstance(value, dict):
+        return
+    if key=="local_experiment":local_debug.plan(value)
+    with DashboardHandler.snapshot_lock:
+        DashboardHandler.snapshot[key] = value
+        DashboardHandler.snapshot["received_at"][key] = time.time()
+        DashboardHandler.received_steady[key] = time.monotonic()
+
+
+def set_local_camera(message):
+    d = message.detections
+    local_debug.camera(dict(view=d.header.frame_id, stamp_ns=str(d.header.stamp.to_nsec()),
+        valid=d.valid, width=d.image_width, height=d.image_height,
+        session=message.producer_session_id, generation=message.generation,
+        boxes=[dict(name=b.source_class_name, group=b.class_name, confidence=b.confidence,
+                    bbox=[b.xmin,b.ymin,b.xmax,b.ymax]) for b in d.boxes[:64]],
+        omitted=max(0,len(d.boxes)-64)))
 
 
 def set_snapshot(key, message):
@@ -129,6 +215,7 @@ def set_snapshot(key, message):
     with DashboardHandler.snapshot_lock:
         DashboardHandler.snapshot[key] = converted
         DashboardHandler.snapshot["received_at"][key] = time.time()
+        DashboardHandler.received_steady[key] = time.monotonic()
 
 
 def set_static_policy(message):
@@ -174,6 +261,7 @@ def set_trajectory(message):
     with DashboardHandler.snapshot_lock:
         DashboardHandler.snapshot["trajectory"] = converted
         DashboardHandler.snapshot["received_at"]["trajectory"] = time.time()
+        DashboardHandler.received_steady['trajectory'] = time.monotonic()
         one_point_stop = (
             message.valid and len(message.points) == 1 and
             abs(message.points[0].velocity) <= 1e-6)
@@ -232,6 +320,7 @@ def set_shadow_diagnostics(message):
             payload = {entry.key: entry.value for entry in status.values[:80]}
             payload.update(reason=status.message, level=int(status.level))
             local_scene.put("controller", payload, stamp_ns(message.header))
+            set_snapshot("camera_control",payload)
             break
 
 
@@ -309,16 +398,42 @@ def set_planning_markers(message):
 
 def run_dashboard(server=None, reserved_port=None):
     rospy.init_node("behavior_dashboard_server")
+    actual_master=os.environ.get('ROS_MASTER_URI','http://localhost:11311')
+    expected_master=rospy.get_param('~expected_master_uri','')
+    if expected_master and actual_master!=expected_master:
+        raise RuntimeError('observer master differs from experiment: '+actual_master)
     port = int(rospy.get_param("~port", 8088))
     if reserved_port is not None and port != reserved_port:
         raise ValueError("dashboard --port and ROS ~port disagree")
     package_path = rospy.get_param("~package_path")
+    source_root=Path(package_path).resolve().parents[1]
+    def git_value(*args):
+        try:return subprocess.check_output(['git',*args],cwd=str(source_root),text=True,stderr=subprocess.DEVNULL).strip()
+        except (OSError,subprocess.CalledProcessError):return 'unavailable'
+    DashboardHandler.snapshot['observer']=dict(component='jamming-observer-v1',master_uri=actual_master,
+        master_pid=rospy.get_master().getPid()[2],source_root=str(source_root),
+        use_sim_time=bool(rospy.get_param('/use_sim_time',False)),
+        branch=git_value('branch','--show-current'),revision=git_value('rev-parse','HEAD'),
+        source_dirty=bool(git_value('status','--porcelain')),
+        runtime=rospy.get_param('~runtime_label','') or socket.gethostname(),started_at=time.time(),
+        backend_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        helper_sha256=hashlib.sha256(Path(dashboard_localization.__file__).read_bytes()).hexdigest(),
+        geometry_hz=5,candidate_limit=24,points_per_candidate_limit=64,
+        role='observer only; no control, localization, inference or planning producer')
     interface_version = rospy.get_param("~interface_version", "v1")
     DashboardHandler.snapshot["interface_version"] = interface_version
+    # Set by the container-owned launcher before starting any ROS nodes.
+    # Read once; no master/Git polling is added to control or HTTP callbacks.
+    DashboardHandler.snapshot["runtime_session"] = rospy.get_param("/runtime/session", None)
     if interface_version == "v2":
+        rospy.Subscriber('/planning/localization/experiment',String,lambda m:experiment_view.put(m.data),queue_size=1)
+        rospy.Subscriber('/planning/jamming/handoff_trace',String,
+                         lambda m:set_local_experiment('localization_handoff',m),queue_size=1)
         # Diagnostics only: no control publishers, inference or duplicate fits.
         rospy.Subscriber("/planning/mode", UInt8,
                          lambda m: local_scene.put("mode", dict(mode=int(m.data))), queue_size=1)
+        rospy.Subscriber("/planning/localization/debug", String,
+                         lambda m: localization_view.put(m.data), queue_size=1)
         rospy.Subscriber("/planning/control_selector/diagnostics", String, set_control_selector, queue_size=1)
         rospy.Subscriber("/planning/camera_bbox_lane_change/diagnostics", DiagnosticArray, set_shadow_diagnostics, queue_size=1)
         rospy.Subscriber("/planning/camera_bbox_lane_change/markers", MarkerArray, set_shadow_markers, queue_size=1)
@@ -373,6 +488,19 @@ def run_dashboard(server=None, reserved_port=None):
     rospy.Subscriber(
         "/planning/markers", MarkerArray,
         set_planning_markers, queue_size=1)
+    DashboardHandler.snapshot['jamming_strategy']=rospy.get_param('/planning_mode/strategy','camera')
+    rospy.Subscriber('/planning/mode/status',String,lambda m:set_snapshot('jamming_transition',dict(status=m.data)),queue_size=1)
+    rospy.Subscriber("/planning/local/trace", String,
+                     lambda m: set_local_experiment("local_experiment", m), queue_size=1)
+    rospy.Subscriber("/planning/local/control_trace", String,
+                     lambda m: set_local_experiment("local_control", m), queue_size=1)
+    prefix = "/experimental/shadow/semantic_space_trial/"
+    for key, topic in (("probability", "drivable_probability"), ("coverage", "coverage")):
+        rospy.Subscriber(prefix + topic, Image,
+            lambda m, key=key: local_debug.grid(key, m.header.stamp.to_nsec(), m.width, m.height, m.step, m.encoding, m.data),
+            queue_size=1)
+    rospy.Subscriber("/perception/camera/objects/observations", CameraObjectObservation,
+                     set_local_camera, queue_size=3)
     DashboardHandler.snapshot["debug_config"] = load_debug_config()
     handler = functools.partial(DashboardHandler, directory=package_path)
     if server is None:  # Legacy direct rosrun invocation without --port.
@@ -402,7 +530,8 @@ def main():
     if not 1 <= args.port <= 65535:
         parser.error('--port must be between 1 and 65535')
     return run_on_port(args.port, DashboardHandler,
-                       lambda server: run_dashboard(server, args.port))
+                       lambda server: run_dashboard(server, args.port),
+                       workspace=Path(__file__).resolve().parents[3])
 
 
 if __name__ == "__main__":

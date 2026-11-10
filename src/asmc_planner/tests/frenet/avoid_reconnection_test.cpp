@@ -1,6 +1,7 @@
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Frenet/Maneuver/ManeuverUtils.hpp"
+#include "avoid_test_braking.hpp"
 #include <yaml-cpp/yaml.h>
 #include <iostream>
 #include <fstream>
@@ -45,7 +46,13 @@ int main(){
   objects.push_back(box(2,89,sign*.8,1));
   objects.push_back(box(3,99,-sign*2.5,1));
   bool ready=false;
-  for(int i=0;i<100&&!ready;++i){planner.PlanCommittedAvoid(ego,objects,cmd,path,r);ready=r.candidate_valid;}
+  bool braking_safe=true;
+  for(int i=0;i<100&&!ready;++i){
+   planner.PlanCommittedAvoid(ego,objects,cmd,path,r);ready=r.candidate_valid;
+   if(!ready)braking_safe=braking_safe&&BrakeAvoidTestVehicle(ego,planner,objects);
+  }
+  Expect(braking_safe,"late blocker permits collision-free braking before reconnection");
+  if(!ready)std::cout<<"reconnection stalled: x="<<ego.x<<" y="<<ego.y<<" yaw="<<ego.yaw<<" k="<<ego.kappa<<" v="<<ego.v<<" a="<<ego.a<<" phase="<<planner.avoid_phase_name()<<" generated="<<r.generated_candidate_count<<" stage="<<r.rejection_stage<<" blocker="<<r.blocking_object_id<<'\n';
   Expect(ready,"RETURN finds a checked route around a downstream obstacle");
   Expect(ready&&std::fabs(r.selected_target_d)>.1,"blocked RETURN selects an intermediate lateral goal");
   Expect(ready&&std::fabs(path.y.back())<.02,"intermediate route still ends on the global path");

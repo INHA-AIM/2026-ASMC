@@ -24,6 +24,7 @@ void PlanningPort::publishFeedbackV2(
     bool plan_valid, bool frenet_state_valid, double current_s,
     const AvoidFeedbackFields* avoid_fields,
     const LaneChangeFeedbackFields* lane_change_fields) {
+    if(!plan_valid)planner_.InvalidateStaticAvoidSpeedProof();
     asmc_msgs::FrenetFeedback feedback;
     feedback.header.stamp = ros::Time::now();
     feedback.header.frame_id = "map";

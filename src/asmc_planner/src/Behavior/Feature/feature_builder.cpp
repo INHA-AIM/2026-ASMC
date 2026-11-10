@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include "Frenet/Geometry/AvoidanceGeometry.hpp"
 
 namespace behavior_planner {
 namespace {
@@ -229,6 +230,14 @@ UrbanFeature FeatureBuilder::build(
     }
   }
 
+  // Route-station distance, not nearest-link/Euclidean distance. A153 ends
+  // the highway policy; the successor retains its ordinary speed policy.
+  feature.route.route_generation=route_manager.generation();
+  LinkInfo successor;
+  feature.route.lower_boundary_valid=feature.ego.valid && route_manager.nextRouteLink(
+      "A2256W000153",&successor,&feature.route.lower_boundary_s,&feature.route.next_boundary_s);
+  if(feature.route.lower_boundary_valid){feature.route.next_speed_link=successor.id;
+    feature.route.next_speed_limit=successor.max_speed;}
   RouteSignalMovement signal_movement;
   if (route_manager.findNextSignalMovement(feature.ego.s, 200.0,
                                            &signal_movement)) {
@@ -698,7 +707,6 @@ UrbanFeature FeatureBuilder::build(
     // makes a real obstacle disappear on north/south roads. Use route
     // topology and geometry only, with a horizon no shorter than Frenet's
     // collision lookahead.
-    const double avoid_route_gap = object.s - feature.ego.s;
     // Gate the nearest obstacle footprint, not only its center. A wide object
     // can overlap the route even when its center is just outside the nominal
     // lateral acquisition band. Project the oriented box half extents onto
@@ -708,21 +716,31 @@ UrbanFeature FeatureBuilder::build(
     if(active_lane)route_yaw=Interpolate(active_lane->line(),object.s).theta;
     else route_manager.getRoutePose(object.s, &obstacle_route_pose, &route_yaw);
     const double obstacle_yaw_delta = object.yaw - route_yaw;
-    const double obstacle_lateral_half_extent =
+    double obstacle_lateral_half_extent =
         0.5 * std::abs(object.length * std::sin(obstacle_yaw_delta)) +
         0.5 * std::abs(object.width * std::cos(obstacle_yaw_delta));
-    const double obstacle_longitudinal_half_extent =
+    double obstacle_longitudinal_half_extent =
         0.5 * std::abs(object.length * std::cos(obstacle_yaw_delta)) +
         0.5 * std::abs(object.width * std::sin(obstacle_yaw_delta));
     const double physical_corridor_half_width =
         0.5 * avoid_target_.ego_width;
-    const double path_corridor_half_width = std::min(
-        avoid_target_.max_lateral_offset,
-        physical_corridor_half_width + avoid_target_.path_margin_m);
-    const double obstacle_lateral_min =
-        object.d - obstacle_lateral_half_extent;
-    const double obstacle_lateral_max =
-        object.d + obstacle_lateral_half_extent;
+    const double path_corridor_half_width =
+        physical_corridor_half_width + avoid_target_.path_margin_m;
+    double obstacle_lateral_min = object.d - obstacle_lateral_half_extent;
+    double obstacle_lateral_max = object.d + obstacle_lateral_half_extent;
+    double obstacle_near_s = object.s - obstacle_longitudinal_half_extent;
+    double obstacle_far_s = object.s + obstacle_longitudinal_half_extent;
+    if(object.geometry_valid) {
+      const auto bounds=ProjectAvoidFootprint(object.corners,object.x,object.y,route_yaw);
+      if(bounds.valid) {
+        obstacle_lateral_min=object.d+bounds.min_d;
+        obstacle_lateral_max=object.d+bounds.max_d;
+        obstacle_near_s=object.s+bounds.near_s;
+        obstacle_far_s=object.s+bounds.far_s;
+        obstacle_lateral_half_extent=.5*(bounds.max_d-bounds.min_d);
+        obstacle_longitudinal_half_extent=.5*(bounds.far_s-bounds.near_s);
+      }
+    }
     const auto interval_overlap = [](double lhs_min, double lhs_max,
                                      double rhs_min, double rhs_max) {
       return std::max(0.0,
@@ -732,15 +750,8 @@ UrbanFeature FeatureBuilder::build(
     const double physical_overlap_m = interval_overlap(
         obstacle_lateral_min, obstacle_lateral_max,
         -physical_corridor_half_width, physical_corridor_half_width);
-    const double margin_overlap_m = interval_overlap(
-        obstacle_lateral_min, obstacle_lateral_max,
-        -path_corridor_half_width, path_corridor_half_width);
     const double obstacle_projected_width =
         2.0 * obstacle_lateral_half_extent;
-    const double margin_overlap_ratio = obstacle_projected_width > 1e-6
-                                            ? margin_overlap_m /
-                                                  obstacle_projected_width
-                                            : 0.0;
     // "중심점이 corridor 안인가"만 보면 중심이 경계에서 흔들릴 때 AVOID가
     // 매 frame 켜졌다 꺼진다. 실제로 ego swept width를 얼마나 가리는지를
     // 사용한다. 작은 물체가 분모 때문에 불리해지지 않도록 OBB 투영 폭과
@@ -751,12 +762,10 @@ UrbanFeature FeatureBuilder::build(
                                                ? physical_overlap_m /
                                                      blocking_reference_width
                                                : 0.0;
-    const double obstacle_nearest_forward_gap =
-        avoid_route_gap - obstacle_longitudinal_half_extent;
+    const double obstacle_nearest_forward_gap = obstacle_near_s-feature.ego.s;
     const bool obstacle_is_in_acquisition_range =
-        avoid_route_gap > 0.0 &&
+        obstacle_far_s >= feature.ego.s-avoid_target_.rear_overhang &&
         obstacle_nearest_forward_gap <= avoid_target_.max_distance &&
-        ego_longitudinal > 0.0 &&
         euclidean_distance <=
             avoid_target_.max_distance + obstacle_longitudinal_half_extent;
 
@@ -811,14 +820,13 @@ UrbanFeature FeatureBuilder::build(
         measurable_physical_overlap &&
         physical_blocking_ratio + 1e-9 >=
             avoid_target_.immediate_blocking_ratio;
-    const bool physical_overlap_candidate =
-        measurable_physical_overlap &&
-        physical_blocking_ratio + 1e-9 >=
-            avoid_target_.blocking_enter_ratio;
+    // Every footprint intersecting the collision corridor must be actionable.
+    // Ratios still select immediate confirmation, never a permanent exclusion
+    // for a smaller (but equally collision-blocking) intrusion.
+    const bool physical_overlap_candidate = physical_overlap_m>1e-9;
     const bool margin_overlap_candidate =
-        !measurable_physical_overlap &&
-        margin_overlap_m + 1e-9 >= avoid_target_.min_margin_overlap_m &&
-        margin_overlap_ratio + 1e-9 >= avoid_target_.min_overlap_ratio;
+        obstacle_lateral_min<=path_corridor_half_width+1e-9&&
+        obstacle_lateral_max>=-path_corridor_half_width-1e-9;
     bool confirmed_corridor_block = false;
     if (avoidable_obstacle && obstacle_is_in_acquisition_range) {
       avoid_overlap_ids_seen.insert(object.id);
@@ -1020,9 +1028,11 @@ UrbanFeature FeatureBuilder::build(
   }
   feature.extra_values["predicted_front_ttc"] = predicted_front_ttc;
   feature.extra_values["required_deceleration"] = required_deceleration;
-  feature.risk.emergency_risk =
+  const bool temporal_emergency =
       feature.risk.min_ttc < safety_.emergency_ttc_enter ||
-      predicted_front_ttc < safety_.emergency_predicted_ttc ||
+      predicted_front_ttc < safety_.emergency_predicted_ttc;
+  feature.extra_flags["emergency_temporal_evidence"] = temporal_emergency;
+  feature.risk.emergency_risk = temporal_emergency ||
       required_deceleration > safety_.emergency_required_decel;
   buildHighwayLaneChange(feature,objects,evaluation_time);
   return feature;

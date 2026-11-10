@@ -13,6 +13,7 @@
 #include "Util/BrakingSteering.hpp"
 #include "Util/StopResponseScope.hpp"
 #include "Util/RecoverySpeed.hpp"
+#include "Util/StaticAvoidProgress.hpp"
 #include "Util/MessageConverter.hpp"
 #include "MPC/Reference/path_resampler.hpp"
 #include "MPC/Reference/reference_validator.hpp"
@@ -26,6 +27,16 @@ namespace {
 bool stop_response_active = false;
 StopResponseScope stop_response_scope = StopResponseScope::NONE;
 ros::SteadyTime behavior_received_at;
+bool StaticProgressAllowed(const asmc_msgs::Trajectory& path) {
+    if(path.execution_policy==asmc_msgs::Trajectory::POLICY_NORMAL)return true;
+    const bool owner=g_control.binding_enabled?
+        (g_control.binding_gate.has_request()&&g_control.binding_gate.request().command.maneuver_type==asmc_msgs::BehaviorCommand::AVOID):
+        (g_control.latest_behavior_type==asmc_msgs::BehaviorCommand::AVOID&&
+         g_control.latest_behavior_valid_until>=ros::Time::now()&&
+         IsMessageFresh(behavior_received_at,ros::SteadyTime::now(),g_control.trajectory_timeout));
+    return owner&&StaticAvoidProgressProfileAllowed(path,g_control.allow_static_contact_progress,
+        g_control.static_recovery_speed_cap,g_control.static_contact_speed_cap);
+}
 StopBrakeResponse stop_brake_response;
 StopAccelerationResponse stop_acceleration_response;
 struct EmergencySteeringResult {
@@ -39,6 +50,7 @@ std::uint64_t emergency_generation=0;
 void PublishControl(const morai_msgs::CtrlCmd& command) {
     g_control.last_published_brake=command.brake;
     g_control.control_pub.publish(command);
+    if(g_control.output_observer)g_control.output_observer(command);
     if(!g_control.binding_enabled || !g_control.control_status_pub || !g_control.binding_gate.has_request())return;
     const auto& gate=g_control.binding_gate;
     const auto& pending=gate.pending();
@@ -169,6 +181,8 @@ void BehaviorCommandCallback(
     stop_response_scope = scope;
     stop_response_active = scope != StopResponseScope::NONE;
     behavior_received_at = ros::SteadyTime::now();
+    g_control.latest_behavior_type=message->maneuver_type;
+    g_control.latest_behavior_valid_until=message->valid_until;
     const bool emergency =
         message->maneuver_type == asmc_msgs::BehaviorCommand::EMERGENCY_STOP;
     if(!emergency && g_control.emergency_stop_active && g_control.require_verified_release) {
@@ -177,6 +191,20 @@ void BehaviorCommandCallback(
         if(message->command_id!=g_control.pending_release_command)
             g_control.pending_release_command=message->command_id;
         return;
+    }
+    // Repeated AVOID heartbeats cannot release a collision stop. A genuinely
+    // new, failure-free moving reference is required on the legacy transport;
+    // bound transport continues to use the stronger request/plan proof above.
+    if(!emergency && g_control.collision_stop_active) {
+        PlannedPath check;
+        if(!g_control.has_trajectory ||
+           g_control.trajectory_received_at<=g_control.collision_stop_at ||
+           !IsMessageFresh(g_control.trajectory_received_at,ros::SteadyTime::now(),g_control.trajectory_timeout) ||
+           g_control.latest_trajectory.header.stamp.toSec()<=g_control.collision_stop_state_stamp ||
+           g_control.latest_trajectory.failure_reason!=asmc_msgs::Trajectory::FAILURE_NONE ||
+           !StaticProgressAllowed(g_control.latest_trajectory) ||
+           ConvertTrajectory(g_control.latest_trajectory,check)!=TrajectoryStatus::OK)return;
+        g_control.collision_stop_active=false;
     }
     if (emergency != g_control.emergency_stop_active) {
         ROS_WARN("MPC emergency brake override %s (command_id=%u)",
@@ -274,6 +302,7 @@ void PublishStop(const char* reason) {
 }
 
 void ControlProcess(const ros::SteadyTimerEvent&) {
+    g_control.handoff_solved=false;
     if(g_control.binding_enabled) {
         auto& gate=g_control.binding_gate;
         const auto now=ros::SteadyTime::now();
@@ -287,6 +316,7 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
             state_age>=0 && state_age<=g_control.vehicle_state_timeout &&
             ConvertVehicleState(g_control.latest_vehicle_state,checked_state)==VehicleStateStatus::OK;
         const bool linked=request_fresh && state_ready && gate.linked() &&
+            StaticProgressAllowed(gate.plan().trajectory) &&
             (!gate.request().recovery_release || gate.plan().exit_path_valid) &&
             IsMessageFresh(g_control.binding_plan_received_at,now,g_control.trajectory_timeout);
         const bool emergency=request_fresh && (gate.request().command.maneuver_type==asmc_msgs::BehaviorCommand::EMERGENCY_STOP ||
@@ -330,11 +360,17 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
             g_control.emergency_steering={};
         }
         g_control.emergency_stop_active=false;
+        g_control.collision_stop_active=false;
         if(!gate.request().brake_level)g_control.brake_watchdog.Released();
         g_control.latest_trajectory=gate.plan().trajectory;
         g_control.trajectory_received_at=g_control.binding_plan_received_at;
         g_control.has_trajectory=true;
         stop_response_active=gate.request().command.maneuver_type==asmc_msgs::BehaviorCommand::STOP;
+    }
+    if(g_control.has_trajectory&&!StaticProgressAllowed(g_control.latest_trajectory)) {
+        if(g_control.emergency_stop_active)PublishEmergencyStop();
+        else PublishStop("static recovery policy rejected");
+        return;
     }
     if (g_control.emergency_stop_active) {
         PublishEmergencyStop();
@@ -371,6 +407,11 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
         // needs maximum braking immediately; the ordinary hold uses only 0.3.
         if (g_control.latest_trajectory.failure_reason ==
             asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED) {
+            if(!g_control.collision_stop_active) {
+                g_control.collision_stop_active=true;
+                g_control.collision_stop_at=ros::SteadyTime::now();
+                g_control.collision_stop_state_stamp=g_control.latest_vehicle_state.header.stamp.toSec();
+            }
             g_control.emergency_stop_active = true;
             PublishEmergencyStop();
             ROS_WARN_THROTTLE(1.0, "Planner trajectory collision blocked: emergency brake");
@@ -457,6 +498,14 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
         g_control.binding_gate.request().signal.enabled && g_control.binding_gate.request().signal.braking_only;
     double acceleration_limit=signal_braking ? 0. : compensate ? response_config.acceleration_limit :
         std::numeric_limits<double>::quiet_NaN();
+    if(g_control.latest_trajectory.failure_reason!=asmc_msgs::Trajectory::FAILURE_NONE)
+        acceleration_limit=std::isfinite(acceleration_limit)?std::min(0.0,acceleration_limit):0.0;
+    if(g_control.latest_trajectory.execution_policy!=asmc_msgs::Trajectory::POLICY_NORMAL) {
+        const double cap=g_control.latest_trajectory.execution_policy==asmc_msgs::Trajectory::POLICY_STATIC_CONTACT_PROGRESS?
+            g_control.static_contact_speed_cap:g_control.static_recovery_speed_cap;
+        const double recovery_limit=current_state.vx>=cap?0.0:1.0;
+        acceleration_limit=std::isfinite(acceleration_limit)?std::min(acceleration_limit,recovery_limit):recovery_limit;
+    }
     if(g_control.binding_enabled && g_control.binding_gate.has_request() &&
        g_control.binding_gate.request().recovery_release) {
         const auto& request=g_control.binding_gate.request();
@@ -465,7 +514,16 @@ void ControlProcess(const ros::SteadyTimerEvent&) {
             GetMPCParams().accel_min,GetMPCParams().accel_max);
         acceleration_limit=std::isfinite(acceleration_limit) ? std::min(acceleration_limit,recovery_limit) : recovery_limit;
     }
+    const double speed_cap=g_control.validation_speed_cap_mps;
+    if(speed_cap>0) {
+        const double trial_limit=RecoveryAccelerationLimit(speed_cap,
+            current_state.vx,g_control.latest_vehicle_state.acceleration,.5,
+            GetMPCParams().accel_min,GetMPCParams().accel_max);
+        acceleration_limit=std::isfinite(acceleration_limit)?std::min(acceleration_limit,trial_limit):trial_limit;
+    }
+    if(g_control.before_solve)g_control.before_solve();
     const MPCOutput output = MPCProcess(current_state, reference,acceleration_limit);
+    g_control.handoff_solved=output.success;
     if (output.stuck_event ==
         StuckEvent::RECOVERY_STARTED) {
         ROS_WARN("MPC stuck recovery start: ego_v=%.2f max_ref_v=%.2f "

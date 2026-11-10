@@ -195,14 +195,17 @@ std::vector<FrenetPath> GenerateSpatialStoppingCandidates(
                          cruise_speed,comfortable,max_decel,jerk,
                          std::min(limits.max_forward_accel,
                              acceleration_limit > 0 ? std::min(acceleration_limit,max_decel) : comfortable),profile,options.braking_only))continue;
-        for(double horizon:SampleRange(cfg.time_horizon)) {
+        const auto horizons=options.complete_profile
+            ? std::vector<double>{std::max(cfg.dt,std::ceil(profile.duration/cfg.dt)*cfg.dt)}
+            : SampleRange(cfg.time_horizon);
+        for(double horizon:horizons) {
             if(horizon<=0)continue;
             // If the stop fits in the planning horizon, publish it through
             // zero speed. Otherwise use the full approach horizon, not a short
             // fragment that hides the upcoming stop from the controller.
-            if(!allow_partial_horizons && profile.duration<=cfg.time_horizon.max+1e-9) {
+            if(!options.complete_profile&&!allow_partial_horizons && profile.duration<=cfg.time_horizon.max+1e-9) {
                 if(horizon+1e-9<profile.duration)continue;
-            } else if(!allow_partial_horizons&&horizon+1e-9<cfg.time_horizon.max)continue;
+            } else if(!options.complete_profile&&!allow_partial_horizons&&horizon+1e-9<cfg.time_horizon.max)continue;
             FrenetPath path{};
             path.valid=true;path.t=SampleTimes(horizon,cfg.dt);path.delta_s=offset;
             State previous=profile.initial;

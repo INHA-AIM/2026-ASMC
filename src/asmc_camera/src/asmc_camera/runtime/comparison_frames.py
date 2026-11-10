@@ -90,7 +90,7 @@ class ComparisonFrames:
             self.contexts[stamp_ns] = (self.clock(), message)
         self._trim(self.contexts)
 
-    def latest(self):
+    def latest(self, require_raw=True):
         self._trim(self.contexts)
         for view in self.views:
             self._trim(self.raw[view]); self._trim(self.semantic[view])
@@ -102,9 +102,9 @@ class ComparisonFrames:
             for view, header in zip(context.views, context.image_headers):
                 raw_entry = self.raw[view].get((*image_key(header), int(header.seq)))
                 semantic_entry = self.semantic[view].get(image_key(header))
-                if raw_entry is None or semantic_entry is None or semantic_entry[1] is None:
+                if (require_raw and raw_entry is None) or semantic_entry is None or semantic_entry[1] is None:
                     break
-                raw[view], semantic[view] = raw_entry[1], semantic_entry[1]
+                raw[view], semantic[view] = raw_entry[1] if raw_entry else None, semantic_entry[1]
             else:
                 self.last_output_ns = stamp_ns
                 self.contexts = OrderedDict((k, v) for k, v in self.contexts.items() if k > stamp_ns)

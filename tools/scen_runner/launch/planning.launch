@@ -7,4 +7,35 @@
     <arg name="dashboard" value="false"/>
     <arg name="rviz" value="false"/>
   </include>
+  <param name="camera_bbox_lane_change/contact_clearance_enabled" value="$(optenv ASMC_SHADOW_CONTACT_CLEARANCE false)" type="bool"/>
+  <param name="camera_bbox_lane_change/contact_local_required" value="$(optenv ASMC_SHADOW_LOCAL_CONTACT false)" type="bool"/>
+  <param name="camera_bbox_lane/local_contact_support_enabled" value="$(optenv ASMC_SHADOW_LOCAL_CONTACT false)" type="bool"/>
+  <param name="camera_bbox_lane_change/bev_mode" value="$(optenv ASMC_SHADOW_BEV_MODE off)" type="str"/>
+  <group if="$(optenv ASMC_SHADOW_SEMANTIC false)">
+    <include file="$(find lane_boundary_adapter)/../../tools/scen_runner/launch/semantic_space.launch"/>
+    <param name="camera_bbox_lane_change/bev_mode" value="semantic_trial"/>
+    <param name="camera_bbox_lane_change/semantic_near_ego_lidar_assist" value="$(optenv ASMC_SHADOW_NEAR_EGO_LIDAR false)" type="bool"/>
+    <param name="camera_bbox_lane_change/contact_clearance_enabled" value="true"/>
+    <param name="camera_bbox_lane_change/contact_local_required" value="true"/>
+    <param name="camera_bbox_lane_change/consumer_x_max" value="20.0"/>
+    <param name="camera_bbox_lane_change/path_horizon" value="15.0"/>
+  </group>
+  <!-- Experimental path sees the family provider's available 15-20 m range.
+       Runtime still intersects actual contiguous support and full-body coverage;
+       this does not extrapolate a short family to 20 m. Legacy remains 15/11 m. -->
+  <group if="$(optenv ASMC_SHADOW_CONTACT_CLEARANCE false)">
+    <param name="camera_bbox_lane_change/consumer_x_max" value="20.0" type="double"/>
+    <param name="camera_bbox_lane_change/path_horizon" value="15.0" type="double"/>
+  </group>
+  <!-- Trial-only preparation: the existing final arbitration cap applies to
+       KEEP/FOLLOW/AVOID alike. A normal_cruise link cap is insufficient when a
+       visible obstacle selects another behavior. GPS ownership stays unchanged. -->
+  <group if="$(optenv ASMC_SHADOW_APPROACH_CAP false)">
+    <param name="behavior_planner/maximum_speed_kph" value="5.0" type="double"/>
+    <!-- Matched-speed legacy/candidate comparison. The contact candidate
+         already caps these commands; legacy must not accelerate to20 on handoff. -->
+    <param name="camera_bbox_lane_change/target_speed_kph" value="5.0" type="double"/>
+    <param name="camera_bbox_lane_change/inferred_speed_kph" value="5.0" type="double"/>
+  </group>
+  <!-- The camera frame bridge consumes asmc_camera directly, independently of Main. -->
 </launch>

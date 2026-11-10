@@ -154,6 +154,9 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   if(refine) {
     auto& c=p.camera_point_refinement;
     if(refine["enabled"])c.enabled=refine["enabled"].as<bool>();
+    if(refine["vehicle_history_enabled"])c.vehicle_history_enabled=refine["vehicle_history_enabled"].as<bool>();
+    if(refine["vehicle_history_max_camera_age_s"])c.vehicle_history_max_camera_age_s=refine["vehicle_history_max_camera_age_s"].as<float>();
+    if(refine["vehicle_history_match_m"])c.vehicle_history_match_m=refine["vehicle_history_match_m"].as<float>();
     if(refine["steel_fragment_merge"])c.steel_fragment_merge=refine["steel_fragment_merge"].as<bool>();
     if(refine["steel_minimum_confidence"])c.steel_minimum_confidence=refine["steel_minimum_confidence"].as<float>();
     if(refine["steel_maximum_gap_m"])c.steel_maximum_gap_m=refine["steel_maximum_gap_m"].as<float>();
@@ -211,11 +214,35 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   g.minimum_seed_points = r.Get<int>("ground.ground_minimum_seed_points");
   if (root["ground"]["ground_remove_below_plane"])
     g.remove_below_plane = root["ground"]["ground_remove_below_plane"].as<bool>();
+  if (root["ground"]["fit_distance_threshold_m"]) {
+    try {
+      g.fit_threshold_m = root["ground"]["fit_distance_threshold_m"].as<double>();
+    } catch (const YAML::Exception&) {
+      Fail(file, "fit_distance_threshold_m must be numeric");
+    }
+    if (!std::isfinite(g.fit_threshold_m) || g.fit_threshold_m <= 0. ||
+        g.fit_threshold_m > g.far_threshold_m)
+      Fail(file, "fit_distance_threshold_m must be positive and <= removal far band");
+  }
 
   p.tunnel.enabled = r.Get<bool>("experimental.tunnel_filter.enabled");
   p.tunnel.suppress_ceiling = r.Get<bool>("experimental.tunnel_filter.suppress_ceiling");
   p.tunnel.suppress_wall = r.Get<bool>("experimental.tunnel_filter.suppress_wall");
   const auto tunnel=root["experimental"]["tunnel_filter"];
+  if(root["tunnel_only_updates"])p.tunnel_only_updates=root["tunnel_only_updates"].as<bool>();
+  const auto entry_wall=root["pre_entry_wall"];
+  if(entry_wall&&entry_wall["enabled"]&&entry_wall["enabled"].as<bool>()) {
+    auto& c=p.shadow_wall;c.enabled=true;
+    const auto path=Resolve(entry_wall["route_profile"].as<std::string>(),package_share_dir);
+    const auto profile=YAML::LoadFile(path);c.profile_sha256=Sha256(path);
+    c.entry_m=profile["entry_m"].as<double>();c.exit_m=profile["exit_m"].as<double>();
+    c.lead_m=entry_wall["lead_m"]?entry_wall["lead_m"].as<double>():30.;
+    c.exit_buffer_m=entry_wall["exit_buffer_m"]?entry_wall["exit_buffer_m"].as<double>():10.;
+    c.lateral_m=entry_wall["lateral_m"]?entry_wall["lateral_m"].as<double>():6.;
+    for(const auto& row:profile["route"])c.route.push_back(row.as<std::array<double,3>>());
+    pipeline::ValidateShadowWall(c);
+  }
+  if(p.tunnel_only_updates&&!p.shadow_wall.enabled)Fail(file,"tunnel_only_updates requires pre_entry_wall route");
   if(tunnel["original_pipeline"])p.tunnel_route.original_pipeline=tunnel["original_pipeline"].as<bool>();
   const auto cluster_z=tunnel["cluster_z"];
   if(tunnel["low_obstacle_evidence"])p.tunnel_route.low_obstacle_evidence=tunnel["low_obstacle_evidence"].as<bool>();
@@ -228,6 +255,7 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
   p.tunnel_route.params.wall_gap_reanchor_enable=p.tunnel_route.integrated_motion;
   if(tunnel["boundary_cluster_rescue"])p.tunnel_route.boundary_cluster_rescue=tunnel["boundary_cluster_rescue"].as<bool>();
   if(tunnel["residual_wall_surface"])p.tunnel_route.params.residual_wall_surface_enable=tunnel["residual_wall_surface"].as<bool>();
+  if(tunnel["wall_geometry_precedence"])p.tunnel_route.params.wall_geometry_precedence=tunnel["wall_geometry_precedence"].as<bool>();
   const auto noise=tunnel["temporal_noise"];
   if(noise) {
     if(noise["adaptive_confirmation"])p.tunnel_noise.adaptive_confirmation=noise["adaptive_confirmation"].as<bool>();
@@ -323,6 +351,9 @@ RuntimeConfig LoadRuntimeConfig(const std::string& yaml_path, const std::string&
     if(original["wall_remove_margin_m"])p.tunnel_route.params.wall_remove_margin_m=original["wall_remove_margin_m"].as<float>();
     if(original["wall_remove_min_height_m"])p.tunnel_route.params.wall_remove_min_height_m=original["wall_remove_min_height_m"].as<float>();
     if(original["cluster_tolerance_m"])p.tunnel_route.params.cluster_tolerance_m=original["cluster_tolerance_m"].as<float>();
+    if(original["sparse_cluster_enable"])p.tunnel_route.params.sparse_cluster_enable=original["sparse_cluster_enable"].as<bool>();
+    if(original["sparse_cluster_min_points"])p.tunnel_route.params.sparse_cluster_min_points=original["sparse_cluster_min_points"].as<int>();
+    if(original["sparse_cluster_wall_clearance_m"])p.tunnel_route.params.sparse_cluster_wall_clearance_m=original["sparse_cluster_wall_clearance_m"].as<float>();
     if(original["cluster_min_points"])p.tunnel_route.params.cluster_min_points=original["cluster_min_points"].as<int>();
     if(original["cluster_max_points"])p.tunnel_route.params.cluster_max_points=original["cluster_max_points"].as<int>();
     if(original["obb_filter_enable"])p.tunnel_route.params.obb_filter_enable=original["obb_filter_enable"].as<bool>();
@@ -529,7 +560,7 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
     << p.minimum_obb_road_ratio << ',' << p.road_inset_m << ',' << p.camera_age_ms;
   if(p.enabled)effective << ',' << filtering::kDeliveryProtectionPolicy;
   effective << '\n';
-  effective << "tunnel-residual-wall-surface-driving-v8-corridor," << config.pipeline.tunnel_route.params.residual_wall_surface_enable << '\n';
+  effective << "tunnel-residual-wall-surface-driving-v9-wall-precedence," << config.pipeline.tunnel_route.params.residual_wall_surface_enable << ',' << config.pipeline.tunnel_route.params.wall_geometry_precedence << '\n';
   effective << "tunnel-boundary-cluster-rescue-v1," << config.pipeline.tunnel_route.boundary_cluster_rescue << '\n';
   effective << "tunnel-temporal-adaptive-v6-reclassification," << config.pipeline.tunnel_noise.enabled << "," << config.pipeline.tunnel_noise.hold_frames << "," << config.pipeline.tunnel_noise.confirmation_all_unknown << "," << config.pipeline.tunnel_noise.confirmation_frames << "," << config.pipeline.tunnel_noise.adaptive_confirmation << "," << config.pipeline.tunnel_noise.structural_confirmation_frames << ',' << config.pipeline.tunnel_noise.low_flat_confirmation_frames << '\n';
   effective << "semantic-static-v1," << config.pipeline.motion.semantic_static_enabled << ",5,.25,.6,.35,2.5,.7,3,8,350ms\n";
@@ -619,6 +650,9 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << ',' << config.pipeline.tunnel_route.params.wall_remove_min_height_m;
   effective << ',' << config.pipeline.tunnel_route.params.cluster_tolerance_m;
   effective << ',' << config.pipeline.tunnel_route.params.cluster_min_points;
+  effective << ',' << config.pipeline.tunnel_route.params.sparse_cluster_enable;
+  effective << ',' << config.pipeline.tunnel_route.params.sparse_cluster_min_points;
+  effective << ',' << config.pipeline.tunnel_route.params.sparse_cluster_wall_clearance_m;
   effective << ',' << config.pipeline.tunnel_route.params.cluster_max_points;
   effective << ',' << config.pipeline.tunnel_route.params.obb_filter_enable;
   effective << ',' << config.pipeline.tunnel_route.params.obb_ceiling_min_z_road_m;
@@ -647,7 +681,8 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
             << ',' << config.pipeline.tunnel_route.cluster_z.min_sensor_z_m;
   effective << ",low-obstacle-evidence-v1," << config.pipeline.tunnel_route.low_obstacle_evidence;
   const auto& cr=config.pipeline.camera_point_refinement;
-  effective << ",camera-point-refinement-v4,optical-tunnel-protection-v3," << cr.enabled << ',' << cr.minimum_confidence
+  effective << ",camera-point-refinement-v5-multiview,optical-tunnel-protection-v3," << cr.enabled << ',' << cr.minimum_confidence
+    << ",vehicle-history-v1," << cr.vehicle_history_enabled << ',' << cr.vehicle_history_max_camera_age_s << ',' << cr.vehicle_history_match_m
     << ',' << cr.max_age_s << ',' << cr.connection_m << ',' << cr.angular_connection
     << ',' << cr.maximum_connection_m << ',' << cr.ambiguity_depth_m << ',' << cr.fragment_connection_m << ',' << cr.wall_band_m
     << ',' << cr.minimum_points << ',' << cr.maximum_box_points << ',' << cr.maximum_boxes
@@ -656,6 +691,10 @@ void FinalizeRuntimeIdentity(RuntimeConfig& config, const std::string& camera_ca
   effective << ',' << cr.vehicle_scanline_grouping << ',' << cr.independent_wall_cleanup
     << ',' << cr.scanline_gap_slope << ',' << cr.scanline_max_gap_m
     << ',' << cr.detached_wall_cleanup << ',' << config.pipeline.tunnel_route.protection.motion_compensated_fallback;
+  effective << ",tunnel-only-updates-v2-camera-geometry-scope," << config.pipeline.tunnel_only_updates;
+  const auto& entry_wall=config.pipeline.shadow_wall;
+  effective<<",hdmap-pre-entry-wall-v1,"<<entry_wall.enabled<<','<<entry_wall.profile_sha256
+           <<','<<entry_wall.lead_m<<','<<entry_wall.exit_buffer_m<<','<<entry_wall.lateral_m;
   config.config_id = hash(effective.str());
 }
 

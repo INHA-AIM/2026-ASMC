@@ -1,0 +1,45 @@
+# GPS-independent LOCAL runtime. NORMAL and the camera jamming selector remain separate.
+# LOCAL-2G: geometric motion forecasts, turn-room reserve and measured-gap checks.
+# Vehicle dimensions and cruise/ceiling/recovery policy: jamming_motion.yaml + launch.
+# Shadow-only experiment: no fixed clearance beyond the physical footprint.
+# Observation uncertainty and moving-object predictions remain independent.
+clearance_margin: 0.0
+road_clearance_margin: 0.0
+planning_budget_ms: 40.0
+# Fresh near-field recovery uses a5km/h ceiling; physical constraints may lower it. Internal semantic occlusion can
+# be a soft cost, but body clearance, current OBB and exterior checks stay hard.
+recovery: true
+near_blind_assist: false
+# LOCAL-2B experimental near-body evidence, not a filled current semantic mask.
+# Actual observed free road only, max5s/6m, fresh nonroad/OBB always veto.
+# Set false for the LOCAL-2A memory-OFF comparison (same runtime, no extra node).
+causal_road_memory: true
+# Match the local solver bound; NORMAL's2m/s^2 configuration stays unchanged.
+acceleration_limit_mps2: 1.0
+# Missing/folded home reference falls back to current observed semantic space.
+# Current raster/OBB collision checks remain authoritative; no mask is filled.
+semantic_reference_fallback: true
+# Short measured-asset retention did not improve A/B consistently; keep OFF.
+retain_static_observations: false
+# Comfort2.0m/s²; controlled3.0 only when actual-state braking needs it.
+controlled_braking_limit_mps2: 3.0
+
+comfort_deceleration_mps2: 2.0
+preferred_clearance: 0.55
+maneuver_clearance: 0.55
+# Cost-only LOCAL trial; 0 preserves the deployed ranking.
+forward_warning_weight: 0.0
+low_speed_rate_floor_mps: 0.1
+local_motion_prediction: true
+maneuver_reserve_m: 1.2
+
+# LOCAL-2H geometry baseline was qualified at10km/h in FOGGY13.
+# New shared15/20 speed policy awaits the deferred closed-loop comparison.
+# Current OBB geometry and350ms source freshness remain unchanged.
+# A close tight selected sweep gets maneuver time, not every YOLO detection.
+maneuver_speed_cap_kph: 5.0
+# Six unique rigid source observations allow a nonzero2m/s past-age envelope.
+# Known mobile groups are vetoed; raw velocity and valid absolute-speed floors remain.
+quiescent_geometry_padding: true
+
+# Escape ceiling is owned by jamming_motion.yaml, never a forced minimum.

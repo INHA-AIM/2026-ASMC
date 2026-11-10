@@ -81,6 +81,18 @@ int main() {
            "stopped vehicle can safely approach a still-distant target");
     auto small=Generate(.1,0,.05,1);
     Expect(!small.empty() && Safe(small[0],.05),"low-speed endpoint remains forward-only");
+    FrenetState departure{};
+    const auto prefix=GenerateSpatialStoppingCandidates(departure,12,6.94,1.5,
+        Grid(5),Limits(),.5);
+    const auto complete=GenerateSpatialStoppingCandidates(departure,12,6.94,1.5,
+        Grid(5),Limits(),.5,SpatialStopOptions{false,false,true});
+    bool same_departure=!prefix.empty()&&!complete.empty()&&
+        complete[0].t.back()>5&&Safe(complete[0],12)&&
+        std::fabs(complete[0].s.back()-12)<1e-6&&complete[0].s_d.back()<1e-7;
+    if(same_departure)for(std::size_t i=0;i<prefix[0].s.size();++i)
+        same_departure&=std::fabs(prefix[0].s[i]-complete[0].s[i])<1e-10&&
+            std::fabs(prefix[0].s_d[i]-complete[0].s_d[i])<1e-10;
+    Expect(same_departure,"departure witness extends the same STOP profile without changing prefix, endpoint or limits");
     Expect(Generate(5,std::numeric_limits<double>::quiet_NaN(),20).empty(),
            "invalid acceleration does not generate a path");
 

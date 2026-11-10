@@ -78,8 +78,18 @@ struct FollowingConfig {
 struct AvoidConfig {
     // Cooperative search slice; unfinished candidates resume from fresh inputs.
     double map_search_budget_s = 0.08;
+    double static_search_lateral_limit=6.0;
     // Map-aware bypass cruise speed; independent of KEEP's low-speed fallback.
     double bypass_speed_cap = 2.0; // [m/s]
+    double bypass_accel_cap = 2.0; // [m/s^2], Controller's achievable positive response
+    bool static_margin_recovery_enabled=false;
+    bool static_contact_progress_enabled=false; // explicit MORAI opt-in
+    double static_recovery_speed_cap=1.0;
+    double static_contact_speed_cap=.5;
+    double static_normal_resume_speed_cap=4.2;
+    double static_speed_confirm_time=1.0;
+    double static_speed_confirm_distance=.5;
+    double static_speed_step=4.2;
     double detection_distance; // [m] FSM이 지정한 대상까지 이 거리 안이어야 유효(실제값은 충돌 lookahead와 자동 조정)
     // [m] 회피 시 lateral_d1 격자를 밀어낼 크기. 자차 폭(1.9m 기준) + 장애물
     // 폭 절반씩 + 여유(0.3m)를 감안한 최소 이격(~2.2m)보다 확실히 크게 잡아야

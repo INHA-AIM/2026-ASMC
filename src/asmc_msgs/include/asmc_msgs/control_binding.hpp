@@ -1,7 +1,7 @@
 #pragma once
 
-// Explicit additive transport contract. Existing .msg definitions, header
-// timestamps, frame IDs and diagnostic strings retain their original meaning.
+// Explicit transport contract. Version 3 carries Trajectory.execution_policy;
+// older serialized trajectory layouts cannot authorize control release.
 // /behavior/control_request and /planning/control_plan use UInt8MultiArray
 // with an empty layout and the versioned payload below. A plan contains the
 // exact accepted request AND its trajectory atomically; no topic ordering or
@@ -23,7 +23,7 @@
 
 namespace asmc_msgs::binding {
 constexpr std::uint32_t magic=0x41534d43;
-constexpr std::uint8_t version=2;
+constexpr std::uint8_t version=3;
 constexpr std::size_t max_bytes=4*1024*1024;
 enum class Kind : std::uint8_t { REQUEST=1, PLAN=2, STATUS=3 };
 
@@ -272,6 +272,11 @@ class Gate {
     linked_=false;
     // An accepted request must also be the actual planning owner. Rejected
     // requests/old locked paths cannot be relabelled with the latest token.
+    if(p.trajectory.execution_policy>asmc_msgs::Trajectory::POLICY_STATIC_CONTACT_PROGRESS ||
+       (p.trajectory.execution_policy!=asmc_msgs::Trajectory::POLICY_NORMAL&&
+        (request_.command.maneuver_type!=asmc_msgs::BehaviorCommand::AVOID||
+         (p.feedback.execution_state!=asmc_msgs::FrenetFeedback::COMMITTED&&
+          p.feedback.execution_state!=asmc_msgs::FrenetFeedback::EXECUTING))))return false;
     if(!p.feedback.command_accepted || p.feedback.command_id!=request_.command.command_id ||
        p.feedback.active_maneuver!=request_.command.maneuver_type ||
        (!p.feedback.plan_valid && !p.stationary_hold && !CertifiedMergeWaitingPath(p) &&

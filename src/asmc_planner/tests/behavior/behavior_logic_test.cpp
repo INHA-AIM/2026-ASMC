@@ -1466,3 +1466,26 @@ int main(int argc, char** argv) {
   return RUN_ALL_TESTS();
 }
 
+
+namespace behavior_planner {
+TEST(NormalCruiseTest,A153LowerCeilingPreviewsAndSurvivesBoundaryJitter) {
+ BehaviorDecision d;ASSERT_TRUE(d.setNormalCruiseConfig(CruiseConfig()));
+ ASSERT_TRUE(d.setAbsoluteSpeedLimit(57.5/3.6));auto f=CruiseFeature();
+ f.highway.cruising=true;f.highway.speed_cap_mps=70./3.6;
+ f.route.lower_boundary_valid=true;f.route.lower_boundary_s=100;f.route.next_boundary_s=150;
+ f.route.next_speed_link="ordinary";f.route.next_speed_limit=50./3.6;f.route.route_generation=1;
+ auto tick=[&](double station){f.timestamp+=.1;f.ego.s=station;return d.decide(f,PlannerFeedbackData{},0);};
+ EXPECT_DOUBLE_EQ(tick(89.99).hard.max_speed,70./3.6);
+ for(double station:{90.,89.9,99.9,100.,100.1,120.}){
+  auto c=tick(station);EXPECT_DOUBLE_EQ(c.hard.max_speed,57.5/3.6);
+  EXPECT_LE(c.target.desired_speed,57.5/3.6);EXPECT_FALSE(c.hard.planned_stop);
+  EXPECT_FALSE(c.hard.intersection_approach_active);
+ }
+ EXPECT_DOUBLE_EQ(tick(50).hard.max_speed,70./3.6);
+ f.highway.speed_cap_mps=40./3.6;EXPECT_DOUBLE_EQ(tick(95).hard.max_speed,40./3.6);
+ f.highway.speed_cap_mps=57.5/3.6;EXPECT_DOUBLE_EQ(tick(95).hard.max_speed,57.5/3.6);
+ f.highway.speed_cap_mps=70./3.6;tick(95);++f.route.route_generation;
+ EXPECT_DOUBLE_EQ(tick(89.9).hard.max_speed,70./3.6);
+}
+
+} // namespace behavior_planner

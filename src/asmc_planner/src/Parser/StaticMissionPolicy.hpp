@@ -15,8 +15,9 @@ class StaticMissionPolicy {
                       double heading_tolerance_rad = 1.0);
   bool contains(double x, double y, double* station = nullptr) const;
   bool containsEgo(double x, double y, double yaw, bool valid) const;
-  // Call on a fresh copy of the original observation each cycle. Only type is
-  // changed: camera labels, measured motion, validity, IDs and OBBs survive.
+  // Call on a fresh copy of the original observation each cycle. Policy type
+  // and effective motion policy change; raw velocity, labels, validity, IDs and
+  // OBBs survive. This mission prior does not assert a measured zero velocity.
   std::size_t apply(double ego_x, double ego_y, double ego_yaw, bool ego_valid,
                     planning_inputs::DetectedObjectArray& objects) const;
   double start() const { return start_; }

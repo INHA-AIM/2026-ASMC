@@ -9,6 +9,8 @@ def stamp(message):
 class Readiness:
     def __init__(self, config):
         self.config = config['readiness']
+        self.profile=config.get('readiness_profile','map')
+        if self.profile not in ('map','shadow_local'):raise ValueError('invalid readiness profile')
         self.messages = {}
         self.reset({}, float('inf'))
 
@@ -49,6 +51,30 @@ class Readiness:
             self.detail = '새 위치 차량 상태·'+selected+'·제어 준비 완료'
         return ready
 
+    def _shadow_failure(self, now, ros_now):
+        # Explicit simulator-test profile. The scenario engine separately checks
+        # the native held_at pose before release. No map pose is fabricated.
+        for name in ('family','local','gps','speed','control'):
+            row=self.messages.get(name)
+            if not row:return name+' 미수신 (local 준비)'
+            m,received=row
+            age=.25 if name=='control' else .35
+            if not 0<=now-received<=age:return name+' 수신 지연 (local 준비)'
+            if name!='control':
+                h=m.observation.objects.header if name=='local' else m.header
+                source=h.stamp.to_sec()
+                if source<self.cutoff or not -.05<=ros_now-source<=age:return name+' 이전 회차/오래된 데이터 (local 준비)'
+        family=self.messages['family'][0];local=self.messages['local'][0].observation.objects
+        gps=self.messages['gps'][0];speed=self.messages['speed'][0];control=self.messages['control'][0]
+        mode=self.messages.get('mode')
+        if not mode or mode[0].data!=1:return '실제 GPS JAMMING 모드 대기'
+        if gps.latitude!=0 or gps.longitude!=0:return 'local 시험은 실제 GPS 무효 구간에서만 허용'
+        if not family.valid or family.header.frame_id!='base_link':return 'local family 무효'
+        if local.header.frame_id!='base_link' or local.status not in (1,2):return 'local 관측 무효'
+        if not math.isfinite(speed.velocity.x) or abs(speed.velocity.x)>.3:return 'local 시험 정차 확인 실패'
+        if control.longlCmdType!=2 or not 0<control.velocity<=5. or control.brake>0:return '검증된 local 주행 명령 대기'
+        return None
+
     def _fresh(self, name, age, now, ros_now, source=True):
         row = self.messages.get(name)
         if not row:
@@ -64,6 +90,7 @@ class Readiness:
         return None
 
     def _failure(self, now, ros_now):
+        if self.profile=='shadow_local':return self._shadow_failure(now,ros_now)
         cfg = self.config
         if 'mode' not in self.messages:
             return 'mode 미수신'

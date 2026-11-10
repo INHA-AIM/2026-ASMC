@@ -2,6 +2,7 @@
 #include "Frenet/Common/ObjectTypes.hpp"
 #include "Frenet/Geometry/ObservationContinuity.hpp"
 #include "Frenet/Geometry/PredictionInput.hpp"
+#include "Frenet/Evaluation/CollisionChecker.hpp"
 #include "Frenet/Reference/Reference.hpp"
 #include <algorithm>
 #include <cmath>
@@ -25,6 +26,10 @@ class RoundaboutPrediction {
         TrackedObject last{};
         double body_stamp=-1, body_x=0, body_y=0;
         double half_length=0, half_width=0;
+        // Execution evidence lives inside the same bounded continuity track.
+        // Reset/expiry/ID discontinuity destroys it with that track.
+        mutable std::shared_ptr<const RefLine> execution_lane;
+        mutable double execution_lane_stamp=-1,execution_low=NAN,execution_high=NAN;
     };
     std::unordered_map<int,Track> tracks_;
     double stamp_=-1;
@@ -205,6 +210,63 @@ public:
         const auto& samples=found->second.samples;
         const double speed=std::hypot(object.vx,object.vy);
         if(samples.size()<3||samples.back().t-samples.front().t<.2||speed<.5)return object;
+        return MapExecutionMotion(object,references,horizon,status);
+    }
+    TrackedObject ExecutionMappedMotion(const TrackedObject& object,
+        const std::vector<std::shared_ptr<const RefLine>>& references,double horizon) const {
+        auto input=object;input.prediction_lane.reset();
+        const auto found=tracks_.find(input.id);
+        if(found==tracks_.end()||!GeometryUsable(input)||InspectPredictionVelocity(input)!=PredictionInputStatus::MEASURED||
+           input.motion_state==ObjectMotionState::LOW_THREAT||(input.type!=0&&input.type!=1))return input;
+        const auto& track=found->second;
+        const auto remember=[&](TrackedObject mapped) {
+            if(mapped.prediction_lane) {
+                track.execution_lane=mapped.prediction_lane;track.execution_lane_stamp=track.stamp;
+                track.execution_low=mapped.prediction_min_speed;track.execution_high=mapped.prediction_max_speed;
+            }
+            return mapped;
+        };
+        const auto retained=[&]() {
+            if(!track.execution_lane||track.samples.empty()||
+               track.execution_lane_stamp<track.samples.front().t||
+               stamp_-track.stamp>1e-6||!track.moving||
+               std::find(references.begin(),references.end(),track.execution_lane)==references.end())return input;
+            // Retain a previously position-supported lane only while CURRENT
+            // measured direction, three recent positions and map coverage agree.
+            // A transient fragment fit may fail without erasing that evidence.
+            const auto point=Interpolate(*track.execution_lane,FindClosestS(*track.execution_lane,input.x,input.y,nullptr,1e6));
+            if(std::cos(std::atan2(input.vy,input.vx)-point.theta)<std::cos(.20))return input;
+            auto bounded=input;const auto range=ObservedSpeedRange(input.id,std::hypot(input.vx,input.vy));
+            bounded.prediction_min_speed=std::min(range.first,
+                std::isfinite(track.execution_low)?track.execution_low:range.first);
+            bounded.prediction_max_speed=std::max(range.second,
+                std::isfinite(track.execution_high)?track.execution_high:range.second);
+            if(std::isfinite(input.prediction_min_speed))bounded.prediction_min_speed=std::min(bounded.prediction_min_speed,input.prediction_min_speed);
+            if(std::isfinite(input.prediction_max_speed))bounded.prediction_max_speed=std::max(bounded.prediction_max_speed,input.prediction_max_speed);
+            auto mapped=MapExecutionMotion(bounded,{track.execution_lane},horizon,nullptr);
+            // Reusing evidence must never renew its original observation age.
+            return mapped;
+        };
+        auto strict=MappedMotion(input,references,horizon);if(strict.prediction_lane)return remember(strict);
+        double vx=0,vy=0,error=0;
+        if(!PositionVelocity(track,vx,vy,error,3,.2))return retained();
+        const double speed=std::hypot(input.vx,input.vy),position=std::hypot(vx,vy);
+        if(speed<.5||position<.5||(vx*input.vx+vy*input.vy)/(speed*position)<std::cos(.20))return retained();
+        const auto& samples=track.samples;double mt=0,ma=0,tt=0,ta=0;
+        for(const auto& q:samples){mt+=q.t-track.stamp;ma+=q.direction;}mt/=samples.size();ma/=samples.size();
+        for(const auto& q:samples){const double t=q.t-track.stamp-mt;tt+=t*t;ta+=t*(q.direction-ma);}
+        if(tt<=1e-9||std::fabs(ta/tt-track.rate)>1e-6)return retained();
+        for(const auto& q:samples)if(std::fabs(q.direction-ma-ta/tt*(q.t-track.stamp-mt))>.20)return retained();
+        input.prediction_min_speed=std::max(0.0,std::min(speed,position-error));
+        input.prediction_max_speed=std::max(speed,position+error);
+        if(std::isfinite(object.prediction_min_speed))input.prediction_min_speed=std::min(input.prediction_min_speed,object.prediction_min_speed);
+        if(std::isfinite(object.prediction_max_speed))input.prediction_max_speed=std::max(input.prediction_max_speed,object.prediction_max_speed);
+        return remember(MapExecutionMotion(input,references,horizon,nullptr));
+    }
+private:
+    TrackedObject MapExecutionMotion(const TrackedObject& object,
+        const std::vector<std::shared_ptr<const RefLine>>& references,double horizon,PredictionInputStatus* status) const {
+        const auto& samples=tracks_.at(object.id).samples;const double speed=std::hypot(object.vx,object.vy);
         std::shared_ptr<const RefLine> best;double best_s=0,best_d=0,distance=INFINITY;
         for(const auto& line:references) {
             const double station=FindClosestS(*line,object.x,object.y,nullptr,1e6);
@@ -235,8 +297,14 @@ public:
         result.prediction_lane_heading=at.theta;result.prediction_lane_end_s=best->length;
         // Caller certifies only spans fully covered by this supplied lane.
         // No unobserved circular successor or ego exit is invented.
+        for(std::size_t i=1;i<best->points.size();++i) {
+            const auto& a=best->points[i-1];const auto& b=best->points[i];
+            if(b.s>a.s)result.prediction_lane_curvature=std::max(result.prediction_lane_curvature,
+                std::fabs(std::remainder(b.theta-a.theta,2*M_PI))/(b.s-a.s));
+        }
         result.yaw_rate=0;return result;
     }
+public:
     double Rate(int id) const {
         const auto it=tracks_.find(id);return it==tracks_.end()?0:it->second.rate;
     }
@@ -278,8 +346,9 @@ public:
     // shift within the body, so require bounded position residuals and actual
     // travel before using this as an additional motion estimate. Geometry is
     // never replaced, and the departure confidence gate is not relaxed.
-    bool PositionVelocity(const Track& track,double& vx,double& vy,double& error) const {
-        if(track.samples.size()<4||track.samples.back().t-track.samples.front().t<.25)return false;
+    bool PositionVelocity(const Track& track,double& vx,double& vy,double& error,
+        std::size_t minimum_samples=4,double minimum_span=.25) const {
+        if(track.samples.size()<minimum_samples||track.samples.back().t-track.samples.front().t<minimum_span)return false;
         double mt=0,mx=0,my=0;
         for(const auto& p:track.samples){mt+=p.t-track.stamp;mx+=p.x;my+=p.y;}
         mt/=track.samples.size();mx/=track.samples.size();my/=track.samples.size();
@@ -372,6 +441,99 @@ public:
             }
             result.push_back(std::move(bound));
         }
+        return result;
+    }
+    struct MissingDepartureObservation {
+        int id=-1;
+        double source_stamp=-1, age=0;
+        std::size_t observations=0;
+        bool motion_supported=false, body_supported=false;
+        TrackedObject observation{};
+        const char* reason="motion_insufficient";
+        std::vector<TrackedObject> models;
+        // Relevance only: never upgrades body confidence or a sensor sample.
+        std::vector<TrackedObject> relevance_models;
+    };
+    // Read-only use of the existing one-second history. Construct at the real
+    // observation time, then align once to the ego time. Never renew authority.
+    std::vector<MissingDepartureObservation> MissingDepartureOccupancies(
+        double evaluation_time,const std::function<bool(double,double)>& on_lane,
+        double partial_length,double partial_width,double clamp,
+        double conflict_x=NAN,double conflict_y=NAN) const {
+        std::vector<MissingDepartureObservation> result;
+        if(!std::isfinite(evaluation_time))return result;
+        for(const auto& item:tracks_) {
+            const auto& track=item.second;
+            const double age=std::max(0.0,evaluation_time-track.stamp);
+            if(stamp_-track.stamp<=1e-6||age>1||!track.moving)continue;
+            MissingDepartureObservation missing;
+            missing.id=item.first;missing.source_stamp=track.stamp;missing.age=age;
+            missing.observations=track.samples.size();
+            missing.observation=track.last;
+            double vx=0,vy=0,error=0;
+            missing.motion_supported=BoundedDisagreement(track,vx,vy,error);
+            missing.body_supported=track.body_stamp>=0&&evaluation_time-track.body_stamp<=1;
+            RoundaboutPrediction original;
+            original.stamp_=track.stamp;original.tracks_.emplace(item.first,track);
+            if(missing.motion_supported&&(track.body_stamp<0||missing.body_supported)) {
+                auto bodies=original.DepartureOccupancies({track.last},on_lane,
+                    partial_length,partial_width);
+                if(!bodies.empty()) {
+                    auto models=original.ApproachOccupancies({track.last});
+                    bodies=original.ApproachOccupancies(bodies);
+                    models.insert(models.end(),bodies.begin(),bodies.end());
+                    models=ExpandTurnModels(original.WithObservedSpeedRanges(models),clamp);
+                    for(const auto& model:models)
+                        missing.models.push_back(AdvanceObjectObservation(model,age));
+                }
+            }
+            if(!missing.models.empty())missing.reason="none";
+            else if(InspectPredictionVelocity(track.last)!=PredictionInputStatus::MEASURED)
+                missing.reason="velocity_missing";
+            else if(!missing.motion_supported)missing.reason="motion_insufficient";
+            else {
+                missing.reason=track.body_stamp>=0&&!missing.body_supported?
+                    "body_expired":"body_missing";
+                // Source-time motion evidence is immutable. Missing time is
+                // accounted for only by AdvanceObjectObservation below.
+                if(!std::isfinite(conflict_x)||!std::isfinite(conflict_y)||
+                   !original.MovingAwayReliable(item.first,conflict_x,conflict_y))
+                    missing.reason="moving_away_unproven";
+                else if(!GeometryUsable(track.last)||!std::isfinite(partial_length)||
+                        partial_length<=0||!std::isfinite(partial_width)||partial_width<=0)
+                    missing.reason="prediction_uncovered";
+                else {
+                    auto bound=track.last;
+                    bound.heading=std::atan2(track.vy,track.vx);bound.yaw_rate=track.rate;
+                    // A fragment centre can be anywhere on the body: use full
+                    // dimensions as radii, including larger observed bodies.
+                    double hl=std::max({partial_length,track.last.length,2*track.half_length})+.25;
+                    double hw=std::max({partial_width,track.last.width,2*track.half_width})+.25;
+                    const double c=std::cos(bound.heading),s=std::sin(bound.heading);
+                    for(const auto& p:track.last.corners) {
+                        const double dx=p.x-bound.x,dy=p.y-bound.y;
+                        hl=std::max(hl,std::fabs(dx*c+dy*s)+.25);
+                        hw=std::max(hw,std::fabs(-dx*s+dy*c)+.25);
+                    }
+                    bound.length=2*hl;bound.width=2*hw;bound.z_valid=false;
+                    const auto speeds=original.ObservedSpeedRange(item.first,track.speed);
+                    const double position_speed=std::hypot(vx,vy);
+                    bound.prediction_min_speed=std::min(speeds.first,std::max(0.0,position_speed-error));
+                    bound.prediction_max_speed=std::max(speeds.second,position_speed+error);
+                    for(int k=0;k<8;++k) {
+                        const double dx=(k%4==0||k%4==3)?-hl:hl,dy=k%4<2?-hw:hw;
+                        bound.corners[k]={bound.x+dx*c-dy*s,bound.y+dx*s+dy*c,bound.z};
+                    }
+                    auto raw=track.last;raw.yaw_rate=track.rate;
+                    auto models=ExpandTurnModels(original.WithObservedSpeedRanges(
+                        original.ApproachOccupancies({raw,bound})),clamp);
+                    for(const auto& model:models)
+                        missing.relevance_models.push_back(AdvanceObjectObservation(model,age));
+                }
+            }
+            result.push_back(std::move(missing));
+        }
+        std::sort(result.begin(),result.end(),[](const auto& a,const auto& b){return a.id<b.id;});
         return result;
     }
     // PREPARE checks both position-supported translation and a short sensor

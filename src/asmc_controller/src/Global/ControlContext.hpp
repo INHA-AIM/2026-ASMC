@@ -4,12 +4,18 @@
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 #include <ros/ros.h>
+#include <morai_msgs/CtrlCmd.h>
+#include <functional>
 #include <asmc_msgs/control_binding.hpp>
 #include "Util/EmergencySteering.hpp"
 #include "Util/BrakeResponseWatchdog.hpp"
 
 struct ControlContext {
     ros::Publisher control_pub;
+    std::function<void(const morai_msgs::CtrlCmd&)> output_observer;
+    std::function<void()> before_solve;
+    double validation_speed_cap_mps=0; // private trial fixture; production disabled
+    bool handoff_solved=false;
     asmc_msgs::Trajectory latest_trajectory;
     bool has_trajectory = false;
     ros::SteadyTime trajectory_received_at;
@@ -24,6 +30,14 @@ struct ControlContext {
     ros::SteadyTime last_successful_control_at;
     bool has_successful_control = false;
     bool emergency_stop_active = false;
+    bool collision_stop_active = false;
+    ros::SteadyTime collision_stop_at;
+    double collision_stop_state_stamp = 0;
+    bool allow_static_contact_progress=false;
+    double static_recovery_speed_cap=1.0;
+    double static_contact_speed_cap=.5;
+    std::uint8_t latest_behavior_type=255;
+    ros::Time latest_behavior_valid_until;
     EmergencySteeringState emergency_steering;
     double braking_geometry_stamp=0;
     // Enabled by explicit wire binding. The legacy-only test gate also uses

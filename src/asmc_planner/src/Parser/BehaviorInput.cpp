@@ -1,4 +1,5 @@
 #include "Parser/BehaviorInput.hpp"
+#include "Parser/RoundaboutEmergencyAuthority.hpp"
 
 #include "Planning/BehaviorContext.hpp"
 #include <algorithm>
@@ -221,6 +222,8 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
              avoid_release_grace_cycles);
   pnh_.param("vehicle/width", avoid_target.ego_width,
              avoid_target.ego_width);
+  pnh_.param("vehicle/length", avoid_target.ego_length, avoid_target.ego_length);
+  pnh_.param("vehicle/rear_overhang", avoid_target.rear_overhang, avoid_target.rear_overhang);
   pnh_.param("publish_topics/feature_debug", debug_topic, debug_topic);
   pnh_.param("publish_topics/marker", marker_topic, marker_topic);
   pnh_.param("map/link_set_path", link_path, std::string());
@@ -325,7 +328,11 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
   }
   if (avoid_target.max_distance <= 0.0 ||
       avoid_target.max_lateral_offset <= 0.0 ||
-      avoid_target.ego_width <= 0.0 || avoid_target.path_margin_m < 0.0 ||
+      !std::isfinite(avoid_target.ego_width) || avoid_target.ego_width <= 0.0 ||
+      !std::isfinite(avoid_target.path_margin_m) || avoid_target.path_margin_m < 0.0 ||
+      !std::isfinite(avoid_target.ego_length) || avoid_target.ego_length <= 0.0 ||
+      !std::isfinite(avoid_target.rear_overhang) || avoid_target.rear_overhang < 0.0 ||
+      avoid_target.rear_overhang >= avoid_target.ego_length ||
       avoid_target.min_physical_overlap_m <= 0.0 ||
       avoid_target.min_margin_overlap_m <= 0.0 ||
       avoid_target.min_overlap_ratio < 0.0 ||
@@ -345,13 +352,15 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
       avoid_target.reconnect_max_lateral_delta_m <= 0.0 ||
       avoid_target.reconnect_max_size_delta_m < 0.0) {
     ROS_WARN("Invalid AVOID corridor/overlap policy; using 120.0 m / 1.75 m "
-             "ceiling, 1.892 m ego width, 0.40 m margin, "
+             "legacy ceiling, 1.9 m ego width, 0.45 m margin, "
              "0.10/0.20 m overlap, margin ratio 0.20, "
              "blocking ratio 0.70/0.35/0.15, confirm/release 2/3 cycles");
     avoid_target.max_distance = 120.0;
     avoid_target.max_lateral_offset = 1.75;
-    avoid_target.ego_width = 1.892;
-    avoid_target.path_margin_m = 0.4;
+    avoid_target.ego_width = 1.9;
+    avoid_target.path_margin_m = 0.45;
+    avoid_target.ego_length = 4.635;
+    avoid_target.rear_overhang = 0.79;
     avoid_target.min_physical_overlap_m = 0.10;
     avoid_target.min_margin_overlap_m = 0.20;
     avoid_target.min_overlap_ratio = 0.20;
@@ -456,16 +465,14 @@ BehaviorInput::BehaviorInput(ros::NodeHandle nh,ros::NodeHandle pnh,
            follow_target.max_distance, follow_target.max_lateral_offset,
            follow_release_delay_s, objects_stale_seconds_);
   ROS_INFO("Behavior AVOID corridor: distance=%.2f m half_width=%.2f m "
-           "(ego_width=%.3f + margin=%.2f, ceiling=%.2f), "
+           "(ego_width=%.3f + margin=%.2f, legacy_ceiling=%.2f), "
            "overlap physical=%.2f m margin=%.2f m margin_ratio=%.2f, "
            "blocking_ratio immediate/enter/exit=%.2f/%.2f/%.2f "
            "confirm/release=%d/%d, "
            "reconnect grace=%d ds/dd/size=%.2f/%.2f/%.2f m, "
            "release grace=%d cycles",
            avoid_target.max_distance,
-           std::min(avoid_target.max_lateral_offset,
-                    0.5 * avoid_target.ego_width +
-                        avoid_target.path_margin_m),
+           0.5 * avoid_target.ego_width + avoid_target.path_margin_m,
            avoid_target.ego_width, avoid_target.path_margin_m,
            avoid_target.max_lateral_offset,
            avoid_target.min_physical_overlap_m,
@@ -636,7 +643,7 @@ void BehaviorInput::runOnce() {
     static_mission_ego_in_scope = static_mission_observation_.egoInScope();
     static_mission_remapped = static_mission_observation_.remapped();
     if (static_mission_remapped > 0) {
-      ROS_INFO_THROTTLE(2.0, "Static mission: %zu person/vehicle objects use UNKNOWN policy (motion unchanged)",
+      ROS_INFO_THROTTLE(2.0, "Static mission: %zu objects use stationary mission prior (raw velocity/validity unchanged)",
                         static_mission_remapped);
     }
   }
@@ -666,6 +673,9 @@ void BehaviorInput::runOnce() {
       out << "{\"planner_id\":" << raw->objects[i].id
           << ",\"original_type\":" << int(raw->objects[i].type)
           << ",\"effective_type\":" << int(static_mission_policy_ ? static_mission_observation_.objects().objects[i].type : raw->objects[i].type)
+          << ",\"original_motion\":" << int(raw->objects[i].motion_state)
+          << ",\"effective_motion\":" << int(static_mission_policy_ ? static_mission_observation_.objects().objects[i].motion_state : raw->objects[i].motion_state)
+          << ",\"mission_prior\":" << (static_mission_ego_in_scope && static_mission_policy_ && static_mission_policy_->contains(raw->objects[i].center.x, raw->objects[i].center.y))
           << '}';
     }
     out << "]}";
@@ -724,6 +734,31 @@ void BehaviorInput::runOnce() {
             validated_native_avoid,current.dynamic.evaluated_provisional_ids,
             current.dynamic.action==DynamicAction::AVOID?current.dynamic.object_id:-1);
       });
+  // Native MERGE has already checked the actual timed swept body. Do not
+  // cancel it solely because general FOLLOW's desired 8m gap hit its 0.5m
+  // denominator floor. No exemption for TTC, stale/failed plans or other modes.
+  const auto temporal = feature.extra_flags.find("emergency_temporal_evidence");
+  const double execution_age = (steady_now-control_status_received_at_).toSec();
+  const bool native_gap_owner = asmc_planner::NativeOwnsRoundaboutGapEmergency(
+      last_control_request_.command.maneuver_type==asmc_msgs::BehaviorCommand::MERGE &&
+      last_control_request_.command.merge_type==asmc_msgs::BehaviorCommand::MERGE_ROUNDABOUT,
+      feedback_snapshot.execution_state==asmc_msgs::FrenetFeedback::COMMITTED ||
+      feedback_snapshot.execution_state==asmc_msgs::FrenetFeedback::EXECUTING,
+      feedback_received && feedback_snapshot.command_accepted &&
+      feedback_snapshot.command_id==v2_command_manager_.activeCommandId() &&
+      feedback_snapshot.command_id==last_control_request_.command.command_id,
+      feedback_snapshot.plan_valid,
+      feedback_snapshot.trajectory_source==asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
+      objects_fresh && ego_.valid && feedback_snapshot.header.stamp.toSec()>=objects_source_time_,
+      temporal==feature.extra_flags.end() || temporal->second, feedback_age,
+      control_status_sequence_ && control_status_.linked && control_status_.planning_checked &&
+      control_status_.token==last_control_request_.token &&
+      execution_age>=0 && execution_age<=.15);
+  if(native_gap_owner && feature.risk.emergency_risk) {
+    feature.risk.emergency_risk=false;
+    ROS_INFO_THROTTLE(1.0,"Roundabout native swept path owns desired-gap deceleration; TTC protection retained");
+  }
+  feature.extra_flags["roundabout_native_gap_authority"]=native_gap_owner;
   if(dynamic_enabled_ && dynamic_policy_.enabled()) {
     if(feature.dynamic.action==DynamicAction::FOLLOW &&
        (!feature.surrounding.has_front_vehicle ||
@@ -801,8 +836,17 @@ void BehaviorInput::runOnce() {
   UrbanFeature decision_feature=feature;
   const bool signal_scoped=signal_active_ && signal_active_->enabled() && signal_active_->inScope();
   if(signal_scoped)decision_feature.signal.light_state=TrafficLightState::GREEN;
+  auto decision_feedback = NormalizeFeedback(feedback);
+  if (use_v2_interface_) {
+    std::lock_guard<std::mutex> lock(feedback_mutex_);
+    // Keep the actual latest feedback for arbitration and command sequencing.
+    // Only the maneuver lifecycle consumes the previously observed READY.
+    if (roundabout_ready_notice_.consume(feedback, ros::SteadyTime::now().toSec(),
+                                        feedback_v2_stale_seconds_))
+      decision_feedback.execution_state = PlannerExecutionState::READY;
+  }
   BehaviorContextData context = use_v2_interface_
-      ? decision_.decide(decision_feature, NormalizeFeedback(feedback),
+      ? decision_.decide(decision_feature, decision_feedback,
                          v2_command_manager_.activeCommandId())
       : decision_.decide(decision_feature, feedback_);
   if(signal_scoped) {
@@ -933,6 +977,10 @@ void BehaviorInput::runOnce() {
   if (use_v2_interface_) {
     const auto command = v2_command_manager_.update(
         context, feedback, ros::Time::now(), command_validity_seconds_);
+    {
+      std::lock_guard<std::mutex> lock(feedback_mutex_);
+      roundabout_ready_notice_.issuedCommand(command);
+    }
     command_v2_pub_.publish(command); // external compatibility mirror
     asmc_msgs::binding::Request request;
     if(control_binding_enabled_ && !controller_epoch_.empty()) {
@@ -1062,6 +1110,7 @@ void BehaviorInput::receiveFeedback(const asmc_msgs::FrenetFeedback& feedback) {
   feedback_v2_ = feedback;
   feedback_v2_received_at_ = ros::SteadyTime::now();
   feedback_v2_received_ = true;
+  roundabout_ready_notice_.observe(feedback, feedback_v2_received_at_.toSec());
 }
 
 }  // namespace behavior_planner

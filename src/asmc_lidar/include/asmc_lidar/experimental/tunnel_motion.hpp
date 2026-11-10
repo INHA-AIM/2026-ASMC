@@ -35,9 +35,11 @@ class TunnelMotionHistory {
   // Bounded causal IMU/CAN integration, independent of GPS/map availability.
   std::optional<asmc::lidar::Pose> CameraFromScan(std::int64_t begin,std::int64_t end,
                                                 const asmc::lidar::Pose& mount,
-                                                std::int64_t maximum_duration_ns=150000000LL) const {
+                                                std::int64_t maximum_duration_ns=150000000LL,
+                                                double maximum_yaw_change_rad=.05) const {
     std::lock_guard<std::mutex> lock(mutex_);
-    if(maximum_duration_ns<=0||maximum_duration_ns>250000000LL||begin<=0||end<=begin||end-begin>maximum_duration_ns||!asmc::lidar::pose_valid(mount))return {};
+      if(maximum_duration_ns<=0||maximum_duration_ns>250000000LL||!std::isfinite(maximum_yaw_change_rad)||
+          maximum_yaw_change_rad<=0||maximum_yaw_change_rad>.2||begin<=0||end<=begin||end-begin>maximum_duration_ns||!asmc::lidar::pose_valid(mount))return {};
     auto valid=[&](std::int64_t t) {
       const auto y=At(yaw_,t),v=At(speed_,t);
       return y&&v&&y->trusted&&v->trusted&&t-y->stamp<=80000000LL&&t-v->stamp<=120000000LL&&
@@ -47,7 +49,7 @@ class TunnelMotionHistory {
     if(!valid(begin)||!valid(end))return {};
     const auto a=At(yaw_,begin),b=At(yaw_,end);
     if(std::abs(b->roll-a->roll)>.02||std::abs(b->pitch-a->pitch)>.02||
-       std::abs(std::atan2(std::sin(b->value-a->value),std::cos(b->value-a->value)))>.05)return {};
+         std::abs(std::atan2(std::sin(b->value-a->value),std::cos(b->value-a->value)))>maximum_yaw_change_rad)return {};
     const auto first=asmc::lidar::rpy(a->roll,a->pitch,a->value);
     const auto last=asmc::lidar::rpy(b->roll,b->pitch,b->value);
     std::set<std::int64_t> knots{begin,end};

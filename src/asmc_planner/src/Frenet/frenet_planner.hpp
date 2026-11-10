@@ -6,10 +6,14 @@
 #include <memory>
 #include <unordered_map>
 #include <chrono>
+#include <array>
+#include <limits>
 
 #include "Frenet/Map/AvoidRoadMap.hpp"
 #include "Frenet/Geometry/ObservedMotion.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutMerge.hpp"
+#include "Frenet/Maneuver/Avoid/StaticAvoidPolicy.hpp"
+#include "Frenet/Speed/StaticAvoidSpeedRecovery.hpp"
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
 #include "Frenet/Maneuver/Merge/HighwayMerge.hpp"
 #include "Frenet/Maneuver/Merge/HighwayTransitionPath.hpp"
@@ -41,10 +45,44 @@ namespace asmc_planner::lane_reference { class LaneReference; }
 // 책임이고, 이 클래스는 그 행동을 어떻게 trajectory로 만들지만 담당한다.
 class FrenetPlanner {
 public:
+    void ConfigureStaticAvoidRecovery(bool margin,bool contact) {
+        avoid_cfg_.static_margin_recovery_enabled=margin;
+        avoid_cfg_.static_contact_progress_enabled=margin&&contact;
+    }
+    bool static_margin_recovery_enabled() const { return avoid_cfg_.static_margin_recovery_enabled; }
+    bool static_contact_progress_enabled() const { return avoid_cfg_.static_contact_progress_enabled; }
+    void InvalidateStaticAvoidSpeedProof() {
+        auto& context=v2_avoidance_;
+        context.static_speed.ResetProof();
+        if(context.static_recovery_engaged)
+            context.static_speed.cap=std::min(context.static_speed.cap,context.static_contact_used?
+                avoid_cfg_.static_contact_speed_cap:avoid_cfg_.static_recovery_speed_cap);
+    }
     const AvoidRoadMap& road_map() const { return avoid_road_map_; }
     VehicleShape vehicle_shape() const { return vehicle_shape_; }
     double rear_overhang() const { return avoid_cfg_.rear_overhang; }
     CollisionCheckConfig collision_config() const { return collision_cfg_; }
+    void SetShadowWallPermission(bool value){avoid_road_map_.SetShadowWallPermission(value);}
+    bool SetShadowWallOverlay(const std::vector<geometry::Polygon2D>& polygons) {
+        return !avoid_committed()&&avoid_road_map_.SetShadowWallOverlay(polygons);
+    }
+    // Caller-owned cooperative slice; reducing it changes search scheduling,
+    // never the candidate checks. Other callers retain their configured budget.
+    bool LimitAvoidSearchBudget(double seconds) {
+        if(ref_.points.empty() || avoid_committed() || !std::isfinite(seconds) ||
+           seconds<.005 || seconds>.25)return false;
+        avoid_cfg_.map_search_budget_s=std::min(seconds,avoid_cfg_.map_search_budget_s);return true;
+    }
+    // Opt-in caller envelope, before execution. Only conservative enlargement
+    // is accepted. Production callers keep their unchanged YAML geometry.
+    bool SetConservativeVehicleEnvelope(const VehicleShape& shape) {
+        if(ref_.points.empty() || avoid_committed() || !std::isfinite(shape.width+shape.length+shape.rear_overhang+shape.road_outer_width) ||
+           shape.width<vehicle_shape_.width || shape.length<vehicle_shape_.length ||
+           shape.rear_overhang<vehicle_shape_.rear_overhang ||
+           shape.length-shape.rear_overhang<vehicle_shape_.length-vehicle_shape_.rear_overhang ||
+           shape.road_outer_width<std::max(shape.width,vehicle_shape_.road_outer_width))return false;
+        vehicle_shape_=shape;return true;
+    }
     // Actual perception timestamp; empty frames carry time too.
     void SetObjectObservationTime(double time, double evaluation_time = -1) {
         object_observation_time_=time;
@@ -104,6 +142,10 @@ public:
 
     struct MergePrepareResult {
         bool candidate_valid = false, ready = false, maneuver_completed = false;
+        // Separate the nominal candidate (legacy feedback) from a complete
+        // departure checked against every currently supported occupancy.
+        bool departure_certified = false;
+        RoundaboutEntryStatus entry_status = RoundaboutEntryStatus::NOT_EVALUATED;
         // A checked PREPARE approach is usable even before a complete
         // departure fits the horizon. This never grants gap/COMMIT authority.
         bool waiting_path_valid = false;
@@ -112,6 +154,10 @@ public:
         double entry_time = -1, exit_time = -1, progress = 0;
         std::size_t generated = 0, valid = 0;
         int blocking_object_id = -1;
+        std::size_t retained_missing_objects=0, unverified_missing_objects=0;
+        double blocking_history_age=-1, blocking_path_time=-1, blocking_gap_shift=0;
+        std::string missing_status="none", missing_reason="none";
+        std::size_t missing_models_checked=0, missing_non_interference=0;
         CartesianPath candidate_path;
     };
     bool roundabout_merge_enabled() const { return roundabout_merge_cfg_.enabled && roundabout_zone_.valid; }
@@ -134,6 +180,7 @@ public:
     bool highway_merge_committed() const { return highway_committed_; }
     struct HighwayMergeResult {
         bool candidate_valid=false,ready=false,maneuver_completed=false;
+        bool forward_mitigation=false;
         std::uint64_t epoch=0;
         std::size_t generated=0,valid=0;
         double progress=0,transition_terminal_s=0;
@@ -231,6 +278,9 @@ public:
     //
     // s가 reference line 범위를 벗어나거나 결과가 유한하지 않으면 false.
     bool ReferenceHeadingAt(double s, double& out_heading) const;
+    // Read-only guide for the isolated position-tracking baseline. Uses the
+    // same loaded reference/topology; does not run candidate generation.
+    bool ReferencePoseAt(double s, CartesianState& pose) const;
 
     // Plan()이 반환하는 CartesianPath의 샘플 간격 [s] (params.yaml의 planner.dt).
     // MPC 쪽에서 이 값을 알아야 시간 기준으로 재샘플링해 궤적 추종(time-aligned
@@ -376,6 +426,22 @@ public:
     }
 
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
+    void SetShadowPaintExemption(bool value) { avoid_road_map_.SetPaintExemption(value); }
+    // Private localization instance only, during a verified lane-exempt zone.
+    // Predictions and physical road/body checks remain enabled.
+    void SetShadowDynamicBypass(bool value) { shadow_dynamic_bypass_=value; }
+    // Localization supplies its own physical envelope and verifies the final
+    // trajectory independently. Preserve its map search and road-body model;
+    // ordinary MORAI static recovery keeps its separate corridor proposals.
+    void SetShadowAvoidanceProfile(bool value) { shadow_avoidance_profile_=value; }
+    // Private shadow instance: align native search with final local sweep.
+    // NORMAL instances cannot use this override. Motion prediction stays active.
+    void SetShadowCollisionClearance(double margin) {
+        if(shadow_avoidance_profile_ && std::isfinite(margin) && margin>=0.) {
+            collision_cfg_.safety_margin=margin;
+            if(margin==0.) collision_cfg_.margin_growth_rate=0.;
+        }
+    }
     bool follow_release_pending() const { return v2_following_.release_pending; }
     const std::vector<CartesianPath>& last_candidate_paths() const {
         return last_candidate_paths_;
@@ -450,6 +516,32 @@ public:
         bool map_return_schedule_valid = false;
         double map_return_start_s = 0.0;
         double map_return_end_s = 0.0;
+        bool map_group_valid = false;
+        double map_group_end_s = 0.0;
+        CartesianPath spatial_geometry;
+        bool retained_geometry = false;
+        // Reconnect to the accepted reference each cycle; never recursively
+        // turn the latest ego connector into the next spatial reference.
+        bool retain_spatial_reference = false;
+        double static_geometry_time = -1;
+        double static_connector_distance = 0;
+        double static_return_distance = 0;
+        bool search_pending = false;
+        int static_search_pending_level=-1;
+        std::string static_corridor_kind;
+        std::string rejection_stage;
+        StaticAvoidPolicy::Mode static_progress_mode=StaticAvoidPolicy::NORMAL;
+        int static_progress_level=0;
+        double static_progress_margin=.45;
+        double static_contact_cost=0;
+        double static_minimum_clearance=std::numeric_limits<double>::infinity();
+        bool static_progress_fresh=false;
+        std::string static_recovery_rejection;
+        bool static_speed_recovery_active=false;
+        bool static_speed_retry=false;
+        double static_execution_speed_cap=0;
+        double static_next_speed_cap=0;
+        unsigned static_speed_proof_frames=0;
 
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
@@ -580,6 +672,7 @@ public:
     // v2 AVOID의 내부 실행 단계 이름. 진단·검증용 문자열이다. 내부 enum을
     // 공개하지 않기 위해 이름으로 돌려준다.
     const char* avoid_phase_name() const;
+    const char* avoid_side_policy_name() const;
 
     // 외부 AVOID 상태를 전부 비운다 (D6-3a).
     //
@@ -680,6 +773,8 @@ public:
     void ResetExternalLaneChange();
 
 private:
+    bool shadow_dynamic_bypass_ = false;
+    bool shadow_avoidance_profile_ = false;
     bool PlanInternal(const CartesianState& ego,
                       const std::vector<TrackedObject>& obstacles,
                       const PlannerCommand* external_command,
@@ -965,6 +1060,7 @@ private:
     std::shared_ptr<const asmc_planner::lane_reference::HdLaneMap> highway_prediction_map_;
     std::vector<std::shared_ptr<const asmc_planner::lane_reference::LaneReference>> highway_traffic_lanes_;
     bool highway_committed_=false;
+    std::unordered_map<const RefLine*,double> highway_lane_entry_times_;
     bool highway_returning_to_source_=false;
     int highway_unresolved_return_object_=-1;
     double highway_unresolved_return_stamp_=-1;
@@ -994,6 +1090,10 @@ private:
     std::uint64_t roundabout_epoch_ = 0;
     MergePrepareResult last_roundabout_result_;
 
+    void UpdateMapAvoidEntry(const CartesianState& ego, double s, double d, bool committed);
+    bool MapAvoidSideLocked(bool committed) const;
+    bool MapAvoidSideAllowed(double passage_d, bool committed) const;
+    bool CanReselectMapAvoidSide(bool committed) const;
     bool MapAvoidProcess(const CartesianState& ego, const FrenetState& start,
         double s, double d, double speed, const std::vector<TrackedObject>& obstacles,
         const PlannerCommand& command, bool prepare, bool committed,
@@ -1001,7 +1101,23 @@ private:
     bool PlanAvoidReconnection(const CartesianState& ego, double s, double d,
         double speed, double initial_a, const std::vector<TrackedObject>& obstacles,
         bool committed, CartesianPath& output, AvoidPrepareResult& result,
+        std::chrono::steady_clock::time_point deadline,
+        const StaticAvoidPolicy* policy=nullptr);
+    bool PlanStaticAvoidCorridor(const CartesianState& ego,double s,double d,
+        double speed,double initial_a,const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command,bool committed,AvoidPrepareResult& result,
+        std::chrono::steady_clock::time_point deadline,
+        const StaticAvoidPolicy* policy=nullptr);
+    bool PlanStaticAvoidRecovery(const CartesianState& ego,double s,double d,
+        double speed,double initial_a,const std::vector<TrackedObject>& objects,
+        const PlannerCommand& command,bool committed,AvoidPrepareResult& result,
         std::chrono::steady_clock::time_point deadline);
+    bool PlanStaticAvoidCreep(const CartesianState& ego,double s,double d,
+        double speed,double initial_a,const std::vector<TrackedObject>& objects,
+        const PlannerCommand& command,AvoidPrepareResult& result,
+        std::chrono::steady_clock::time_point deadline,const StaticAvoidPolicy& policy);
+    bool AcquireStaticAvoidGroup(double s,const std::vector<TrackedObject>& objects,
+        const PlannerCommand& command);
     bool AvoidProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -1050,16 +1166,56 @@ private:
         bool map_return_schedule_valid = false;
         double map_return_start_s = 0.0;
         double map_return_end_s = 0.0;
+        bool map_group_valid = false;
+        double map_group_end_s = 0.0;
+        CartesianPath map_spatial_geometry;
+        std::size_t map_corridor_cursor = 0;
+        unsigned map_search_turn = 0;
+        int static_progress_level=0;
+        // Recovery belongs to this finite maneuver, independent of tracker IDs.
+        bool static_group_recovery=false;
+        bool static_recovery_engaged=false;
+        bool static_contact_used=false;
+        StaticAvoidSpeedRecovery static_speed;
+        double static_speed_travel=0;
+        double static_speed_last_s=0;
+        bool static_progress_fresh=false;
+        std::size_t static_creep_cursor=0;
+        unsigned static_target_missing_cycles=0;
+        int static_search_level=1;
+        int static_normal_clear_cycles=0;
+        struct StaticSearchCursor {
+            std::size_t corridor=0,reconnection=0;
+            bool center_done=false,corridor_exhausted=false,reconnection_exhausted=false;
+        };
+        std::array<StaticSearchCursor,6> static_search_cursors{};
+        AvoidPrepareResult last_nominal;
+        // Only objects already inside the nominal margin at the beginning of
+        // this maneuver may use the static escape rule. Exit is irreversible.
+        bool margin_recovery_initialized = false;
+        std::vector<int> margin_recovery_ids;
+        struct MarginAnchor {
+            int id=-1;
+            double x=0,y=0,maximum=0;
+            bool physical=false,exited=false;
+        };
+        std::vector<MarginAnchor> margin_anchors;
+        double margin_axis_x=1,margin_axis_y=0;
         // Measured lateral motion, rather than the nominal SHIFT/PASS label,
         // locks the entry and side against changes during an actual bypass.
         // Before it starts, only NONE without a target pose may reselect a
         // blocked side; explicit FSM direction/pose remains authoritative.
         double map_lateral_origin_d = 0.0;
         bool map_lateral_started = false;
-        // A blocked, still-straight committed bypass may choose the other
-        // checked side once.  Further flips while moving undo the lateral
-        // progress and can leave the vehicle stopped beside the obstacle.
+        double map_lateral_slope = 0.0;
+        int map_entry_side = 0;  // +1 left / -1 right, latched on measured entry
+        // The one-reselection limit belongs to the legacy dynamic bypass.
+        // Static approaches keep both sides available until physical entry;
+        // a still-valid incumbent, rather than a flip counter, prevents churn.
         bool map_side_reselected = false;
+        // Enumeration exhaustion is valid only under the same side authority.
+        // Reopening a previously forbidden side resets search positions only.
+        unsigned map_search_side_mask = 0;
         // Enumeration progress only: no unchecked path/geometry crosses cycles.
         std::size_t map_search_cursor = 0;
         std::size_t map_reconnection_cursor = 0;
@@ -1075,6 +1231,7 @@ private:
         // failed plans invalidate it rather than advancing an unchecked path.
         bool map_speed_profile_valid = false;
         std::chrono::steady_clock::time_point map_speed_profile_at{};
+        double map_speed_profile_cap=0;
         // Keep an accepted spatial lateral profile through SHIFT/RETURN even
         // when launch speed crosses the normal generator boundary.
         bool spatial_lateral_active = false;
@@ -1092,8 +1249,8 @@ private:
         //
         // true이면 회피 방향과 target_d / start_d가 확정되며, 후보 생성은
         // 현재 target_d를 **정확히** 겨냥한다(lateral tolerance 0).
-        // geometry 기반 target_d는 새 OBB가 커질 때 같은 방향 바깥쪽으로만
-        // 확장될 수 있다. PREPARE에서는 항상 false다.
+        // Map execution changes the target only with a fully checked replacement.
+        // Observation refresh never widens an accepted map path by itself.
 
         // 저속 SHIFT에서 공용 margin-recovery 판정을 사용한 후보가
         // 승인되었는가. 이 값은 충돌 예외를 켜는 phase gate가 아니라,
@@ -1165,8 +1322,15 @@ private:
         const CartesianState& ego, double s, double d,
         double resolved_target_speed, CartesianPath& out_path,
         double duration_s = 2.0, bool* road_blocked = nullptr,
-        bool* actuation_blocked = nullptr, double minimum_path_distance = -1.0) const;
+        bool* actuation_blocked = nullptr, double minimum_path_distance = -1.0);
     bool KeepDepartureRoadClear(const CartesianPath& path) const;
+    // Shared only by low-speed KEEP and ordinary STOP partial departures.
+    // Re-entry remains active until the enlarged body has settled inside.
+    struct DepartureRoadRecovery {
+        bool active = false;
+        double last_x = 0.0, last_y = 0.0;
+        double settled_travel_m = 0.0;
+    } departure_road_recovery_;
 
     // FSM이 지정한 FOLLOW 대상의 확보 결과.
     enum class FollowTargetStatus {
@@ -1393,6 +1557,12 @@ private:
                                  CartesianPath& out_path, double service_decel,
                                  double target_d, double lateral_distance,
                                  bool recover_initial_state) const;
+    // A caller-owned collision certificate for the generated braking path.
+    // Ordinary STOP callers retain the original checker and road/kinematics.
+    bool PlanCollisionBrakingPathWithSafety(const CartesianState& ego,double s,double d,
+        const std::vector<TrackedObject>& obstacles,CartesianPath& out_path,
+        double service_decel,double target_d,double lateral_distance,bool recover_initial_state,
+        const std::function<bool(const CartesianPath&)>& safety) const;
 
     bool GenerateDecelToZeroPath(double s, double d, double s_dot,
                                  CartesianPath& out_path) const;
@@ -1492,6 +1662,7 @@ private:
     double object_evaluation_time_ = -1;
     std::unordered_map<int, ObjectTrack> object_tracks_{};
     RoundaboutPrediction roundabout_prediction_{};
+    double roundabout_physical_entry_time_=-1;
     bool roundabout_exit_prediction_active_=false;
     double roundabout_exit_prediction_until_=-1;
 };

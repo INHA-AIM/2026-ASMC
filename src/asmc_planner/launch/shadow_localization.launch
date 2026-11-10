@@ -1,0 +1,66 @@
+<launch>
+  <!-- Empty-scene position tracking baseline. One motion integrator (or an
+       existing pose source), shared GPS/IMU/LiDAR/bridge, one MPC. -->
+  <arg name="run_id"/>
+  <arg name="journal_path" default=""/>
+  <arg name="speed_cap_kph" default="20"/>
+  <arg name="enable_control" default="false"/>
+  <arg name="local_recovery" default="false"/>
+  <arg name="static_avoidance" default="false"/>
+  <arg name="dynamic_obstacles" default="false"/>
+  <arg name="shadow_lane_rules" default="false"/>
+  <arg name="mode_gated" default="false"/>
+  <arg name="smooth_handoff" default="false"/>
+  <arg name="integrated_normal_controller" default=""/>
+  <arg name="state_topic" default="/planning/localization/motion"/>
+  <arg name="motion_yaw_source" default="orientation"/>
+  <arg name="motion_reference_offset_m" default="1.4"/>
+  <arg name="motion_turn_gain_m2ps" default="1.54"/>
+  <arg name="start_motion" default="true"/>
+  <node if="$(arg start_motion)" pkg="asmc_planner" type="asmc_local_planner_node" name="localization_motion" output="screen" required="true">
+    <param name="odometry_only" value="true"/>
+    <param name="yaw_source" value="$(eval {'orientation': 'orientation', 'rate': 'rate'}[arg('motion_yaw_source')])"/>
+    <param name="input_reorder_tolerance_s" value="0.10"/>
+    <param name="reverse_tracking_limit_mps" value="0.15"/>
+    <param name="velocity_reference_offset_m" value="$(arg motion_reference_offset_m)"/>
+    <param name="velocity_turn_gain_m2ps" value="$(arg motion_turn_gain_m2ps)"/>
+    <param name="run_id" value="$(arg run_id)"/>
+    <remap from="/planning/local/odometry" to="$(arg state_topic)"/>
+  </node>
+  <node pkg="asmc_planner" type="asmc_shadow_localization_node" name="localization" output="screen" required="true">
+    <rosparam command="load" file="$(find planning_inputs)/config/vehicle_state.yaml"/>
+    <rosparam command="load" file="$(find asmc_planner)/config/shadow_localization.yaml"/>
+    <rosparam command="load" file="$(find asmc_planner)/config/jamming_motion.yaml"/>
+    <param name="wall_corridor_file" value="$(find asmc_planner)/config/shadow_localization/tunnel_wall_corridor_molitcomp03.json"/>
+    <param name="parameters" value="$(find asmc_planner)/config/frenet/params.yaml"/>
+    <param name="run_id" value="$(arg run_id)"/>
+    <param name="journal_path" value="$(arg journal_path)"/>
+    <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
+    <param name="state_topic" value="$(arg state_topic)"/>
+    <param name="local_recovery_enabled" value="$(arg local_recovery)"/>
+    <param name="static_avoidance" value="$(arg static_avoidance)"/>
+    <param name="dynamic_obstacles" value="$(arg dynamic_obstacles)"/>
+    <param name="shadow_lane_rules" value="$(arg shadow_lane_rules)"/>
+    <param name="mode_gated" value="$(arg mode_gated)"/>
+  </node>
+  <node pkg="asmc_controller" type="asmc_local_controller_node" name="localization_controller" output="screen" required="true">
+    <param name="experimental_speed_cap_ceiling_kph" value="20.0"/>
+    <!-- Normal positive acceleration only. Emergency stop and braking bounds
+         bypass this upper ceiling and retain their existing authority. -->
+    <param name="comfort_acceleration_limit_mps2" value="1.0"/>
+    <param name="comfort_acceleration_rise_rate_mps3" value="2.0"/>
+    <param name="bounded_standstill_rollback_mps" value="0.05"/>
+    <rosparam command="load" file="$(find asmc_controller)/config/local_controller.yaml"/>
+    <param name="speed_cost" value="24.0"/>
+    <param name="speed_cap_kph" value="$(arg speed_cap_kph)"/>
+    <param name="enable_control" value="$(arg enable_control)"/>
+    <param name="smooth_handoff" value="$(arg smooth_handoff)"/>
+    <param name="normal_controller_node" value="$(arg integrated_normal_controller)"/>
+    <param name="selector_node" value="/asmc_control_selector"/>
+    <param name="controller_config" value="$(find asmc_controller)/config/controller.yaml"/>
+    <remap from="/planning/local/odometry" to="$(arg state_topic)"/>
+    <remap from="/planning/local/trajectory" to="/planning/localization/trajectory"/>
+    <remap from="/planning/local/control_trace" to="/planning/localization/control_trace"/>
+    <remap from="/planning/local/control_diagnostics" to="/planning/localization/control_diagnostics"/>
+  </node>
+</launch>

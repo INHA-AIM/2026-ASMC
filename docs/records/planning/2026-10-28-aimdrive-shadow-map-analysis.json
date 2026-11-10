@@ -1,0 +1,258 @@
+{
+  "schema": "asmc_aimdrive_shadow_map_analysis_v1",
+  "analysis_date": "2026-10-28",
+  "analysis_branch": "research/shadow-aimdrive-localization-20261028",
+  "fork_source_branch": "feat/shadow-local-footprint",
+  "fork_commit": "6f416d466bc316a147b92c6da903c54f1bdf0071",
+  "working_changes_policy": "Forked committed HEAD only; original dirty changes and PR127 index were not moved, stashed, merged, or reset.",
+  "reference_repository": "INHA-AIM/AIMDrive",
+  "reference_remote_commit": "730eb8a4a2306ea1b5044ea741fcf308ae986795",
+  "reference_local_checkout_commit": "1606844179d0528c673e7a81a7820a980e2372bb",
+  "verified_reference_files": 36,
+  "reference_files": [
+    {
+      "path": "AIM2026/Expert/adapter.py",
+      "blob": "d47c29297c37849e5247a062b11ac8f4ee0b1d92",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/main.py",
+      "blob": "fda4cd2c9072bac2a815e8c4fa8e038c6478ee31",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/config/parameters/jamming.py",
+      "blob": "7a06d48466c4f043c8e7333e7c44194339302bab",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/README.md",
+      "blob": "9f18601f946546ac6a245ee4663769c3c4927673",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/__init__.py",
+      "blob": "2549b3b3f06d777a2a8a8b84f9489dcd6ed650d0",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/corridor.py",
+      "blob": "4fa4738c0de341816bbd23203f0aa34a2e4fdc36",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/dynamic_planner.py",
+      "blob": "8301383d956b2bde4c1daada32abcfa2455734b6",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/dynamic_recovery.py",
+      "blob": "8bfb7f127b6b26af524d6cb58d9e76761b6beed7",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/motion.py",
+      "blob": "b5f70eeabd314ddf6d4658be49e1713013f2b4c9",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/pedestrian_safety.py",
+      "blob": "da588814d822feb1e1e613eacfc6bdef735e0839",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/pedestrian_speed.py",
+      "blob": "11dc0aeb78840bc1a0df29f7161721ec2a9e2e3c",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/prepare_routes.py",
+      "blob": "d6737c96bc903840bce3c8a03e71b2de0a0f5b22",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/recorded_planner.py",
+      "blob": "884d01267193900090ec38bcc96b673f73669dba",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/road_boundary.py",
+      "blob": "72cad813f1be4a142d2c826f18d8418bef6c2411",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/jamming/section.py",
+      "blob": "b9a875033bd01a7730c9d65a0cb3ee604638ba1f",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/tunnel_map.py",
+      "blob": "0f4559afa4c8003f8b5e3a2758dcaec617017d49",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/__init__.py",
+      "blob": "4ee56be64abfd47115674276635a80c5dc961754",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/adapters.py",
+      "blob": "1c912c31a1cf07db5ba0046d4fafe93bbf124d69",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/config.yaml",
+      "blob": "ffd19e0fcac509d8a6a1c8ddf05d14cf741dd383",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/gps_aligned_hold.py",
+      "blob": "51e72c2b8a7bd1a597bf1b85482406da2b659b58",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/gps_blackout_hold.py",
+      "blob": "798ecf8f1671f9211571e15e012e971c4f7765ac",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/map_geometry.py",
+      "blob": "cc6f16f2d1a03907c7059b48a1e4e95b127aa14d",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/service.py",
+      "blob": "99c6140caa6e937e0e057fce8b3c1ebbbfe84122",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/tests/__init__.py",
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/tests/support.py",
+      "blob": "cee76cbf2f5c95fdcdaef806d6831eb7df6b3789",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/tests/test_localization_aligned_hold.py",
+      "blob": "7d4b2882f7b3f2f80ffbbb14951aa86c90f1dfcc",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/tests/test_localization_blackout_hold.py",
+      "blob": "250aec2d2ac6656ca6625e971c8122a7b2c736f2",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Localization/tests/test_localization_service.py",
+      "blob": "52a5757f6bf5549b25bd870bbb474c11a3b1573e",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/UDP/Manager.py",
+      "blob": "493ffd2b2709af2bb3703792c20642e0a9531d97",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/UDP/Pose.py",
+      "blob": "30293013167548a626159a4a4445bb665074b97e",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/UDP/GPS.py",
+      "blob": "b4970bf871b1135ffe429ef2f5b3a969332a762a",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/config.yaml",
+      "blob": "69e4b01dd4e1d57526841424aa7546ae43e6bf3e",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/runtime.py",
+      "blob": "a3c0b94ea7bf193780e842ea19f07dd465ea4c34",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/GPSJamming/README.md",
+      "blob": "71d1050855d451f40c50b574b951ebf155301768",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/static_obstacle/corridor_optimizer.py",
+      "blob": "aba0589ea92db1033bdfc94fd9bc0d5cecebaaed",
+      "local_blob_matches_remote": true
+    },
+    {
+      "path": "AIM2026/Expert/src/planning/static_obstacle/recorded_planner.py",
+      "blob": "316118eb0ba5837e88a040aeda7b64d65f0070e7",
+      "local_blob_matches_remote": true
+    }
+  ],
+  "reference_checks": {
+    "scope": "Original MotionTrack/forward_vector loaded directly from the pinned external checkout; synthetic inputs only.",
+    "passed": 7,
+    "cases": [
+      "forward",
+      "reverse",
+      "absolute_heading",
+      "meridian_convergence",
+      "pitch_projection",
+      "source_time_under_receipt_jitter",
+      "invalid_source_interval_refusal"
+    ],
+    "full_service_or_closed_loop_test": false,
+    "ros_connection": false,
+    "bag_replay": false,
+    "simulator_control": false,
+    "new_sensor_collection": false
+  },
+  "map_correspondence": {
+    "frame": "map; UTM52N relative origin [302595.0, 4124145.0, 0.0]",
+    "route_link": "A2256W000126",
+    "opposite_link": "A2256W000131",
+    "route_centerline_length_m": 118.99,
+    "route_endpoints_xy": [
+      [
+        29.5894,
+        -487.6503
+      ],
+      [
+        -74.8607,
+        -544.578
+      ]
+    ],
+    "reference_test_blackout_endpoints_xy": [
+      [
+        29.589355843083467,
+        -487.65027253562585
+      ],
+      [
+        -74.86074459552765,
+        -544.5780326710083
+      ]
+    ],
+    "blackout_rectangle_is_test_only": true
+  },
+  "analytical_sensitivity_not_measured_performance": {
+    "distance_m": 120,
+    "constant_heading_error_lateral_m": {
+      "0.1_deg": 0.20943940390779706,
+      "0.5_deg": 1.0471842598048722,
+      "1.0_deg": 2.0942887724740213
+    },
+    "speed_scale_1_percent_longitudinal_m": 1.2,
+    "age_185_ms_at_25_kmh_distance_m": 1.2847222222222223
+  },
+  "integration_blockers": [
+    "Raw GPS validity and estimated pose validity must be separate: map_pose.valid currently also controls tunnel preprocessing.",
+    "GPS-invalid canonical map output is intentionally empty; need an isolated qualified estimated-map object adapter.",
+    "Current NORMAL/JAMMING selector will not accept normal planner control while JAMMING; do not spoof GPS to bypass it.",
+    "Dynamic policy route_links exclude A126; absolute velocity and uncertainty must be qualified before prediction reuse.",
+    "AIM aligned hold requires zero GPS/IMU mount; current GPS rear-axle lever is 0.35m and must be adapted.",
+    "Map-only hard clipping with 0.10m margins is not justified by existing 35m relative drift evidence."
+  ],
+  "status": "Analysis and source reference checks only; no runtime implementation or deployment."
+}

@@ -88,6 +88,7 @@ struct StopRequest {
     double cruise_speed = 0.0;
     double acceleration_limit = 0.0; // zero keeps the generator default
     bool allow_partial_horizons = false;
+    bool complete_profile = false; // explicit partial-departure return witness
     // STOP 계열은 정지 목표를 지나치지 않도록 delta_s 범위를 제한한다.
     // R5부터 GenerateRequestedCandidates(CandidateCombiner.cpp)가 이 값을
     // 직접 읽어 종방향 후보를 만든다 - 호출자(Keep.cpp)가

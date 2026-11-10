@@ -40,12 +40,14 @@ class ReplayEnvironment:
 
 
 def crossing_plan(definition,state=None):
-    d=copy.deepcopy(definition);start=d['start'];finished=False;started=False
+    d=copy.deepcopy(definition);start=d['start']
+    finished=math.dist(start,d['end'])<=.05 or d['cfg']['walk_speed_kmh']<=0
+    started=False
     if state:
         pose=state['pose'];point=[pose['x'],pose['y'],pose['z']]
         moved=math.dist(point[:2],start[:2])
         if moved>.1:
-            start=point;finished=math.dist(point[:2],d['end'][:2])<=.4;started=not finished
+            start=point;finished=finished or math.dist(point[:2],d['end'][:2])<=.4;started=not finished
     return S(cfg=d['cfg'],models=[(d['group'],d['model'])],start=start,end=d['end'],
              heading_deg=d['heading_deg'],move_distance=math.dist(start,d['end']),
              direction_label=d['direction'],timing=d.get('timing',{}),
@@ -58,6 +60,12 @@ class ReplaySection(Section):
         self.definition=copy.deepcopy(definition);self.baseline=list(self.definition['baseline'])
         self.events=sorted(self.definition.get('events',[]),key=lambda e:(e['time_s'],e['action']=='spawn'))
         self.next_event=0;self.by_key={};self.plans={};self.tickets=[];self.pending=None;self.started=None
+
+    def ready_live(self, states):
+        if (self.definition.get('allow_empty_scene') is True and
+                self.definition.get('baseline')==[] and not self.events):
+            return not self.actors
+        return super().ready_live(states)
 
     def vehicle_cfg(self,definition,state):
         cfg=copy.deepcopy(definition['cfg'])
@@ -95,6 +103,10 @@ class ReplaySection(Section):
         elif d['type']=='crossing':
             plan=crossing_plan(d,state)
             aid=self.link.spawn_crossing(plan,with_route=False);actor=self.register_replay(record,aid)
+            # Perception warmup can last longer than a short native crossing.
+            # Keep the owned actor at the saved start until its route is ready;
+            # never let it finish/despawn before control is released.
+            self.link.pause_actor(aid,2,True)
             self.plans[actor.request_id]=plan
         elif d['type']=='vehicle':
             cfg=self.vehicle_cfg(d,state);plan=S(cfg=cfg,period=d.get('period_s') or 1.)
@@ -148,6 +160,7 @@ class ReplaySection(Section):
             elif actor.kind==2:
                 plan=self.plans[actor.request_id]
                 if not plan.replay_finished:self.link.register_crossing(actor.native_id,plan)
+                self.link.pause_actor(actor.native_id,2,plan.replay_finished or getattr(plan,'hold_at_start',False))
                 plan.registered=True
 
     def register_live_crossings(self,states):
@@ -157,11 +170,12 @@ class ReplaySection(Section):
                 plan=self.plans[actor.request_id]
                 if not getattr(plan,'registered',False) and actor.native_id in live:
                     if not plan.replay_finished:self.link.register_crossing(actor.native_id,plan)
+                    self.link.pause_actor(actor.native_id,2,plan.replay_finished or getattr(plan,'hold_at_start',False))
                     plan.registered=True
 
-    def tick(self):
+    def tick(self,states=None):
         if self.cancelled():return
-        states=self.link.states()
+        if states is None:states=self.link.states()
         self.map_statics();self.register_live_crossings(states)
         if not self.bind_pending(states):return
         if self.next_event>=len(self.events):return

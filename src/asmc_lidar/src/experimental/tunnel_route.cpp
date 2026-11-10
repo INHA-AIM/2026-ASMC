@@ -204,6 +204,10 @@ TunnelRoute::TunnelRoute(const TunnelRouteConfig& config):config_(config),core_(
      !std::isfinite(c.depth_front_margin_m) ||
      !std::isfinite(c.depth_ref_percentile) ||
      !std::isfinite(c.ambiguous_max_range_m))throw std::invalid_argument("non-finite tunnel parameter");
+  if(p.sparse_cluster_min_points<2 || !std::isfinite(p.sparse_cluster_wall_clearance_m) ||
+     p.sparse_cluster_wall_clearance_m<0 ||
+     (p.sparse_cluster_enable && p.sparse_cluster_min_points>=p.cluster_min_points))
+    throw std::invalid_argument("invalid sparse cluster parameters");
   if(p.roi_min_x_m>=p.roi_max_x_m||p.roi_min_y_m>=p.roi_max_y_m||p.roi_min_z_m>=p.roi_max_z_m||
      p.cluster_tolerance_m<=0||p.cluster_min_points<1||p.cluster_max_points<p.cluster_min_points||
      p.wall_bin_size_m<=0||p.ground_mode_bin_m<=0||p.wall_min_persist_frames<1||
@@ -249,7 +253,8 @@ bool TunnelRoute::InsideCurrentWalls(const TrackedObject& object,float margin) c
   return true;
 }
 TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& local,std::int64_t stamp,
-                                       const VehicleSpec& vehicle,const TunnelCameraInput* camera,const tunnel_filter::EgoMotion* integrated_motion) {
+                                       const VehicleSpec& vehicle,const TunnelCameraInput* camera,const tunnel_filter::EgoMotion* integrated_motion,
+                                       const CloudPtr& measured_vehicle_support,float vehicle_match_m) {
   if(!active_||!voxel)throw std::invalid_argument("inactive/null tunnel route");
   tunnel_filter::EgoMotion motion;
   if(!config_.integrated_motion && anchor_valid_&&local.st_IMU.b_ImuReady) {
@@ -265,7 +270,7 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   std::vector<std::uint8_t> protect,ambiguous;
   TunnelCameraInput compensated;
   const TunnelCameraInput* protection_camera=camera;
-  if(config_.protection.motion_compensated_fallback&&camera&&camera->low_obstacle_camera) {
+  if(updates_allowed_&&config_.protection.motion_compensated_fallback&&camera&&camera->low_obstacle_camera) {
     const auto* causal=camera->low_obstacle_camera.get();
     // The original protection enum cannot represent every mission class. Do
     // not turn off ambiguity protection around steel/low obstacles it cannot
@@ -292,6 +297,13 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   }
   const auto protection_start=std::chrono::steady_clock::now();
   Protection(*voxel,vehicle,protection_camera,config_.protection,protect,ambiguous);
+  if(measured_vehicle_support&&!measured_vehicle_support->empty()) {
+    pcl::search::KdTree<pcl::PointXYZI> tree;tree.setInputCloud(measured_vehicle_support);
+    std::vector<int> near(1);std::vector<float> distance(1);
+    for(std::size_t i=0;i<voxel->size();++i)
+      if(tree.nearestKSearch(voxel->at(i),1,near,distance)==1&&distance[0]<=vehicle_match_m*vehicle_match_m)
+        protect[i]=tunnel_filter::kProtectCar;
+  }
   const double protection_ms=std::chrono::duration<double,std::milli>(
     std::chrono::steady_clock::now()-protection_start).count();
   const bool available=config_.protection.enabled&&protection_camera&&
@@ -301,7 +313,7 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
        return v.calibrated&&v.available&&(!v.still_current||v.still_current());}));
   const auto& f=core_.Process(*voxel,local.st_IMU.f32_Roll_rad,local.st_IMU.f32_Pitch_rad,&protect,&ambiguous,available,&motion);
   TunnelRouteOutput out;out.leveled=f.leveled;out.kept_indices=f.kept_indices;
-  const auto low_evidence=LowObstacleEvidence(*voxel,f,vehicle,stamp,camera,config_);
+  const auto low_evidence=updates_allowed_?LowObstacleEvidence(*voxel,f,vehicle,stamp,camera,config_):std::vector<LowObstacleHint>(f.clusters.size());
   for(int i:f.kept_indices)out.filtered->push_back(f.leveled->points[i]);
   std::vector<int> compact(f.leveled->size(),-1);
   for(std::size_t k=0;k<f.kept_indices.size();++k)compact[f.kept_indices[k]]=k;
@@ -310,6 +322,7 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   std::vector<bool> structure_removed(f.leveled->size(),false);
   bool has_structure_removed=false;
   int structure_wall_points=0,structure_ground_points=0,structure_ceiling_points=0,structure_ground_objects=0;
+  const float effective_cluster_z=updates_allowed_?config_.cluster_z.min_sensor_z_m:TunnelClusterZConfig{}.min_sensor_z_m;
   for(std::size_t c=0;c<f.clusters.size();++c) {
     const auto& flags=f.objects.at(c).flags;
     const bool low_verified=!low_evidence[c].source_class.empty();
@@ -317,7 +330,7 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
     double sensor_z=0;
     for(int i:f.clusters[c].indices)sensor_z+=voxel->points.at(i).z;
     const bool below_z=config_.cluster_z.enabled && !f.clusters[c].indices.empty() &&
-        sensor_z/f.clusters[c].indices.size()<config_.cluster_z.min_sensor_z_m;
+        sensor_z/f.clusters[c].indices.size()<effective_cluster_z;
     const bool rescued=low_verified && (below_z || (flags.removed&&flags.ground_residual));
     if(rescued) {
       ++out.report.low_obstacle_rescued;
@@ -413,7 +426,7 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
           sensor_z+=voxel->at(out.kept_indices.at(compact_index)).z;
         }
         const float count=cluster.indices.size();
-        if(config_.cluster_z.enabled&&sensor_z/count<config_.cluster_z.min_sensor_z_m)continue;
+        if(config_.cluster_z.enabled&&sensor_z/count<effective_cluster_z)continue;
         center.x/=count;center.y/=count;center.z/=count;
         out.report.boundary_rescued_points+=cluster.indices.size();++out.report.boundary_rescued_clusters;
         out.clusters.push_back(std::move(cluster));out.centroids->push_back(center);out.protected_classes.push_back("unknown");
@@ -441,7 +454,7 @@ TunnelRouteOutput TunnelRoute::Process(const CloudPtr& voxel,const LocalState& l
   };
   out.report.wall_left_state=state(f.walls[0]);out.report.wall_right_state=state(f.walls[1]);
   out.report.cluster_z_enabled=config_.cluster_z.enabled;
-  out.report.cluster_z_min_sensor_m=config_.cluster_z.min_sensor_z_m;
+  out.report.cluster_z_min_sensor_m=effective_cluster_z;
   out.report.ground_fallback_used=f.ground_fallback_used;
   out.report.wall_left_removal_allowed=f.walls[0].removal_allowed;
   out.report.wall_right_removal_allowed=f.walls[1].removal_allowed;

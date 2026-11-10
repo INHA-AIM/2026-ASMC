@@ -177,6 +177,12 @@ SpeedProfileOutput Advance(double speed, double acceleration,
 
 }  // namespace
 
+SpeedProfileOutput AdvancePhysicalSpeed(const SpeedProfileInput& input,
+                                        const SpeedProfileLimits& limits) {
+    return Advance(input.ego_speed, input.ego_acceleration, input.raw_speed_cap,
+                   input.dt, limits);
+}
+
 SpeedProfileOutput SpeedProfiler::Preview(
     const SpeedProfileInput& input, const SpeedProfileLimits& limits) const {
     const double initial_speed = initialized_

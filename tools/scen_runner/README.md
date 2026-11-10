@@ -1,6 +1,6 @@
 # scen_runner — 전체 씬·단일 구간 검증
 
-카메라 실행은 `asmc_camera/camera.launch`, LiDAR 실행은 `asmc_lidar/lidar.launch`를 사용한다. 카메라는 공용 관측을 발행하고 LiDAR가 전방 matching/fusion을 담당한다. 카메라 설정은 카메라 패키지가 소유하며 [LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다.
+카메라 실행은 `asmc_camera/camera.launch`, LiDAR 실행은 `asmc_lidar/lidar.launch`를 사용한다. 카메라는 공용 관측을 발행하고 LiDAR가 3뷰 matching/fusion을 담당한다. 카메라 설정은 카메라 패키지가 소유하며 [LiDAR 인계](../../docs/handoffs/camera-to-lidar.md)를 따른다.
 
 MORAI에 객체·환경을 배치하고 ego의 준비 정지, 충돌/도착/정체에 따른 다음 주행과 최종 시작점 복귀를 처리한다. `run_validation.sh`는 기존처럼 키보드 또는 외부 제어기를 사용한다. `run_scenario.sh`는 별도 판제 실행기와 연동하여 리스폰마다 판제·MPC를 재시작하고 준비를 확인한다. 시나리오 자체는 `/ctrl_cmd`를 발행하지 않는다.
 
@@ -169,6 +169,10 @@ ROS 노드·MORAI 주행을 시작하지 않고 구성과 실행 파일만 검�
 
 ## 실행
 
+음영구간의 센서·판단 동시 기록과 모델별 반복은
+[등록 run 녹화 안내](docs/shadow-recording.md)를 따른다. 일반 시나리오 실행은 기존과 같으며,
+`--recording-spec`을 지정할 때만 ROS bag을 추가로 저장한다.
+
 WSL에서 기존 컨테이너를 시작하고 들어간다.
 
 ```bash
@@ -259,6 +263,12 @@ max_sample_gap_s: 5.0
 날씨/시간은 Sunny/Foggy × 11/13/15시의 6가지에서 고르며 직전 **조합 하나만** 다음 선택에서 제외한다. 전체 씬은 시작과 체크포인트 통과 시, 단일 구간은 매 주행 시작 시 변경한다. Foggy Density/Distance는 따로 지정하지 않는다. 객체 난수와 환경 난수는 분리하며 `checkpoint_environment.yaml`의 좌표 보정을 유지한다.
 
 ## 충돌·정체 저장과 재현
+
+정적 회피 접촉 허용 시험은 `run_scenario.sh --mode section --section static
+--continue-on-static-contact`로 실행한다. 현재 실행에 등록된 정적 미션 고정
+장애물(kind 3)의 접촉을 저장하면서 회차를 계속한다. 차량·보행자와 기타 구간
+접촉, 기본 옵션의 충돌 종료는 유지한다. 접촉을 무충돌 완주로 집계하는 옵션이
+아니므로 실제 접촉 기록과 완주 여부를 함께 비교한다.
 
 기본 저장은 항상 켜져 있다. ego/객체를 옮기거나 삭제하기 전에 구간 설정·seed·실제 상태·날씨/시뮬레이터 시간·UTC/KST 감지 시각·생성/삭제 이력·구간 진입 상태를 복사한다. 파일 쓰기는 별도 스레드가 처리한다. 현재 구간 밖의 정체는 다음 생성 구간 또는 가장 가까운 이전 구간을 선택하고 실제 경로 위치·선택 방식을 함께 남긴다.
 
@@ -473,3 +483,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w tools/scen
 실제 MORAI 주행 성공·충돌 재현은 오프라인 검사와 구분해 확인한다. 의존성은 `requirements.txt`와 기존 저장소 gRPC SDK이며, 컨테이너가 이미 준비됐다면 별도 진입 스크립트를 설치할 필요는 없다.
 
 통합·단일 구간 실행에 불필요한 개별 생성 GUI, 경로 추종/PID 시험기, 벤치마크·범위 PNG 생성기, 과거 진단 실행기는 제거했다. 개인 `.logs/`, `.runtime/`, `save_collision_log/`, 이전 개별 실행의 저장 배치 `layouts/`, 빌드 `dll/builds/`, 소스 정리 전 로컬 백업 `.archive/`는 Git에서 제외한다.
+
+### 공유 IMU semantic 경로 실험
+
+PR #126의 내부 후보는 [S3 실행·복구와 한계](../../docs/records/planning/2026-10-28-shadow-semantic-space.md)를 따른다. 기본 판제 정책은 변경하지 않는다. `analyze_semantic`은 exact source grid/family/RGB 갤러리를 생성하며, 관측 불가를 무장애 영역으로 표시하지 않는다.

@@ -126,7 +126,8 @@ class DynamicSection(Section):
 class TunnelSection(Section):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.plan = TunnelPlan(self.seed, catalog=live_static_catalog(self.link))
+        self.plan = TunnelPlan(self.seed, catalog=live_static_catalog(self.link),
+                               **self.base.get('tunnel_profile',{}))
         self.spawned = False
         self.route_registered=False
 

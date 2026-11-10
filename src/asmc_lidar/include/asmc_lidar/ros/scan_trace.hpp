@@ -84,6 +84,7 @@ void RowMajor(std::ostream& out, const Matrix& m) {
 
 // <object>: idx, core, min, max, dist, points, obb, corners (no braces).
 inline void ObjectFields(std::ostream& out, const pipeline::TrackedObject& o) {
+  out << "\"measured_vehicle_track_id\":" << o.detection.measured_vehicle_track_id << ',';
   const auto& cs=o.detection.camera_point_support;
   out << "\"camera_point_support\":{\"stamp_ns\":" << cs.stamp_ns
       << ",\"epoch\":" << cs.epoch << ",\"box_index\":" << cs.box_index << ",\"identity\":";
@@ -339,6 +340,10 @@ struct LineInput {
 
 inline void Tunnel(std::ostream& out,const pipeline::TunnelFilterStageReport& t) {
   out << "{\"ran\":";Bool(out,t.ran);
+    out << ",\"pre_entry_wall\":";Bool(out,t.pre_entry_wall);
+    out << ",\"wall_gate_reason\":\""<<t.wall_gate_reason<<"\",\"route_station_m\":";Num(out,t.route_station_m);
+    out << ",\"entry_distance_m\":";Num(out,t.entry_distance_m);
+    out << ",\"route_lateral_m\":";Num(out,t.route_lateral_m);
   out << ",\"low_obstacle_verified\":" << t.low_obstacle_verified
       << ",\"low_obstacle_rescued\":" << t.low_obstacle_rescued
       << ",\"low_obstacle_rescued_points\":" << t.low_obstacle_rescued_points
@@ -350,6 +355,7 @@ inline void Tunnel(std::ostream& out,const pipeline::TunnelFilterStageReport& t)
     out << "],\"temporary_class\":";Str(out,t.low_obstacle_decisions[i].second);out << '}';
   }
   out << ']';
+  out << ",\"updates_active\":";Bool(out,t.updates_active);
   out << ",\"ground_removed\":" << t.ground_labeled << ",\"wall_removed\":" << t.wall_labeled
       << ",\"removed\":" << t.removed_points
       << ",\"left_allowed\":";Bool(out,t.wall_left_removal_allowed);
@@ -513,11 +519,23 @@ inline std::string Line(const LineInput& in) {
         if(i)out << ',';
         const auto& d=cr.decisions[i];
         out << "{\"box\":" << d.box << ",\"class\":";Str(out,d.source_class);
+        out << ",\"camera_id\":";Str(out,d.camera_id);
         out << ",\"reason\":";Str(out,d.reason);
         out << ",\"input_points\":" << d.input_points << ",\"object_points\":" << d.object_points
             << ",\"wall_points\":" << d.wall_points << ",\"components\":" << d.components
             << ",\"scanline_groups\":" << d.scanline_groups << ",\"depth_m\":";
         Num(out,d.depth_m);out << '}';
+      }
+      out << "],\"views\":[";
+      for(std::size_t i=0;i<cr.views.size();++i) {
+        if(i)out << ',';
+        const auto& v=cr.views[i];
+        out << "{\"camera_id\":";Str(out,v.camera_id);out << ",\"reason\":";Str(out,v.reason);
+        out << ",\"image_stamp_ns\":" << v.image_stamp_ns << ",\"projection\":[";
+        for(std::size_t j=0;j<v.projection.size();++j){if(j)out << ',';Num(out,v.projection[j]);}
+        out << "],\"applied\":";Bool(out,v.applied);
+        out << ",\"projected_points\":" << v.projected_points << ",\"extracted_objects\":" << v.extracted_objects
+            << ",\"removed_wall_points\":" << v.removed_wall_points << '}';
       }
       out << "]}";
       if (in.debug) {

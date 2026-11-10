@@ -38,8 +38,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install contract parser
-        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.2
+      - name: Install contract dependencies
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.2 numpy==1.26.4
       - name: Check essential contracts and Python syntax
         run: bash .github/ci/essential-contracts.sh
 

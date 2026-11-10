@@ -2,6 +2,7 @@
 #include <iostream>
 #include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
 #include <cmath>
+#include "Frenet/Maneuver/Merge/RoundaboutDeparture.hpp"
 int main(){
  int failures=0;auto expect=[&](bool ok,const char* name){std::cout<<(ok?"[PASS] ":"[FAIL] ")<<name<<'\n';failures+=!ok;};
  RoundaboutMergeZone zone;zone.valid=true;zone.conflict_areas={{{20,-2},{40,-2},{40,2},{20,2}}};
@@ -65,5 +66,84 @@ int main(){
  bounded={body};bounded.insert(bounded.end(),envelope.begin(),envelope.end());
  expect(envelope.size()==1&&check(path,bounded).safe,
   "clear remembered body can certify departure without requiring a new full-size view");
+ {
+  RoundaboutPrediction missed;auto approaching=box(98,30,32.8,0);
+  approaching.length=4.5;approaching.width=1.9;approaching.vx=0;approaching.vy=-4;
+  approaching.motion_state=ObjectMotionState::DYNAMIC;
+  for(int step=0;step<8;++step){approaching.y=32.8-.4*step;
+   for(int k=0;k<8;++k)approaching.corners[k]={30+(k%4<2?-.95:.95),
+       approaching.y+(k%2?-2.25:2.25),double(k/4)};
+   missed.Observe({approaching},1100+.1*step,1,5);
+  }
+  missed.Observe({},1100.8,1,5);
+  expect(missed.UncertainNear(20,0)<0,"approaching vehicle lies outside the old fixed proximity gate");
+  auto evidence=missed.MissingDepartureOccupancies(1100.8,[](double,double){return true;},6,3,1);
+  std::vector<TrackedObject> models;for(const auto& e:evidence)models.insert(models.end(),e.models.begin(),e.models.end());
+  const auto rejected=check(path,models);
+  expect(!models.empty()&&!rejected.safe&&rejected.blocking_object_id==98,
+      "missing vehicle outside the old gate still blocks a future crossing on the complete path");
+  for(auto& model:models){model.y+=100;for(auto& c:model.corners)c.y+=100;
+      if(model.prediction_origin){auto origin=std::make_shared<TrackedObject>(*model.prediction_origin);origin->y+=100;for(auto& c:origin->corners)c.y+=100;model.prediction_origin=origin;}}
+  expect(check(path,models).safe,"a separated missing occupancy does not veto a safe traversal");
+ }
+
+ {
+  RoundaboutPrediction history;
+  auto fragment=box(110,100,0,0);fragment.length=1;fragment.width=.3;
+  fragment.vx=5;fragment.vy=0;fragment.motion_state=ObjectMotionState::DYNAMIC;
+  for(int step=0;step<8;++step) {
+   fragment.x=100+.5*step;
+   for(int k=0;k<8;++k)fragment.corners[k]={fragment.x+(k%4<2?-.5:.5),
+       k%2?-.15:.15,.02*(k/4)};
+   history.Observe({fragment},1300+.1*step,1,5);
+  }
+  history.Observe({},1300.8,1,5);
+  auto missing=history.MissingDepartureOccupancies(1300.85,
+      [](double,double){return false;},6,3,1,20,0);
+  expect(missing.size()==1&&missing[0].motion_supported&&!missing[0].body_supported&&
+      missing[0].models.empty()&&!missing[0].relevance_models.empty(),
+      "verified departing motion can supply relevance bounds without forging mapped or whole-body support");
+  auto check_missing=[&](const CartesianPath& candidate) {
+   return CheckMissingRoundaboutDeparture(candidate,zone,missing,shape,collision,.1,1.5,2);
+  };
+  const auto safe=check_missing(path);
+  expect(safe.safe&&safe.non_interference_proven==1&&safe.blocking_id<0,
+      "all conservative departing-fragment hypotheses clear a separated complete candidate");
+  bool envelope=false,aligned=false;
+  for(const auto& model:missing[0].relevance_models) {
+   envelope|=model.length>=12.5&&model.width>=6.5;
+   if(std::fabs(model.yaw_rate)<1e-9)aligned|=std::fabs(model.x-104.25)<1e-6&&
+       std::fabs(model.prediction_origin_offset_s-.15)<1e-6;
+  }
+  expect(envelope&&aligned,"relevance body bounds fragment-centre uncertainty and aligns only once");
+  auto other=path;
+  const auto collision_pose=PredictTrackedObjectPose(missing[0].relevance_models.front(),2);
+  other.x[20]=collision_pose.x;other.y[20]=collision_pose.y;
+  const auto rejected=check_missing(other);
+  expect(!rejected.safe&&rejected.blocking_id==110&&rejected.time>=0&&
+      std::string(rejected.status)=="potential_conflict",
+      "a safe candidate does not exempt the same missing vehicle on another colliding candidate");
+  expect(check_missing(path).safe,"a rejected candidate leaves no stale blocker on a later safe candidate");
+  const auto toward=history.MissingDepartureOccupancies(1300.85,
+      [](double,double){return false;},6,3,1,200,0);
+  expect(toward.size()==1&&toward[0].relevance_models.empty()&&
+      !CheckMissingRoundaboutDeparture(path,zone,toward,shape,collision,.1,1.5,2).safe,
+      "body-less approaching motion cannot use a departing-vehicle relevance exemption");
+  history.Reset();fragment.id=10;history.Observe({fragment},1400,1,5);
+  history.Observe({},1400.05,1,5);
+  auto single=history.MissingDepartureOccupancies(1400.05,
+      [](double,double){return false;},6,3,1,20,0);
+  const auto unknown=CheckMissingRoundaboutDeparture(path,zone,single,shape,collision,.1,1.5,2);
+  expect(single.size()==1&&single[0].observations==1&&single[0].relevance_models.empty()&&
+      !unknown.safe&&unknown.blocking_id==10&&std::string(unknown.reason)=="motion_insufficient",
+      "single low partial ID 10 cannot acquire confidence or a size-based exemption");
+  history.Reset();fragment.velocity_unavailable=true;history.Observe({fragment},1500,1,5);
+  history.Observe({},1500.05,1,5);
+  const auto unavailable=history.MissingDepartureOccupancies(1500.05,
+      [](double,double){return false;},6,3,1,20,0);
+  expect(unavailable.size()==1&&unavailable[0].relevance_models.empty()&&
+      std::string(unavailable[0].reason)=="velocity_missing",
+      "unavailable velocity is distinct from missing body evidence and cannot be extrapolated");
+ }
  return failures?1:0;
 }

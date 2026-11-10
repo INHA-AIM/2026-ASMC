@@ -142,3 +142,14 @@ accepts an explicit `--lidar-reset-service /migration/lidar/lidar_pipeline/reset
 The caller must own that trial node; no service is guessed and the option is off
 by default. It resets after settling at the new pose and again after restoration.
 Normal sensor invalidity/collisions do not cause automatic resets.
+
+
+## Short LOCAL-1 motion feasibility probe
+
+`short_dr_probe.cpp` directly calls the current local MotionHistory. It is an
+optional offline executable with no ROS/control publisher, built as documented in
+[the DR pilot](../../../docs/records/planning/2026-10-28-local-timing-and-dr-pilot.md).
+`../audit_short_dr.py` compares the same recorded inputs with an explicitly pinned
+external AIMDrive numeric core. The external checkout is not a runtime or CI
+requirement. `local_policy_probe.cpp` calls the current planner for synthetic
+speed/hood/OBB policy sensitivity; its all-free grid is not real-world free space.

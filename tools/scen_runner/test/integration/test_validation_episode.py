@@ -42,6 +42,19 @@ class EpisodeTest(unittest.TestCase):
         self.assertEqual(ended[0]['episode'],1)
         self.assertGreater(ended[0]['elapsed_s'],150.)
 
+    def test_static_contact_continuation_records_contacts_and_mobile_contacts_end_run(self):
+        e,l,r=self.engine('section','static');e.begin(1);self.prepare(e)
+        aid=next(iter(e.owned));owner=e.id_owners[aid]
+        owner.actors=[S(native_id=aid,kind=3)]
+        e.continue_on_static_contact=True;e.on_collision=Mock()
+        sample=self.contact_sample(e,aid);sample['actor_states'][1].actor_info.object_type=3
+        self.assertFalse(e.contact(sample))
+        self.assertFalse(e.collision_requested);e.on_collision.assert_called_once()
+        e.contact(dict(self.contact_sample(e,aid),contacts=[]))
+        owner.actors[0].kind=1
+        self.assertTrue(e.contact(self.contact_sample(e,aid)))
+        self.assertTrue(e.collision_requested)
+
     def test_background_signal_failure_holds_ego_during_driving(self):
         e,l,r=self.engine('section','dynamic')
         e.begin(1);self.prepare(e)
@@ -193,6 +206,9 @@ class EpisodeTest(unittest.TestCase):
         wire_link=EpisodeLink(load_config());stub=Mock()
         for name in ['SetPause','SetVelocity','SetVehicleGear']:
             getattr(stub,name).return_value=S(status=1)
+        stub.GetActorState.return_value=S(actor_info=S(id=S(value='Ego')),
+            transform=S(location=S(x=0.,y=0.),rotation=S(z=0.)),
+            bounding_box=S(location=S(x=1.5,y=0.)))
         wire_link._sa=S(_actor_stub=stub);l.release.side_effect=wire_link.release
         for epoch in (1,2):
             e.begin(epoch);self.prepare(e)
@@ -595,8 +611,27 @@ class EpisodeTest(unittest.TestCase):
         for call in stub.SetPause.call_args_list:self.assertTrue(call.args[0].enable)
         request=stub.SetTransform.call_args.args[0]
         self.assertEqual(request.actor_info.id.value,'Ego');self.assertAlmostEqual(request.transform.rotation.z,62.515)
+        stub.GetActorState.return_value=S(actor_info=S(id=S(value='Ego')),
+            transform=S(location=S(x=0.,y=0.),rotation=S(z=0.)),
+            bounding_box=S(location=S(x=1.5,y=0.)))
         link.release();self.assertFalse(stub.SetPause.call_args.args[0].enable)
         self.assertEqual(stub.SetVehicleGear.call_args.args[0].gear,4)
+
+    def test_reset_body_heading_rejects_reversed_or_missing_body(self):
+        import math
+        def state(direction):
+            yaw=math.radians(62.515)
+            return S(transform=S(location=S(x=0.,y=0.),rotation=S(z=62.515)),
+                     bounding_box=S(location=S(x=direction*1.5*math.cos(yaw),
+                                              y=direction*1.5*math.sin(yaw))))
+        self.assertTrue(EpisodeLink.body_heading_consistent(state(1)))
+        self.assertFalse(EpisodeLink.body_heading_consistent(state(-1)))
+        self.assertFalse(EpisodeLink.body_heading_consistent(S()))
+        link=EpisodeLink(load_config());link.ego=Mock(return_value=state(-1))
+        link.zero_ego=Mock();link.pause_ego=Mock();link.gear_ego=Mock()
+        with self.assertRaisesRegex(RuntimeError,'차체/보고 방향 불일치'):link.release()
+        link.zero_ego.assert_not_called();link.pause_ego.assert_not_called()
+        link.gear_ego.assert_not_called()
 
     def test_reset_corrects_reported_chassis_rotation_offset(self):
         link=EpisodeLink(load_config());stub=Mock()

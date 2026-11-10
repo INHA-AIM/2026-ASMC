@@ -65,8 +65,16 @@ void ResetMPCForPlannerStop(double published_steering) {
     RecordPublishedSteering(g_mpc.last_control.delta);
 }
 
+void ResetMPCForHandoff(double steering,double acceleration) {
+    ResetMPCOnFailSafe();
+    if(!std::isfinite(steering+acceleration))return;
+    g_mpc.last_control.delta=std::clamp(steering,-g_mpc.params.steering_max,g_mpc.params.steering_max);
+    g_mpc.last_control.accel=std::clamp(acceleration,g_mpc.params.accel_min,g_mpc.params.accel_max);
+    RecordPublishedSteering(g_mpc.last_control.delta);
+}
+
 MPCOutput MPCProcess(
-    const MPCState& ego_state, const ReferencePath& reference, double acceleration_limit) {
+    const MPCState& ego_state, const ReferencePath& reference, double acceleration_limit, double acceleration_rise_rate) {
     MPCOutput output;
 
     // UDP MPC와 같은 정지 데드락 복구. 정상 STOP은 호출자가 이미 걸러낸
@@ -104,6 +112,7 @@ MPCOutput MPCProcess(
     }
 
     auto solve_params = g_mpc.params;
+    solve_params.acceleration_rise_rate = acceleration_rise_rate;
     if (std::isfinite(acceleration_limit))
         solve_params.accel_max = std::clamp(acceleration_limit,solve_params.accel_min,solve_params.accel_max);
     const MPCControl optimization_previous_control = g_mpc.last_control;

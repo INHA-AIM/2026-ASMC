@@ -3,6 +3,7 @@ project(asmc_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
+  nav_msgs
   message_generation
   std_msgs
 )
@@ -24,6 +25,8 @@ add_message_files(
   BehaviorContext.msg
   TrajectoryPoint.msg
   Trajectory.msg
+  LocalTrajectory.msg
+  ControlHandoff.msg
   PlanFeedback.msg
   # v2 인터페이스 (FSM <-> Frenet). FSM 담당자가 정의한 원본을 그대로 등록한다.
   # 필드/상수를 Frenet 편의로 수정하지 않는다
@@ -69,6 +72,7 @@ add_service_files(FILES SetInferenceMode.srv)
 generate_messages(
   DEPENDENCIES
   geometry_msgs
+  nav_msgs
   std_msgs
 )
 
@@ -76,6 +80,7 @@ catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS
   geometry_msgs
+  nav_msgs
   message_runtime
   std_msgs
 )

@@ -8,6 +8,7 @@
   <arg name="hood_crop_bottom_ratio" default="0.0"/>
   <arg name="ego_mask_enabled" default="$(eval float(arg('hood_crop_bottom_ratio')) == 0)"/>
   <arg name="ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
+  <arg name="smooth_handoff" default="false"/>
   <arg name="enable_control" default="false"/>
   <arg name="lookahead_distance" default="8.0"/>
   <arg name="target_speed_kph" default="20.0"/>
@@ -57,19 +58,17 @@
   <arg name="far_obstacle_speed_kph" default="5.0"/>
   <arg name="bbox_source_timeout" default="0.5"/>
   <arg name="bbox_receive_timeout" default="0.5"/>
-  <!-- Legacy startup arguments retained; fixed person stop/ignore timers are retired. -->
-  <arg name="person_stop" default="true" doc="Deprecated alias for dynamic_obstacle_stop"/>
-  <arg name="person_stop_sec" default="3.0" doc="Deprecated; no fixed stop timer"/>
-  <arg name="person_ignore_sec" default="4.0" doc="Deprecated; hazards are never ignored by a timer"/>
-  <arg name="dynamic_obstacle_stop" default="$(arg person_stop)"/>
-  <arg name="dynamic_prediction_sec" default="2.0"/>
-  <arg name="dynamic_acceleration_mps2" default="4.0" doc="Ego acceleration bound for prediction; calibrate with the pedal limit"/>
-  <arg name="dynamic_clear_sec" default="1.0" doc="Continuous safe path confirmation after physical stop; at least 3 new LiDAR scans"/>
-  <arg name="dynamic_stop_speed_mps" default="0.1"/>
-  <arg name="dynamic_rest_sec" default="0.25"/>
-  <arg name="line_return_clear_sec" default="1.0"/>
-  <arg name="line_commit_sec" default="1.0"/>
-  <arg name="dynamic_uncertain_speed_kph" default="3.0"/>
+  <!-- 차도 위 사람: 최소 person_stop_sec 정지하며 사람 위치를 최신으로 기억한다. 사람이 내 차로를 벗어나거나
+       person_settle_sec 동안 person_move_tolerance 이상 움직이지 않거나 person_max_wait_sec가 지나면 그 위치로
+       선을 다시 고르고, 출발한 때부터 person_ignore_sec 동안 사람으로 재정지하지 않는다.
+       사람 박스는 계속 장애물로 피하며, 재선택·무시 중 지날 선이 없으면 정지하지 않고 creep한다. -->
+  <arg name="person_stop" default="true"/>
+  <arg name="person_stop_sec" default="5.0"/>
+  <arg name="person_settle_sec" default="1.0"/>
+  <arg name="person_max_wait_sec" default="10.0"/>
+  <arg name="person_move_tolerance" default="0.3" doc="[m] 이보다 크게 움직이면 아직 움직이는 사람으로 본다"/>
+  <arg name="person_replace_min_x" default="5.0" doc="[m] 주행 중 이보다 먼 사람 기억은 새 BBOX 판정으로 교체(합치지 않음)"/>
+  <arg name="person_ignore_sec" default="4.0"/>
   <arg name="max_sensor_skew" default="0.4"/>
   <arg name="obstacle_confirm_frames" default="2"/>
   <arg name="adjacent_clear_frames" default="3"/>
@@ -99,7 +98,7 @@
   <arg name="ego_speed_timeout" default="0.3"/>
   <arg name="avoid_clearance" default="0.5"/>
   <arg name="avoid_speed_kph" default="8.0"/>
-  <arg name="avoid_obstacle_length" default="6.0" doc="Deprecated; obstacle size comes from LiDAR OBB only"/>
+  <arg name="avoid_obstacle_length" default="6.0"/>
   <arg name="avoid_pass_margin" default="2.0"/>
   <arg name="avoid_lane_tie" default="0.10"/>
   <arg name="avoid_shift_length" default="5.0"/>
@@ -131,7 +130,7 @@
   <arg name="avoid_reconsider_distance" default="0.5"/>
   <arg name="avoid_plan_margin" default="0.05"/>
   <!-- LiDAR objects_local (Main enable_common_geometry:=true), filtered to the current camera road area. -->
-  <arg name="use_lidar_obstacles" default="true" doc="LiDAR supplies metric obstacle geometry; camera lane following remains active"/>
+  <arg name="use_lidar_obstacles" default="false"/>
   <arg name="lidar_objects_topic" default="/perception/lidar/objects_local"/>
   <arg name="lidar_timeout" default="0.6"/>
   <arg name="lidar_max_x" default="30.0"/>
@@ -143,7 +142,7 @@
   <arg name="lidar_structure_hold" default="1.5"/>
   <arg name="use_rviz" default="true"/>
   <arg name="bbox_consumer_x_max" default="20.0"/>
-  <arg name="start_classifier" default="true" doc="Keep camera lane assignment/image display; obstacle metric geometry comes from LiDAR"/>
+  <arg name="start_classifier" default="true"/>
   <arg name="projection_context_required" default="true"/>
   <arg name="projection_manifest" default="$(find asmc_camera)/config/bev/projection_context_v1.yaml"/>
   <arg name="calibration_file" default="$(find asmc_camera)/config/cameras_v3.yaml"/>
@@ -170,6 +169,7 @@
   </include>
   <node pkg="lane_boundary_adapter" type="camera_bbox_lane_change_node" name="camera_bbox_lane_change" output="screen" required="true">
     <param name="clipped_tracking_speed_kph" value="$(arg clipped_tracking_speed_kph)"/>
+    <param name="smooth_handoff" value="$(arg smooth_handoff)"/>
     <param name="enable_control" type="bool" value="$(arg enable_control)"/>
     <param name="lookahead_distance" type="double" value="$(arg lookahead_distance)"/>
     <param name="target_speed_kph" type="double" value="$(arg target_speed_kph)"/>
@@ -215,15 +215,13 @@
     <param name="far_obstacle_speed_kph" type="double" value="$(arg far_obstacle_speed_kph)"/>
     <param name="bbox_source_timeout" type="double" value="$(arg bbox_source_timeout)"/>
     <param name="bbox_receive_timeout" type="double" value="$(arg bbox_receive_timeout)"/>
-    <param name="dynamic_obstacle_stop" type="bool" value="$(arg dynamic_obstacle_stop)"/>
-    <param name="dynamic_prediction_sec" value="$(arg dynamic_prediction_sec)"/>
-    <param name="dynamic_acceleration_mps2" value="$(arg dynamic_acceleration_mps2)"/>
-    <param name="dynamic_clear_sec" value="$(arg dynamic_clear_sec)"/>
-    <param name="dynamic_stop_speed_mps" value="$(arg dynamic_stop_speed_mps)"/>
-    <param name="dynamic_rest_sec" value="$(arg dynamic_rest_sec)"/>
-    <param name="line_return_clear_sec" value="$(arg line_return_clear_sec)"/>
-    <param name="line_commit_sec" value="$(arg line_commit_sec)"/>
-    <param name="dynamic_uncertain_speed_kph" value="$(arg dynamic_uncertain_speed_kph)"/>
+    <param name="person_stop" type="bool" value="$(arg person_stop)"/>
+    <param name="person_stop_sec" type="double" value="$(arg person_stop_sec)"/>
+    <param name="person_settle_sec" type="double" value="$(arg person_settle_sec)"/>
+    <param name="person_max_wait_sec" type="double" value="$(arg person_max_wait_sec)"/>
+    <param name="person_move_tolerance" type="double" value="$(arg person_move_tolerance)"/>
+    <param name="person_replace_min_x" type="double" value="$(arg person_replace_min_x)"/>
+    <param name="person_ignore_sec" type="double" value="$(arg person_ignore_sec)"/>
     <param name="max_sensor_skew" type="double" value="$(arg max_sensor_skew)"/>
     <param name="obstacle_confirm_frames" type="int" value="$(arg obstacle_confirm_frames)"/>
     <param name="adjacent_clear_frames" type="int" value="$(arg adjacent_clear_frames)"/>

@@ -117,16 +117,17 @@ TEST_F(FeatureBuilderAvoidTest, UnknownOutsideRouteCorridorDoesNotSelectAvoid) {
   EXPECT_EQ(feature.risk.avoidance_object_id, -1);
 }
 
-TEST_F(FeatureBuilderAvoidTest, TinyMarginTouchDoesNotSelectAvoid) {
+TEST_F(FeatureBuilderAvoidTest, CollisionMarginTouchBecomesActionableAfterConfirmation) {
   AvoidTargetConfig config;
   config.ego_width = 1.892;
   config.path_margin_m = 0.40;
   config.max_lateral_offset = 1.75;
   builder_.setAvoidTargetConfig(config);
 
+  EXPECT_FALSE(Build(ObjectAt(20.0, 1.8, 1.2)).risk.static_obstacle_ahead);
   const UrbanFeature feature = Build(ObjectAt(20.0, 1.8, 1.2));
-  EXPECT_FALSE(feature.risk.static_obstacle_ahead);
-  EXPECT_EQ(feature.risk.avoidance_object_id, -1);
+  EXPECT_TRUE(feature.risk.static_obstacle_ahead);
+  EXPECT_EQ(feature.risk.avoidance_object_id, 71);
 }
 
 TEST_F(FeatureBuilderAvoidTest, CenterInsidePhysicalCorridorSelectsImmediately) {
@@ -135,7 +136,7 @@ TEST_F(FeatureBuilderAvoidTest, CenterInsidePhysicalCorridorSelectsImmediately) 
   EXPECT_EQ(feature.risk.avoidance_object_id, 71);
 }
 
-TEST_F(FeatureBuilderAvoidTest, SmallPhysicalBoundaryTouchDoesNotSelectAvoid) {
+TEST_F(FeatureBuilderAvoidTest, SmallPhysicalOverlapCannotFallBetweenRatioGates) {
   AvoidTargetConfig config;
   config.ego_width = 1.892;
   config.min_physical_overlap_m = 0.10;
@@ -146,7 +147,16 @@ TEST_F(FeatureBuilderAvoidTest, SmallPhysicalBoundaryTouchDoesNotSelectAvoid) {
   const UrbanFeature first = Build(ObjectAt(20.0, 1.4, 1.2));
   const UrbanFeature second = Build(ObjectAt(20.0, 1.4, 1.2));
   EXPECT_FALSE(first.risk.static_obstacle_ahead);
-  EXPECT_FALSE(second.risk.static_obstacle_ahead);
+  EXPECT_TRUE(second.risk.static_obstacle_ahead);
+}
+
+TEST_F(FeatureBuilderAvoidTest, LegacyCeilingCannotShrinkTheCollisionCorridor) {
+  AvoidTargetConfig config;
+  config.max_lateral_offset = .2;
+  builder_.setAvoidTargetConfig(config);
+  const auto object = ObjectAt(20, 1.6, 1.2);
+  EXPECT_FALSE(Build(object).risk.static_obstacle_ahead);
+  EXPECT_TRUE(Build(object).risk.static_obstacle_ahead);
 }
 
 TEST_F(FeatureBuilderAvoidTest, MeaningfulPhysicalOverlapNeedsConfirmation) {
@@ -173,12 +183,31 @@ TEST_F(FeatureBuilderAvoidTest, LatchedOverlapUsesSeparateReleaseThreshold) {
   EXPECT_FALSE(Build(entry).risk.static_obstacle_ahead);
   EXPECT_TRUE(Build(entry).risk.static_obstacle_ahead);
 
-  // About 12% physical blocking: below the 15% exit threshold. The latched
-  // target survives two noisy frames and releases on the third.
-  const TrackedObject weak = ObjectAt(20.0, 1.4, 1.2);
+  // Release only after leaving the collision corridor. A smaller ratio inside
+  // that corridor remains a genuine path constraint.
+  const TrackedObject weak = ObjectAt(20.0, 2.2, 1.2);
   EXPECT_TRUE(Build(weak).risk.static_obstacle_ahead);
   EXPECT_TRUE(Build(weak).risk.static_obstacle_ahead);
   EXPECT_FALSE(Build(weak).risk.static_obstacle_ahead);
+}
+
+TEST_F(FeatureBuilderAvoidTest, InitialAlongsideFootprintCanBeSelected) {
+  const auto side=ObjectAt(-.2,1.6,1.2);
+  EXPECT_FALSE(Build(side).risk.static_obstacle_ahead);
+  EXPECT_TRUE(Build(side).risk.static_obstacle_ahead);
+  EXPECT_FALSE(Build(ObjectAt(-8,1.6,1.2)).risk.static_obstacle_ahead);
+}
+
+TEST_F(FeatureBuilderAvoidTest, AcquisitionUsesAuthoritativeCorners) {
+  auto object=ObjectAt(20,1.8,.1);
+  const double c=std::cos(object.yaw),s=std::sin(object.yaw);
+  for(int i=0;i<8;++i) {
+    const double dx[4]={-1,1,1,-1},dy[4]={-.6,-.6,.6,.6};
+    object.corners[i]={object.x+c*dx[i%4]-s*dy[i%4],object.y+s*dx[i%4]+c*dy[i%4],double(i/4)};
+  }
+  object.geometry_valid=true;
+  EXPECT_FALSE(Build(object).risk.static_obstacle_ahead);
+  EXPECT_TRUE(Build(object).risk.static_obstacle_ahead);
 }
 
 TEST_F(FeatureBuilderAvoidTest, MarginOnlyOverlapNeedsConsecutiveConfirmation) {
@@ -302,7 +331,7 @@ TEST_F(FeatureBuilderAvoidTest, PendingUnknownBecomesLongitudinalLead) {
 }
 
 TEST_F(FeatureBuilderAvoidTest, RearUnknownDoesNotSelectAvoid) {
-  const UrbanFeature feature = Build(ObjectAt(-1.0, 0.0, 1.2));
+  const UrbanFeature feature = Build(ObjectAt(-8.0, 0.0, 1.2));
   EXPECT_FALSE(feature.risk.static_obstacle_ahead);
   EXPECT_EQ(feature.risk.avoidance_object_id, -1);
 }

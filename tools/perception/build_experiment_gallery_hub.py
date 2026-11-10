@@ -3,6 +3,8 @@
 import argparse
 from datetime import datetime, timezone, timedelta
 import html
+import hashlib
+from itertools import chain
 from html.parser import HTMLParser
 import json
 import os
@@ -11,9 +13,15 @@ import re
 from urllib.parse import quote, unquote, urljoin, urlsplit
 
 
-def catalogue(root, output):
+def catalogue(root, output, scan_roots=None):
     pages = []
-    for directory, _, filenames in os.walk(root, followlinks=False):
+    for directory, directories, filenames in chain.from_iterable(
+            os.walk(p, followlinks=False) for p in (scan_roots or [root])):
+        if '.gallery-ignore' in filenames:
+            directories[:]=[]
+            continue  # Browser automation caches are not experiment pages.
+        # Reproduction sources are not rendered experiments (keep them on disk).
+        directories[:] = [d for d in directories if d not in ("source-snapshot", "source-untracked")]
         for name in filenames:
             if not name.lower().endswith('.html'):
                 continue
@@ -34,6 +42,25 @@ def catalogue(root, output):
             pages.append(dict(group=relative.parts[0], path=relative.as_posix(),
                               href=quote(relative.as_posix(), safe='/'), title=title.strip()[:180]))
     return sorted(pages, key=lambda row: (row['group'], row['path']))
+
+
+def collect_pages(root, output, groups=()):
+    """Explicit partial refresh preserves unselected registered experiment pages."""
+    if not groups:
+        return catalogue(root, output)
+    for group in groups:
+        if Path(group).name != group or group in (".", "..") or not (root/group).is_dir():
+            raise ValueError("group must be an existing direct child: " + group)
+        (root/group).resolve().relative_to(root.resolve())
+    previous_path = root/"gallery-catalogue.json"
+    if not previous_path.is_file():
+        raise ValueError("partial refresh requires an existing catalogue")
+    previous = json.loads(previous_path.read_text())["pages"]
+    kept = []
+    for p in previous:
+        if p["group"] not in groups:
+            kept.append(dict(p, title=p.get("original_title", p["title"])))
+    return kept + catalogue(root, output, [root/g for g in groups])
 
 
 def number_pages(root, pages):
@@ -99,11 +126,12 @@ def check_local_links(root, pages):
 CATEGORIES = [
     ('training', '학습·성능 평가'), ('data', '데이터·라벨 검수'),
     ('models', '모델 비교·선정'), ('collection', 'Capture·자동 수집'),
-    ('fusion', '센서·퓨전'), ('other', '기타 실험')]
+    ('fusion', '센서·퓨전'), ('planning', '로컬 경로·주행·실패 검수'), ('other', '기타 실험')]
 
 
 def category(row):
     path=row['path'].lower()
+    if path.startswith(('local1-', 'local2a-', 'local2b-', 'local2c-', 'local2d-', 'local2e-', 'local2f-', 'shadow-')):return 'planning'
     if path.startswith('lidar') or 'fusion' in path:return 'fusion'
     if any(v in path for v in ('training-data','data-expansion','teacher','dataset','supervision','background-full','validation16','capture-size','tiny-gt','training-audit','source-coverage','capture-restoration','v11-preflight')):return 'data'
     if any(v in path for v in ('bbox-main','bbox-pilot','bbox-regression','vehicle-diagnostic','epoch8-decision')):return 'training'
@@ -113,6 +141,15 @@ def category(row):
 
 
 def friendly_group(group):
+    if group.startswith('local2h-'):return 'LOCAL-2H · 연속성·기준선·검증 길이 · '+group[len('local2h-'):]
+    if group.startswith('local2g-'):return 'LOCAL-2G · 동적 횡단·정적 회피·물리 여유 검수 · '+group[len('local2g-'):]
+    if group.startswith('local2f-'):return 'LOCAL-2F · 제동·복구 경로 검수 · '+group[len('local2f-'):]
+    if group.startswith('local2e-'):return 'LOCAL-2E · 전환·장애물 회피 개선 · '+group[len('local2e-'):]
+    if group.startswith('local2d-'):return 'LOCAL-2D · 공급·전환·주행 검수 · '+group[len('local2d-'):]
+    if group.startswith('local2c-'):return 'LOCAL-2C · 속도 연속성·지면 OBB · '+group[len('local2c-'):]
+    if group.startswith('local2b-'):return 'LOCAL-2B · 경로 길이·안정화 · '+group[len('local2b-'):]
+    if group.startswith('local2a-'):return 'LOCAL-2A · 입력 정렬·벽 간격 · '+group[len('local2a-'):]
+    if group.startswith('local1-'):return 'LOCAL-1 · 초기 주행·실패 · '+group[len('local1-'):]
     known={'camera-epoch8-decision-20261013-r1':'8 epoch 평가·이어 학습 판단',
            'camera-dataset-v10-review-20261013-r1':'v10 데이터 재분할·16종 검수',
            'camera-supervision-policy-review-20261013-r2':'극소 GT·ignore·배경 정책 검토',
@@ -140,16 +177,44 @@ def enrich(pages):
     return pages
 
 
+def audit_refresh(root,pages,groups=()):
+    # Full audits remain full. An explicit partial refresh checks every local
+    # link in its changed pages (including cross-group targets), without
+    # rewriting another campaign's ongoing global audit or failing on unrelated
+    # frozen wheel/source templates.
+    selected=[p for p in pages if not groups or p['group'] in groups]
+    links=check_local_links(root,selected)
+    links['refresh_scope']=list(groups) or ['all']
+    suffix=hashlib.sha256('\n'.join(sorted(groups)).encode()).hexdigest()[:12] if groups else None
+    name='gallery-link-report.partial-'+suffix+'.json' if suffix else 'gallery-link-report.json'
+    return links,name
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifacts',type=Path,required=True)
+    parser.add_argument('--group',action='append',default=[],help='Refresh only this direct child; preserve other catalogue entries')
     args=parser.parse_args();root=args.artifacts.resolve()
     if not root.is_dir():parser.error('artifacts directory does not exist')
-    output=root/'index.html';pages=enrich(number_pages(root,catalogue(root,output)))
+    output=root/'index.html';pages=enrich(number_pages(root,collect_pages(root,output,args.group)))
     # Shortcut choices are explicit roles. File existence is never model acceptance.
     live=next((r for r in pages if 'camera-bbox-main-' in r['path'] and r['path'].endswith('/live.html')),None)
+    local2c=next((r for r in pages if r['path'].startswith('local2c-') and r['path'].endswith('/review-v2/index.html')),None)
+    local=next((r for r in pages if r['path'].startswith('local2b-') and r['path'].endswith('/campaign/index.html')),None)
     prepared_review='camera-v11-preflight-20261013-r1/index.html'
-    wishes=[('최근 본학습',live['path'] if live else None),
+    local2d=next((r for r in pages if r['path'].startswith('local2d-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
+    local2e=next((r for r in pages if r['path'].startswith('local2e-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
+    local2f=next((r for r in pages if r['path'].startswith('local2f-') and r['path'].endswith('/index.html') and r['path'].count('/') == 1),None)
+    local2g=next((r for r in pages if r['path'].startswith('local2g-') and r['path'].endswith('/status.html')),None)
+    local2h=next((r for r in pages if r['path'].startswith('local2h-') and r['path'].endswith('/status.html')),None)
+    wishes=[('LOCAL-2H 연속성·기준선·검증 길이',local2h['path'] if local2h else None),
+            ('LOCAL-2G 실시간 웹·회피 검수',local2g['path'] if local2g else None),
+            ('LOCAL-2F 제동·복구 경로 검수',local2f['path'] if local2f else None),
+            ('LOCAL-2E 전환·장애물 회피 검수',local2e['path'] if local2e else None),
+            ('LOCAL-2D 공급·전환·주행 검수',local2d['path'] if local2d else None),
+            ('LOCAL-2C 속도·노면 OBB 검수',local2c['path'] if local2c else None),
+            ('LOCAL-2B 주행·실패 검수',local['path'] if local else None),
+            ('최근 본학습',live['path'] if live else None),
             ('현재 데이터 검수',prepared_review if (root/prepared_review).is_file() else 'camera-dataset-v10-review-20261013-r1/index.html'),
             ('이전 학습 평가','camera-epoch8-decision-20261013-r1/index.html'),
             ('운영 모델 선정 근거','camera-coco7-live-v1/broad-model-summary-v1/index.html')]
@@ -157,13 +222,14 @@ def main():
     featured=[dict(label=label,**by_path[path]) for label,path in wishes if path in by_path]
     updated=datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).isoformat(timespec='seconds')
     payload=dict(updated=updated,pages=pages,categories=CATEGORIES,featured=featured,
+                 refresh_scope=args.group or "all",
                  live_status_path=(str(Path(live['path']).parent/'supervisor.json') if live else None))
     template=Path(__file__).with_name('templates')/'experiment_catalogue.html'
     output.write_text(template.read_text().replace('__CATALOGUE_DATA__',json.dumps(payload,ensure_ascii=False).replace('<','\\u003c')),encoding='utf-8')
     (root/'gallery-catalogue.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    links=check_local_links(root,pages)
-    (root/'gallery-link-report.json').write_text(json.dumps(links,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    if links['missing']:raise SystemExit('Missing local gallery links; see gallery-link-report.json')
+    links,report_name=audit_refresh(root,pages,args.group)
+    (root/report_name).write_text(json.dumps(links,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    if links['missing']:raise SystemExit('Missing local gallery links; see '+report_name)
     print(json.dumps(dict(output=str(output),pages=len(pages),groups=len({p['group'] for p in pages}))))
 
 

@@ -1,0 +1,4 @@
+<launch>
+  <!-- Existing scenario entrypoint; configuration is owned by asmc_camera. -->
+  <include file="$(find asmc_camera)/launch/semantic_space.launch"/>
+</launch>

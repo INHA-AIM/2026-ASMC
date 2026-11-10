@@ -6,3 +6,6 @@ PyYAML
 grpcio
 protobuf
 pyproj==3.5.0
+
+# Offline/native-box trial evaluation; not a production ROS dependency.
+shapely>=2.0,<3

@@ -78,6 +78,10 @@ def canonical_family_hash():
                  LaneEpochGate=inert, ModelGridGroundProjector=inert,
                  invalid_support_config_from_dict=inert, planning_zones_from_config=inert,
                  DEFAULT_PLANNING_ZONES=[], TemporalBoundaryTracker=inert,
+                 # Backend availability is diagnostics only; the geometry hash
+                 # deliberately excludes native/Python selection. No ROS/GPU
+                 # backend is loaded by this constructor-prefix contract test.
+                 association_backend_info=inert,
                  _names=lambda values: values)
     exec(compile(ast.Module(body=[constructor], type_ignores=[]), '<camera-hash-prefix>', 'exec'), scope)
     instance = SimpleNamespace(_runtime_invalidate=inert,_imu_callback=inert)
@@ -92,7 +96,7 @@ class JammingLaunchContractTest(unittest.TestCase):
             self.assertNotIn('objects_source',args)
             self.assertNotIn('traffic_light',args)
             self.assertEqual('competition' if name=='autonomy_no_bridges_v2.launch' else 'gps_imu',args['state_source'])
-            self.assertEqual('false',args['highway_merge'])
+            self.assertEqual('true' if name=='autonomy_no_bridges_v2.launch' else 'false',args['highway_merge'])
         root=ET.parse(LAUNCH/'autonomy_no_bridges_v2.launch')
         lidar=root.find("./include[@file='$(find planning_inputs)/launch/objects.launch']")
         self.assertIsNotNone(lidar)
@@ -130,10 +134,16 @@ class JammingLaunchContractTest(unittest.TestCase):
         controller=(package/'src/camera_bbox_lane_change_node.cpp').read_text()
         self.assertIn('std::fabs(message->velocity.x)',controller)
         self.assertNotIn('message->velocity.y',controller)
-        self.assertIn('far_obstacle_lane_unresolved',controller)
+        self.assertTrue('lidarFresh()' in controller,'metric obstacle geometry must retain its freshness gate')
+        self.assertIn('refreshPersonStopObstacles()', controller)
+        self.assertIn('preparingHandoff()', controller)
+        self.assertIn('params.enable_control && mode_active', controller)
         args=default_arguments(JAMMING/'camera_bbox_lane_change.launch')
         self.assertEqual('true',args['straddle_avoidance'])
-        self.assertEqual('false',args['use_lidar_obstacles'])
+        self.assertEqual('false',args['use_lidar_obstacles'])  # PR142 standalone default
+        integrated=default_arguments(LAUNCH/'autonomy_no_bridges_v2.launch')
+        self.assertEqual('true',integrated['jamming_use_lidar_obstacles'])
+        self.assertEqual('0.05',integrated['jamming_avoid_clearance'])
         self.assertEqual('false',args['return_to_entry_lane'])  # standalone still opts in explicitly
 
     def test_highway_dashboard_and_recovery_passthrough_coexist(self):

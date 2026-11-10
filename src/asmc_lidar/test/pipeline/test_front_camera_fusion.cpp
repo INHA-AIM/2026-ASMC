@@ -1152,6 +1152,22 @@ TEST(MultiCameraFusion, ThreeViewsGiveOnlyOneConfirmationAndPreserveGeometry) {
   EXPECT_EQ(r.fusion.counters().observations,5u);ExpectSameGeometry(before,r.objects.front());
 }
 
+TEST(MultiCameraFusion, ImageOverlapCannotClassifyExtendedWallAsCar) {
+  MultiRig r;
+  r.objects[0].detection.obb_length_m=21.f;
+  r.objects[0].detection.obb_width_m=5.f;
+  for(int i=0;i<6;++i) {
+    const auto stamp=kT0+i*100*kMs;
+    ThreeFrames(r.source,stamp,{"car","car","car"});
+    // Even a matching support token cannot certify impossible whole geometry.
+    const auto& frame=r.source.snapshot.by_view["camera_front"].front();
+    r.objects[0].detection.camera_point_support={stamp,frame.epoch,0,frame.identity,"car"};
+    r.Run(stamp);
+  }
+  EXPECT_EQ("unknown",r.objects[0].camera.str_ObjectClass);
+  EXPECT_NE("vehicle",r.objects[0].camera.protection_group);
+}
+
 TEST(MultiCameraFusion, Mission15AcceptsEveryClassFromEachViewAndRejectsCone) {
   FusionConfig config;
   config.allowed_names = fusion_adapter::MissionNames();

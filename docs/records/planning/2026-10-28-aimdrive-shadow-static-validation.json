@@ -1,0 +1,153 @@
+{
+  "scope": "experimental static map core, ideal-tracking fixtures, isolated recorded-input replay; no live vehicle acceptance",
+  "fork": "6f416d466bc316a147b92c6da903c54f1bdf0071",
+  "source_configuration": "manifests/aimdrive-static-preparation/aimdrive-static-port-20261028-r03/config.json",
+  "synthetic": {
+    "shadow-unit.log": {
+      "assertions_passed": 16,
+      "assertions_failed": 0,
+      "max_lateral_m": 2.2,
+      "minimum_local_clearance_m": 0.597797,
+      "end_x_m": 80.02,
+      "end_y_m": 0.138698,
+      "phases": [
+        "KEEP",
+        "PASS",
+        "RETURN",
+        "SHIFT"
+      ]
+    },
+    "shadow-unit-15.log": {
+      "assertions_passed": 16,
+      "assertions_failed": 0,
+      "max_lateral_m": 2.2,
+      "minimum_local_clearance_m": 0.569898,
+      "end_x_m": 95.0618,
+      "end_y_m": 0.245507,
+      "phases": [
+        "KEEP",
+        "PASS",
+        "RETURN",
+        "SHIFT"
+      ]
+    },
+    "shadow-unit-15-left.log": {
+      "assertions_passed": 17,
+      "assertions_failed": 0,
+      "max_lateral_m": 2.2,
+      "minimum_local_clearance_m": 0.597331,
+      "end_x_m": 99.3512,
+      "end_y_m": -0.246114,
+      "phases": [
+        "KEEP",
+        "PASS",
+        "PREPARE",
+        "RETURN",
+        "SHIFT"
+      ]
+    }
+  },
+  "tunnel_route_tests_passed": 35,
+  "tunnel_core_tests_passed": 37,
+  "local_planner_regression_passed": true,
+  "controller_contract_passed": true,
+  "strict_replay": {
+    "run_id": "aimdrive-static-port-20261028-r02",
+    "input": "/storage/artifacts/local1-20261028-drive20/sensors_0.bag",
+    "input_counts": {
+      "/perception/lane/boundary_family": 688,
+      "/Ego_topic": 1876,
+      "/imu": 1845,
+      "/perception/lidar/tracks_local": 551,
+      "/experimental/shadow/semantic_space_trial/context": 457,
+      "/experimental/shadow/semantic_space_trial/drivable_probability": 457,
+      "/experimental/shadow/semantic_space_trial/coverage": 457,
+      "/gps": 231,
+      "masked_gps": 216
+    },
+    "trajectory_reasons": {
+      "motion_unavailable": 11,
+      "no_complete_scene": 2,
+      "shadow_anchor_unavailable": 2,
+      "shadow_start_unverified": 431,
+      "scene_stale": 6,
+      "shadow_native_blocked": 3
+    },
+    "valid_trajectories": 0,
+    "phases": {
+      "unavailable": 21,
+      "KEEP": 434
+    },
+    "pose_sources": {
+      "unavailable": 21,
+      "gps_anchored": 32,
+      "dead_reckoning": 402
+    },
+    "gps_blackout_after_s": 3.0,
+    "scope": "recorded open-loop perception; no live simulator or closed-loop vehicle motion",
+    "command_publishers": 0
+  },
+  "assisted_replay": {
+    "run_id": "aimdrive-static-port-20261028-r03",
+    "input": "/storage/artifacts/local1-20261028-drive20/sensors_0.bag",
+    "input_counts": {
+      "/perception/lane/boundary_family": 688,
+      "/Ego_topic": 1876,
+      "/imu": 1845,
+      "/perception/lidar/tracks_local": 551,
+      "/experimental/shadow/semantic_space_trial/context": 457,
+      "/experimental/shadow/semantic_space_trial/drivable_probability": 457,
+      "/experimental/shadow/semantic_space_trial/coverage": 457,
+      "/gps": 231,
+      "masked_gps": 216
+    },
+    "trajectory_reasons": {
+      "motion_unavailable": 12,
+      "no_complete_scene": 2,
+      "shadow_anchor_unavailable": 2,
+      "ok": 431,
+      "shadow_native_blocked": 3,
+      "scene_stale": 4
+    },
+    "valid_trajectories": 431,
+    "phases": {
+      "unavailable": 20,
+      "KEEP": 434
+    },
+    "pose_sources": {
+      "unavailable": 20,
+      "gps_anchored": 32,
+      "dead_reckoning": 402
+    },
+    "gps_blackout_after_s": 3.0,
+    "near_blind_assist": true,
+    "verdict": "paths_available",
+    "scope": "recorded open-loop perception; no live simulator or closed-loop vehicle motion",
+    "command_publishers": 0,
+    "valid_dr_trajectories": 399,
+    "assisted_trajectories": 431,
+    "maximum_selected_kph": 5
+  },
+  "lidar_source_changed": false,
+  "test_logs_sha256": {
+    "shadow-controller-regression.log": "983bade25a31943b52c1d14fdb68d16e0cb916eb390ed2bf1db9dab2c7c3aed4",
+    "shadow-final-build.log": "a895dd115b53ed11dc3bc87d42f421de966cbb26a6f538513ad39314804399d0",
+    "shadow-local-regression.log": "bf98f87ebc49520b390fe932579860d0de12c5d531f3ec5de9dbf8f1cf93a5dd",
+    "shadow-tunnel-filter.log": "9a390255c56d80681cc7f1717b3d1682198a9185ef5d9b810394362bf319ddd0",
+    "shadow-tunnel-route.log": "3b79020016008f2f7c83b98b2e4679b05855b14a48f61611d13e1a9bc291b3a3",
+    "shadow-unit-15-left.log": "46ad699c03c9dfe13ec0ac82f5f50a5c9f6348caa85641d6bb181b8939ab282f",
+    "shadow-unit-15.log": "8df71a2a1edd49858dff8b7c528e0c4381bed0b369a6d0a2a3baf1c1f379341f",
+    "shadow-unit.log": "04ea5b315e57230cc797a28afd27560949883a9a70faa7f7d7da8974d81c0dac"
+  },
+  "build_identity": {
+    "container_image": "sha256:e7cf6ea31196c9613ff93c56bf6e6f82acdb0fec49707385efc801b2093b18b9",
+    "network_mode": "none",
+    "binary_sha256": {
+      "devel/lib/asmc_planner/asmc_local_planner_node": "45f596f38ec4ab6663d19f7a1bd654058cf5b9ec40a61a4cce4edc74cc2ec15d",
+      "devel/lib/asmc_planner/shadow_map_test": "2b1009dc036a2eab9f9a6e7eb4d5fab35b198e94069ef0cdec360f833c06cd91",
+      "devel/lib/libasmc_shadow_map_core.so": "0c0eab6fc0fe88d6f23b16e64c069d196153906ca9938aa621d355152a25fdf6",
+      "devel/lib/libasmc_local_planner_core.so": "130ad5306d4837025edcd038ef5b31d26603a76013300a9398d118649333190b"
+    },
+    "runtime_source_matches_registered_config": true
+  }
+}

@@ -1,0 +1,15 @@
+<launch>
+  <!-- LOCAL input projection from existing inference. Uses family context, no second IMU decision. -->
+  <node pkg="asmc_camera" type="semantic_space_trial.py" name="semantic_space_trial" ns="/experimental/shadow" output="screen" required="true">
+    <!-- Small three-camera matrices share CPUs with inference and control.
+         Avoid BLAS worker oversubscription; projection geometry is unchanged. -->
+    <env name="OPENBLAS_NUM_THREADS" value="1"/>
+    <env name="MKL_NUM_THREADS" value="1"/>
+    <rosparam command="load" file="$(find asmc_camera)/config/bev/bev_grid.yaml"/>
+    <rosparam command="load" file="$(find asmc_camera)/config/cameras_v3.yaml"/>
+    <param name="managed" value="true"/>
+    <param name="ego_masks/front" value="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
+    <param name="ego_masks/left" value="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml"/>
+    <param name="ego_masks/right" value="$(find asmc_camera)/config/camera/yolo_ego_mask_right_v1.yaml"/>
+  </node>
+</launch>

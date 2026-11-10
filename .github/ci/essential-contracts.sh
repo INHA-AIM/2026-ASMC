@@ -20,9 +20,15 @@ PYTHONPATH=src/data_collection/src python3 -m unittest discover -s src/data_coll
 python3 -m unittest tools/audit/test_storage_launchers.py tools/audit/test_data_location_preflight.py
 python3 src/planning_inputs/test/runtime_launch_contract_test.py
 python3 src/planning_inputs/test/object_filter_contract_test.py
+python3 tools/planning/test_jamming_launch_contract.py
 python3 -m unittest tools/audit/test_git_history_assets.py
 python3 -m unittest tools/perception/test_object_engine_selection.py
 python3 src/asmc_planner/tests/behavior/dashboard_startup_test.py
+python3 tools/runtime/test_standalone.py
 node src/asmc_planner/tests/behavior/dashboard_motion_test.js
 node src/asmc_planner/tests/behavior/dashboard_shadow_test.js
+node src/asmc_planner/tests/behavior/dashboard_localization_test.js
+python3 src/asmc_planner/tests/behavior/dashboard_localization_test.py
 python3 -m compileall -q src tools/ci tools/scen_runner/scen_runner
+
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_trial_monitor.py'

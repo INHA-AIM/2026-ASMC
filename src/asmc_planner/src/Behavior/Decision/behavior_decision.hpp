@@ -26,4 +26,6 @@ int lc_leader_=-1;
 std::uint64_t lc_epoch_=0,driving_epoch_=0;
 double lc_since_=-1,lc_observation_=-1,lc_cooldown_until_=0,lc_last_lead_observation_=-1;
 double absolute_speed_limit_=1e9;
+double boundary_cap_=0,boundary_last_time_=-1; uint64_t boundary_generation_=0;
+double ordinarySpeedCeiling(const std::string& link,double map_cap) const;
 NormalCruiseConfig normal_cruise_;HardRuleFilter rules_;BehaviorScorer scorer_;Fsm fsm_; }; }

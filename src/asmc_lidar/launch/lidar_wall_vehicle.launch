@@ -1,0 +1,8 @@
+<launch>
+  <!-- Explicit local profile: does not start sensors, bridges or control. -->
+  <arg name="debug" default="true"/>
+  <include file="$(find asmc_lidar)/launch/lidar.launch">
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="pipeline_config" value="$(find asmc_lidar)/config/lidar_wall_vehicle.yaml"/>
+  </include>
+</launch>

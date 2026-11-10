@@ -1,3 +1,4 @@
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../asmc_geometry/include)
 cmake_minimum_required(VERSION 3.0.2)
 project(asmc_planner LANGUAGES CXX)
 
@@ -5,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
-  planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs geometry_msgs
+  planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs nav_msgs diagnostic_msgs geometry_msgs
   sensor_msgs visualization_msgs)
 find_package(yaml-cpp REQUIRED)
 find_package(Boost REQUIRED)
@@ -13,7 +14,7 @@ find_package(OpenSSL REQUIRED)
 catkin_package(INCLUDE_DIRS src
   LIBRARIES asmc_signal_policy_core asmc_planner_lane_reference_core asmc_planner_frenet_core asmc_planner_behavior_core
     asmc_planner_execution_core asmc_planner_behavior_module asmc_planner_ros_adapters
-  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs
+  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp std_msgs std_srvs nav_msgs diagnostic_msgs
     geometry_msgs sensor_msgs visualization_msgs)
 
 # Shared reference preparation/execution. Production uses the existing highway
@@ -90,6 +91,7 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Generator/BoundaryConditionPolicy.cpp
   src/Frenet/Generator/CartesianRetimer.cpp
   src/Frenet/Generator/SpatialStop.cpp
+  src/Frenet/Generator/StaticAvoidPath.cpp
   src/Frenet/Generator/CandidateCombiner.cpp
   src/Frenet/Generator/LateralGenerator.cpp
   src/Frenet/Generator/LongitudinalGenerator.cpp
@@ -101,6 +103,10 @@ add_library(asmc_planner_frenet_core
   src/Frenet/Maneuver/Avoid/AvoidCompletion.cpp
   src/Frenet/Maneuver/Avoid/MapAvoidReconnection.cpp
   src/Frenet/Maneuver/Avoid/MapAvoid.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidCorridor.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidPolicy.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidRecovery.cpp
+  src/Frenet/Maneuver/Avoid/StaticAvoidCreep.cpp
   src/Frenet/Maneuver/Follow.cpp
   src/Frenet/Maneuver/Keep.cpp
   src/Frenet/Maneuver/LaneChange/LaneChange.cpp
@@ -331,8 +337,16 @@ if(CATKIN_ENABLE_TESTING)
     tests/gps_mode_source_main.cpp src/Planning/GpsModeSource.cpp)
   target_include_directories(gps_mode_source_test_node PRIVATE src ${catkin_INCLUDE_DIRS})
   add_dependencies(gps_mode_source_test_node ${catkin_EXPORTED_TARGETS})
-  target_link_libraries(gps_mode_source_test_node ${catkin_LIBRARIES})
+  target_link_libraries(gps_mode_source_test_node asmc_planner_frenet_core OpenSSL::Crypto ${catkin_LIBRARIES})
   add_rostest(tests/gps_mode_source.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/shadow_recovery_gate.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/jamming_handoff.test DEPENDENCIES gps_mode_source_test_node asmc_control_selector_node)
+  add_rostest(tests/jamming_entry.test DEPENDENCIES gps_mode_source_test_node asmc_control_selector_node)
+  add_rostest(tests/localization_handoff.test DEPENDENCIES gps_mode_source_test_node asmc_control_selector_node)
+  add_rostest(tests/handoff_mode_first.test DEPENDENCIES asmc_control_selector_node)
+  add_rostest(tests/localization_seed.test)
+  add_rostest(tests/localization_approach.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/localization_motion_order.test DEPENDENCIES asmc_local_planner_node)
 
   add_executable(highway_runtime_test tests/behavior/highway_runtime_test.cpp)
   target_include_directories(highway_runtime_test PRIVATE src ${catkin_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS})
@@ -716,8 +730,10 @@ if(CATKIN_ENABLE_TESTING)
     add_test(NAME ${merge_test} COMMAND ${merge_test})
   endforeach()
 
-  add_executable(roundabout_execution_shadow tools/frenet/roundabout_execution_shadow.cpp)
-  target_link_libraries(roundabout_execution_shadow asmc_planner_frenet_core yaml-cpp)
+  add_executable(roundabout_execution_shadow tools/frenet/roundabout_execution_shadow.cpp src/Parser/PlanningInput.cpp)
+  target_include_directories(roundabout_execution_shadow PRIVATE ${catkin_INCLUDE_DIRS})
+  add_dependencies(roundabout_execution_shadow ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(roundabout_execution_shadow asmc_planner_frenet_core yaml-cpp ${catkin_LIBRARIES})
 
   # MERGE contract only: does not enable the runtime capability gate.
   add_executable(merge_contract_test tests/frenet/merge_contract_test.cpp)
@@ -947,7 +963,9 @@ endif()
 
 
 if(CATKIN_ENABLE_TESTING)
-  foreach(regression avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
+  add_test(NAME static_avoid_launch_margin_test
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/static_avoid_launch_margin_test.py)
+  foreach(regression static_avoid_smoothness_test static_avoid_priority_test static_avoid_speed_recovery_test static_avoid_progress_test static_avoid_corridor_test avoid_completion_test avoid_reconnection_test avoid_return_distance_test avoid_return_progress_test avoid_side_search_test spatial_stop_speed_test stop_road_braking_test vehicle_curvature_test)
     add_executable(${regression} tests/frenet/${regression}.cpp)
     target_link_libraries(${regression} asmc_planner_frenet_core yaml-cpp)
     target_compile_definitions(${regression} PRIVATE
@@ -955,6 +973,13 @@ if(CATKIN_ENABLE_TESTING)
       FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt")
     add_test(NAME ${regression} COMMAND ${regression})
   endforeach()
+  # Check real recovery profiles against the independent Controller consumer.
+  target_include_directories(static_avoid_progress_test PRIVATE
+    ${catkin_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../asmc_controller/src)
+  add_dependencies(static_avoid_progress_test ${catkin_EXPORTED_TARGETS})
+  target_include_directories(static_avoid_speed_recovery_test PRIVATE
+    ${catkin_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../asmc_controller/src)
+  add_dependencies(static_avoid_speed_recovery_test ${catkin_EXPORTED_TARGETS})
 endif()
 
 if(CATKIN_ENABLE_TESTING)
@@ -995,3 +1020,105 @@ endif()
 configure_file(scripts/dashboard_startup.py
   ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_startup.py COPYONLY)
 install(FILES scripts/dashboard_startup.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+configure_file(scripts/dashboard_localization.py
+  ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/dashboard_localization.py COPYONLY)
+install(FILES scripts/dashboard_localization.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+# LOCAL-1 is opt-in; reuse the existing pure geometry/speed implementation.
+add_library(asmc_jamming_common src/jamming_common/geometry.cpp src/jamming_common/speed_profile.cpp)
+target_include_directories(asmc_jamming_common PUBLIC src)
+target_compile_options(asmc_jamming_common PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(asmc_jamming_common asmc_planner_frenet_core)
+add_library(asmc_local_planner_core src/local/planner.cpp src/local/recovery.cpp)
+target_include_directories(asmc_local_planner_core PUBLIC src)
+target_compile_options(asmc_local_planner_core PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(asmc_local_planner_core asmc_jamming_common)
+add_library(asmc_shadow_localization_core src/shadow_localization/static_planner.cpp src/shadow_localization/position_reference.cpp)
+target_include_directories(asmc_shadow_localization_core PUBLIC src)
+target_compile_options(asmc_shadow_localization_core PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(asmc_shadow_localization_core asmc_jamming_common)
+add_executable(asmc_local_planner_node src/local/node.cpp)
+add_dependencies(asmc_local_planner_node ${catkin_EXPORTED_TARGETS})
+target_include_directories(asmc_local_planner_node PRIVATE src ${catkin_INCLUDE_DIRS})
+target_compile_options(asmc_local_planner_node PRIVATE -O2)
+target_link_libraries(asmc_local_planner_node asmc_local_planner_core ${catkin_LIBRARIES} pthread)
+add_executable(asmc_shadow_localization_node src/shadow_localization/position_node.cpp)
+add_dependencies(asmc_shadow_localization_node ${catkin_EXPORTED_TARGETS})
+target_include_directories(asmc_shadow_localization_node PRIVATE src ${catkin_INCLUDE_DIRS})
+target_compile_options(asmc_shadow_localization_node PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(asmc_shadow_localization_node asmc_shadow_localization_core ${catkin_LIBRARIES} pthread)
+install(TARGETS asmc_jamming_common asmc_local_planner_core asmc_shadow_localization_core asmc_local_planner_node asmc_shadow_localization_node
+ ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+ LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+ RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+if(CATKIN_ENABLE_TESTING)
+ add_executable(jamming_policy_test tests/jamming_policy_test.cpp)
+ target_include_directories(jamming_policy_test PRIVATE src)
+ target_link_libraries(jamming_policy_test asmc_jamming_common)
+ add_test(NAME jamming_policy_regression COMMAND jamming_policy_test)
+ add_executable(local_planner_test tests/local_planner_test.cpp)
+ target_include_directories(local_planner_test PRIVATE src)
+ target_link_libraries(local_planner_test asmc_local_planner_core pthread)
+ add_test(NAME local_planner_regression COMMAND local_planner_test)
+ add_executable(shadow_localization_test tests/shadow_localization_test.cpp)
+ target_include_directories(shadow_localization_test PRIVATE src)
+ target_compile_definitions(shadow_localization_test PRIVATE SHADOW_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+ target_link_libraries(shadow_localization_test asmc_shadow_localization_core)
+ add_test(NAME shadow_localization_regression COMMAND shadow_localization_test)
+endif()
+
+# Observer-only exact-stamp raster cache shared by dashboard source/install runs.
+configure_file(scripts/local_debug_cache.py
+  ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/local_debug_cache.py COPYONLY)
+install(FILES scripts/local_debug_cache.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+# Isolated Localization M2 input boundaries and independent native-pose evaluator.
+add_executable(localization_evaluate tools/localization_evaluate.cpp)
+target_include_directories(localization_evaluate PRIVATE src)
+target_link_libraries(localization_evaluate asmc_planner_frenet_core)
+add_executable(localization_static_scenarios tools/localization_static_scenarios.cpp)
+target_include_directories(localization_static_scenarios PRIVATE src)
+target_compile_definitions(localization_static_scenarios PRIVATE SHADOW_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(localization_static_scenarios asmc_shadow_localization_core)
+if(CATKIN_ENABLE_TESTING)
+ add_executable(local_recovery_test tests/local_recovery_test.cpp)
+ target_include_directories(local_recovery_test PRIVATE src ${catkin_INCLUDE_DIRS})
+ add_dependencies(local_recovery_test ${catkin_EXPORTED_TARGETS})
+ target_link_libraries(local_recovery_test ${catkin_LIBRARIES})
+ add_test(NAME local_recovery_regression COMMAND local_recovery_test)
+ add_executable(localization_input_test tests/localization_input_test.cpp)
+ add_test(NAME localization_static_scenarios_regression COMMAND localization_static_scenarios 15 --require-completion)
+ add_test(NAME localization_dashboard_payload COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/behavior/dashboard_localization_test.py)
+ target_include_directories(localization_input_test PRIVATE src ${catkin_INCLUDE_DIRS})
+ add_dependencies(localization_input_test ${catkin_EXPORTED_TARGETS})
+ target_link_libraries(localization_input_test asmc_local_planner_core)
+ add_test(NAME localization_input_regression COMMAND localization_input_test)
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  add_executable(jamming_wall_scope_test tests/jamming_wall_scope_test.cpp)
+  target_include_directories(jamming_wall_scope_test PRIVATE src)
+  target_compile_definitions(jamming_wall_scope_test PRIVATE JAMMING_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(jamming_wall_scope_test asmc_shadow_localization_core)
+  add_test(NAME jamming_wall_scope COMMAND jamming_wall_scope_test)
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  add_executable(static_mission_policy_test tests/static_mission_policy_test.cpp)
+  target_include_directories(static_mission_policy_test PRIVATE src ${catkin_INCLUDE_DIRS})
+  target_compile_options(static_mission_policy_test PRIVATE -UNDEBUG)
+  target_link_libraries(static_mission_policy_test asmc_planner_ros_adapters ${catkin_LIBRARIES} crypto)
+  add_dependencies(static_mission_policy_test ${catkin_EXPORTED_TARGETS})
+  add_test(NAME static_mission_policy COMMAND static_mission_policy_test)
+  add_executable(roundabout_object_policy_test tests/roundabout_object_policy_test.cpp)
+  target_include_directories(roundabout_object_policy_test PRIVATE src)
+  target_compile_options(roundabout_object_policy_test PRIVATE -UNDEBUG)
+  add_test(NAME roundabout_object_policy COMMAND roundabout_object_policy_test)
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  add_executable(roundabout_emergency_authority_test tests/roundabout_emergency_authority_test.cpp)
+  target_include_directories(roundabout_emergency_authority_test PRIVATE src)
+  target_compile_options(roundabout_emergency_authority_test PRIVATE -UNDEBUG)
+  add_test(NAME roundabout_emergency_authority COMMAND roundabout_emergency_authority_test)
+endif()

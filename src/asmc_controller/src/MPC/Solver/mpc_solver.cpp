@@ -21,6 +21,12 @@ static void projectControls(std::vector<MPCControl>& controls,
     for (auto& u : controls) {
         clipControl(u, params);
         clipSteeringRate(u, u_prev, params.steering_rate_max, params.dt);
+        // Apply the same release envelope at EACH future stage. Applying the
+        // first negative ceiling to the whole horizon predicts continued
+        // braking even when the measured reference requests acceleration.
+        if(params.acceleration_rise_rate>0)
+            u.accel=std::max(params.accel_min,std::min(u.accel,
+                u_prev.accel+params.acceleration_rise_rate*params.dt));
         u_prev = u;
     }
 }

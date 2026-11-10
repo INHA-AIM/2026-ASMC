@@ -1,7 +1,8 @@
-# 명령과 실제 제어 궤적의 연결 v2
+# 명령과 실제 제어 궤적의 연결 v3
 
 구현: [control_binding.hpp](../../src/asmc_msgs/include/asmc_msgs/control_binding.hpp).
-기존 `BehaviorCommand`, `FrenetFeedback`, `Trajectory` 정의와 필드 의미는 유지한다.
+`BehaviorCommand`, `FrenetFeedback` 필드 의미는 유지한다. `Trajectory`는 정적
+복구 실행 정책을 명시하는 `execution_policy`가 추가되어 함께 재빌드해야 한다.
 시간은 신선도에만 사용한다. `frame_id`, 설명 문자열을 명령 ID로 재해석하지 않는다.
 
 ## 전송과 활성화
@@ -20,15 +21,16 @@
 
 UInt8MultiArray의 layout은 비우고 data_offset은 0으로 한다. 최대 payload는 4MiB다.
 payload는 ROS1 little-endian serialization을 사용하며 magic `0x41534d43`,
-버전 `uint8(2)`, 종류 `uint8(1=request, 2=plan, 3=status)`로 시작한다.
+버전 `uint8(3)`, 종류 `uint8(1=request, 2=plan, 3=status)`로 시작한다.
 이후 필드 순서와 형식의 정본은 위 헤더의 `PutRequest`, `Encode`, `Decode`다.
 바이너리 내용을 임의로 이어 붙인 별도 producer는 허용하지 않는다. 종류·버전·크기·
 layout·끝 길이가 맞지 않는 메시지는 폐기한다. 시험 기록기는 별도 읽기 전용
 [Python decoder](../../tools/scen_runner/scen_runner/records/control_binding.py)를 사용한다.
 
-v2는 Plan 끝에 `merge_waiting_path_valid` bool을 추가한다. 기존 ROS `.msg`와
-feedback의 `plan_valid` 의미를 바꾸지 않는다. 실제 제어 producer/consumer는 v2만
-수락하며 함께 재시작한다. 읽기 전용 Python 기록 분석만 과거 v1도 해석한다.
+v2는 Plan 끝에 `merge_waiting_path_valid` bool을 추가했다. v3는 궤적의 정적
+복구 정책을 포함하며, 복구 정책은 수락된 AVOID COMMITTED/EXECUTING 소유자만
+사용한다. 실제 제어 producer/consumer는 v3만 수락하고 함께 재시작한다.
+읽기 전용 Python 기록 분석은 과거 v1/v2 궤적도 일반 정책으로 해석한다.
 
 ## 소속 증명과 전이
 

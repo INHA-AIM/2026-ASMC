@@ -238,8 +238,35 @@
 /* Separate local scene from global-map policy; no duplicate controller. */
 .toolbar select { background: #162733; color: #d8e6ef; border: 1px solid #3a5365; padding: 5px; max-width: 270px; }
 .shadow-panel { border-left: 3px solid #20e6d0; }
+#experimentState { grid-template-columns: 1fr 1fr; }
+#experimentState > div:nth-child(3), #experimentState > div:nth-child(4),
+#experimentState > div:nth-child(7) { grid-column: 1 / -1; }
+#experimentState strong, #localizationState strong { white-space: normal; overflow-wrap: anywhere; }
 .shadow-panel small { color: #a5b8c7; line-height: 1.6; display: block; margin-top: 8px; }
 #selectedMode { font-size: 12px; color: #20e6d0; }
 #shadowBoxes { max-height: 150px; overflow-y: auto; }
 #shadowGrid strong { white-space: normal; overflow-wrap: anywhere; }
 #shadowGrid > div:nth-child(3) { grid-column: 1 / -1; }
+
+#localExperimentPanel[hidden] { display:none; }
+#localExperimentPanel pre { max-height:240px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px monospace; }
+#localExperimentPanel h3 { font-size:12px;margin-top:12px; }
+
+#localExperimentGrid strong { white-space:normal;overflow-wrap:anywhere; }
+
+/* Keep the grid row within the viewport: sidebar content must not stretch canvas. */
+main { height:calc(100dvh - 52px); min-height:0; grid-template-rows:minmax(0,1fr); }
+.map-panel { min-height:0; height:100%; padding:0; margin-bottom:0; overflow:hidden; }
+.map-panel canvas { height:100%; min-height:0; }
+aside { min-height:0; height:100%; }
+
+body.local-experiment-active aside .hero-v2,
+body.local-experiment-active aside .shadow-panel:not(#localExperimentPanel) { display:none; }
+
+/* The optional trial identity occupies real layout height, never covers canvas. */
+body[data-interface="v2"] { display:flex; flex-direction:column; }
+body[data-interface="v2"] > header { height:auto; min-height:52px; flex-shrink:0; flex-wrap:wrap; gap:6px; padding-top:8px; padding-bottom:8px; }
+body[data-interface="v2"] > main { flex:1; min-height:0; height:auto; }
+.trial-monitor { flex:1 0 100%; overflow-wrap:anywhere; color:#ffce87; font-size:12px; line-height:1.5; }
+.trial-monitor.live { color:#77efc0; }
+.trial-monitor[hidden] { display:none; }

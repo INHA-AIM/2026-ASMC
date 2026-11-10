@@ -659,6 +659,78 @@ const FrameResult& TunnelPipeline::Process(
     return r;
 }
 
+const FrameResult& TunnelPipeline::ProcessWallsOnly(
+    const pcl::PointCloud<pcl::PointXYZI>& leveled,const std::vector<int>& kept,
+    bool ground_valid,const Plane& ground,const EgoMotion* motion) {
+    const auto start=Clock::now();
+    const auto previous_walls=result_.walls;
+    result_=FrameResult();auto& r=result_;
+    r.leveled=leveled.makeShared();r.input_points=leveled.size();
+    r.labels.assign(leveled.size(),kInvalid);
+    for(int i:kept)if(i>=0&&static_cast<std::size_t>(i)<leveled.size()&&FinitePoint(leveled[i]))r.labels[i]=kKept;
+    r.ground_fallback_used=!ground_valid||!ground.Finite()||ground.c<=.5f;
+    if(!r.ground_fallback_used) {
+        r.ground.source=PlaneSource::kCurrent;r.ground.plane=ground;
+        r.ground_reference_height=ground.HeightAt(0,0);
+        // Tall wall support above the common height ROI is evidence only.
+        // It must never be reintroduced into the common output cloud.
+        for(std::size_t i=0;i<leveled.size();++i)if(FinitePoint(leveled[i])&&
+            leveled[i].z-ground.HeightAt(leveled[i].x,leveled[i].y)>=params_.wall_candidate_min_height_m)
+            r.labels[i]=kKept;
+    }
+    if(motion&&motion->valid&&std::isfinite(motion->dyaw_rad)&&std::isfinite(motion->dx_m)&&
+       std::isfinite(motion->dy_m)&&motion->dt_s>0&&motion->dt_s<=params_.wall_track_motion_max_dt_s)r.motion=*motion;
+    ProcessWalls(nullptr,nullptr,true);
+    // A lower step plane can disappear from RANSAC for one scan while its
+    // CURRENT measured surface remains. Revalidate it, never keep a blind
+    // historical deletion mask or extend unobserved intervals.
+    if(r.motion.valid&&r.motion.reliable&&!r.ground_fallback_used)
+    for(std::size_t side=0;side<2;++side) {
+        auto& wall=r.walls[side];
+        if(!wall.removal_allowed||!previous_walls[side].removal_allowed||wall.segments.empty())continue;
+        const auto primary=wall.segments.front().plane;
+        for(const auto& old:previous_walls[side].segments) {
+            if(!old.valid)continue;
+            WallSegment seg=old;seg.plane=TransformPlaneToCurrent(old.plane,r.motion);
+            if(HorizontalAngleBetweenNormalsDeg(seg.plane,primary)>params_.wall_step_max_angle_deg||
+               std::fabs(seg.plane.d-primary.d)>params_.wall_step_max_offset_m)continue;
+            bool present=false;
+            for(const auto& current:wall.segments)
+                if(HorizontalAngleBetweenNormalsDeg(seg.plane,current.plane)<2.f&&
+                   std::fabs(seg.plane.d-current.plane.d)<.12f)present=true;
+            if(present)continue;
+            const float normal=std::hypot(seg.plane.a,seg.plane.b);if(normal<.5f)continue;
+            seg.tangent_x=-seg.plane.b/normal;seg.tangent_y=seg.plane.a/normal;
+            std::vector<float> along;std::vector<int> support;float zlo=INFINITY,zhi=-INFINITY;
+            for(std::size_t i=0;i<leveled.size();++i) {
+                const auto& q=leveled[i];const float h=q.z-ground.HeightAt(q.x,q.y);
+                if(r.labels[i]!=kKept||h<params_.wall_candidate_min_height_m||
+                   h>params_.wall_candidate_max_height_m||
+                   std::fabs(seg.plane.SignedDistance(q.x,q.y,q.z))>params_.wall_remove_distance_m)continue;
+                support.push_back(i);along.push_back(seg.AlongWall(q.x,q.y));zlo=std::min(zlo,q.z);zhi=std::max(zhi,q.z);
+            }
+            if(support.size()<static_cast<std::size_t>(params_.wall_min_inliers)||
+               zhi-zlo<params_.wall_step_min_vertical_span_m)continue;
+            seg.intervals.clear();seg.span=0;
+            for(const auto& run:ComputeWallRuns(along,params_.wall_bin_size_m,params_.wall_bin_min_points,params_.wall_bin_max_gap))
+                if(run.s_end-run.s_start>=params_.wall_min_span_m){seg.intervals.emplace_back(run.s_start,run.s_end);seg.span=std::max(seg.span,run.s_end-run.s_start);}
+            if(seg.intervals.empty())continue;
+            seg.reject_reason="current_revalidated_step";wall.segments.push_back(seg);
+            for(int i:support)if(seg.InIntervals(seg.AlongWall(leveled[i].x,leveled[i].y),0))r.labels[i]=kWall;
+        }
+    }
+    std::vector<std::uint8_t> output_mask(leveled.size(),0);
+    r.wall_removed=0;
+    for(int i:kept)if(i>=0&&static_cast<std::size_t>(i)<leveled.size()) {
+        output_mask[i]=1;
+        if(r.labels[i]==kKept)r.kept_indices.push_back(i);
+        else if(r.labels[i]==kWall)++r.wall_removed;
+    }
+    for(std::size_t i=0;i<r.labels.size();++i)if(!output_mask[i])r.labels[i]=kInvalid;
+    r.kept_points=r.kept_indices.size();r.timings.total_ms=ElapsedMs(start);
+    return r;
+}
+
 void TunnelPipeline::FitGround() {
     FrameResult& r = result_;
     GroundFit fit;
@@ -1363,7 +1435,7 @@ void TunnelPipeline::ProcessWalls(
             for (std::size_t side = 0; side < 2; ++side) {
                 WallSideResult& result = r.walls[side];
                 if (!result.removal_allowed) continue;
-                bool matched = false;
+                bool matched = false, confirmed_surface = false;
                 for (const WallSegment& segment : result.segments) {
                     const float distance =
                         segment.plane.SignedDistance(p.x, p.y, p.z);
@@ -1377,10 +1449,18 @@ void TunnelPipeline::ProcessWalls(
                     const float z_road = p.z - GroundHeightAt(p.x, p.y);
                     if (z_road < params_.wall_remove_min_height_m) continue;
                     matched = true;
-                    break;
+                    // A 2D box is not evidence that an independently fitted
+                    // wall surface is a vehicle. The configured removal band
+                    // is independent of the RANSAC fitting tolerance.
+                    confirmed_surface |= std::fabs(distance) <=
+                        params_.wall_remove_distance_m;
                 }
                 if (!matched) continue;
-                if (protect_class != nullptr &&
+                if (params_.wall_geometry_precedence && confirmed_surface) {
+                    r.labels[i] = kWall;
+                    ++result.removed;
+                    ++r.wall_removed;
+                } else if (protect_class != nullptr &&
                     (*protect_class)[i] != kProtectNone) {
                     ++result.protected_skipped;
                 } else if (!protection_available && ambiguous != nullptr &&
@@ -1587,6 +1667,46 @@ void TunnelPipeline::RemoveResidualWalls(
     r.timings.wall_remove_ms+=ElapsedMs(start);
 }
 
+bool SparseClusterWallClear(const pcl::PointCloud<pcl::PointXYZI>& cloud,
+    const pcl::PointIndices& component, const std::array<WallSideResult, 2>& walls,
+    const Params& params) {
+    if (!params.sparse_cluster_enable || params.sparse_cluster_min_points < 2 ||
+        component.indices.size() < static_cast<std::size_t>(params.sparse_cluster_min_points) ||
+        component.indices.size() >= static_cast<std::size_t>(params.cluster_min_points) ||
+        !std::isfinite(params.sparse_cluster_wall_clearance_m) ||
+        params.sparse_cluster_wall_clearance_m < 0 ||
+        !walls[0].removal_allowed || !walls[1].removal_allowed) return false;
+    for (const int i : component.indices) {
+        if (i < 0 || static_cast<std::size_t>(i) >= cloud.size()) return false;
+        const auto& q = cloud[i];
+        if (!std::isfinite(q.x) || !std::isfinite(q.y) || !std::isfinite(q.z)) return false;
+        for (const auto& side : walls) {
+            bool supported = false;
+            double nearest = std::numeric_limits<double>::infinity();
+            for (const auto& segment : side.segments) {
+                if (!segment.valid) continue;
+                if (!segment.plane.Finite() || !std::isfinite(segment.tangent_x) ||
+                    !std::isfinite(segment.tangent_y)) return false;
+                const double norm = std::sqrt(double(segment.plane.a)*segment.plane.a +
+                    double(segment.plane.b)*segment.plane.b + double(segment.plane.c)*segment.plane.c);
+                // Producers fit unit normals; reject corrupt planes, normalize roundoff.
+                if (!std::isfinite(norm) || std::abs(norm-1.0) > 1e-3) return false;
+                const float along = segment.AlongWall(q.x, q.y);
+                if (!std::isfinite(along)) return false;
+                for (const auto& interval : segment.intervals)
+                    if (!std::isfinite(interval.first) || !std::isfinite(interval.second) ||
+                        interval.first > interval.second) return false;
+                if (!segment.InIntervals(along, 0.0f)) continue;
+                const double distance = segment.plane.SignedDistance(q.x,q.y,q.z)/norm;
+                if (!std::isfinite(distance)) return false;
+                supported = true; nearest = std::min(nearest, distance);
+            }
+            if (!supported || nearest < params.sparse_cluster_wall_clearance_m) return false;
+        }
+    }
+    return true;
+}
+
 void TunnelPipeline::ClusterAndFilter(
     const std::vector<std::uint8_t>* protect_class) {
     FrameResult& r = result_;
@@ -1598,11 +1718,22 @@ void TunnelPipeline::ClusterAndFilter(
 
     auto stage_start = Clock::now();
     r.cluster_id.assign(n, -1);
+    // Residual-wall components omit small support; recompute complete kept set.
+    if (params_.sparse_cluster_enable) residual_reusable_ = false;
     if (residual_reusable_) {
         r.clusters=std::move(residual_clusters_);r.residual_clusters_reused=true;
     } else if (!r.kept_indices.empty()) {
         r.clusters = asmc::lidar::pipeline::EuclideanComponents(*r.leveled,r.kept_indices,
-            params_.cluster_tolerance_m,std::max(1,params_.cluster_min_points),std::max(1,params_.cluster_max_points));
+            params_.cluster_tolerance_m,
+            params_.sparse_cluster_enable ? std::max(2,params_.sparse_cluster_min_points) : std::max(1,params_.cluster_min_points),
+            std::max(1,params_.cluster_max_points));
+        if (params_.sparse_cluster_enable) {
+            r.clusters.erase(std::remove_if(r.clusters.begin(), r.clusters.end(),
+                [&](const pcl::PointIndices& component) {
+                    return component.indices.size() < static_cast<std::size_t>(params_.cluster_min_points) &&
+                        !SparseClusterWallClear(*r.leveled, component, r.walls, params_);
+                }), r.clusters.end());
+        }
     }
     for (std::size_t c = 0; c < r.clusters.size(); ++c) {
         for (const int index : r.clusters[c].indices) {
@@ -1617,6 +1748,23 @@ void TunnelPipeline::ClusterAndFilter(
     else if (!r.clusters.empty()) obb_function_(r.leveled, r.clusters, &obbs);
     residual_reusable_=false;
     obbs.resize(r.clusters.size());
+    // The tracker fitter pads degenerate widths to 5cm. New sparse candidates
+    // use the same fitted yaw but strictly measured extents (no invented size).
+    if (params_.sparse_cluster_enable) for (std::size_t k=0;k<r.clusters.size();++k) {
+        if (r.clusters[k].indices.size() >= static_cast<std::size_t>(params_.cluster_min_points)) continue;
+        auto& b=obbs[k];if(!std::isfinite(b.yaw))b.yaw=0;
+        const float cs=std::cos(b.yaw),sn=std::sin(b.yaw);
+        float u0=INFINITY,u1=-INFINITY,v0=INFINITY,v1=-INFINITY,z0=INFINITY,z1=-INFINITY;
+        for(int i:r.clusters[k].indices) {const auto& q=(*r.leveled)[i];
+            const float u=cs*q.x+sn*q.y,v=-sn*q.x+cs*q.y;
+            u0=std::min(u0,u);u1=std::max(u1,u);v0=std::min(v0,v);v1=std::max(v1,v);
+            z0=std::min(z0,q.z);z1=std::max(z1,q.z);
+        }
+        b.cx=cs*(u0+u1)*.5f-sn*(v0+v1)*.5f;b.cy=sn*(u0+u1)*.5f+cs*(v0+v1)*.5f;
+        b.cz=(z0+z1)*.5f;b.length=u1-u0;b.width=v1-v0;b.z_min=z0;b.z_max=z1;
+        const float us[4]={u0,u1,u1,u0},vs[4]={v0,v0,v1,v1};
+        for(int j=0;j<8;++j)b.corners[j]=pcl::PointXYZ(cs*us[j%4]-sn*vs[j%4],sn*us[j%4]+cs*vs[j%4],j<4?z0:z1);
+    }
     r.timings.obb_ms = ElapsedMs(stage_start);
 
     stage_start = Clock::now();

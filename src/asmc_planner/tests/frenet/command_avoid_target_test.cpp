@@ -1232,7 +1232,8 @@ int main() {
         FrenetPlanner planner;
         planner.Init(config);
         TrackedObject wide = MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0);
-        wide.width = 3.0;
+        wide = MakeMapObstacle(wide.id,wide.x,wide.y,wide.heading,wide.speed,
+                               wide.length,3.0,wide.height);
         CartesianPath path;
         planner.Plan(ego, {wide},
                      MakeAvoidCommand(21, LateralDirection::LEFT), path);
@@ -1266,7 +1267,9 @@ int main() {
         FrenetPlanner rotated_planner;
         rotated_planner.Init(config);
         TrackedObject rotated = aligned;
-        rotated.heading += 0.5 * 3.14159265358979323846;
+        rotated = MakeMapObstacle(rotated.id,rotated.x,rotated.y,
+            rotated.heading+0.5*3.14159265358979323846,rotated.speed,
+            rotated.length,rotated.width,rotated.height);
         rotated_planner.Plan(
             ego, {rotated},
             MakeAvoidCommand(21, LateralDirection::LEFT), path);
@@ -2626,8 +2629,10 @@ int main() {
         // 뒤에는 속도가 fallback 임계값을 넘어도 같은 crawl 생성기를
         // 유지해야 한다. margin 밖에서 시작해 나중에 진입하는 경로는 별도
         // polygon_collision_test에서 금지됨을 검증한다.
+        // Keep the required offset outside the 0.4 m SHIFT tolerance with
+        // the SDK-calibrated 1.892 m body, so this still exercises the latch.
         const std::vector<TrackedObject> close_target{
-            MakeObstacle(waypoints, 21, kEgoS + 0.5, 0.0, -2.0,
+            MakeObstacle(waypoints, 21, kEgoS + 0.5, 0.0, -1.95,
                          1.4, 0.1, 0.5 * std::acos(-1.0))};
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);

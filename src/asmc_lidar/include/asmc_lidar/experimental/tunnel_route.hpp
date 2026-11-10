@@ -53,6 +53,7 @@ struct TunnelRouteConfig {
 };
 struct TunnelCameraInput;
 struct TunnelCameraView {
+  std::string camera_id;
   bool common_projection=false; // M1 uses the canonical optical-axis transform
   bool calibrated = false, available = false;
   camera::Calibration calibration;
@@ -70,6 +71,9 @@ struct TunnelCameraView {
 };
 struct TunnelCameraInput : TunnelCameraView {
   std::vector<TunnelCameraView> views; // empty preserves the front rollback path
+  // Per-view causal, motion-compensated input for measured point refinement.
+  // Separate from the synchronous wall-protection views above.
+  std::vector<std::shared_ptr<const TunnelCameraInput>> refinement_views;
 };
 struct TunnelRouteOutput {
   CloudPtr leveled{new Cloud}, filtered{new Cloud}, centroids{new Cloud};
@@ -87,6 +91,11 @@ class TunnelRoute {
   // Called once per accepted scan. Bounded, causal GPS map validity already
   // includes invalid/stale GPS and the existing three-sample recovery latch.
   bool Select(bool map_pose_valid);
+  void SetUpdatesAllowed(bool allowed) {
+    updates_allowed_=allowed;
+    core_.SetScopedUpdates(allowed&&config_.params.sparse_cluster_enable,
+                          allowed&&config_.params.wall_geometry_precedence);
+  }
   void SetClusterZConfig(const TunnelClusterZConfig& config) {
     ValidateTunnelClusterZ(config); config_.cluster_z = config;
   }
@@ -100,11 +109,15 @@ class TunnelRoute {
   TunnelRouteOutput Process(const CloudPtr& voxel, const LocalState& local,
                             std::int64_t stamp_ns, const VehicleSpec& vehicle,
                             const TunnelCameraInput* camera,
-                            const tunnel_filter::EgoMotion* motion = nullptr);
+                            const tunnel_filter::EgoMotion* motion = nullptr,
+                            const CloudPtr& measured_vehicle_support = {},float vehicle_match_m=.25f);
   const tunnel_filter::FrameResult& last() const { return core_.LastResult(); }
+  const tunnel_filter::TunnelPipeline& wall_core() const { return core_; }
+  void SeedWallHistory(const tunnel_filter::TunnelPipeline& other) { core_.CopyWallHistoryFrom(other); }
  private:
   TunnelRouteConfig config_;
   tunnel_filter::TunnelPipeline core_;
+  bool updates_allowed_=true;
   bool active_ = false, anchor_valid_ = false;
   std::int64_t anchor_stamp_ = 0;
   float anchor_yaw_ = 0, anchor_speed_ = 0;

@@ -219,7 +219,8 @@ double EffectiveSafetyMargin(const CollisionCheckConfig& cfg,
     // LOW_THREAT는 perception이 고정 구조물/정적으로 확정한 상태다. 시간에
     // 따른 위치 불확실성이 누적되지 않으므로 고정 base margin만 적용한다.
     // UNKNOWN/PENDING/DYNAMIC은 전달 속도 예측의 불확실성을 반영해 성장시킨다.
-    if (object.velocity_unavailable || object.motion_state != ObjectMotionState::LOW_THREAT) {
+    if ((object.velocity_unavailable && !object.stationary_observed) ||
+        object.motion_state != ObjectMotionState::LOW_THREAT) {
         margin += std::max(0.0, cfg.margin_growth_rate) *
                   std::max(0.0, prediction_time);
     }
@@ -234,7 +235,8 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
     int margin_recovery_object_id,
     int reactive_coast_exempt_object_id,
     const std::vector<bool>* following_rear = nullptr,
-    PredictionFootprintCache* predictions = nullptr) {
+    PredictionFootprintCache* predictions = nullptr,
+    const std::vector<int>* static_margin_recovery_ids = nullptr) {
     CartesianCollisionCheckResult result;
     if (samples.empty() || obstacles.empty()) return result;
 
@@ -244,7 +246,7 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
     const double recovery_ny = recovery_tx;
     const double clearance_backtrack_tolerance =
         std::max(1e-4, 0.1 * std::max(0.0, cfg.safety_margin));
-    MarginRecoveryState recovery;
+    std::unordered_map<int,MarginRecoveryState> recoveries;
 
     const auto reject = [&](int object_id, size_t sample_index) {
         CartesianCollisionCheckResult rejected = result;
@@ -288,7 +290,11 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
             // contact also remains blocked, including a zero configured margin.
             const bool inside_margin = physical_clearance <= margin + 1e-9;
 
-            if (object.id != margin_recovery_object_id) {
+            const bool static_recovery=static_margin_recovery_ids &&
+                object.motion_state==ObjectMotionState::LOW_THREAT &&
+                !object.velocity_unavailable &&
+                std::find(static_margin_recovery_ids->begin(),static_margin_recovery_ids->end(),object.id)!=static_margin_recovery_ids->end();
+            if (object.id != margin_recovery_object_id && !static_recovery) {
                 // 회피 대상이 아닌 모든 객체에는 최단거리 margin을 강제한다.
                 if (inside_margin) return reject(object.id, sample_index);
                 continue;
@@ -298,6 +304,7 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
             if (physical_clearance <= 1e-9) {
                 return reject(object.id, sample_index);
             }
+            auto& recovery=recoveries[object.id];
 
             const PredictedObjectPose predicted =
                 PredictTrackedObjectPose(object, sample.time);
@@ -320,7 +327,7 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
                 recovery.started_inside_margin = inside_margin;
                 recovery.initial_clearance = clearance;
                 recovery.max_clearance = clearance;
-                result.margin_recovery_used = inside_margin;
+                result.margin_recovery_used |= inside_margin;
                 continue;
             }
 
@@ -356,9 +363,12 @@ CartesianCollisionCheckResult EvaluateCollisionSamples(
 
     // 경로가 margin 안에서 끝나더라도 실제 이격이 개선됐다면 다음 cycle에
     // 이어서 탈출할 수 있다. 전혀 개선되지 않은 정지/접근 후보만 거부한다.
-    if (recovery.initialized && recovery.started_inside_margin &&
-        !recovery.exited_margin && !recovery.clearance_progressed) {
-        return reject(margin_recovery_object_id, samples.size() - 1);
+    for(const auto& entry:recoveries) {
+      const auto& recovery=entry.second;
+      if (recovery.initialized && recovery.started_inside_margin &&
+          !recovery.exited_margin && !recovery.clearance_progressed) {
+        return reject(entry.first, samples.size() - 1);
+      }
     }
     return result;
 }
@@ -643,7 +653,8 @@ CartesianCollisionCheckResult EvaluateCartesianTrajectorySafety(
     const VehicleShape& ego_shape,
     const CollisionCheckConfig& cfg,
     double dt,
-    int margin_recovery_object_id) {
+    int margin_recovery_object_id,
+    const std::vector<int>* static_margin_recovery_ids) {
     const size_t count =
         std::min({path.x.size(), path.y.size(), path.yaw.size()});
     std::vector<CollisionSample> samples;
@@ -657,7 +668,8 @@ CartesianCollisionCheckResult EvaluateCartesianTrajectorySafety(
         samples.push_back(sample);
     }
     return EvaluateCollisionSamples(samples, obstacles, ego_shape, cfg,
-                                    margin_recovery_object_id, -1);
+                                    margin_recovery_object_id, -1,nullptr,nullptr,
+                                    static_margin_recovery_ids);
 }
 
 // =========================================================

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <limits>
 #include "Frenet/Geometry/PolygonUtils.hpp"
+#include "Frenet/Maneuver/Merge/RoundaboutPrediction.hpp"
+#include "Frenet/Maneuver/Merge/ExecutionResponse.hpp"
 
 namespace {
 double Cross(geometry::Point2D a, geometry::Point2D b, geometry::Point2D c) {
@@ -183,7 +185,9 @@ MergeCandidateCheck CheckRoundaboutCandidate(const CartesianPath& path,
     if(!entering&&!safety.clear&&safety.blocking_sample_index==0)
         safety=EvaluateCartesianTrajectorySafety(path,objects,shape,collision,dt,
                                                  safety.blocking_object_id);
-    if(!safety.clear){result.blocking_object_id=safety.blocking_object_id;return result;}
+    if(!safety.clear){result.blocking_object_id=safety.blocking_object_id;
+        result.rejection_reason="physical_collision";
+        result.blocking_time=safety.blocking_sample_index*dt;return result;}
     if(entering)for(size_t i=0;i<count;++i){
         auto p=Pose(path,i);if(!zone.Overlaps(p,shape,collision.safety_margin))continue;
         // Check intermediate time shifts, not only the two endpoints: a fast
@@ -192,11 +196,13 @@ MergeCandidateCheck CheckRoundaboutCandidate(const CartesianPath& path,
             double t=std::max(0.0,i*dt+shift);
             auto footprint=MakeEgoFootprint(p,shape,collision.safety_margin+collision.margin_growth_rate*t);
             for(const auto& object:objects)if(CheckObstacleOverlap(footprint,{},object,t)){
-                result.blocking_object_id=object.id;return result;
+                result.blocking_object_id=object.id;
+                result.rejection_reason=shift<0?"front_gap":"rear_gap";
+                result.blocking_time=i*dt;result.blocking_shift=shift;return result;
             }
         }
     }
-    result.safe=true;return result;
+    result.safe=true;result.rejection_reason="none";return result;
 }
 
 int UnclassifiedCirculatingObject(const std::vector<TrackedObject>& objects,
@@ -215,4 +221,91 @@ int UnclassifiedCirculatingObject(const std::vector<TrackedObject>& objects,
                 return object.id;
     }
     return -1;
+}
+
+
+// Preserve the existing certificate first. Only a failed, committed execution
+// can use lane-supported future motion and an explicit NPC response assumption.
+// PREPARE's confidence, whole-body and temporal-gap checks are unchanged.
+CartesianCollisionCheckResult EvaluateRoundaboutExecutionSafety(
+    const CartesianPath& path,const RoundaboutMergeZone& zone,
+    const std::vector<TrackedObject>& objects,const VehicleShape& shape,
+    const CollisionCheckConfig& collision,double dt,const RoundaboutPrediction& history,
+    const RoundaboutMergeConfig& cfg,double entry_age) {
+    auto original=EvaluateCartesianTrajectorySafety(path,objects,shape,collision,dt);
+    if(!original.clear&&original.blocking_sample_index==0)
+        original=EvaluateCartesianTrajectorySafety(path,objects,shape,collision,dt,original.blocking_object_id);
+    if(original.clear||path.x.size()<2||!zone.valid)return original;
+    if(!std::isfinite(cfg.execution_reaction_time)||cfg.execution_reaction_time<0||
+       !std::isfinite(cfg.execution_max_rear_decel)||cfg.execution_max_rear_decel<=0)return original;
+    double entry=0;
+    if(entry_age<0) {
+        entry=-1;
+        for(std::size_t i=0;i<path.x.size();++i)
+            if(zone.Overlaps(Pose(path,i),shape,0)){entry=i*dt;break;}
+        if(entry<0)return original;
+    }
+    const double reaction=entry_age>=0?std::max(0.0,cfg.execution_reaction_time-entry_age):entry+cfg.execution_reaction_time;
+    auto remaining=objects;auto failure=original;
+    for(std::size_t attempt=0;attempt<objects.size();++attempt) {
+        const auto it=std::find_if(remaining.begin(),remaining.end(),[&](const auto& o){return o.id==failure.blocking_object_id;});
+        if(it==remaining.end()||std::count_if(remaining.begin(),remaining.end(),[&](const auto& o){return o.id==it->id;})!=1)return original;
+        const double age=it->prediction_origin?it->prediction_origin_offset_s:0;
+        const auto& observed=it->prediction_origin?*it->prediction_origin:*it;
+        auto mapped=history.ExecutionMappedMotion(observed,zone.circulating_references,0);
+        if(!mapped.prediction_lane)return original;
+        const auto aligned=AdvanceObjectObservation(mapped,age);
+        const CartesianState ego=Pose(path,0);
+        if(geometry::ConvexPolygonDistance(MakeEgoFootprint(ego,shape,0),PredictObstacleFootprint(aligned,0))<=collision.safety_margin)return original;
+        // A directly leading actor cannot be converted to a yielding rear car.
+        double closest=INFINITY,along=0,heading=0;
+        for(std::size_t i=0;i+1<path.x.size();++i) {
+            const double dx=path.x[i+1]-path.x[i],dy=path.y[i+1]-path.y[i],d2=dx*dx+dy*dy;
+            const double u=d2>1e-9?std::clamp(((aligned.x-path.x[i])*dx+(aligned.y-path.y[i])*dy)/d2,0.0,1.0):0;
+            const double error=std::hypot(aligned.x-path.x[i]-u*dx,aligned.y-path.y[i]-u*dy);
+            if(error<closest){closest=error;along=i+u;heading=path.yaw[i];}
+        }
+        if(along>0&&closest<(shape.width+aligned.width)*.5+collision.safety_margin&&
+           (aligned.vx*std::cos(heading)+aligned.vy*std::sin(heading))>.7*std::hypot(aligned.vx,aligned.vy))return original;
+        // Determine the resulting relationship under the SAME bounded response
+        // that is checked below. Requiring the unreacted car to be a follower
+        // first is circular: yielding is precisely what makes it fall behind.
+        highway_rear_response::State response;
+        response.enabled=true;response.start=age+reaction;
+        const double speed=std::hypot(mapped.vx,mapped.vy);
+        response.low=std::isfinite(mapped.prediction_min_speed)?mapped.prediction_min_speed:speed;
+        response.high=std::isfinite(mapped.prediction_max_speed)?mapped.prediction_max_speed:speed;
+        response.floor=0;
+        response.required_decel=response.maximum_decel=cfg.execution_max_rear_decel;
+        bool following=false;
+        for(std::size_t i=0;i<path.x.size();++i) {
+            const double time=age+i*dt;
+            const auto distances=response.distances(time);
+            if(mapped.prediction_lane_s+distances.second>
+               std::min(mapped.prediction_lane->length,mapped.prediction_lane_end_s))break;
+            const auto frame=Interpolate(*mapped.prediction_lane,mapped.prediction_lane_s+distances.second);
+            if(std::cos(frame.theta-path.yaw[i])<=.7)continue;
+            const auto body=response.footprint(mapped,time);
+            double front=-INFINITY,lo=INFINITY,hi=-INFINITY;
+            for(const auto& p:body) {
+                const double x=p.x-path.x[i],y=p.y-path.y[i];
+                front=std::max(front,x*std::cos(path.yaw[i])+y*std::sin(path.yaw[i]));
+                const double lateral=-x*std::sin(path.yaw[i])+y*std::cos(path.yaw[i]);
+                lo=std::min(lo,lateral);hi=std::max(hi,lateral);
+            }
+            const double rear=shape.rear_overhang<0?shape.length*.5:shape.rear_overhang;
+            if(body.size()>=3&&front < -rear-collision.safety_margin&&
+               lo<shape.width*.5+collision.safety_margin&&hi>-shape.width*.5-collision.safety_margin) {
+                following=true;break;
+            }
+        }
+        if(!following||!merge_response::Clear(path,mapped,shape,collision,dt,reaction,
+             cfg.execution_max_rear_decel,path.x.size(),std::chrono::steady_clock::time_point::max(),age))return original;
+        remaining.erase(it);
+        failure=EvaluateCartesianTrajectorySafety(path,remaining,shape,collision,dt);
+        if(!failure.clear&&failure.blocking_sample_index==0)
+            failure=EvaluateCartesianTrajectorySafety(path,remaining,shape,collision,dt,failure.blocking_object_id);
+        if(failure.clear)return failure;
+    }
+    return original;
 }

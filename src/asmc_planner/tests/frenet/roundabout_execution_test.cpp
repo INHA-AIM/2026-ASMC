@@ -26,6 +26,10 @@ int main(){
  expect(tick(100,100)&&r.candidate_valid&&!r.ready,"resting ego has full departure candidate and valid hold output");
  tick(100.05,100);expect(!r.ready,"same observation cannot satisfy confirmation count");
  tick(100.1,100.1);tick(100.2,100.2);expect(r.ready&&planner.CanCommitRoundaboutMerge(r),"three fresh safe observations authorize current candidate");
+ auto incomplete=r;incomplete.departure_certified=false;
+ expect(!planner.CanCommitRoundaboutMerge(incomplete),"READY without a full departure certificate cannot commit");
+ incomplete=r;incomplete.candidate_valid=false;
+ expect(!planner.CanCommitRoundaboutMerge(incomplete),"a rejected nominal candidate cannot commit using a copied certificate");
  auto old=r;
  planner.RevokeRoundaboutReadiness();expect(!planner.CanCommitRoundaboutMerge(old),"stale input revokes READY without accepting an old commit");
  tick(100.21,100.21);expect(!r.ready,"fresh input must rebuild confirmations after staleness");
@@ -216,6 +220,8 @@ int main(){
  for(int i=0;i<8;++i)fragment.corners[i]={fragment.x+(i%4<2?-.4:.4),fragment.y+(i%2?-.2:.2),double(i/4)};
  for(int i=0;i<4&&uncertain_ok;++i)uncertain_ok=uncertain_entry.PlanRoundaboutMerge(ego,{fragment},cmd,410+i*.1,410+i*.1,frontier,r);
  expect(uncertain_ok&&r.candidate_valid&&!r.ready&&r.blocking_object_id==901,"nearby partial moving vehicle prevents a departure certificate");
+ expect(!r.departure_certified&&r.entry_status==RoundaboutEntryStatus::OBSERVATION_UNVERIFIABLE,
+  "nominal gap success cannot impersonate a complete certificate for a new partial ID");
  ego.v=0;
  uncertain_ok=uncertain_ok&&uncertain_entry.PlanRoundaboutMerge(ego,{fragment},cmd,410.5,410.5,frontier,r);
  expect(uncertain_ok&&r.candidate_valid&&!r.ready,"having stopped once does not bypass uncertain nearby vehicle checks");
@@ -225,6 +231,33 @@ int main(){
  FrenetPlanner stale_entry;bool stale_ok=stale_entry.Init(file.string());
  for(int i=0;i<3&&stale_ok;++i)stale_ok=stale_entry.PlanRoundaboutMerge(ego,{},cmd,413+i*.1,412+i*.1,frontier,r);
  expect(stale_ok&&!r.ready,"fresh confirmation numbers cannot authorize stale sensor observations");
+ expect(!r.departure_certified&&r.entry_status==RoundaboutEntryStatus::STALE_INPUT,
+  "input freshness has a distinct entry-block reason without relaxed timestamp limits");
+ {
+  FrenetPlanner partial_entry;bool partial_ok=partial_entry.Init(file.string());
+  auto actor=fragment;actor.id=902;actor.length=4.5;actor.width=1.9;
+  actor.motion_state=ObjectMotionState::DYNAMIC;actor.vx=0;actor.vy=3;
+  auto observe_actor=[&](int step,bool partial) {
+   actor.x=conflict_pose.x-15;actor.y=conflict_pose.y+.3*step;
+   const double length=partial?.8:4.5,width=partial?.4:1.9,height=partial?.16:1;
+   actor.length=length;actor.width=width;
+   for(int i=0;i<8;++i)actor.corners[i]={actor.x+(i%2?-.5*width:.5*width),
+       actor.y+(i%4<2?-.5*length:.5*length),height*(i/4)};
+   return partial_entry.PlanRoundaboutMerge(ego,{actor},cmd,420+step*.1,420+step*.1,frontier,r);
+  };
+  for(int i=0;i<6&&partial_ok;++i)partial_ok=observe_actor(i,false);
+  expect(partial_ok&&r.ready&&r.departure_certified,
+   "a safely separated moving vehicle establishes a complete departure certificate");
+  partial_ok=partial_ok&&observe_actor(6,true);
+  expect(partial_ok&&r.ready&&r.departure_certified&&partial_entry.CanCommitRoundaboutMerge(r),
+   "fresh retained-body bounds preserve safe confirmation across partial visibility");
+  const auto safe_token=r;
+  actor.id=903;actor.x=conflict_pose.x-15;actor.y=conflict_pose.y;
+  for(auto& c:actor.corners)c.y-=1.8;
+  partial_entry.PlanRoundaboutMerge(ego,{actor},cmd,420.7,420.7,frontier,r);
+  expect(!r.ready&&!r.departure_certified&&!partial_entry.CanCommitRoundaboutMerge(safe_token),
+   "a different partial ID cannot inherit the old certificate or commit token");
+ }
  auto crossing=o;crossing.id=88;
  if(!early_candidate.x.empty()){
   const size_t j=std::min(early_candidate.x.size()-1,static_cast<size_t>((r.entry_time+1)/.1));
@@ -447,6 +480,62 @@ int main(){
  expect(slow_offset_ok&&out.x.size()>2&&out.v.back()==0&&
      std::fabs(out.kappa.front()-ego.kappa)<1e-5,
    "low-speed offset policy keeps a steering-capable stop and its initial curvature");
+ {
+  FrenetPlanner missed;bool initialized=missed.Init(file.string());missed.ResetRoundaboutMerge();
+  ego=zone.waiting_pose;ego.v=ego.a=0;
+  for(int i=0;i<3;++i){out={};missed.PlanRoundaboutMerge(ego,{},cmd,1200+.1*i,1200+.1*i,out,r);}
+  auto nominal=r.candidate_path;
+  const size_t j=std::min<size_t>(60,nominal.x.size()-1);
+  auto actor=o;actor.id=993;actor.motion_state=ObjectMotionState::DYNAMIC;
+  actor.length=4.5;actor.width=1.9;actor.vx=0;actor.vy=-5;
+  for(int step=0;step<8;++step) {
+   actor.x=nominal.x[j];actor.y=nominal.y[j]+5*j*.1+5*(.7-.1*step);
+   for(int k=0;k<8;++k)actor.corners[k]={actor.x+(k%4<2?-.95:.95),actor.y+(k%2?-2.25:2.25),double(k/4)};
+   out={};missed.PlanRoundaboutMerge(ego,{actor},cmd,1201+.1*step,1201+.1*step,out,r);
+  }
+  const auto before=r;out={};missed.PlanRoundaboutMerge(ego,{},cmd,1201.8,1201.8,out,r);
+  expect(initialized&&r.retained_missing_objects==1,
+   "planner feeds a verified missing vehicle into its full departure certificate");
+  RoundaboutPrediction proof;
+  for(int step=0;step<8;++step){auto a=actor;a.y+=5*(.7-.1*step);for(auto& c:a.corners)c.y+=5*(.7-.1*step);proof.Observe({a},1201+.1*step,1,5);}
+  proof.Observe({},1201.8,1,5);
+  auto records=proof.MissingDepartureOccupancies(1201.8,[](double,double){return true;},6,3,1);
+  std::vector<TrackedObject> models;for(const auto& record:records)models.insert(models.end(),record.models.begin(),record.models.end());
+  expect(!CheckRoundaboutCandidate(nominal,zone,models,missed.vehicle_shape(),missed.collision_config(),missed.sample_dt(),.7,1,true).safe,
+   "the same missing vehicle would invalidate the original empty-road candidate");
+  expect(!r.departure_certified||CheckRoundaboutCandidate(r.candidate_path,zone,models,
+     missed.vehicle_shape(),missed.collision_config(),missed.sample_dt(),.7,1,true).safe,
+   "a selected departure cannot ignore the retained vehicle when choosing another speed schedule");
+  expect(!missed.CanCommitRoundaboutMerge(before),"a missing-frame recheck invalidates the previous departure token");
+ }
+
+ {
+  FrenetPlanner safe_missing;expect(safe_missing.Init(file.string()),"safe missing fixture initializes");
+  ego=zone.waiting_pose;ego.v=ego.a=0;
+  auto departed=o;departed.id=994;departed.motion_state=ObjectMotionState::DYNAMIC;
+  departed.velocity_unavailable=false;departed.length=1;departed.width=.3;
+  departed.vx=5;departed.vy=0;
+  for(int step=0;step<8;++step) {
+   departed.x=ego.x+100+.5*step;departed.y=ego.y;
+   for(int k=0;k<8;++k)departed.corners[k]={departed.x+(k%4<2?-.5:.5),
+       departed.y+(k%2?-.15:.15),.02*(k/4)};
+   safe_missing.PlanRoundaboutMerge(ego,{departed},cmd,1600+.1*step,1600+.1*step,out,r);
+  }
+  expect(r.ready,"separated observed fragment does not block the original candidate");
+  for(int step=8;step<=9;++step) {
+   safe_missing.PlanRoundaboutMerge(ego,{},cmd,1600+.1*step,1600+.1*step,out,r);
+   expect(r.ready&&r.departure_certified&&r.missing_non_interference==1&&
+       r.blocking_object_id<0&&safe_missing.CanCommitRoundaboutMerge(r),
+       "safe relevance proof preserves confirmations across one and two missing frames");
+  }
+  auto token=r;departed.id=10;
+  safe_missing.PlanRoundaboutMerge(ego,{departed},cmd,1601,1601,out,r);
+  safe_missing.PlanRoundaboutMerge(ego,{},cmd,1601.1,1601.1,out,r);
+  expect(!r.ready&&!r.departure_certified&&r.blocking_object_id==10&&
+      r.missing_status=="unverifiable"&&r.missing_reason=="motion_insufficient"&&
+      !safe_missing.CanCommitRoundaboutMerge(token),
+      "new single-frame ID cannot inherit another ID's path exemption or old commit token");
+ }
  std::filesystem::remove_all(dir);return failures?1:0;
 }
 

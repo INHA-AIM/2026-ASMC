@@ -9,6 +9,7 @@
 #include "Planning/Compatibility/lane_change_commit_coordinator.hpp"
 #include "Parser/PlanningInput.hpp"
 #include "Planning/Compatibility/steady_freshness.hpp"
+#include "local/preparation_limit.hpp"
 namespace asmc_planner {
 template<class RuntimePort>
 bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
@@ -407,6 +408,15 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                           /*plan_valid=*/false);
         return true;
     }
+    if constexpr(std::is_same_v<RuntimePort,frenet_planner_ros::PlanningPort>) {
+        // LOCAL opt-in only: decelerate on the existing NORMAL path during the
+        // 30m preparation zone. Waiting until blackout handed35km/h to a10km/h
+        // short-range planner and forced its stopping-space guard to reject.
+        local::ApplyPreparationLimit(planner_command, port.local_prepare_enabled_,
+            port.local_preparing_,
+            (ros::SteadyTime::now()-port.local_prepare_received_).toSec(),
+            port.local_entry_cap_kph_);
+    }
     // Acceptance can rebind this cycle to an older locked command. A new
     // request's constraint must never be applied to that different identity.
     planner_command.avoid_in_lane_only=requested_in_lane_avoid &&
@@ -469,6 +479,19 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             failed.execution_state = port.command_manager_.execution_state();
             failed.result_code = terminal ? Feedback::INVALID_COMMAND : Feedback::TRANSIENT_GENERATION_FAILURE;
             failed.detail = terminal ? "unsupported roundabout zone/type or gap preference" : "roundabout candidate/maintenance blocked";
+            if(!port.planner().roundabout_merge_committed()) {
+                const auto reason=ok?RoundaboutEntryStatus::PATH_CONVERSION_FAILED:result.entry_status;
+                failed.detail += std::string("; entry_reason=")+RoundaboutEntryStatusName(reason);
+                failed.detail += "; blocking_id="+std::to_string(result.blocking_object_id);
+                failed.detail += "; retained_missing="+std::to_string(result.retained_missing_objects)+
+                    "; unverified_missing="+std::to_string(result.unverified_missing_objects)+
+                    "; history_age="+std::to_string(result.blocking_history_age)+
+                    "; missing_status="+result.missing_status+"; missing_reason="+result.missing_reason+
+                    "; missing_checked="+std::to_string(result.missing_models_checked)+
+                    "; missing_cleared="+std::to_string(result.missing_non_interference)+
+                    "; blocking_time="+std::to_string(result.blocking_path_time)+
+                    "; gap_shift="+std::to_string(result.blocking_gap_shift);
+            }
             const auto stop = MakeStopTrajectory(port.stopReferenceVehicle(snapshot), port.trajectoryDt(), asmc_msgs::Trajectory::FAILURE_GENERATION);
             port.trajectory_pub_.publish(stop);
             port.publishFeedbackV2(feedback_command_id, failed, &stop, Feedback::TRAJECTORY_SAFE_STOP, false, ego_s_valid, ego_s);
@@ -509,6 +532,18 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 (port.planner().roundabout_merge_committed() ? (result.progress_stopping ? "roundabout progress with certified stop" :
                     (result.candidate_valid ? "roundabout committed" : "roundabout collision braking")) :
                  (result.ready ? "roundabout ready after full traversal recheck" : "roundabout waiting/approaching stopline"));
+        if(!port.planner().roundabout_merge_committed()) {
+            succeeded.detail += std::string("; entry_reason=")+RoundaboutEntryStatusName(result.entry_status);
+            succeeded.detail += "; blocking_id="+std::to_string(result.blocking_object_id);
+            succeeded.detail += "; retained_missing="+std::to_string(result.retained_missing_objects)+
+                "; unverified_missing="+std::to_string(result.unverified_missing_objects)+
+                "; history_age="+std::to_string(result.blocking_history_age)+
+                    "; missing_status="+result.missing_status+"; missing_reason="+result.missing_reason+
+                    "; missing_checked="+std::to_string(result.missing_models_checked)+
+                    "; missing_cleared="+std::to_string(result.missing_non_interference)+
+                    "; blocking_time="+std::to_string(result.blocking_path_time)+
+                    "; gap_shift="+std::to_string(result.blocking_gap_shift);
+        }
         port.publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
             port.planner().roundabout_merge_committed() ?
                 (result.candidate_valid || result.progress_stopping || result.maneuver_completed ? Feedback::TRAJECTORY_LOCKED : Feedback::TRAJECTORY_SAFE_STOP) : Feedback::TRAJECTORY_NEW,
@@ -906,11 +941,19 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                        ? asmc_msgs::FrenetFeedback::COLLISION_BLOCKED
                        : asmc_msgs::FrenetFeedback::
                              TRANSIENT_GENERATION_FAILURE);
-            const std::string detail = terminal_target_lost
+            std::string detail = terminal_target_lost
                 ? "committed avoid target lost before lateral shift"
                 : (reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
                        ? "committed avoid path blocked by collision"
                        : "could not generate the committed avoid path");
+            if(committed.search_pending)detail+="; static corridor search pending";
+            detail+="; side_policy="+std::string(port.planner().avoid_side_policy_name());
+            detail+="; avoid_phase="+std::string(port.planner().avoid_phase_name());
+            if(committed.static_search_pending_level>=0)
+                detail+="; static search pending level="+std::to_string(committed.static_search_pending_level);
+            if(!committed.rejection_stage.empty())detail+="; corridor rejection="+committed.rejection_stage;
+            if(!committed.static_recovery_rejection.empty())
+                detail+="; static recovery rejection="+committed.static_recovery_rejection;
             // TRACKING 중 target 장기 소실은 terminal이다. 그 외 post-COMMIT
             // 생성 실패는 기존대로 transaction/lock을 유지한다.
             port.command_manager_.NotifyPlanFailed(
@@ -1012,6 +1055,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             return true;
         }
 
+        trajectory.execution_policy=committed.maneuver_completed?asmc_msgs::Trajectory::POLICY_NORMAL:
+            static_cast<uint8_t>(committed.static_progress_mode);
         AvoidFeedbackFields avoid_fields;
         avoid_fields.applied_speed_mps = trajectory.points.back().velocity;
         avoid_fields.target_d_valid = true;
@@ -1075,7 +1120,31 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             executing.detail = committed.maneuver_completed
                 ? "avoid maneuver completed"
                 : "executing committed avoid trajectory";
+            if(committed.retained_geometry)executing.detail+="; retained spatial corridor";
         }
+        // A rejected replacement command must retain its reason while still
+        // exposing the actual locked maneuver's recovery policy.
+        if(committed.static_progress_mode!=StaticAvoidPolicy::NORMAL)
+            executing.detail+="; static recovery policy="+std::to_string(int(committed.static_progress_mode))+
+                " margin="+std::to_string(committed.static_progress_margin)+
+                " clearance="+std::to_string(committed.static_minimum_clearance)+
+                " contact_cost="+std::to_string(committed.static_contact_cost)+
+                " fresh_prefix="+std::to_string(committed.static_progress_fresh);
+        if(committed.static_speed_recovery_active)
+            executing.detail+="; static speed_cap="+std::to_string(committed.static_execution_speed_cap)+
+                " next_speed_cap="+std::to_string(committed.static_next_speed_cap)+
+                " proof_frames="+std::to_string(committed.static_speed_proof_frames);
+        if(committed.static_speed_retry)executing.detail+=" speed_retry=1";
+        if(!committed.static_corridor_kind.empty())executing.detail+="; corridor="+committed.static_corridor_kind;
+        executing.detail+="; side_policy="+std::string(port.planner().avoid_side_policy_name());
+        executing.detail+="; avoid_phase="+std::string(port.planner().avoid_phase_name());
+        if(committed.static_geometry_time>=0)
+            executing.detail+="; geometry_time="+std::to_string(committed.static_geometry_time)+
+                " connector_m="+std::to_string(committed.static_connector_distance)+
+                " return_m="+std::to_string(committed.static_return_distance);
+        if(committed.static_search_pending_level>=0)
+            executing.detail+="; static search pending level="+std::to_string(committed.static_search_pending_level);
+        if(committed.escape_recovery_required)executing.detail+="; initial_margin_escape=1";
         port.trajectory_pub_.publish(trajectory);
         port.publishDebugMarkersV2(trajectory, command);
         port.publishFeedbackV2(feedback_command_id, executing, &trajectory,
@@ -1324,7 +1393,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             failed.detail = detail;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 port.stopReferenceVehicle(snapshot), port.trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_GENERATION);
+                code==asmc_msgs::FrenetFeedback::COLLISION_BLOCKED?
+                    asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED:asmc_msgs::Trajectory::FAILURE_GENERATION);
             port.trajectory_pub_.publish(stop);
             port.publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1399,6 +1469,7 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
                 avoid_trajectory);
             if (convert_status == ConversionStatus::OK &&
                 !avoid_trajectory.points.empty()) {
+                avoid_trajectory.execution_policy=static_cast<uint8_t>(prepare.static_progress_mode);
                 // 3~4번: pure core preflight 뒤 manager와 core를 연속 적용한다.
                 // preflight가 실패하면 manager는 READY 그대로이므로
                 // COMMITTED/core-unlocked 분리 상태가 남지 않는다.
@@ -1463,6 +1534,13 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
             : (prepare.candidate_valid
                    ? std::string("avoid candidate is ready")
                    : std::string("no safe avoid candidate this cycle"));
+        if(prepare.candidate_valid&&prepare.static_progress_mode!=StaticAvoidPolicy::NORMAL)
+            prepared.detail+="; static recovery policy="+std::to_string(int(prepare.static_progress_mode))+
+                " margin="+std::to_string(prepare.static_progress_margin);
+        if(prepare.static_search_pending_level>=0)
+            prepared.detail+="; static search pending level="+std::to_string(prepare.static_search_pending_level);
+        if(!prepare.static_corridor_kind.empty())prepared.detail+="; corridor="+prepare.static_corridor_kind;
+        if(prepare.escape_recovery_required)prepared.detail+="; initial_margin_escape=1";
 
         port.trajectory_pub_.publish(published);
         port.publishDebugMarkersV2(published, command);
@@ -1788,7 +1866,8 @@ bool Planner::RunV2(RuntimePort& port, const ros::Time& now) {
         }
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             port.stopReferenceVehicle(snapshot), port.trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_GENERATION);
+            failed.result_code==asmc_msgs::FrenetFeedback::COLLISION_BLOCKED?
+                asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED:asmc_msgs::Trajectory::FAILURE_GENERATION);
         port.trajectory_pub_.publish(stop);
         port.publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,

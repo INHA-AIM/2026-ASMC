@@ -85,3 +85,17 @@ TEST(BrakingWarmStart, MatchingBrakingHistoryIsPreserved) {
         EXPECT_DOUBLE_EQ(u.delta, .04); EXPECT_DOUBLE_EQ(u.accel, -.8);
     }
 }
+
+TEST(BrakingWarmStart, StageWiseReleaseDoesNotFreezeBrakingAcrossHorizon) {
+ auto p=Params();p.max_iterations=0;p.acceleration_rise_rate=2.;
+ MPCState ego{0,0,0,1};MPCControl previous{.02,-1.};
+ std::vector<MPCControl> desired(p.horizon,{.02,1.});
+ auto result=solveMPC(ego,Reference(ego,desired,p),previous,{},p);
+ ASSERT_TRUE(result.success);auto last=previous;
+ for(const auto& u:result.controls){EXPECT_LE(u.accel-last.accel,.1+1e-9);last=u;}
+ EXPECT_NEAR(result.control.accel,-.9,1e-9);
+ EXPECT_GT(result.controls.back().accel,0.);
+ p.accel_max=-.9;p.acceleration_rise_rate=0;
+ auto frozen=solveMPC(ego,Reference(ego,desired,p),previous,{},p);
+ ASSERT_TRUE(frozen.success);EXPECT_LE(frozen.controls.back().accel,-.9);
+}

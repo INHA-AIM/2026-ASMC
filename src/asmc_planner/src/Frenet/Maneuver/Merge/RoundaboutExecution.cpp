@@ -1,4 +1,6 @@
+#include "Frenet/Maneuver/Merge/RoundaboutObjectPolicy.hpp"
 #include "Frenet/Maneuver/Merge/ProgressStoppingCertificate.hpp"
+#include "Frenet/Maneuver/Merge/RoundaboutDeparture.hpp"
 #include "Frenet/frenet_planner.hpp"
 #include "Frenet/Generator/BoundaryConditionPolicy.hpp"
 #include "Frenet/Generator/LongitudinalGenerator.hpp"
@@ -420,6 +422,7 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
 void FrenetPlanner::ResetRoundaboutMerge(bool preserve_exit_prediction) {
     execution_.resetMerge();
     roundabout_preferred_d_=0;
+    roundabout_physical_entry_time_=-1;
     roundabout_acceleration_memory_.Reset();
     if(!preserve_exit_prediction||!roundabout_exit_prediction_active_) {
         roundabout_prediction_.Reset();
@@ -449,7 +452,7 @@ void FrenetPlanner::RevokeRoundaboutReadiness() {
 }
 bool FrenetPlanner::CanCommitRoundaboutMerge(const MergePrepareResult& result) const {
     return execution_.canCommitMerge(roundabout_merge_enabled(),
-        result.epoch==roundabout_epoch_, result.candidate_valid, result.ready,
+        result.epoch==roundabout_epoch_, result.candidate_valid&&result.departure_certified, result.ready,
         last_roundabout_result_.ready, !result.candidate_path.x.empty());
 }
 void FrenetPlanner::ApplyRoundaboutMergeCommit(const MergePrepareResult&) {
@@ -458,7 +461,7 @@ void FrenetPlanner::ApplyRoundaboutMergeCommit(const MergePrepareResult&) {
     execution_.resetStopTarget();
 }
 bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
-    const std::vector<TrackedObject>& obstacles,const PlannerCommand& command,
+    const std::vector<TrackedObject>& source_obstacles,const PlannerCommand& command,
     double planning_time,double observation_stamp,CartesianPath& out_path,
     MergePrepareResult& result,double ego_observation_time) {
     result=MergePrepareResult{};result.epoch=++roundabout_epoch_;
@@ -475,10 +478,25 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         roundabout_acceleration_memory_.Reset();
         last_failure_reason_=PlanFailureReason::INVALID_COMMAND;return false;
     }
+    // User-approved competition assumption: only vehicles circulate here.
+    // Unknown geometry remains, including camera blind spots. This private
+    // input copy does not delete LiDAR tracks or affect ordinary/local planning.
+    std::vector<TrackedObject> obstacles;
+    obstacles.reserve(source_obstacles.size());
+    for (const auto& object : source_obstacles)
+        if (roundabout_policy::Keep(object.classification)) obstacles.push_back(object);
     speed_profiler_.Reset();
     last_profiled_acceleration_=0.0;
     const double evaluation_time=ego_observation_time>=0?ego_observation_time:planning_time;
     if(!std::isfinite(evaluation_time))return false;
+    if(evaluation_time<roundabout_physical_entry_time_)roundabout_physical_entry_time_=-1;
+    if(execution_->merge.committed&&roundabout_physical_entry_time_<0&&roundabout_zone_.Overlaps(ego,vehicle_shape_,0))
+        roundabout_physical_entry_time_=evaluation_time;
+    const double entry_age=roundabout_physical_entry_time_<0?-1:evaluation_time-roundabout_physical_entry_time_;
+    const auto execution_safety=[&](const CartesianPath& p,const std::vector<TrackedObject>& os) {
+        return EvaluateRoundaboutExecutionSafety(p,roundabout_zone_,os,vehicle_shape_,collision_cfg_,
+            path_cfg_.dt,roundabout_prediction_,roundabout_merge_cfg_,entry_age);
+    };
     SetObjectObservationTime(observation_stamp,observation_stamp);
     auto ctx=PreparePlanningContext(ego,obstacles,command);
     roundabout_prediction_.Observe(obstacles,observation_stamp,
@@ -491,6 +509,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     }
     auto departure_obstacles=ctx.predicted_obstacles;
     std::vector<TrackedObject> departure_bounds;
+    std::vector<RoundaboutPrediction::MissingDepartureObservation> missing_departure;
     if(!execution_->merge.committed) {
         ctx.predicted_obstacles=roundabout_prediction_.ApproachOccupancies(ctx.predicted_obstacles);
         departure_obstacles=ctx.predicted_obstacles;
@@ -504,6 +523,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         departure_obstacles=RoundaboutPrediction::ExpandTurnModels(
             roundabout_prediction_.WithObservedSpeedRanges(departure_obstacles),
             object_tracking_cfg_.yaw_rate_clamp_rad_s);
+        missing_departure=roundabout_prediction_.MissingDepartureOccupancies(evaluation_time,
+            [&](double x,double y){return roundabout_zone_.SupportsCirculatingObservation(x,y);},
+            roundabout_merge_cfg_.partial_vehicle_length,roundabout_merge_cfg_.partial_vehicle_width,
+            object_tracking_cfg_.yaw_rate_clamp_rad_s,
+            Interpolate(ref_,roundabout_zone_.conflict_start_s).x,
+            Interpolate(ref_,roundabout_zone_.conflict_start_s).y);
     }
     if(execution_->merge.committed)
         ctx.predicted_obstacles=roundabout_prediction_.ExecutionOccupancies(ctx.predicted_obstacles,
@@ -512,6 +537,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     const double observation_age=std::max(0.0,evaluation_time-observation_stamp);
     for(auto& object:ctx.predicted_obstacles)object=AdvanceObjectObservation(object,observation_age);
     for(auto& object:departure_obstacles)object=AdvanceObjectObservation(object,observation_age);
+    for(const auto& missing:missing_departure) {
+        if(missing.models.empty()){++result.unverified_missing_objects;continue;}
+        ++result.retained_missing_objects;
+        // These models are already ego-aligned. The mandatory candidate-local
+        // missing check below uses them without a second time adjustment.
+    }
     last_s_=ctx.s;last_d_=ctx.d;has_last_s_=true;
     double dd,ddd;ArcDerivToTimeDeriv(ctx.s_dot,ctx.s_ddot,ctx.d_prime,ctx.d_pprime,dd,ddd);
     auto start=ClampInitialBoundaryState(ctx.s,ctx.s_dot,ctx.s_ddot,ctx.d,dd,ddd,limits_);
@@ -553,6 +584,8 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         if(roundabout_bridge_settled_>=.5)roundabout_bridge_active_=false;
     }
     bool early_departure_clear=true;int uncertain=-1;
+    const bool entry_inputs_fresh=planning_time-observation_stamp<=.25&&
+        observation_stamp<=planning_time+.05;
     if(!execution_->merge.committed) {
     // MakeMergeProfile starts at the measured speed/acceleration and unwinds
     // braking under the existing jerk limit. Certify that actual schedule
@@ -587,6 +620,10 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         return true;
     };
     const auto checked_occupancy=[&](int id) {
+        // Defer missing IDs to the mandatory full candidate check. This does
+        // not certify them or bypass the confidence policy for current objects.
+        if(std::any_of(missing_departure.begin(),missing_departure.end(),
+            [&](const auto& missing){return missing.id==id;}))return true;
         return std::any_of(departure_bounds.begin(),departure_bounds.end(),
             [&](const auto& bound){return bound.id==id;})||passed(id);
     };
@@ -596,12 +633,17 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     // establishes motion/classification. Small roadside fixtures are excluded.
     if(uncertain<0)uncertain=UnclassifiedCirculatingObject(obstacles,roundabout_zone_,
         conflict.x,conflict.y);
-    early_departure_clear=uncertain<0&&
-        planning_time-observation_stamp<=.25&&observation_stamp<=planning_time+.05;
+    early_departure_clear=uncertain<0&&entry_inputs_fresh;
     if(uncertain>=0)result.blocking_object_id=uncertain;
     }
     double best_cost=std::numeric_limits<double>::infinity();
-    bool nominal_candidate_found=false;
+    bool nominal_candidate_found=false, certified_candidate_found=false;
+    MissingDepartureCheck selected_missing;
+    MergeCandidateCheck selected_departure;
+    const auto selection_complete=[&]() {
+        return execution_->merge.committed||!early_departure_clear?
+            nominal_candidate_found:certified_candidate_found;
+    };
     // A departure certificate must also be obtainable from a slightly displaced
     // waiting pose. It does not execute movement during PREPARE: the stop path
     // remains authoritative, and the complete departure still needs gap and
@@ -645,11 +687,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                     object=roundabout_prediction_.MappedMotion(object,roundabout_zone_.circulating_references,horizon);
                     object=AdvanceObjectObservation(object,observation_age);
                 }
-                auto safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
-                    vehicle_shape_,collision_cfg_,path_cfg_.dt);
-                if(!safety.clear&&safety.blocking_sample_index==0)
-                    safety=EvaluateCartesianTrajectorySafety(certified,progress_obstacles,
-                        vehicle_shape_,collision_cfg_,path_cfg_.dt,safety.blocking_object_id);
+                const auto safety=execution_safety(certified,progress_obstacles);
                 if(safety.clear) {
                     progress_certificate=std::move(certified);selected_d=alternative.offset;break;
                 }
@@ -665,16 +703,16 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     // Strict grid containment is preferred; an execution/waiting recovery bridge is bounded
     // by 15 cm, 10% of the footprint, 6 m and 5 s before settled re-entry.
     for(bool allow_bridge:{false,true}) {
-    if(allow_bridge&&((!execution_->merge.committed&&!waiting_boundary_recovery)||nominal_candidate_found))break;
+    if(allow_bridge&&((!execution_->merge.committed&&!waiting_boundary_recovery)||selection_complete()))break;
     for(bool release_positive_accel:{false,true}) {
-    if(release_positive_accel&&(ego.a<=0||!profile_failed||nominal_candidate_found))break;
+    if(release_positive_accel&&(ego.a<=0||!profile_failed||selection_complete()))break;
     std::vector<std::pair<double,double>> geometries{
         {ordinary_settle,roundabout_preferred_d_},{6,roundabout_preferred_d_},
         {10,.35},{10,-.35},{6,.35},{6,-.35}};
     if(roundabout_preferred_d_!=0){geometries.push_back({ordinary_settle,0});geometries.push_back({6,0});}
     for(const auto geometry:geometries) {
     double nominal_family_cost=std::numeric_limits<double>::infinity(),nominal_family_paint=0;
-    bool nominal_family_valid=false;
+    bool nominal_family_valid=false, certified_family_valid=false;
     for(double fraction:{1.0,.8,.6,.4}) {
         ++result.generated;
         CartesianPath path;
@@ -700,6 +738,10 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             check=CheckRoundaboutCandidate(path,roundabout_zone_,ctx.predicted_obstacles,
                 vehicle_shape_,collision_cfg_,path_cfg_.dt,roundabout_merge_cfg_.min_front_time_gap,
                 merge_cfg_.min_rear_time_gap,!execution_->merge.committed);
+            if(!check.safe&&check.covers_exit&&execution_->merge.committed) {
+                const auto continued=execution_safety(path,ctx.predicted_obstacles);
+                check.safe=continued.clear;check.blocking_object_id=continued.blocking_object_id;
+            }
             valid=check.safe;
             if(check.blocking_object_id>=0)result.blocking_object_id=check.blocking_object_id;
             // Keep only the existing four speed schedules of the first
@@ -713,6 +755,9 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                 progress_alternatives.push_back({path,geometry.second});
             }
         }
+        bool departure_certified=false;
+        MissingDepartureCheck missing_check;
+        MergeCandidateCheck departure_check;
         double cost=check.exit_time+AvoidRoadMap::PaintCost(road)+std::fabs(geometry.second);
         if(valid) {
             nominal_candidate_found=nominal_family_valid=true;
@@ -720,17 +765,29 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             // Select among the existing candidates AFTER the full certificate.
             // No extra speed/geometry catalogue or delayed-entry samples.
             if(!execution_->merge.committed&&early_departure_clear) {
-                const auto final=CheckRoundaboutCandidate(path,roundabout_zone_,departure_obstacles,
+                departure_check=CheckRoundaboutCandidate(path,roundabout_zone_,departure_obstacles,
                     vehicle_shape_,collision_cfg_,path_cfg_.dt,roundabout_merge_cfg_.min_front_time_gap,
                     merge_cfg_.min_rear_time_gap,true);
-                valid=final.safe;
-                if(!valid&&final.blocking_object_id>=0)result.blocking_object_id=final.blocking_object_id;
+                if(departure_check.safe)
+                    missing_check=CheckMissingRoundaboutDeparture(path,roundabout_zone_,missing_departure,
+                        vehicle_shape_,collision_cfg_,path_cfg_.dt,roundabout_merge_cfg_.min_front_time_gap,
+                        merge_cfg_.min_rear_time_gap);
+                departure_certified=departure_check.safe&&missing_check.safe;
+                certified_candidate_found|=departure_certified;
+                certified_family_valid|=departure_certified;
             }
         }
-        last_candidate_paths_.push_back(path);last_candidate_validity_.push_back(valid);
+        last_candidate_paths_.push_back(path);
+        last_candidate_validity_.push_back(valid&&
+            (execution_->merge.committed||!early_departure_clear||departure_certified));
         if(!valid)continue;
         ++result.valid;
-        if(cost<best_cost){best_cost=cost;selected_d=geometry.second;selected_bridge=bridge;result.candidate_valid=true;
+        // A cheap diagnostic-only candidate must never mask a certified one.
+        if(!result.candidate_valid||(departure_certified&&!result.departure_certified)||
+           (departure_certified==result.departure_certified&&cost<best_cost)){
+            best_cost=cost;selected_d=geometry.second;selected_bridge=bridge;result.candidate_valid=true;
+            result.departure_certified=departure_certified;
+            selected_missing=missing_check;selected_departure=departure_check;
             result.entry_time=check.entry_time;result.exit_time=check.exit_time;
             result.candidate_path=std::move(path);}
     }
@@ -742,11 +799,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     if(!progress_certificate.x.empty())break;
     // Prefer the original reference geometry when it is feasible. Alternate
     // local shapes rescue geometry or prolonged paint contact, with bounded work.
-    if(nominal_family_valid&&nominal_family_paint<.3)break;
+    if(nominal_family_valid&&nominal_family_paint<.3&&
+       (execution_->merge.committed||!early_departure_clear||certified_family_valid))break;
     }
-    if(nominal_candidate_found||!progress_certificate.x.empty())break;
+    if(selection_complete()||!progress_certificate.x.empty())break;
     }
-    if(nominal_candidate_found||!progress_certificate.x.empty())break;
+    if(selection_complete()||!progress_certificate.x.empty())break;
     }
     if(!execution_->merge.committed&&uncertain>=0)result.blocking_object_id=uncertain;
     else if(result.candidate_valid)result.blocking_object_id=-1;
@@ -793,11 +851,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                         roundabout_bridge_active_?5.0-(planning_time-roundabout_bridge_start_time_):5.0,
                         roundabout_bridge_settled_);
                 if(!road.drivable)continue;
-                auto safety=EvaluateCartesianTrajectorySafety(stop,ctx.predicted_obstacles,
-                    vehicle_shape_,collision_cfg_,path_cfg_.dt);
-                if(!safety.clear&&safety.blocking_sample_index==0)
-                    safety=EvaluateCartesianTrajectorySafety(stop,ctx.predicted_obstacles,
-                        vehicle_shape_,collision_cfg_,path_cfg_.dt,safety.blocking_object_id);
+                const auto safety=execution_safety(stop,ctx.predicted_obstacles);
                 if(!safety.clear)continue;
                 out_path=std::move(stop);braking=true;break;
             }
@@ -811,8 +865,25 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         last_failure_reason_=braking?PlanFailureReason::NONE:PlanFailureReason::COLLISION_BLOCKED;
         return braking;
     }
+    if(uncertain<0&&early_departure_clear&&result.candidate_valid) {
+        result.missing_status=selected_missing.status;
+        result.missing_reason=selected_missing.reason;
+        result.missing_models_checked=selected_missing.models_checked;
+        result.missing_non_interference=selected_missing.non_interference_proven;
+        result.blocking_object_id=selected_departure.safe?selected_missing.blocking_id:
+            selected_departure.blocking_object_id;
+        result.blocking_history_age=selected_missing.age;
+        result.blocking_path_time=selected_departure.safe?selected_missing.time:selected_departure.blocking_time;
+        result.blocking_gap_shift=selected_departure.safe?selected_missing.shift:selected_departure.blocking_shift;
+        if(selected_departure.safe&&!selected_missing.safe&&
+           std::string(selected_missing.status)=="unverifiable")uncertain=selected_missing.blocking_id;
+    }
+    if(result.departure_certified) {
+        result.blocking_object_id=-1;result.blocking_history_age=-1;
+        result.blocking_path_time=-1;result.blocking_gap_shift=0;
+    }
     // Every selected departure has already passed the same final models.
-    if(!result.candidate_valid||!early_departure_clear) {
+    if(!result.departure_certified) {
         roundabout_safe_observations_=0;roundabout_last_entry_=-1;
     } else if(observation_stamp>roundabout_last_observation_+1e-6) {
         double absolute_entry=planning_time+result.entry_time;
@@ -825,9 +896,16 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     roundabout_last_observation_=observation_stamp;
     // Restrict early commitment to one body length before the frontier. A
     // distant forecast is not permission to commit while still approaching.
-    result.ready=result.candidate_valid && early_departure_clear && roundabout_safe_observations_>=merge_cfg_.safe_confirm_cycles &&
+    result.ready=result.departure_certified && roundabout_safe_observations_>=merge_cfg_.safe_confirm_cycles &&
         ctx.s>=roundabout_zone_.stop_s-vehicle_shape_.length &&
         ctx.s<=roundabout_zone_.stop_s+1.0;
+    if(!entry_inputs_fresh)result.entry_status=RoundaboutEntryStatus::STALE_INPUT;
+    else if(uncertain>=0)result.entry_status=RoundaboutEntryStatus::OBSERVATION_UNVERIFIABLE;
+    else if(!result.departure_certified)result.entry_status=RoundaboutEntryStatus::PATH_REJECTED;
+    else if(roundabout_safe_observations_<merge_cfg_.safe_confirm_cycles)
+        result.entry_status=RoundaboutEntryStatus::CONFIRMING;
+    else if(!result.ready)result.entry_status=RoundaboutEntryStatus::OUTSIDE_ENTRY_ZONE;
+    else result.entry_status=RoundaboutEntryStatus::READY;
     // Once actually stopped in the departure zone, hold here until a fresh
     // full departure is authorized. Do not inch forward just to stop again.
     execution_.observeMergeWaiting(ego.v<=.1&&
@@ -905,7 +983,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                collision_cfg_,path_cfg_.dt))out_path=std::move(aligned);
     }
     if(!ok&&result.ready&&ego.v<.1){PlanExternalStopHold(ego,ctx.s,out_path);ok=true;}
-    if(!ok)result.ready=false;
+    if(!ok){result.ready=false;result.entry_status=RoundaboutEntryStatus::WAITING_PATH_INVALID;}
     last_roundabout_result_=result;
     return ok;
 }

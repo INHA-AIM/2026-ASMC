@@ -1,6 +1,7 @@
 #include "Frenet/Config/ConfigLoader.hpp"
 
 #include <yaml-cpp/yaml.h>
+#include <cmath>
 
 namespace {
 
@@ -150,6 +151,18 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/vehicle_shape/length", vehicle_shape.length);
     REQUIRE("planner/vehicle_shape/rear_overhang", vehicle_shape.rear_overhang);
     REQUIRE("planner/vehicle_shape/road_outer_width", vehicle_shape.road_outer_width);
+    // Older profiles contain only the calibrated total. New profiles expose
+    // the separate per-side reserve without changing any existing caller.
+    const auto vehicle_node = root["planner"]["vehicle_shape"];
+    if (ok && vehicle_node["boundary_reserve_each_side_m"]) {
+        double reserve = 0.;
+        if (!loadInto(root, "planner/vehicle_shape/boundary_reserve_each_side_m", reserve) ||
+            !std::isfinite(reserve) || reserve < 0. ||
+            std::abs(vehicle_shape.width + 2.*reserve - vehicle_shape.road_outer_width) > 1e-8) {
+            error_message = "planner/vehicle_shape boundary reserve conflicts with physical/outer width";
+            return false;
+        }
+    }
 
     REQUIRE("planner/collision_check/safety_margin",      collision_cfg.safety_margin);
     REQUIRE("planner/collision_check/margin_growth_rate", collision_cfg.margin_growth_rate);
@@ -171,6 +184,26 @@ bool LoadParams(const std::string& yaml_path,
     if (root["planner"]["avoid"]["map_search_budget_s"]) {
         REQUIRE("planner/avoid/map_search_budget_s", avoid_cfg.map_search_budget_s);
     }
+    if(root["planner"]["avoid"]["static_search_lateral_limit"])
+        REQUIRE("planner/avoid/static_search_lateral_limit",avoid_cfg.static_search_lateral_limit);
+    if(root["planner"]["avoid"]["bypass_accel_cap"])
+        REQUIRE("planner/avoid/bypass_accel_cap",avoid_cfg.bypass_accel_cap);
+    if(root["planner"]["avoid"]["static_margin_recovery_enabled"])
+        REQUIRE("planner/avoid/static_margin_recovery_enabled",avoid_cfg.static_margin_recovery_enabled);
+    if(root["planner"]["avoid"]["static_contact_progress_enabled"])
+        REQUIRE("planner/avoid/static_contact_progress_enabled",avoid_cfg.static_contact_progress_enabled);
+    if(root["planner"]["avoid"]["static_recovery_speed_cap"])
+        REQUIRE("planner/avoid/static_recovery_speed_cap",avoid_cfg.static_recovery_speed_cap);
+    if(root["planner"]["avoid"]["static_contact_speed_cap"])
+        REQUIRE("planner/avoid/static_contact_speed_cap",avoid_cfg.static_contact_speed_cap);
+    if(root["planner"]["avoid"]["static_normal_resume_speed_cap"])
+        REQUIRE("planner/avoid/static_normal_resume_speed_cap",avoid_cfg.static_normal_resume_speed_cap);
+    if(root["planner"]["avoid"]["static_speed_confirm_time"])
+        REQUIRE("planner/avoid/static_speed_confirm_time",avoid_cfg.static_speed_confirm_time);
+    if(root["planner"]["avoid"]["static_speed_confirm_distance"])
+        REQUIRE("planner/avoid/static_speed_confirm_distance",avoid_cfg.static_speed_confirm_distance);
+    if(root["planner"]["avoid"]["static_speed_step"])
+        REQUIRE("planner/avoid/static_speed_step",avoid_cfg.static_speed_step);
     REQUIRE("planner/avoid/detection_distance",         avoid_cfg.detection_distance);
     if (root["planner"]["avoid"]["bypass_speed_cap"]) {
         REQUIRE("planner/avoid/bypass_speed_cap", avoid_cfg.bypass_speed_cap);

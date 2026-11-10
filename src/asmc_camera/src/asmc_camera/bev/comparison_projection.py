@@ -29,10 +29,9 @@ class ComparisonProjection:
         quality = build_quality_maps(projectors, self.grid, **self.quality_options)
         return projectors, quality
 
-    def render(self, planes, rgb, semantics):
-        """Return RGB and fused semantic layers using the SAME per-view map."""
-        if set(planes) != set(self.cameras) or set(rgb) != set(planes) or set(semantics) != set(planes):
-            raise ValueError('comparison requires all configured views')
+    def geometry(self, planes):
+        if set(planes) != set(self.cameras):
+            raise ValueError("projection requires every configured camera plane")
         nominal = all(tuple(planes[v]) == c.ground_plane.coefficients
                       for v, c in self.cameras.items())
         if nominal:
@@ -43,6 +42,13 @@ class ComparisonProjection:
                 z_at_origin_m=planes[v][2], source='family_projection_context'))
                 for v, c in self.cameras.items()}
             projectors, quality = self._geometry(cameras)
+        return projectors, quality
+
+    def render(self, planes, rgb, semantics):
+        """Return RGB and fused semantic layers using the SAME per-view map."""
+        if set(planes) != set(self.cameras) or set(rgb) != set(planes) or set(semantics) != set(planes):
+            raise ValueError('comparison requires all configured views')
+        projectors, quality = self.geometry(planes)
         size = (self.grid.width_px, self.grid.height_px)
         rgb_projected, semantic_projected = {}, {}
         for view, projector in projectors.items():
@@ -59,3 +65,49 @@ class ComparisonProjection:
             drivable=fused.drivable_probability, road_marking=fused.road_marking_class_id,
             confidence=fused.road_marking_confidence, coverage=fused.coverage,
             source_count=fused.source_count)
+
+    def drivable(self, planes, probabilities, masks, visibility_margin_px=1):
+        """Semantic-only experiment using the exact family planes.
+
+        No RGB, IMU lookup, JPEG, or repeated fitting. Ego pixels remove camera
+        support, never fill it with free space. A strong overlapping view's
+        non-free observation cannot be averaged away by another camera.
+        Low probability behind an obstacle remains unknown/occupied; this
+        raster does not claim to recover the obstacle's depth or length.
+        """
+        if not isinstance(visibility_margin_px,int) or not 1<=visibility_margin_px<=16:
+            raise ValueError('invalid source visibility margin')
+        if set(probabilities) != set(self.cameras) or set(masks) != set(self.cameras):
+            raise ValueError('drivable requires all views and visibility masks')
+        projectors, quality = self.geometry(planes)
+        size = (self.grid.width_px, self.grid.height_px)
+        values, weights, original_support = [], [], []
+        for view, projector in projectors.items():
+            camera = self.cameras[view]
+            p = projector._validate_source(probabilities[view], 'drivable')
+            mask = masks[view]
+            if mask.dtype != np.bool_ or mask.shape != p.shape:
+                raise ValueError('invalid ego visibility mask')
+            # Bilinear projection must not borrow an excluded source neighbour.
+            # Original-space resampling halo is excluded as UNKNOWN, never free.
+            kernel=2*visibility_margin_px+1
+            visible = cv2.erode((~mask).astype(np.uint8), np.ones((kernel,kernel), np.uint8))
+            support = cv2.warpPerspective(visible, projector.homography.bev_from_image,
+                size, flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT)
+            weight = quality[view] * (support > 0)
+            values.append(cv2.warpPerspective(p, projector.homography.bev_from_image,
+                size, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT))
+            weights.append(weight)
+            original_support.append(quality[view] > 1e-6)
+        weights = np.stack(weights)
+        strongest = np.max(weights, axis=0)
+        usable = (weights > 1e-6) & (weights >= .25*strongest)
+        observed = np.any(usable, axis=0)
+        fused = np.min(np.where(usable, np.stack(values), 255), axis=0).astype(np.uint8)
+        fused[~observed] = 0
+        #128 is specifically ego-occluded, not observed free.0 is outside
+        # usable camera support. A semantic obstacle/shadow remains coverage255
+        # with low probability and cannot use an ego-occlusion exception.
+        coverage=np.where(observed,255,np.where(np.any(original_support,axis=0),128,0)).astype(np.uint8)
+        return dict(drivable=fused, coverage=coverage,
+                    source_count=np.sum(usable, axis=0).astype(np.uint8))

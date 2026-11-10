@@ -20,6 +20,7 @@
   <exec_depend>python3-opencv</exec_depend>
   <exec_depend>asmc_camera</exec_depend>
   <depend>asmc_msgs</depend>
+  <depend>asmc_geometry</depend>
   <depend>diagnostic_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>morai_msgs</depend>

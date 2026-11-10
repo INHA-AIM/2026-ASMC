@@ -37,6 +37,10 @@ inline CurveSpeedConfig ResolveHighwayCurveSpeed(
 
 struct HighwayCandidateCheck {
     bool safe = false, covers_completion = false;
+    // Execution-only risk mitigation, never entry approval. Every non-rear
+    // collision check and the complete issued span still has to succeed.
+    bool rear_response_unverified = false;
+    int unverified_rear_id = -1;
     double entry_time_s = -1, clear_time_s = -1;
     double minimum_front_gap_m = INFINITY, minimum_rear_gap_m = INFINITY;
     double minimum_front_ttc_s = INFINITY, minimum_rear_ttc_s = INFINITY;

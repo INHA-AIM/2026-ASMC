@@ -25,7 +25,19 @@
         "planning_gps_recovery_test",
         "stop_brake_response_test",
         "reference_validator_test",
-        "asmc_mode_detector_test"
+        "asmc_mode_detector_test",
+        "asmc_local_planner_node",
+        "asmc_shadow_localization_node",
+        "asmc_local_controller_node",
+        "localization_input_test",
+        "shadow_localization_test",
+        "control_binding_test",
+        "local_planner_test",
+        "jamming_policy_test",
+        "local_execution_history_test",
+        "local_ownership_probe",
+        "jamming_wall_scope_test",
+        "gps_mode_source_test_node"
       ],
       "script": ".github/ci/essential-planning.sh"
     },
@@ -51,7 +63,11 @@
         "lane_boundary_adapter_generate_messages",
         "asmc_lidar_frame_time_core_test",
         "asmc_lidar_geometry_boundary_test",
-        "ground_projection_test"
+        "ground_projection_test",
+        "asmc_lidar_test_tunnel_filter_core",
+        "asmc_lidar_test_tunnel_route",
+        "asmc_lidar_test_tunnel_runtime",
+        "asmc_lidar_test_pipeline"
       ],
       "script": ".github/ci/essential-perception.sh"
     }

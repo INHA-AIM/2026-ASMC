@@ -32,12 +32,12 @@
   <!-- 장애물 팽창. 필요 여유 = vehicle_width/2 + max(avoid_clearance, obstacle_lateral_margin)
        이므로 둘 중 큰 값만 작용한다. 좁은 틈을 통과시키려면 둘을 함께 내린다. -->
   <arg name="line_edge_expand" default="0.30" doc="[m] 기준선 1·5를 바깥으로 확장"/>
-  <arg name="avoid_line_extra" default="0.0" doc="회피 선을 더 밀어 여유 확보(선 번호). 0은 기존 동작."/>
-  <arg name="avoid_clearance" default="0.20"/>
-  <arg name="obstacle_lateral_margin" default="0.20"/>
+  <arg name="avoid_line_extra" default="1.0" doc="회피 선을 더 밀어 여유 확보(선 번호). 0은 기존 동작."/>
+  <arg name="avoid_clearance" default="0.05"/>
+  <arg name="obstacle_lateral_margin" default="0.05"/>
   <!-- 갓길 사용량. 카메라만으로는 벽 위치를 확인하지 않는다. -->
-  <arg name="avoid_line_overrun" default="0.0"/>
-  <arg name="avoid_max_shoulder" default="0.0"/>
+  <arg name="avoid_line_overrun" default="1.5"/>
+  <arg name="avoid_max_shoulder" default="2.0"/>
   <!-- 인식/판단 정지 대신 기어가는 속도[km/h]. 0이면 정지. -->
   <arg name="creep_speed_kph" default="3.0"/>
   <!-- 0이면 장애물로는 멈추지 않는다(사람·비상정지·입력 timeout만 정지). -->
@@ -47,7 +47,7 @@
        camera_bbox_lane_change.launch의 기본값은 바꾸지 않았다).
        stop_brake=0.5는 순간 정지를 완만하게 하지만 입력 유실·invalid·비상정지의
        제동력도 같이 낮춘다. 본선 설정으로 승격하기 전에 팀 검토가 필요하다. -->
-  <arg name="target_speed_kph" default="10.0"/>
+  <arg name="target_speed_kph" default="20.0"/>
   <arg name="avoid_speed_kph" default="10.0"/>
   <arg name="avoid_shift_length" default="7.0"/>
   <arg name="max_lateral_accel" default="1.8"/>
@@ -55,8 +55,7 @@
   <arg name="stop_brake" default="0.5"/>
   <arg name="speed_kp" default="0.3"/>
   <arg name="speed_ki" default="0.1"/>
-  <arg name="max_accel_pedal" default="0.15"/>
-  <arg name="dynamic_acceleration_mps2" default="1.5"/>
+  <arg name="max_accel_pedal" default="0.5"/>
   <arg name="max_brake_pedal" default="0.5"/>
 
   <!-- latched: 늦게 올라오는 selector/재밍 노드도 즉시 JAMMING을 받는다. -->
@@ -89,7 +88,6 @@
     <arg name="speed_kp" value="$(arg speed_kp)"/>
     <arg name="speed_ki" value="$(arg speed_ki)"/>
     <arg name="max_accel_pedal" value="$(arg max_accel_pedal)"/>
-    <arg name="dynamic_acceleration_mps2" value="$(arg dynamic_acceleration_mps2)"/>
     <arg name="max_brake_pedal" value="$(arg max_brake_pedal)"/>
     <arg name="avoid_clearance" value="$(arg avoid_clearance)"/>
     <arg name="obstacle_lateral_margin" value="$(arg obstacle_lateral_margin)"/>

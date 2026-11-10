@@ -3,6 +3,8 @@
   <arg name="state_topic" default="/planning/vehicle/state"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="open_dashboard" default="false"/>
+  <arg name="expected_master_uri" default=""/>
+  <arg name="runtime_label" default=""/>
   <arg name="dashboard_lidar_objects_topic" default="/planning/objects"/>
   <!-- Current motion state is in typed planning objects. Historical JSON is opt-in. -->
   <arg name="dashboard_lidar_motion_debug_topic" default=""/>
@@ -13,6 +15,8 @@
     <param name="port" value="$(arg dashboard_port)"/>
     <param name="package_path" value="$(find asmc_planner)"/>
     <param name="interface_version" value="v2"/>
+    <param name="expected_master_uri" value="$(arg expected_master_uri)"/>
+    <param name="runtime_label" value="$(arg runtime_label)"/>
     <param name="lidar_objects_topic" value="$(arg dashboard_lidar_objects_topic)"/>
     <param name="lidar_motion_debug_topic" value="$(arg dashboard_lidar_motion_debug_topic)"/>
   </node>

@@ -3,10 +3,63 @@ from pathlib import Path
 import os
 import tempfile
 import unittest
-from build_experiment_gallery_hub import catalogue, number_pages
+from build_experiment_gallery_hub import catalogue, number_pages, collect_pages, category, friendly_group, audit_refresh
 
 
 class GalleryChronologyTest(unittest.TestCase):
+    def test_explicit_browser_cache_exclusion_keeps_real_review(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);cache=root/'browser-profile';cache.mkdir()
+            (cache/'.gallery-ignore').write_text('automation cache')
+            (cache/'cache.html').write_text('<title>Cache</title>')
+            child=cache/'nested';child.mkdir();(child/'index.html').write_text('<title>Cache child</title>')
+            (root/'review.html').write_text('<title>Review</title>')
+            self.assertEqual(['review.html'],[p['path'] for p in catalogue(root,root/'index.html')])
+    def test_partial_link_audit_keeps_cross_targets_and_global_report_separate(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            for group in ('old','changed'):(root/group).mkdir()
+            (root/'old/index.html').write_text('<a href="missing.bin">old</a>')
+            page=root/'changed/index.html';page.write_text('<h1>new</h1>')
+            pages=catalogue(root,root/'index.html')
+            full,name=audit_refresh(root,pages)
+            self.assertEqual(name,'gallery-link-report.json');self.assertEqual(len(full['missing']),1)
+            scoped,name=audit_refresh(root,pages,['changed'])
+            self.assertEqual(scoped['missing'],[]);self.assertIn('.partial-',name)
+            page.write_text('<a href="../old/missing.bin">referenced old target</a>')
+            scoped,_=audit_refresh(root,pages,['changed'])
+            self.assertEqual(len(scoped['missing']),1)
+
+    def test_local2d_review_is_planning_without_implying_acceptance(self):
+        self.assertEqual(category({'path':'local2d-run/index.html'}),'planning')
+        self.assertIn('검수',friendly_group('local2d-run'))
+
+    def test_source_snapshots_are_not_experiment_pages(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            (root/"run/source-snapshot").mkdir(parents=True)
+            (root/"run/source-snapshot/index.html").write_text("<title>source</title>")
+            (root/"run/index.html").write_text("<title>result</title>")
+            self.assertEqual(["run/index.html"], [p["path"] for p in catalogue(root, root/"index.html")])
+
+    def test_partial_refresh_preserves_unselected_pages_and_titles(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            for group in ("old", "changed"):
+                (root/group).mkdir()
+                (root/group/"index.html").write_text("<title>"+group+"</title>")
+            first=number_pages(root,catalogue(root,root/"index.html"))
+            (root/"gallery-catalogue.json").write_text(json.dumps({"pages":first}))
+            (root/"changed/index.html").unlink()
+            (root/"changed/new.html").write_text("<title>new</title>")
+            second=number_pages(root,collect_pages(root,root/"index.html",["changed"]))
+            self.assertEqual({"old/index.html", "changed/new.html"}, {p["path"] for p in second})
+            old1=next(p for p in first if p["group"]=="old")
+            old2=next(p for p in second if p["group"]=="old")
+            self.assertEqual(old1["experiment_id"],old2["experiment_id"])
+            self.assertEqual(old1["title"],old2["title"])
+            with self.assertRaises(ValueError):collect_pages(root,root/"index.html",["../bad"])
+
     def test_identifiers_and_dates_survive_regeneration_and_removal(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp); (root/'old').mkdir();(root/'new').mkdir()

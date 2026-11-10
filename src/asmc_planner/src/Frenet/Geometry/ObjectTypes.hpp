@@ -76,6 +76,10 @@ struct TrackedObject {
     bool geometry_valid = false;
     bool z_valid = false;
     bool velocity_unavailable = false;  // observed occupancy, not measured rest
+    // Internal derived evidence from distinct, source-aligned observations.
+    // Raw velocity availability stays unchanged. Only LOW_THREAT together with
+    // this evidence may use the fixed static margin when velocity is missing.
+    bool stationary_observed = false;
 };
 
 #endif  // PLANNER_COMMON_OBJECT_TYPES_HPP

@@ -5,6 +5,25 @@
 #include "Frenet/Reference/Reference.hpp"
 #include "Frenet/Evaluation/CollisionChecker.hpp"
 
+enum class RoundaboutEntryStatus {
+    NOT_EVALUATED, OBSERVATION_UNVERIFIABLE, PATH_REJECTED, CONFIRMING,
+    OUTSIDE_ENTRY_ZONE, STALE_INPUT, WAITING_PATH_INVALID, PATH_CONVERSION_FAILED, READY
+};
+
+inline const char* RoundaboutEntryStatusName(RoundaboutEntryStatus status) {
+    switch(status) {
+        case RoundaboutEntryStatus::OBSERVATION_UNVERIFIABLE:return "observation_unverifiable";
+        case RoundaboutEntryStatus::PATH_REJECTED:return "departure_path_rejected";
+        case RoundaboutEntryStatus::CONFIRMING:return "confirming";
+        case RoundaboutEntryStatus::OUTSIDE_ENTRY_ZONE:return "outside_entry_zone";
+        case RoundaboutEntryStatus::STALE_INPUT:return "stale_input";
+        case RoundaboutEntryStatus::WAITING_PATH_INVALID:return "waiting_path_invalid";
+        case RoundaboutEntryStatus::PATH_CONVERSION_FAILED:return "path_conversion_failed";
+        case RoundaboutEntryStatus::READY:return "ready";
+        default:return "not_evaluated";
+    }
+}
+
 // A single map-defined roundabout entry. Highway merge/reference switching
 // remain separate callers of the transaction contract.
 struct RoundaboutMergeConfig {
@@ -27,6 +46,8 @@ struct RoundaboutMergeConfig {
     // a partial-only occupancy uses these FULL sizes as its half extents.
     double partial_vehicle_length = 6.0;
     double partial_vehicle_width = 3.0;
+    double execution_reaction_time = 1.0;
+    double execution_max_rear_decel = 3.0;
 };
 
 struct RoundaboutMergeZone {
@@ -50,6 +71,8 @@ struct MergeCandidateCheck {
     bool covers_exit = false;
     double entry_time = -1, exit_time = -1;
     int blocking_object_id = -1;
+    const char* rejection_reason = "path_uncovered";
+    double blocking_time = -1, blocking_shift = 0;
 };
 // Uses the candidate's actual positions/times. Stationary objects are included.
 // extra temporal buffers apply before entry only; committed replanning still
@@ -64,3 +87,9 @@ MergeCandidateCheck CheckRoundaboutCandidate(
 // certify departure from an initial zero-velocity estimate.
 int UnclassifiedCirculatingObject(const std::vector<TrackedObject>& objects,
     const RoundaboutMergeZone& zone,double conflict_x,double conflict_y);
+
+class RoundaboutPrediction;
+CartesianCollisionCheckResult EvaluateRoundaboutExecutionSafety(
+    const CartesianPath&,const RoundaboutMergeZone&,const std::vector<TrackedObject>&,
+    const VehicleShape&,const CollisionCheckConfig&,double,const RoundaboutPrediction&,
+    const RoundaboutMergeConfig&,double entry_age_s);

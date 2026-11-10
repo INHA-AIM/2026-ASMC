@@ -1,0 +1,217 @@
+tunnel_only_updates: true
+camera_point_refinement:
+  detached_wall_cleanup: true
+  enabled: true
+  independent_wall_cleanup: true
+  max_age_s: 0.15
+  minimum_confidence: 0.7
+  steel_fragment_merge: false
+  steel_maximum_gap_m: 2.8
+  steel_minimum_confidence: 0.5
+  steel_minimum_ownership: 0.8
+  vehicle_scanline_grouping: true
+  vehicle_history_enabled: true
+  vehicle_history_max_camera_age_s: 10.0
+  vehicle_history_match_m: 0.25
+delivery:
+  confirmation_frames: 3
+  enabled: true
+  minimum_obstacle_height_m: 0.1
+  release_frames: 5
+experimental:
+  tunnel_filter:
+    boundary_cluster_rescue: true
+    cluster_z:
+      enabled: true
+      min_sensor_z_m: -1.55
+    enabled: true
+    integrated_motion: true
+    low_obstacle_evidence: true
+    original_parameters:
+      cluster_min_points: 10
+      sparse_cluster_enable: true
+      sparse_cluster_min_points: 2
+      sparse_cluster_wall_clearance_m: 1.5
+      cluster_tolerance_m: 1.0
+      obb_remove_ground_residual: true
+      pre_gps_ceiling_filter_enable: false
+      pre_gps_structural_obb_filter_enable: false
+      wall_fit_distance_m: 0.15
+      wall_remove_distance_m: 0.25
+      wall_search_min_abs_y_m: 1.75
+      wall_track_max_offset_m: 0.6
+    original_pipeline: true
+    protection:
+      enabled: true
+      max_time_offset_s: 0.05
+      motion_compensated_fallback: true
+    residual_wall_surface: true
+    suppress_ceiling: true
+    suppress_wall: true
+    temporal_noise:
+      adaptive_confirmation: true
+      confirmation_all_unknown: true
+      confirmation_frames: 3
+      enabled: true
+      hold_frames: 4
+      low_flat_confirmation_frames: 6
+      structural_confirmation_frames: 5
+    wall_geometry_precedence: true
+fusion:
+  camera_class_profile: mission15_no_cone_v1
+  camera_objects_conf_thres: 0.0
+  enable_sensor_fusion: true
+  exclude_ymax_px: 720
+  exclude_ymin_px: 637
+  fusion_change_confirmations: 3
+  fusion_class_miss_grace: 3
+  fusion_exclude_hood_y_band: false
+  fusion_initial_confirmations: 5
+  fusion_iou_threshold: 0.25
+  fusion_max_time_offset_sec: 0.05
+  fusion_sync_wait_timeout_sec: 0.2
+  fusion_yolo_policy: unique
+  views: all
+gps_sanity:
+  gps_sanity_base_jump_allowance_m: 3.0
+  gps_sanity_max_x: 162.4841
+  gps_sanity_max_y: 621.3542
+  gps_sanity_maximum_speed_mps: 80.0
+  gps_sanity_min_x: -454.5159
+  gps_sanity_min_y: -825.0458
+  gps_sanity_reanchor_after_s: 2.0
+ground:
+  ground_distance_threshold_far_m: 0.4
+  ground_distance_threshold_near_m: 0.30
+  ground_max_tilt_deg: 25.0
+  ground_minimum_seed_points: 30
+  ground_ransac_maximum_iterations: 80
+  ground_remove_below_plane: true
+  ground_seed_max_z_m: -0.65
+  ground_seed_min_z_m: -2.0
+  ground_threshold_far_range_m: 50.0
+hd_map_audit:
+  delivery_preview:
+    camera_age_ms: 500.0
+    enabled: true
+    minimum_obb_road_ratio: 0.1
+    minimum_points: 10
+    minimum_road_points: 3
+    minimum_road_ratio: 0.1
+    road_inset_m: 0.1
+    roof_base_z_m: 1.284
+    roof_margin_m: 0.6
+  manifest: config/hd_map_audit/manifest.json
+  manifest_sha256: 13c517e3fffee3bfd64fabdb6f473c6c668d3d87e2142c38ff756e3650b98f2e
+  mode: filter
+  source_product: ../asmc_hd_map/config/kcity2025_compact_drivable_map.json
+lidar:
+  Clustering:
+    Adaptive:
+      Enabled: true
+      FarEps: 1.32
+      FarRange: 50.0
+      NearEps: 1.3
+      NearRange: 10.0
+      RearFarEps: 1.62
+      RearNearEps: 1.6
+    Enabled: true
+    Eps: 0.5
+    MinPoints: 5
+  ROI:
+    MaxX: 50.0
+    MaxY: 20.0
+    MaxZ: 2.0
+    MinX: -30.0
+    MinY: -20.0
+    MinZ: -2.0
+  Range:
+    Max: 100.0
+    Min: 0.5
+  Tracking:
+    ContinuityBonus: 0.2
+    CostThreshold: 3.0
+    DistanceWeight: 1.0
+    DuplicateCenterDistance: 0.6
+    DuplicateIouThreshold: 0.35
+    MergedTrackRetireDistance: 0.45
+    ShapeWeight: 1.0
+    UseMapAssociation: true
+  height_roi:
+    enabled: true
+    max_height_above_ground_m: 2.5
+    nominal_base_height_m: 0.36
+  level_roll: true
+map:
+  map_altitude_origin_m: 0.0
+  origin:
+  - 302595.0
+  - 4124145.0
+  - 0.0
+motion:
+  semantic_static_enabled: false
+mount_config: config/autonav_v3.yaml
+pose:
+  imu_yaw_is_true_enu: true
+  lidar_pose_can_max_age_s: 0.12
+  lidar_pose_gps_max_age_s: 0.3
+  lidar_pose_history_duration_s: 5.0
+  lidar_pose_imu_max_age_s: 0.12
+  lidar_pose_maximum_speed_mps: 35.0
+  lidar_pose_wait_timeout_s: 0.05
+provenance:
+  baseline_commit: 8f93c22ec247ec8a84ef5c1512898a7d2c64e23f
+  deviations:
+  - lidar.level_roll is true (roll+pitch leveling, shadow default). main.launch default
+    lidar_level_roll=false is Main's pitch-only common profile.
+  - calibration_id = shadow:<sha256 of this file>:<sha256 of mount_config>. Main uses
+    sha256(lidar mount yaml):sha256(camera yaml):sha256(map contract); the two identity
+    strings are intentionally different.
+  - pose.lidar_pose_history_duration_s is Main's code default (not set in main.launch).
+  - fusion.exclude_ymin_px/exclude_ymax_px and fusion.camera_objects_conf_thres are
+    Main/adapter code defaults (main.launch sets only conf_thres=0.0).
+  - 'ground_fallback_frames is not listed: previous-plane reuse is legacy-only in
+    Main.'
+  sources:
+  - copied: vehicle (Vehicle.Length/Width/WheelBase/FrontOverhang/RearOverhang, Vehicle.LiDAR
+      x..yaw, Vehicle.GPS x..z); lidar.Range/ROI (LiDAR.Filter.Range/ROI); lidar.Clustering;
+      lidar.Tracking
+    git_blob: a0b22195c82125839e7b03fb4204a863ecfa8d78
+    path: src/lidar+sensorfusion/src/Main/setting.yaml
+  - copied: ground.*, pose.*, gps_sanity.*, map.map_altitude_origin_m, fusion.* (arg/param
+      values); lidar.level_roll is overridden, see deviations
+    git_blob: b7b24859da5af88c9908a2978bcb2fc4e696c7bb
+    path: src/lidar+sensorfusion/src/Main/main.launch
+  - copied: map.origin = local_crop_policy.gps_imu_policy.local_origin_in_global
+    git_blob: 42fc9656b6b8b792a9e438bb459f4544de65a9d6
+    path: config/contracts/hd_map_topic_contract_v1.yaml
+  - copied: referenced by mount_config; checked against vehicle.LiDAR within 1e-6
+      (Main frame_boundary::Configure)
+    git_blob: f64cfe4e52548b4a8274e38f6179ff2d3c5dfa0b
+    path: src/asmc_lidar/config/autonav_v3.yaml
+runtime:
+  max_points: 62500
+schema_version: 1
+vehicle:
+  FrontOverhang: 0.845
+  GPS:
+    x: 0.35
+    y: 0.0
+    z: 1.25
+  Length: 4.635
+  LiDAR:
+    pitch: 0.0
+    roll: 0.0
+    x: 0.8
+    y: 0.0
+    yaw: 0.0
+    z: 1.45
+  RearOverhang: 0.790
+  WheelBase: 3
+  Width: 1.892
+pre_entry_wall:
+  enabled: true
+  route_profile: config/shadow_wall_gate.yaml
+  lead_m: 30.0
+  exit_buffer_m: 10.0
+  lateral_m: 6.0

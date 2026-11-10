@@ -1,7 +1,9 @@
 # LiDAR 공동 작업표
 
 **현재 다음 작업:** 3뷰 구현·기본 적용 이후 [음영 판제 기반/후속 계획](../../../docs/architecture/shadow-planning-refactoring.md)을 진행한다.
-객체 전달 문자열과 식별자·콘솔을 우선 정리하며 터널 local 회피 및 패키지 흡수는 다음 단위다.
+객체 전달·콘솔 이후 LOCAL 실험 planner에서 local 객체를 소비하고 있다. 패키지 흡수와
+운영 기본 전환은 별도이며 [LOCAL-2C 결과](../../../docs/records/planning/2026-10-28-local-speed-continuity.md)의
+노면 OBB 재발·입력 지연은 미해결이다. 지면 fitting 후보는 검증용으로만 제공한다.
 터널 품질·얇은 장애물·OBB/추적·semantic 보조는
 [보류 과제 인수 단위](improvement-milestones.md#보류-과제-인수-단위)에 착수 조건·완료 기준·복구 경계와 함께 보존한다.
 

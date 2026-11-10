@@ -271,6 +271,65 @@ bool ReceiveNormalRuntimeInputs() {
             ros::SteadyTime::now(), g_control.vehicle_state_timeout);
 }
 
+TEST(ControllerFailSafeVerification, CollisionStopNeedsANewMovingPlanBeforeHeartbeatRelease) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    auto stop=MakeValidTrajectory();stop.failure_reason=asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED;
+    stop.points.resize(1);stop.points.front().velocity=0;
+    mpc_controller_ros::TrajectoryCallback(boost::make_shared<asmc_msgs::Trajectory>(stop));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    ASSERT_TRUE(g_control.collision_stop_active);capture.ClearCommands();
+    asmc_msgs::BehaviorCommand avoid;avoid.command_id=3;avoid.maneuver_type=asmc_msgs::BehaviorCommand::AVOID;
+    mpc_controller_ros::BehaviorCommandCallback(boost::make_shared<asmc_msgs::BehaviorCommand>(avoid));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_TRUE(g_control.emergency_stop_active);EXPECT_DOUBLE_EQ(capture.Commands().back().brake,1);
+    capture.ClearCommands();
+    ASSERT_TRUE(ReceiveNormalRuntimeInputs());
+    mpc_controller_ros::BehaviorCommandCallback(boost::make_shared<asmc_msgs::BehaviorCommand>(avoid));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_FALSE(g_control.emergency_stop_active);EXPECT_FALSE(g_control.collision_stop_active);
+    EXPECT_TRUE(g_control.has_successful_control);
+}
+
+TEST(ControllerFailSafeVerification, FailedMovingStopPathCannotReapplyPositiveAcceleration) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    auto trajectory=MakeValidTrajectory();trajectory.dt=GetMPCParams().dt;
+    trajectory.failure_reason=asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED;
+    trajectory.points.clear();double x=0,v=3,a=1;
+    for(int i=0;i<100;++i) {
+        asmc_msgs::TrajectoryPoint point;point.x=x;point.velocity=v;point.acceleration=a;
+        trajectory.points.push_back(point);
+        const double next_a=i<4?1:std::max(-2.0,a-6*trajectory.dt);
+        const double next_v=std::max(0.0,v+.5*(a+next_a)*trajectory.dt);
+        x+=(v+next_v)*.5*trajectory.dt;v=next_v;a=v>0?next_a:0;
+    }
+    ASSERT_DOUBLE_EQ(trajectory.points.back().velocity,0);
+    mpc_controller_ros::TrajectoryCallback(boost::make_shared<asmc_msgs::Trajectory>(trajectory));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0);
+}
+
+TEST(ControllerFailSafeVerification,StaticContactProgressNeedsOptInAndAFreshAvoidOwner) {
+    ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());
+    auto path=MakeValidTrajectory();path.execution_policy=asmc_msgs::Trajectory::POLICY_STATIC_CONTACT_PROGRESS;
+    double x=0;
+    for(auto& p:path.points){p.x=x;p.velocity=.5;p.acceleration=0;x+=.5*path.dt;}
+    path.points.back().velocity=0;
+    g_control.latest_vehicle_state.speed=0;
+    asmc_msgs::BehaviorCommand avoid;avoid.command_id=7;avoid.maneuver_type=asmc_msgs::BehaviorCommand::AVOID;
+    avoid.valid_until=ros::Time::now()+ros::Duration(1);
+    mpc_controller_ros::BehaviorCommandCallback(boost::make_shared<asmc_msgs::BehaviorCommand>(avoid));
+    mpc_controller_ros::TrajectoryCallback(boost::make_shared<asmc_msgs::Trajectory>(path));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0);EXPECT_FALSE(g_control.has_successful_control);
+    capture.ClearCommands();g_control.allow_static_contact_progress=true;
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_TRUE(g_control.has_successful_control);
+    capture.ClearCommands();avoid.maneuver_type=asmc_msgs::BehaviorCommand::KEEP;
+    mpc_controller_ros::BehaviorCommandCallback(boost::make_shared<asmc_msgs::BehaviorCommand>(avoid));
+    mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+    EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0);EXPECT_FALSE(g_control.has_successful_control);
+}
+
 TEST(ControllerFailSafeVerification, CTRL007EmergencyStop) {
     ControllerOutputCapture capture;
     ASSERT_TRUE(capture.Initialize());
@@ -654,6 +713,16 @@ TEST(ControllerFailSafeVerification,BoundRecoveryBrakesAboveItsOwnCommandSpeedEv
  capture.ClearCommands();mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
  EXPECT_GT(capture.Commands().back().brake,0);EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0);
  EXPECT_FALSE(g_control.brake_watchdog.failed());
+}
+
+TEST(ControllerFailSafeVerification,PrivateValidationCapConstrainsNormalSolverWithoutEmergencyStop) {
+ ControllerOutputCapture capture;ASSERT_TRUE(capture.Initialize());ASSERT_TRUE(ReceiveNormalRuntimeInputs());
+ g_control.validation_speed_cap_mps=1.;
+ capture.ClearCommands();mpc_controller_ros::ControlProcess({});ASSERT_TRUE(capture.WaitForCommand());
+ EXPECT_DOUBLE_EQ(capture.Commands().back().accel,0.);
+ EXPECT_GT(capture.Commands().back().brake,0.);
+ EXPECT_FALSE(g_control.emergency_stop_active);
+ EXPECT_TRUE(g_control.handoff_solved);
 }
 
 }  // namespace

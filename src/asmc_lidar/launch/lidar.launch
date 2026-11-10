@@ -11,8 +11,8 @@
        Previous entry points: lidar_pipeline.launch and lidar_only.launch.
        LiDAR-only, including without asmc_camera installed: fusion:=false. -->
   <arg name="namespace" default="/perception/lidar" doc="Output namespace; inputs keep their canonical paths"/>
-  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_pipeline.yaml" doc="Processing configuration YAML"/>
-  <!-- Empty = keep config/lidar_pipeline.yaml (lidar.level_roll: true, experimental
+  <arg name="pipeline_config" default="$(find asmc_lidar)/config/lidar_wall_vehicle.yaml" doc="Processing configuration YAML"/>
+  <!-- Empty = keep the selected pipeline_config (lidar.level_roll: true, experimental
        tunnel_filter.enabled: true); a value overrides the file. -->
   <arg name="lidar_level_roll" default=""/>
   <!-- Public switch. The internal parameter/YAML names stay unchanged. -->

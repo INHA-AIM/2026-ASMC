@@ -50,6 +50,19 @@ void CompareCentroids(const std::vector<TrackedObject>& vec_Compare, std::vector
     float32 f32_Pred_y = vec_PredictedPositions[i].second;
 
     for (int32 j = 0; j < M; ++j) {
+      const int measured_id=vec_NowObject[j].detection.measured_vehicle_track_id;
+      const int previous_id=vec_Compare[i].tracking.s32_Id;
+      const bool reserved=std::any_of(vec_NowObject.begin(),vec_NowObject.end(),[&](const auto& o){
+        return o.detection.measured_vehicle_track_id==previous_id;});
+      if(reserved) {
+        // The preceding stage verified current points against this exact
+        // track with measured ego motion. A small adjacent residual must not
+        // steal its ID through a lower KF-centroid distance.
+        if(measured_id==previous_id)vec_CostMatrix[i][j]=0;
+        continue;
+      }
+      if(vec_NowObject[j].detection.measured_vehicle_track_id>=0&&
+          vec_NowObject[j].detection.measured_vehicle_track_id!=vec_Compare[i].tracking.s32_Id)continue;
       float32 f32_Det_x = vec_NowObject[j].detection.f32_CoreX;
       float32 f32_Det_y = vec_NowObject[j].detection.f32_CoreY;
 

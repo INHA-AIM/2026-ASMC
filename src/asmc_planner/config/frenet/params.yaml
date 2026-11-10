@@ -146,7 +146,24 @@ planner:
 
   # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
+    # Static intermediate targets; full road/body/actuation checks still apply.
+    # External target-pose validation remains a separate input constraint.
+    static_search_lateral_limit: 6.0
     bypass_speed_cap: 4.2     # [m/s] C091: five recorded passes; higher caps need a new return-safety proof
+    bypass_accel_cap: 2.0    # [m/s^2] asmc_controller accel_max; braking remains independent
+    # The MORAI autonomy launch explicitly enables these policies. Core/offline
+    # callers retain strict defaults unless they opt in.
+    static_margin_recovery_enabled: false
+    static_contact_progress_enabled: false
+    static_recovery_speed_cap: 1.0
+    static_contact_speed_cap: 0.5
+    # After fresh nominal checks AND forward progress, reopen the ordinary
+    # bypass target. The retimer still limits actual acceleration/jerk/slew;
+    # a rejected upgrade retries the current corridor at its previous cap.
+    static_normal_resume_speed_cap: 4.2
+    static_speed_confirm_time: 1.0
+    static_speed_confirm_distance: 0.5
+    static_speed_step: 4.2
     detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
     # [m] legacy geometry 기반(target pose 없음) target_d 계산에서 자차/장애물
@@ -248,8 +265,8 @@ planner:
     stop_buffer: 3.5           # [m] 정지 목표 s=882.26 (자차 반길이+안전마진+추가 여유)
     conflict_radius: 6.0       # [m] 순환차 곡선예측의 충돌점 최근접 허용거리
     min_object_speed: 0.5      # [m/s] 이보다 느린 객체는 순환 차량에서 제외
-    min_front_time_gap: 1.0    # [s] 선행 순환차 통과 후 최소 여유
-    min_rear_time_gap: 2.0     # [s] Ego 진입 후 후속 순환차까지 최소 여유
+    min_front_time_gap: 0.6    # [s] 기존 gap 계산용; 현재 회전교차로는 roundabout_merge.min_front_time_gap_s 사용
+    min_rear_time_gap: 1.0     # [s] Ego 진입 후 후속 순환차까지 최소 여유
     ego_clear_time: 1.5        # [s] Ego의 conflict zone 통과 시간
     max_wait_time: 10.0        # [s] 진입 gap 탐색 시간범위
     completion_distance: 8.0   # [m] 충돌점 통과 후 MERGE 종료 거리
@@ -357,7 +374,7 @@ planner:
     speed_error_correlation_s: 0.3
     motion_fit_min_span_s: 0.2
     provisional_lateral_speed_mps: 0.25 # only small position-contradicted lateral observations
-    max_rear_decel_mps2: 3.0
+    max_rear_decel_mps2: 5.0 # competition rear response; ego limits unchanged
     completion_settle_s: 0.5
     completion_heading_rad: 0.12
     completion_lateral_m: 0.5
@@ -470,10 +487,13 @@ planner:
 
   # --- VehicleShape (collision_checker.hpp) -------------------
   vehicle_shape:
-    width: 1.9
+    width: 1.892
     length: 4.635
-    # MORAI SDK measured exterior width 2.160835m. Road-only calibration;
-    # preserve the existing 1.9m object collision model and its 0.45m margin.
+    # SDK exterior proxy: preserve the historical2.161m total boundary model.
+    # This per-side reserve applies ONLY where road_outer_width was used.
+    # It is not physical vehicle width or the object collision margin.
+    boundary_reserve_each_side_m: 0.1345
+    # Compatibility total, validated against width + 2 * boundary reserve.
     road_outer_width: 2.161
     # /vehicle/state x/y는 IONIQ 5 후륜축 기준이다.
     rear_overhang: 0.79
@@ -508,8 +528,12 @@ roundabout_merge:
   speed_cap_mps: 6.944444444444445
   preview_distance_m: 45.0
   max_horizon_s: 10.0
-  # Roundabout only; highway/common MERGE headways remain unchanged.
-  min_front_time_gap_s: 0.7
+  execution_reaction_time_s: 0.3 # 11 fixed-input bag sequences; NPC response assumption
+  execution_max_rear_decel_mps2: 3.0
+  # 진입 전 선행차 시간 여유. planner.merge.min_front_time_gap보다 우선한다.
+  # 후행차 여유는 planner.merge.min_rear_time_gap(1.0초)을 유지한다.
+  # 고속도로 합류와 회전교차로 진입 후 주행에는 적용하지 않는다.
+  min_front_time_gap_s: 0.3
   # [m/s] Preliminary LiDAR error allowance, not a certified 2-D error bound.
   # The history spread gate is twice this value (opposite-signed errors).
   speed_measurement_error_mps: 5.0

@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "model": "empirical inverse-speed incremental turn correction",
+  "parameter": "velocity_turn_gain_m2ps",
+  "value_m2ps": 1.54,
+  "speed_floor_mps": 1.0,
+  "equation": "offset = gain / max(mean adjacent measured speed, 1m/s); delta_xy += offset * delta(cos(yaw),sin(yaw))",
+  "scope": "MolitComp03 canonical v3 sensor/vehicle; no generalization to 26.R1",
+  "selection": "rounded least-squares gain from pre-loss data in the first three training trials; no native or recovery input fitted",
+  "fit_gain": 1.5393419895146745,
+  "fit_inputs": [
+    {
+      "trial": "blend-point-5-outage-r01",
+      "sha256": "9e7b98b4cdad208745e2524cef902b0d3a9edf0aac8241a20556199944889684",
+      "scope": "only pre-loss GNSS, raw IMU, and allowed-speed relative odometry"
+    },
+    {
+      "trial": "blend-point-5-outage-r02",
+      "sha256": "075af1ac4926390dd7e4746fa95cc2be3372db4ff2b12cc2c6f9cb302f23654b",
+      "scope": "only pre-loss GNSS, raw IMU, and allowed-speed relative odometry"
+    },
+    {
+      "trial": "blend-point-10-outage-r01",
+      "sha256": "b06123c928881e5e5c70888c6e954af027aa23a5485794edbdfe47991a4a7566",
+      "scope": "only pre-loss GNSS, raw IMU, and allowed-speed relative odometry"
+    }
+  ],
+  "evaluated_pre_loss_15kph_trials": [
+    "blend-point-15-outage-r01",
+    "continuous-point-15-outage-r01"
+  ],
+  "validation_design": "failure-informed model selection; 15km/h failures inspected during diagnosis; fresh closed-loop trials required",
+  "interpretation": "empirical Molit simulator correction, not a changing physical GPS mount or speed-dependent rigid lever arm",
+  "compatibility": {
+    "disable_gain": 0,
+    "constant_offset_m": 1.4,
+    "independent_local_default_gain": 0
+  },
+  "prior_constant_model": {
+    "model": "measured-heading rigid-point velocity reference correction",
+    "parameter": "velocity_reference_offset_m",
+    "value_m": 1.4,
+    "scope": "MolitComp03 canonical v3 sensor/vehicle; no generalization to 26.R1",
+    "fit_inputs": [
+      {
+        "trial": "window-cap-5-outage-r01",
+        "sha256": "385bc1211d3b29ff6b1865efe1aecbf2e552a2160461ab713f0d025204cd20a5",
+        "scope": "only pre-loss GPS, IMU and allowed forward speed; native states not read"
+      },
+      {
+        "trial": "window-cap-5-outage-r02",
+        "sha256": "b42f541414f1bb0d657b28059c074ef70a155b5e38fff4d6db93136839f9e7cf",
+        "scope": "only pre-loss GPS, IMU and allowed forward speed; native states not read"
+      },
+      {
+        "trial": "empty-5-outage-r06",
+        "sha256": "2315555294908fe1b3635cd403cf3c37addd1a1051f3f3682b6c315378a80a21",
+        "scope": "only pre-loss GPS, IMU and allowed forward speed; native states not read"
+      }
+    ],
+    "held_out": "ordered-5-outage-r01",
+    "validation_design": "parameter holdout only; this failure was inspected during diagnosis; new physical trials provide prospective validation",
+    "fit_gain_values_m": [
+      1.3942645689484083,
+      1.5088139291949105,
+      1.3885451424695363
+    ],
+    "selection": "rounded median of three pre-loss fits; held-out recovery not used to choose the parameter",
+    "implementation": "one exact heading-dependent translation term in the existing MotionHistory; zero default in independent LOCAL"
+  }
+}

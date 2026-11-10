@@ -1,0 +1,14 @@
+<launch>
+  <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane.launch">
+    <arg name="projection_context_required" value="false"/>
+    <arg name="calibration_file" value="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
+    <arg name="expected_hash" value="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
+    <arg name="hood_crop_bottom_ratio" value="0.0"/>
+    <arg name="ego_mask_enabled" value="true"/>
+    <arg name="use_rviz" value="false"/>
+    <arg name="image_topic" value="/bbox_test/image"/>
+    <arg name="bbox_topic" value="/bbox_test/yolo"/>
+  </include>
+  <param name="camera_bbox_lane/local_contact_support_enabled" value="true" type="bool"/>
+  <test pkg="lane_boundary_adapter" type="test_local_contact.py" test-name="local_contact_integration" time-limit="60"/>
+</launch>

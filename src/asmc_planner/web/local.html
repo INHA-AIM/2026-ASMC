@@ -1,0 +1,17 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>LOCAL-1 실험 진단</title>
+<style>body{background:#10161d;color:#e5edf4;font:16px system-ui;margin:20px}main{display:flex;gap:24px;flex-wrap:wrap}canvas{background:#19232e;max-width:100%;border:1px solid #456}aside{max-width:650px}pre{white-space:pre-wrap;font:14px monospace}label{display:block;margin:10px 0}.bad{color:#ffb56b}a{color:#70d5ff}</style>
+<h1>LOCAL-1 · GPS 독립 경로 실험</h1>
+<p>운영 기본 경로와 분리된 진단입니다. 좌표는 계획 시각 후륜축·수평 기준이며 마지막 GPS에 배치하지 않습니다.</p>
+<main><div><canvas id="view" width="640" height="760"></canvas>
+<label><input id="road" type="checkbox" checked>계획과 같은 시각의 노면 확률 · 초록 ≥0.60 / 적색 비노면 / 갈색 자차 가림 / 회색 미관측</label>
+<label><input id="family" type="checkbox" checked>실제 사용한 family 3경계 · 파랑 점선은 오른쪽 본차로 중심</label>
+<label><input id="objects" type="checkbox" checked>시간 정렬한 LiDAR fusion OBB · 의미 라벨은 보조 정보</label>
+<label><input id="candidates" type="checkbox" checked>연결 후보 경로 표본 · 회색 통과 / 분홍 탈락</label>
+<label><input id="sweep" type="checkbox" checked>차체 sweep · 사양 폭이 아닌 현재 시험 외곽</label>
+<label><input id="rejected" type="checkbox" checked>탈락 후보 표본 · 최대32개 (전체 수량은 진단 참조)</label></div>
+<aside><h2 id="status">수신 대기</h2><pre id="info"></pre><h3>제약별 탈락 수</h3><pre id="failures"></pre><h3>YOLO 원본 영상 관측</h3><p>좌표는 원본 영상 픽셀입니다. Δscene은 관측 시각 차이이며 새 로컬 플래너의 충돌 입력은 아래 fusion OBB입니다.</p><pre id="camera"></pre><details><summary>실제 노면·fusion 입력</summary><pre id="evidence"></pre></details><h3>MPC</h3><pre id="control"></pre>
+<p>청록: 선택 경로 · 보라: 연결된 공간별 목표 · 빨강: 탈락 경로의 끝점 · 주황: 첫 충돌/미관측 근거. 비노면에는 장애물 뒤 가림도 포함됩니다. 빈 OBB 결과가 공간 안전의 증명은 아닙니다.</p>
+<a href="index_v2.html">기존 판제 콘솔</a></aside></main>
+<script src="local_scene_renderer.js"></script>
+<script src="local.js"></script></html>

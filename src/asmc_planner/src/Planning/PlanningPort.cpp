@@ -18,6 +18,14 @@ PlanningPort::PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh,
                            FeedbackSink feedback_sink)
     : feedback_sink_(std::move(feedback_sink)),
       nh_(std::move(nh)), pnh_(std::move(pnh)) {
+    nh_.param("/planning_mode/approach_enabled", local_prepare_enabled_, false);
+    if (local_prepare_enabled_) {
+      nh_.param("/planning_mode/approach_speed_kph", local_entry_cap_kph_, 25.);
+      local_prepare_sub_ = nh_.subscribe<std_msgs::Bool>("/planning/jamming/approach",1,
+          [this](const std_msgs::Bool::ConstPtr& m) {
+            local_preparing_ = m->data; local_prepare_received_ = ros::SteadyTime::now();
+          });
+    }
     nh_.param("/control_binding/enabled",control_binding_enabled_,false);
     if(control_binding_enabled_) {
       control_plan_pub_=nh_.advertise<std_msgs::UInt8MultiArray>("/planning/control_plan",10);
@@ -39,6 +47,11 @@ PlanningPort::PlanningPort(ros::NodeHandle nh, ros::NodeHandle pnh,
         }
 
         planner_initialized_ = planner_.Init(planner_config_path);
+        bool margin_recovery=planner_.static_margin_recovery_enabled();
+        bool contact_progress=planner_.static_contact_progress_enabled();
+        pnh_.param("planner/static_margin_recovery",margin_recovery,margin_recovery);
+        pnh_.param("planner/static_contact_progress",contact_progress,contact_progress);
+        planner_.ConfigureStaticAvoidRecovery(margin_recovery,contact_progress);
         if (!planner_initialized_) {
             ROS_ERROR_STREAM("Frenet planner initialization failed: "
                              << planner_config_path);

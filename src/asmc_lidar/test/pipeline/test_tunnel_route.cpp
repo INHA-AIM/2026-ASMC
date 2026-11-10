@@ -391,8 +391,8 @@ TEST(TunnelTemporalNoise, VerifiedWallSupportDoesNotExtendAcrossTunnelEnds) {
 }
 
 TEST(TunnelBoundaryRescue, AddsOnlyElevatedCompactSparseBoundarySupportWithoutChangingAnyPoint) {
-  for(int scenario=0;scenario<5;++scenario) {
-    TunnelRouteConfig a;a.params.obb_filter_enable=false;
+  for(bool sparse:{false,true})for(int scenario=0;scenario<5;++scenario) {
+    TunnelRouteConfig a;a.params.obb_filter_enable=false;a.params.sparse_cluster_enable=sparse;
     TunnelRouteConfig b=a;b.boundary_cluster_rescue=true;
     if(scenario==4){a.cluster_z.enabled=b.cluster_z.enabled=true;a.cluster_z.min_sensor_z_m=b.cluster_z.min_sensor_z_m=0;}
     TunnelRoute before(a),after(b);before.Select(false);after.Select(false);
@@ -592,4 +592,26 @@ TEST(TunnelRoute, CanonicalOpticalProjectionAlsoProtectsWithoutLegacyRotation) {
   cam.still_current=[](){return false;};
   route.Process(Scene(),Local(),1100000000,VehicleSpec{},&cam);
   EXPECT_EQ(route.last().protected_points,0);
+}
+
+TEST(TunnelSparseRoute, TwoPointTrackingObbAndRescueHaveUniqueIndices) {
+  for(bool rescue:{false,true}) {
+    TunnelRouteConfig cfg;cfg.params.sparse_cluster_enable=true;cfg.boundary_cluster_rescue=rescue;
+    TunnelRoute route(cfg);route.Select(false);auto cloud=Scene();auto camera=NoImage();
+    const int first=cloud->size();cloud->push_back(Point(20,0,0));cloud->push_back(Point(20.2,0,0));
+    TunnelRouteOutput out;
+    for(int frame=0;frame<4;++frame)out=route.Process(cloud,Local(),1000000000LL+frame*100000000LL,VehicleSpec{},&camera);
+    int candidates=0;
+    for(const auto& c:route.last().clusters)for(int i:c.indices)if(i==first)++candidates;
+    EXPECT_EQ(1,candidates);
+    int tiny=0;for(const auto& object:route.last().objects)if(object.point_count==2) {
+      ++tiny;EXPECT_TRUE(std::isfinite(object.obb.cx));EXPECT_TRUE(std::isfinite(object.obb.cy));
+      EXPECT_NEAR(.2f,object.obb.length,1e-4f);EXPECT_NEAR(0.f,object.obb.width,1e-4f);
+      for(const auto& corner:object.obb.corners){EXPECT_TRUE(std::isfinite(corner.x));EXPECT_TRUE(std::isfinite(corner.y));EXPECT_TRUE(std::isfinite(corner.z));}
+    }
+    EXPECT_EQ(1,tiny);
+    std::vector<bool> used(out.filtered->size(),false);
+    for(const auto& c:out.clusters)for(int i:c.indices){ASSERT_GE(i,0);ASSERT_LT(std::size_t(i),used.size());EXPECT_FALSE(used[i]);used[i]=true;}
+    for(const auto& center:*out.centroids){EXPECT_TRUE(std::isfinite(center.x));EXPECT_TRUE(std::isfinite(center.y));EXPECT_TRUE(std::isfinite(center.z));}
+  }
 }

@@ -43,8 +43,8 @@ int main(){
   next.vy=15;next.speed=15;
   planner.PlanCommittedAvoid(ego,{box(1,80,0,1),next},cmd,path,r);
   Expect(r.candidate_valid,"safe AVOID can remain valid while a later obstacle still needs avoidance");
-  Expect(execution.avoid.committed && !execution.avoid.completed,"bound Execution retains the committed unfinished transaction");
-  Expect(!planner.avoid_completed(),"downstream static or uncertain obstacle beyond short KEEP horizon prevents completion");
+  Expect(execution.avoid.committed && execution.avoid.completed,"safe finite handoff completes the first transaction");
+  Expect(planner.avoid_completed(),"distant next obstacle does not retain the old target lock");
   auto aside=box(3,180,4,1);
   planner.PlanCommittedAvoid(ego,{box(1,80,0,1),aside},cmd,path,r);
   Expect(execution.avoid.completed,"safe KEEP handoff updates the bound Execution owner");
@@ -52,6 +52,12 @@ int main(){
   auto snapshot=bound;snapshot.resetAvoid();
   Expect(execution.avoid.completed && planner.avoid_committed(),"preview snapshot reset does not mutate the bound production owner");
   Expect(planner.avoid_completed(),"off-corridor object does not keep a finished avoidance locked");
+ }
+ {
+  asmc_planner::execution::ManeuverState execution;
+  FrenetPlanner planner;planner.BindExecutionState(execution);setup(planner);CartesianPath path;FrenetPlanner::AvoidPrepareResult r;
+  planner.PlanCommittedAvoid(ego,{box(1,80,0,1),box(2,96,0,1)},cmd,path,r);
+  Expect(!planner.avoid_completed(),"next obstacle inside the response-and-stop corridor prevents handoff");
  }
  {
   asmc_planner::execution::ManeuverState execution;
