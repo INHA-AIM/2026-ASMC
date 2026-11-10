@@ -315,7 +315,7 @@ struct RecordedFailure {
   CloudPtr cloud{new Cloud};Context context;TunnelCameraInput camera;
   std::vector<pcl::PointIndices> clusters;std::vector<TunnelWallEvidence> walls;
   RecordedFailure() {
-    const auto path=std::filesystem::path(__FILE__).parent_path()/"data/wall_car_28_07.json";
+    const auto path=std::filesystem::path(ASMC_LIDAR_TEST_PACKAGE_DIR)/"test/pipeline/data/wall_car_28_07.json";
     const auto n=YAML::LoadFile(path.string());context.frame=Frame::LeveledSensor;
     context.time.stamp_ns=n["stamp_ns"].as<std::int64_t>();context.calibration_source="recorded_mount";context.leveling_source="recorded_imu";
     auto pose=[](const YAML::Node& a){Pose p=Pose::Identity();for(int r=0;r<4;++r)for(int c=0;c<4;++c)p.matrix()(r,c)=a[4*r+c].as<double>();return p;};

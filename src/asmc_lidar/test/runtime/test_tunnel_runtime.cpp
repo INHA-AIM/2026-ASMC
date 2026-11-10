@@ -10,8 +10,7 @@ namespace pl = asmc::lidar::pipeline;
 namespace sh = asmc::lidar::runtime;
 using Array = asmc_msgs::LidarObjectArray;
 sh::RuntimeConfig Config() {
-  std::string dir=__FILE__;
-  for(int i=0;i<3;++i)dir=dir.substr(0,dir.find_last_of('/'));
+  const std::string dir=ASMC_LIDAR_TEST_PACKAGE_DIR;
   auto cfg=sh::LoadRuntimeConfig(dir+"/config/lidar_pipeline.yaml",dir);
   cfg.enable_camera_fusion=false;
   return cfg;
@@ -182,7 +181,7 @@ TEST(TunnelSparseConfig, ShippedValuesValidationAndIdentity) {
 }
 
 TEST(TunnelScopedConfig, SelectedProfileRestoresNormalAndBindsScopeIdentity) {
-  auto cfg=Config();std::string root=__FILE__;for(int i=0;i<3;++i)root=root.substr(0,root.find_last_of('/'));
+  auto cfg=Config();const std::string root=ASMC_LIDAR_TEST_PACKAGE_DIR;
   auto scoped=sh::LoadRuntimeConfig(root+"/config/lidar_wall_vehicle.yaml",root);
   EXPECT_TRUE(scoped.pipeline.tunnel_only_updates);
   EXPECT_EQ(5,scoped.pipeline.clustering.s32_MinPoints);

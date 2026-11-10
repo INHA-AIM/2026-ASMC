@@ -488,7 +488,7 @@ TEST(ShadowWallGate, ArmsOnlyReviewedForwardRouteWindowAndUsesExitHysteresis) {
 TEST(ShadowWallGate, OfficialProfileMatchesEntranceAndMeasuresLightweightGate) {
     using namespace asmc::lidar;using namespace asmc::lidar::pipeline;
     // ccache can make __FILE__ relative; test working directories are not source roots.
-    const auto path=std::filesystem::path(ASMC_LIDAR_TEST_CONFIG_DIR)/"shadow_wall_gate.yaml";
+    const auto path=std::filesystem::path(ASMC_LIDAR_TEST_PACKAGE_DIR)/"config/shadow_wall_gate.yaml";
     ASSERT_TRUE(std::filesystem::is_regular_file(path)) << path;
     const auto doc=YAML::LoadFile(path.string());ShadowWallConfig c;c.enabled=true;
     c.entry_m=doc["entry_m"].as<double>();c.exit_m=doc["exit_m"].as<double>();

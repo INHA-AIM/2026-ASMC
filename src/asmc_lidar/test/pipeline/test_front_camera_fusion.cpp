@@ -1354,7 +1354,7 @@ TEST(MultiCameraFusion, CanonicalCameraHandoffRetainsOneTrackAndOneConfirmationP
   // Use the actual 70/-70 degree side mounts, intrinsics and original image
   // sizes. A moving local cluster crosses left/front/right overlap regions;
   // no GPS/map transform or camera-specific tracker is involved.
-  const auto package=std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
+  const auto package=std::filesystem::path(ASMC_LIDAR_TEST_PACKAGE_DIR);
   const auto cameras=camera::load_calibrations((package/"../asmc_camera/config/cameras_v3.yaml").string());
   MultiCameraFusion fusion(FusionConfig{},cameras);FakeSource source;
   std::vector<TrackedObject> live{MakeCar(7,10)};

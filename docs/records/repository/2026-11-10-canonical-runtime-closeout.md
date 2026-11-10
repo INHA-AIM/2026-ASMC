@@ -95,9 +95,14 @@ PR #145와 #146에서 재현된 CI 실패3건은 다음과 같다.
 후속 인지·주행 품질 검증은 보존된 실패 자료와 [작업표](../../../src/asmc_lidar/docs/improvement-milestones.md)를 사용한다.
 
 11월11일 보완 후 정본 `runtime` 재빌드와 ROS 생성 `Trajectory` MD5 대조를 통과했다.
-LiDAR source/build SHA는 `72793c9bba8188beb8a53ebdcc5bb8abac9c0a14e31f968fd140c39a3afa5bc1`로 일치한다.
+LiDAR source/build SHA는 `2e2e96ac3c32b6a8fdb963fddad8ab265461073ea3455808189a996c156a057c`로 일치한다.
 시험 전용 CMake 변경도 source 식별자에 포함되어 값이 달라졌으며 운영 알고리즘 변경은 없다.
 터널 코어45개, 세 방식 launch 및 독립 master의 NORMAL↔LOCAL/중복 발행 차단 시험을 통과했다.
 문서 검사는27개 launch·108개 literal command와5개 동결 snapshot을 확인했다.
 호스트에는 Node가 없고 정본 Noetic의 Node는 웹 문법보다 오래돼 웹 JS 회귀 전체는
 GitHub의 Node20 필수 CI에서 확인한다. 해당 환경 실패를 통과로 세지 않는다.
+
+후속 hosted 실행에서 같은 상대 경로 문제가 터널 runtime 시험에서도 드러났다.
+LiDAR 시험 공통 CMake 경로를 사용하도록 runtime·fusion·점군 정제 fixture까지 정리하고,
+소스와 다른 `/tmp` 작업 디렉토리에서 관련7개 C++ 실행파일의 회귀를 모두 통과했다.
+검사 범위 축소·임계값 변경 없이 실제 설정과 재현 JSON을 읽는지 확인했다.
