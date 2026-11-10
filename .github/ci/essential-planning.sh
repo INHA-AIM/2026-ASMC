@@ -10,3 +10,11 @@ done
 "${ASMC_CI_DEVEL:-devel}/lib/asmc_planner/asmc_mode_detector_test"
 "${ASMC_CI_DEVEL:-devel}/lib/asmc_planner/highway_merge_preflight" src/asmc_planner/config/frenet/params.yaml
 rostest planning_inputs lidar_observation.test
+
+# Opt-in LOCAL ships with the same production runtime. Compile and exercise its
+# geometry/physical speed and execution-history boundary on every PR.
+"${ASMC_CI_DEVEL:-devel}/lib/asmc_planner/local_planner_test"
+"${ASMC_CI_DEVEL:-devel}/lib/asmc_controller/local_execution_history_test"
+python3 tools/scen_runner/test_local_autonomy.py
+python3 tools/scen_runner/test_local_handoff.py
+python3 tools/scen_runner/test_local_ownership.py

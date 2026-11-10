@@ -26,3 +26,5 @@ python3 src/asmc_planner/tests/behavior/dashboard_startup_test.py
 node src/asmc_planner/tests/behavior/dashboard_motion_test.js
 node src/asmc_planner/tests/behavior/dashboard_shadow_test.js
 python3 -m compileall -q src tools/ci tools/scen_runner/scen_runner
+
+PYTHONPATH=tools/scen_runner python3 -m unittest discover -s tools/scen_runner/test/unit -p 'test_trial_monitor.py'
