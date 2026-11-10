@@ -10,7 +10,8 @@
 정본은 `2026-ASMC` checkout과 `asmc-ros-noetic` 한 컨테이너다.
 ROS master는11311, 판제는 <http://localhost:8088/web/index_v2.html>, LiDAR는 <http://localhost:8091/>를 사용한다.
 컨테이너 이름이나 Git HEAD만으로 실행 바이너리가 최신이라고 판단하지 않는다.
-재빌드와 실제 선택 파일 확인은 [명령 모음](commands.md) 및 [대회 종료 보존 기록](../records/repository/2026-11-10-postcompetition-preservation.md)을 따른다.
+재빌드와 실제 선택 파일 확인은 [명령 모음](commands.md) 및 [정본 실행 확인](../records/repository/2026-11-10-canonical-runtime-closeout.md)을 따른다.
+Docker Desktop의 Windows 브라우저에서는 LiDAR `view.launch`에 `bind_address:=0.0.0.0`을 지정한다.
 
 기본 음영 선택은 **`jamming_planner:=localization` + `localization_local_recovery:=true`**다.
 기본 launch에서 localization MPC 한 개가 native 지도 경로 또는 검증된 LOCAL 대체 경로를 추종한다.

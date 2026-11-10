@@ -1,8 +1,8 @@
 # ASMC 실행 명령
 
 > 2026-11-10 PR #141 병합 이후 main의 기본 음영 선택은 localization+LOCAL 복구입니다.
-> 세 방식·속도·전환·콘솔은 [세 재밍 플래너 실행](jamming-comparison.md), 보존·아직 남은 재빌드는
-> [대회 종료 기록](../records/repository/2026-11-10-postcompetition-preservation.md)을 따릅니다.
+> 세 방식·속도·전환·콘솔은 [세 재밍 플래너 실행](jamming-comparison.md), 정본 재빌드·연구 환경 정리 결과는
+> [정본 실행 확인](../records/repository/2026-11-10-canonical-runtime-closeout.md)을 따릅니다.
 
 `asmc-ros-noetic`의 `/root/ws`는 실행할 checkout입니다. 현재 worktree를 유지하고
 다른 checkout을 빌드한 setup과 섞지 않습니다. 인자는 `name:=value`이며
@@ -174,6 +174,15 @@ private 메시지 갱신 후에는 위 전체 빌드를 수행하고 adapter·�
 |---|---|---|
 | 판제 웹 콘솔 | 통합 `autonomy_no_bridges_v2.launch`에 포함; 별도 launch 불필요 | `http://127.0.0.1:8088/web/index_v2.html` |
 | LiDAR 웹 시각화 | `roslaunch asmc_lidar view.launch` | `http://127.0.0.1:8091/` |
+
+Docker Desktop host network에서 Windows 브라우저로 LiDAR 웹을 열 때는 다음처럼 실행합니다.
+기본 `bind_address:=127.0.0.1`은 컨테이너 내부에서만 응답할 수 있습니다.
+포트는8091 그대로이며 이 옵션은 HTTP 서버의 수신 주소만 바꿉니다. 외부 인터페이스에도 바인딩되므로
+Windows 방화벽의 접근 범위를 유지합니다. 판제 웹8088과 동시에 HTTP200을 확인했습니다.
+
+```bash
+roslaunch asmc_lidar view.launch bind_address:=0.0.0.0
+```
 
 판제는 통합 launch에서 서버가 기본 ON이고 브라우저 자동 열기는 OFF입니다.
 별도 dashboard launch 없이 터미널에 출력된 주소를 눌러 패널을 엽니다.

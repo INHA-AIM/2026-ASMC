@@ -1,5 +1,8 @@
 # 대회 종료 후 소스·연구 런타임 보존 — 2026-11-10
 
+> 이 문서는 보존 단계 완료 당시 기록이다. 이후 재빌드·컨테이너 및 worktree 정리를 완료했으며,
+> 현재 상태는 [정본 실행 확인](2026-11-10-canonical-runtime-closeout.md)을 따른다.
+
 사용자가 최종 대회 주행 브랜치로 확인한 `integrate/jamming-three-way-20261029`는
 [PR #141](https://github.com/INHA-AIM/2026-ASMC/pull/141)로 main에 병합됐다.
 대회 코드와 실험 자료를 보존하면서 실행 정본을 하나로 줄이기 위한 기록이다.
