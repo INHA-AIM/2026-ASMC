@@ -222,7 +222,8 @@
 
 | 인자 | 기본값 / 필수 | 소스 설명 |
 |---|---|---|
-| `jamming_planner` | `camera` | — |
+| `jamming_planner` | `localization` | — |
+| `localization_local_recovery` | `true` | — |
 | `transport_profile` | `local` | — |
 | `cmd_ip` | `$(optenv MORAI_CMD_IP 127.0.0.1)` | — |
 | `cmd_port` | `9093` | — |
@@ -231,7 +232,7 @@
 | `lidar_dashboard_port` | `8091` | — |
 | `lidar_view` | `true` | — |
 | `lidar_debug` | `false` | — |
-| `jamming_speed_kph` | `$(eval {'camera':10.,'local':20.,'localization':20.}[arg('jamming_planner')])` | — |
+| `jamming_speed_kph` | `$(eval {'camera':10.,'local':20.,'localization':15.}[arg('jamming_planner')])` | — |
 | `local_run_id` | `$(optenv ASMC_RUNTIME_SESSION_ID standalone)` | — |
 | `local_journal_path` | `(빈 문자열)` | — |
 | `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
@@ -246,9 +247,10 @@
 | `highway_merge` | `true` | — |
 | `dashboard` | `true` | — |
 | `open_dashboard` | `false` | — |
-| `jamming_planner` | `camera` | camera: main follower, local: observed local road, localization: map localization |
+| `jamming_planner` | `localization` | camera: main follower, local: observed local road, localization: map localization |
 | `dashboard_port` | `8088` | — |
-| `jamming_speed_kph` | `$(eval {'camera':20.0,'local':20.0,'localization':20.0}[arg('jamming_planner')])` | — |
+| `jamming_speed_kph` | `$(eval {'camera':20.0,'local':20.0,'localization':15.0}[arg('jamming_planner')])` | — |
+| `localization_local_recovery` | `true` | Experimental validated LOCAL path fallback; localization retains the single MPC |
 | `local_semantic_input` | `true` | — |
 | `local_planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |
 | `local_forward_warning_weight` | `(빈 문자열)` | — |
@@ -268,8 +270,10 @@
 | `state_topic` | `/planning/vehicle/state` | — |
 | `canonical_objects_topic` | `/planning/objects` | — |
 | `lidar_input_topic` | `/perception/lidar/planning_observations_map` | — |
-| `avoid_path_margin_m` | `0.4` | — |
+| `avoid_path_margin_m` | `0.45` | — |
 | `static_obstacle_unknown` | `true` | — |
+| `static_avoid_recovery` | `true` | — |
+| `static_avoid_contact_progress` | `true` | — |
 | `expected_config_sha256` | `2d17cf63adbf2ba049d70656233ee2f34e9a4bfb43373ee76b3371aab1e4dc2a` | — |
 | `calibration_file` | `$(find asmc_camera)/config/cameras_v3.yaml` | — |
 | `rviz` | `false` | 재밍 카메라 차선변경 RViz(BBOX·차선·경로) 표시 |
@@ -293,8 +297,10 @@
 | `behavior_objects_topic` | `/Object_topic` | — |
 | `objects_input_type` | `morai` | — |
 | `planning_objects_topic` | `/planning/objects` | — |
-| `avoid_path_margin_m` | `0.4` | — |
+| `avoid_path_margin_m` | `0.45` | — |
 | `static_obstacle_unknown` | `true` | — |
+| `static_avoid_recovery` | `true` | — |
+| `static_avoid_contact_progress` | `false` | — |
 
 ## MPC component
 
@@ -306,6 +312,7 @@
 | `suspend_in_jamming` | `false` | — |
 | `initial_ready_topic` | `(빈 문자열)` | — |
 | `smooth_handoff` | `false` | — |
+| `allow_static_contact_progress` | `false` | — |
 
 ## Planning state component
 
@@ -619,6 +626,7 @@
 |---|---|---|
 | `smooth_handoff` | `false` | — |
 | `enable_control` | `false` | — |
+| `start_controller` | `true` | — |
 | `run_id` | `local-preview` | — |
 | `journal_path` | `(빈 문자열)` | — |
 | `planner_config` | `$(find asmc_planner)/config/local_planner.yaml` | — |

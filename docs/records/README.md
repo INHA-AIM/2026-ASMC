@@ -12,7 +12,7 @@
 | Bridge | [콘솔 줄바꿈·센서별 Hz](bridge/2026-10-17-bridge-console-layout.md), [로그·선택 형식 구분](bridge/2026-10-17-bridge-log-readability.md), [LiDAR 회전율·진단 정리](bridge/2026-10-17-lidar-cadence-diagnostics.md), [P3-G local closeout](bridge/bridge-p3g-local-closeout-v1.md) | [bridge](bridge/) |
 | Planning | [LOCAL-2A 입력 정렬·벽 간격·반복 주행](planning/2026-10-28-local-input-alignment.md), [시간·속도·DR pilot](planning/2026-10-28-local-timing-and-dr-pilot.md), [LOCAL-1 실패와 개선](planning/2026-10-28-local-planner.md) | [planning](planning/) |
 | HD Map | [compact 제품](hd-map/kcity2025-compact-drivable-v1.md), [입력 감사](hd-map/kcity2025-drivable-input-v1.md) | [hd-map](hd-map/) |
-| 저장소 | [판제 초기화·CI 중복 분석](repository/2026-10-29-planner-startup-ci.md), [구조 이전](repository/documentation-restructure-v2.md), [현행화·소스 검토](repository/2026-10-16-documentation-refresh.md) | [repository](repository/) |
+| 저장소 | [대회 최종 main·WIP·런타임 보존](repository/2026-11-10-postcompetition-preservation.md), [판제 초기화·CI 중복 분석](repository/2026-10-29-planner-startup-ci.md), [구조 이전](repository/documentation-restructure-v2.md), [현행화·소스 검토](repository/2026-10-16-documentation-refresh.md) | [repository](repository/) |
 | 종료된 설계 | [과거 실행/연구 목록](archive/README.md) | [archive](archive/) |
 
 ## 긴 현행 문서에서 분리한 과거 근거
