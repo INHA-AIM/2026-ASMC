@@ -1,5 +1,10 @@
 # 개발·시뮬레이터 운영 가이드
 
+> **대회 종료 정본 — 2026-11-10:** PR #141의 최종 주행 소스가 main에 병합됐습니다.
+> 현재 실행은 [명령 모음](commands.md)과 [세 음영 방식](jamming-comparison.md),
+> 연구 WIP·런타임 보존 및 남은 재빌드는 [종료 기록](../records/repository/2026-11-10-postcompetition-preservation.md)을 따릅니다.
+> 아래 날짜가 붙은 검증 설명은 당시 근거이며 새 실행 수락으로 해석하지 않습니다.
+
 > **2026-10-27 현재 실행 기준:** CompetitionInfoPublisher는9088→9099→`/Ego_topic`이다.
 > `--require-competition-status`/`verify-field`도 이9099 입력을 검사하도록 정정했다.
 > 9798은 로컬 Detail 진단이며 LAN 운영·수락에서 제외한다. 아래 과거 P3 설명과 현재 역할은

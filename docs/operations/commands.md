@@ -1,6 +1,8 @@
 # ASMC 실행 명령
 
-> 이 비교 브랜치의 세 방식 선택·포트·master·A448 정책은 [세 재밍 플래너 비교 실행](jamming-comparison.md)이 현재 정본입니다. 아래의 과거 개별 브랜치 안내와 구분합니다.
+> 2026-11-10 PR #141 병합 이후 main의 기본 음영 선택은 localization+LOCAL 복구입니다.
+> 세 방식·속도·전환·콘솔은 [세 재밍 플래너 실행](jamming-comparison.md), 보존·아직 남은 재빌드는
+> [대회 종료 기록](../records/repository/2026-11-10-postcompetition-preservation.md)을 따릅니다.
 
 `asmc-ros-noetic`의 `/root/ws`는 실행할 checkout입니다. 현재 worktree를 유지하고
 다른 checkout을 빌드한 setup과 섞지 않습니다. 인자는 `name:=value`이며
@@ -74,16 +76,16 @@ GPU가 다른 PC에서 만든 객체 엔진을 사용하던 경우, 추론 노�
 `bash tools/scen_runner/prepare_camera_engines.sh`로 현재 모델·GPU·TensorRT에 맞는
 엔진을 생성합니다. 검증을 마친 로컬 객체 엔진은 직접 실행하는 `camera.launch`와
 시나리오 실행기 모두에서 선택됩니다. [로컬 엔진 안내](local-lane-engine.md)를 참고하세요.
-현재 통합 브랜치의 D는 `jamming_planner:=localization`과
+현재 main의 D는 `jamming_planner:=localization`과
 `localization_local_recovery:=true`가 기본입니다. localization MPC 하나가 native 경로와 검증된 LOCAL 대체 경로를 추종합니다.
 기존 방식 복귀는 `jamming_planner:=camera localization_local_recovery:=false`입니다.
 [공유 master·중복 방지·연구 범위](planning-control.md#localization-음영-위치-추종-연구-옵션)를 먼저 확인합니다.
 판제 대시보드는 D에 포함되어 별도 실행하지 않습니다. 실행·보존·검증 범위는
 [통합 안내](../../src/asmc_planner/docs/main-integration-20261026.md)를 참고하세요.
 
-`jamming_planner:=camera`를 명시한 기존 방식은 차선 카메라로 도로를 잡고, 장애물 형상·위치·운동은
-LiDAR OBB로 판단합니다. 객체 카메라는 LiDAR SensorFusion의 클래스 보완에 사용합니다.
-카메라 BBOX로 6m 장애물을 만드는 경로는 제거했으며 실행 명령은 같습니다.
+`jamming_planner:=camera`를 명시하면 기존 camera BBox/family·LiDAR 기반 방식을 사용합니다.
+현재 launch에는 `/perception/camera/objects`를 받는 BBox bridge와 분류/선택 경로가 포함됩니다.
+이는 기본 localization의 검증 LOCAL 복구와 다른 방식이며, 선택한 제어기만 selector에 연결됩니다.
 [재밍 입력·기억 정책](../../src/jamming_lane_boundary_adapter/docs/bbox-lane-change.md)을 참고하세요.
 
 C/D는 기본 정본 조합입니다. source 선택 인자는 제거됐으며 [실행 기준선](../../src/asmc_lidar/docs/planning-runtime.md)을 따릅니다. 전체 미션·속도 정확도 인수는 후속입니다.
