@@ -11,7 +11,7 @@ PR #114의 속도 품질·GPS 복귀·재밍 출구 처리를 B4의 단일 실�
 카메라·LiDAR·판제를 별도로 한 번씩 실행한다. `planning_output`, `lidar_backend`,
 `lidar_source_policy`, `asmc_lidar_companion` 선택과 `autonomy_asmc_lidar.launch`는 정리했다.
 판제 담당은 기본 `autonomy_no_bridges_v2.launch`를 사용하고 구 overlay/JSON/wire를 연결하지 않는다.
-시험 시 입력 remap과 `namespace:=/migration/lidar`만 사용한다.
+시험 시 입력 remap과 `namespace:=/test/lidar`만 사용한다.
 
 `tracks_local/map`의 기존 공용 추적 계약은 분석용으로 유지한다. 판제용 KF 속도와 일반 classifier
 추정값은 같다고 가정하지 않는다. 속도 미확정의 유효 기하는 UNKNOWN과 `velocity_unavailable`로

@@ -654,7 +654,7 @@ main 포트 ROS11311·판제8088·LiDAR8091과 기존 bridge UDP를 그대로 �
 컨테이너별로 포트를 분리하지 않으므로 다른 브랜치의 전체 실행은 종료한 뒤 교대한다.
 다른 실행이 있으면 시작을 거부하며 임의로 종료하거나 다른 master에 붙지 않는다.
 
-컨테이너 내부 `/root/ws`에서 기본 카메라 재밍 방식:
+컨테이너 내부 `/root/ws`에서 기본 localization+LOCAL 복구 방식:
 
 ```bash
 ./scripts/drive.sh
@@ -681,9 +681,10 @@ roslaunch asmc_lidar lidar.launch
 roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 ```
 
-LOCAL 목표 상한10km/h, 저속 회복 목표5km/h다. 정지하지 않으려면 검증 가능한 대체 경로가
+LOCAL 명시 선택은 상한20·순항15km/h, 기본 localization은 상한15km/h이며 LOCAL 대체 경로 상한은5km/h다. 정지하지 않으려면 검증 가능한 대체 경로가
 필요하며 입력 무효·실제 충돌·물리적으로 불가능한 곡률에 속도만5로 덮어쓰지 않는다.
-기본 재밍 방식은 camera로 유지한다. LOCAL에서만 새 planner/MPC/노면 입력을 시작한다.
+기본 localization에서는 LOCAL planner·노면 입력과 localization MPC 하나를 시작한다.
+`local` 명시 선택에서만 독립 LOCAL MPC를 사용한다.
 
 판제: <http://localhost:8088/web/index_v2.html>. 자동 보기 또는 `LOCAL 경로·노면·fusion`.
 LiDAR: <http://localhost:8091/>. 전체 실행에는 두 웹이 포함되고 GUI를 자동으로 열지 않는다.
@@ -699,7 +700,8 @@ LiDAR 단계별 상세 점군이 필요할 때만 전체 실행에 `lidar_debug:
 
 ### 2026-10-30 비교 컨테이너 실행
 
-`asmc-jamming-compare`의 기존 master11373·브릿지·인지·콘솔을 쓰는 경우:
+아래는 삭제된 `asmc-jamming-compare`의 과거11373·8089/8097 재현 기록이다.
+현재는 위 정본 컨테이너와11311·8088/8091을 사용한다. 당시 별도 콘솔이 켜진 경우 사용한 명령:
 
 ```bash
 roslaunch asmc_planner autonomy_no_bridges_v2.launch dashboard:=false

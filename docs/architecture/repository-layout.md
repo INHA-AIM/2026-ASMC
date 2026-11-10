@@ -25,7 +25,7 @@
 | planning_inputs | `src/planning_inputs` | 판제 전용 GPS/IMU 상태와 LiDAR wire 변환 |
 | lane_boundary_adapter | `src/jamming_lane_boundary_adapter` | 음영 family 검토·BBox 차로/재밍 제어; launch별 권한 다름 |
 | data_collection | `src/data_collection` | Capture·bag 기록/재생·dataset lineage |
-| asmc_lidar | `src/asmc_lidar` | 정본 검출·추적·3뷰 fusion·전달 필터·local/map 공용 출력과 replay. 기본 `/perception/lidar`, 비교 `/migration/lidar`, 일반 판제 연결 |
+| asmc_lidar | `src/asmc_lidar` | 정본 검출·추적·3뷰 fusion·전달 필터·local/map 공용 출력과 replay. 기본 `/perception/lidar`, 비교 `/test/lidar`, 일반 판제 연결 |
 | 구 Main/Msg | B4에서 Git 소스 폐기 | 당시 revision으로만 재현. nested workspace를 빌드/source하지 않음 |
 
 이름 변경이 완료된 `src/asmc_perception` 폴더와 이전 안내는 제거했습니다. 카메라 정본은 `src/asmc_camera`입니다.

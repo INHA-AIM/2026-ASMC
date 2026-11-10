@@ -1,6 +1,6 @@
 # 카메라 근거를 사용하는 실측점 정제
 
-기본 배포의 `fusion.views: all`, `mission15_no_cone_v1`, 전·후방 군집 허용거리와 semantic-motion 정책은 유지한다. 새 정제는 기본적으로 꺼져 있다. 원본 sensor ROI Z는 사용자 요청대로 [-2,+2]m다. 기존 전체 YAML을 복사해 카메라 모델이나 융합 정책을 되돌리지 않는다.
+기본 배포의 `fusion.views: all`, `mission15_no_cone_v1`, 전·후방 군집 허용거리와 semantic-motion 정책은 유지한다. 현재 기본 launch는 `lidar_wall_vehicle.yaml`을 읽으며 정제와 차량 이력을 켠다. C++ 구조체의 미지정 초기값(false)과 실행 프로필을 구분한다. 아래 경로 게이트가 실제 적용 범위를 제한한다. 원본 sensor ROI Z는 사용자 요청대로 [-2,+2]m다. 기존 전체 YAML을 복사해 카메라 모델이나 융합 정책을 되돌리지 않는다.
 
 When `tunnel_only_updates: true` is selected (the `lidar_wall_vehicle.yaml`
 profile), camera-owned point extraction, residual splitting, steel fragment
@@ -44,7 +44,7 @@ python3 src/asmc_lidar/tools/configure_point_refinement.py \
 
 확인된 현재 점은 원래 트랙 ID에만 연결하고, 작은 잔여 군집이 그 ID를 가져가거나 같은 스캔의 통합 단계가 다시 합치지 못하게 한다. 새 카메라 객체가 같은 이력 점과 대응할 때도 현재 이미지의 소유권은 유지하면서 원래 ID에 연결한다. 카메라 관측 시각·확정 횟수·miss 카운터를 갱신하지 않고 현재 실측 대응이 있는 객체의 vehicle 표시만 유지한다. 다른 현재 클래스와의 충돌은 덮어쓰지 않는다.
 
-스캔 간 공백은 최대 0.2초, 마지막 카메라 확인부터의 수명은 `vehicle_history_max_camera_age_s` 기본 10초다. 차량 이력의 회전 보정은 검증된 샘플에서 최대 0.2rad까지 허용하며, 기존 카메라 투영용 0.05rad 제한은 바꾸지 않는다. 현재 측정이나 유효 보정이 끊기면 이력을 종료한다. 따라서 아직 카메라로 분리하지 못한 차량, 긴 가림, 높은 상대 운동 또는 이력 수명 초과까지 해결하는 기능은 아니다. 기능 기본값은 false이며 실행 프로필에서 명시적으로 켠다.
+스캔 간 공백은 최대 0.2초, 마지막 카메라 확인부터의 수명은 `vehicle_history_max_camera_age_s` 기본 10초다. 차량 이력의 회전 보정은 검증된 샘플에서 최대 0.2rad까지 허용하며, 기존 카메라 투영용 0.05rad 제한은 바꾸지 않는다. 현재 측정이나 유효 보정이 끊기면 이력을 종료한다. 따라서 아직 카메라로 분리하지 못한 차량, 긴 가림, 높은 상대 운동 또는 이력 수명 초과까지 해결하는 기능은 아니다. C++ 미지정 초기값은 false이며 현재 기본 실행 프로필 `lidar_wall_vehicle.yaml`에서 명시적으로 켠다.
 
 일반 정제와 벽 정리는 인과적으로 보정된150ms 안의 입력만 사용한다. Steel 기하는 검증된 IMU/CAN 적분 조건에서만 최대250ms다. `general_current` 가드가 steel의 긴 창으로 일반 벽 정리를 활성화하지 못하게 한다. 터널 `protection.motion_compensated_fallback`도 최대150ms이며, 3뷰 중 빠진 전방 입력만 대체하고 측면 입력을 덮지 않는다.
 
