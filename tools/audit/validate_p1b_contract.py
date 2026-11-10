@@ -241,11 +241,15 @@ def _validate_legacy_against_p1a(
 def _validate_messages(
     contract: Mapping[str, object], specs: Mapping[str, MessageSpec], baseline_path: Path,
     registered_names: Optional[set] = None,
+    revisions: Optional[Mapping[str, object]] = None,
 ) -> Dict[str, str]:
     md5s = all_message_md5(specs)
     legacy = _as_mapping(contract.get("legacy_messages"), "legacy_messages")
     additions = _as_mapping(contract.get("new_messages"), "new_messages")
     _validate_legacy_against_p1a(legacy, baseline_path)
+    revisions = revisions or {}
+    if set(revisions) - set(legacy):
+        raise ContractError("legacy revisions may only supersede declared legacy messages")
 
     declared_names = {_message_name(name) for name in legacy} | {
         _message_name(name) for name in additions
@@ -266,6 +270,16 @@ def _validate_messages(
 
     for type_name, expected_md5 in legacy.items():
         name = _message_name(type_name)
+        if type_name in revisions:
+            revision = _as_mapping(revisions[type_name], type_name)
+            if revision.get("previous_md5") != expected_md5:
+                raise ContractError(f"legacy revision baseline mismatch: {type_name}")
+            if not re.fullmatch(r"[0-9a-f]{40}", str(revision.get("source_commit", ""))):
+                raise ContractError(f"legacy revision needs source commit: {type_name}")
+            expected_md5 = revision.get("md5")
+            required = set(_as_list(revision.get("required_fields"), type_name))
+            if not required <= {field.name for field in specs[name].fields}:
+                raise ContractError(f"legacy revision missing required fields: {type_name}")
         if md5s[name] != expected_md5:
             raise ContractError(
                 f"legacy MD5 changed for {type_name}: expected {expected_md5}, got {md5s[name]}"
@@ -398,7 +412,14 @@ def validate_contract(repo_root: Path, contract_path: Path, baseline_path: Path)
     registered_names = _load_registered_message_names(
         repo_root, contract.get("message_registry")
     )
-    md5s = _validate_messages(contract, specs, baseline_path, registered_names)
+    registry = _load_yaml(repo_root / str(contract["message_registry"]))
+    revisions = {}
+    if registry.get("legacy_revisions"):
+        revision_doc = _load_yaml(repo_root / str(registry["legacy_revisions"]))
+        if revision_doc.get("schema_version") != 1:
+            raise ContractError("legacy revisions must use schema_version 1")
+        revisions = _as_mapping(revision_doc.get("messages"), "legacy revisions")
+    md5s = _validate_messages(contract, specs, baseline_path, registered_names, revisions)
     _validate_semantics(specs)
     _validate_topics(contract, md5s)
     return {

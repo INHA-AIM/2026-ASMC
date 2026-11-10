@@ -3,6 +3,7 @@
 구현: [control_binding.hpp](../../src/asmc_msgs/include/asmc_msgs/control_binding.hpp).
 `BehaviorCommand`, `FrenetFeedback` 필드 의미는 유지한다. `Trajectory`는 정적
 복구 실행 정책을 명시하는 `execution_policy`가 추가되어 함께 재빌드해야 한다.
+현재 MD5는 `d2861f02be7f35ccfaad88f88cafb3a9`이며, [기존 MD5와 변경 근거](../../config/contracts/legacy_message_revisions_v1.yaml)를 보존한다.
 시간은 신선도에만 사용한다. `frame_id`, 설명 문자열을 명령 ID로 재해석하지 않는다.
 
 ## 전송과 활성화

@@ -6,6 +6,17 @@
 > **적용 범위:** 메시지와 토픽 의미 동결. P1-C metadata, read-only publisher와 2단계
 > Lane/DrivableArea 제품 구현 완료
 
+## 현재 wire 변경과 과거 기준의 구분
+
+아래 P1-A/P1-B의 13개 MD5 표는 당시 동결 기준이며 원본 YAML·baseline도 그대로 보존한다.
+이후 대회 코드 `87a4d093`에서 `Trajectory.execution_policy` 및 POLICY 상수가 추가됐다.
+현재 `Trajectory` MD5는 **`d2861f02be7f35ccfaad88f88cafb3a9`**다.
+[명시적 변경 목록](../../config/contracts/legacy_message_revisions_v1.yaml)이 이전/현재 MD5와 원인 커밋을 연결한다.
+검사는 등록한 변경만 허용하고 다른 wire drift는 실패시킨다. 이는 과거 additive-only 원칙을
+지켰다는 의미가 아니며, 이미 배포된 호환성 변경을 기록한 것이다.
+Planner/Controller를 같은 소스로 함께 재빌드·재시작한다. 구 bag/실행파일과 직접 혼용하지 않는다.
+[현재 제어 계약](control-binding-v1.md)을 따른다. 이번 문서 정리에서는 `.msg`를 변경하지 않았다.
+
 ## 1. 호환성 원칙
 
 `asmc_msgs` 1.0.0은 기존 13개 타입을 수정하지 않고 HD Map/대회 metadata 타입 12개를

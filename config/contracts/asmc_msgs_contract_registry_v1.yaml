@@ -1,6 +1,7 @@
 schema_version: 1
 registry_id: asmc_msgs_contract_registry_v1
 package: asmc_msgs
+legacy_revisions: config/contracts/legacy_message_revisions_v1.yaml
 contracts:
 - path: config/contracts/hd_map_topic_contract_v1.yaml
   message_sections:

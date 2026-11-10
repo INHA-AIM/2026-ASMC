@@ -1,0 +1,11 @@
+schema_version: 1
+# P1-A/P1-B hashes remain historical evidence. Only these explicit revisions
+# supersede them; current source must match the new hash exactly.
+messages:
+  asmc_msgs/Trajectory:
+    previous_md5: 38657ba74f761a20afb310b0265cb085
+    md5: d2861f02be7f35ccfaad88f88cafb3a9
+    source_commit: 87a4d093c23550210a5991189c5bf7b17de7b6b6
+    reason: Static AVOID execution_policy and POLICY constants added before competition.
+    required_fields: [header, valid, failure_reason, execution_policy, dt, ego_at_plan, points]
+    compatibility: Rebuild and restart all planner/controller producers and consumers together.
