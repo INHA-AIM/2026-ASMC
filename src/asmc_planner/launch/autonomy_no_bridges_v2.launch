@@ -9,6 +9,7 @@
   <arg name="shadow_lane_rules" default="$(eval arg('jamming_planner') == 'localization')" doc="verified shadow zone paint exemption; physical road stays hard"/>
   <arg name="shadow_run_id" default="localization-autonomy"/>
   <arg name="shadow_speed_cap_kph" default="15"/>
+  <arg name="localization_approach_speed_kph" default="25"/>
   <arg name="shadow_journal_path" default=""/>
   <arg name="shadow_start_motion" default="true"/>
   <arg name="shadow_motion_yaw_source" default="orientation"/>
@@ -57,10 +58,12 @@
        전역경로 station. 시뮬레이터가 blackout을 주지 않아도 구간에서 분리된다.
        시작은 metadata(1877.74)보다 30m 앞당겼다. 구간 초입의 정지 장애물을 일반
        플래너가 먼저 보고 회피 후보 없음으로 정지하지 않도록 재밍 회피가 맡게 한다. -->
-  <arg name="shadow_zone_start_m" default="1847.744798966"/>
+  <arg name="shadow_zone_start_m" default="$(eval 1877.744798966 if arg('jamming_planner') == 'localization' else 1847.744798966)"/>
   <group ns="planning_mode">
     <param name="smooth_handoff" value="$(eval arg('jamming_planner') == 'localization')"/>
-    <param name="localization_approach_speed_kph" value="$(eval float(arg('shadow_speed_cap_kph')) if arg('jamming_planner') == 'localization' else 0.0)"/>
+    <param name="localization_approach_speed_kph" value="$(eval float(arg('localization_approach_speed_kph')) if arg('jamming_planner') == 'localization' else 0.0)"/>
+    <param if="$(eval arg('jamming_planner') == 'localization')" name="localization_prepare_start_m" value="1859.641578240"/>
+    <param name="shadow_zone/trigger_mode" value="$(eval arg('jamming_planner') != 'localization')"/>
     <param name="recovery_ready_topic" value="$(eval {'camera': '', 'localization': '/planning/localization/recovery_ready'}[arg('jamming_planner')])"/>
     <param name="shadow_zone/path_file"
            value="$(find asmc_planner)/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"/>
@@ -104,7 +107,7 @@
     <arg name="state_topic" value="$(arg state_topic)"/>
     <arg name="suspend_in_jamming" value="$(eval arg('jamming_planner') == 'localization')"/>
     <arg name="smooth_handoff" value="$(eval arg('jamming_planner') == 'localization')"/>
-    <arg name="localization_approach_speed_kph" value="$(eval float(arg('shadow_speed_cap_kph')) if arg('jamming_planner') == 'localization' else 0.0)"/>
+    <arg name="localization_approach_speed_kph" value="$(eval float(arg('localization_approach_speed_kph')) if arg('jamming_planner') == 'localization' else 0.0)"/>
   </include>
   <node pkg="asmc_planner" type="asmc_control_selector_node"
         name="asmc_control_selector" output="screen" required="true">

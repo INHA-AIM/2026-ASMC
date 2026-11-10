@@ -22,6 +22,11 @@ bool AvoidRoadMap::IntersectsDrivable(const geometry::Polygon2D& footprint) cons
   const auto hull=geometry::ComputeConvexHull(footprint);
   if(geometry::PolygonArea(hull)<1e-6 || xmin<grid_x_ || ymin<grid_y_ ||
       xmax>=grid_x_+grid_width_*grid_resolution_ || ymax>=grid_y_+grid_height_*grid_resolution_) return false;
+  if(paint_exempt_)for(const auto& area:shadow_wall_areas_){
+    if(xmax<area.xmin||xmin>area.xmax||ymax<area.ymin||ymin>area.ymax)continue;
+    geometry::Polygon2D polygon;for(const auto& p:area.points)polygon.push_back({p.x,p.y});
+    if(geometry::CheckConvexPolygonOverlapSAT(hull,polygon))return true;
+  }
   const int x0=std::max(0,int(std::floor((xmin-grid_x_)/grid_resolution_))-1);
   const int x1=std::min(grid_width_-1,int(std::floor((xmax-grid_x_)/grid_resolution_)));
   const int y0=std::max(0,int(std::floor((ymin-grid_y_)/grid_resolution_))-1);
@@ -42,9 +47,10 @@ bool AvoidRoadMap::IntersectsDrivable(const geometry::Polygon2D& footprint) cons
 
 bool AvoidRoadMap::Load(const std::string& areas, const std::string& lines,
                         std::string& error) {
-  enabled_ = false; paint_exempt_=false; areas_.clear(); protected_lines_.clear(); line_bins_.clear();
+  enabled_ = false; paint_exempt_=false; areas_.clear(); shadow_wall_areas_.clear(); product_sha256_.clear(); protected_lines_.clear(); line_bins_.clear();
   try {
     const auto product = YAML::LoadFile(areas), markings = YAML::LoadFile(lines);
+    product_sha256_=product["product_sha256"].as<std::string>("");
     if (product["frame_id"].as<std::string>() != "map" ||
         product["map_id"].as<std::string>() != "waize_katri_2025-10-23" ||
         markings["map_id"].as<std::string>() != "kcity2025_competition_route_curation_candidate_v14" ||
@@ -127,11 +133,44 @@ bool AvoidRoadMap::Load(const std::string& areas, const std::string& lines,
 }
 
 bool AvoidRoadMap::Inside(double x, double y) const {
+  if(!std::isfinite(x+y))return false;
+  if(paint_exempt_)for(const auto& area:shadow_wall_areas_){
+    if(x<area.xmin||x>area.xmax||y<area.ymin||y>area.ymax)continue;
+    bool inside=true;
+    for(size_t i=0;i<area.points.size();++i){const auto& a=area.points[i];const auto& b=area.points[(i+1)%area.points.size()];
+      if((b.x-a.x)*(y-a.y)-(b.y-a.y)*(x-a.x)<-1e-8){inside=false;break;}}
+    if(inside)return true;
+  }
   const int ix=static_cast<int>(std::floor((x-grid_x_)/grid_resolution_));
   const int iy=static_cast<int>(std::floor((y-grid_y_)/grid_resolution_));
   if(ix<0||ix>=grid_width_||iy<0||iy>=grid_height_)return false;
   for(const auto& run:grid_rows_[iy])if(ix>=run.first&&ix<run.second)return true;
   return false;
+}
+
+bool AvoidRoadMap::SetShadowWallOverlay(const std::vector<geometry::Polygon2D>& polygons){
+  if(!enabled_||polygons.size()>100)return false;
+  std::vector<Polygon> checked;
+  for(const auto& points:polygons){
+    if(points.size()<3||points.size()>8)return false;
+    auto hull=geometry::ComputeConvexHull(points);
+    if(hull.size()!=points.size()||geometry::PolygonArea(hull)>50.||geometry::PolygonArea(hull)<.01)return false;
+    Polygon area;area.xmin=area.ymin=INFINITY;area.xmax=area.ymax=-INFINITY;
+    for(const auto& p:hull){
+      if(!std::isfinite(p.x+p.y)||p.x<grid_x_||p.y<grid_y_||
+         p.x>=grid_x_+grid_width_*grid_resolution_||p.y>=grid_y_+grid_height_*grid_resolution_)return false;
+      // The authoring layer may add only shoulders near existing road cells.
+      const int ix=int(std::floor((p.x-grid_x_)/grid_resolution_)),iy=int(std::floor((p.y-grid_y_)/grid_resolution_));
+      bool near=false;
+      for(int row=std::max(0,iy-13);row<=std::min(grid_height_-1,iy+13)&&!near;++row)
+        for(const auto& run:grid_rows_[row])if(run.second>ix-13&&run.first<=ix+13){near=true;break;}
+      if(!near)return false;
+      area.points.push_back({p.x,p.y});area.xmin=std::min(area.xmin,p.x);area.xmax=std::max(area.xmax,p.x);
+      area.ymin=std::min(area.ymin,p.y);area.ymax=std::max(area.ymax,p.y);
+    }
+    checked.push_back(std::move(area));
+  }
+  shadow_wall_areas_=std::move(checked);return true;
 }
 
 bool AvoidRoadMap::DrivablePoseClear(double x,double y,double yaw,const VehicleShape& shape) const {

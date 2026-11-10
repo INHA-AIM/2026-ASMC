@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
         throw std::runtime_error("invalid private validation speed cap");
     g_control.validation_speed_cap_mps=validation_speed_cap_kph/3.6;
     double approach_kph=0;private_nh.param("localization_approach_speed_kph",approach_kph,0.);
-    if(!std::isfinite(approach_kph)||approach_kph<0||approach_kph>15.)
+    if(!std::isfinite(approach_kph)||approach_kph<0||approach_kph>60.)
         throw std::runtime_error("invalid localization approach speed");
     g_control.localization_approach_speed_mps=approach_kph/3.6;
     ros::Subscriber approach_sub;ros::Publisher approach_trace;

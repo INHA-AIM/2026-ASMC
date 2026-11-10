@@ -55,6 +55,7 @@ class GpsModeSource final {
   ros::SteadyTimer timer_;
   JammingDetector detector_;
   std::unique_ptr<ShadowZone> zone_;
+  std::unique_ptr<ShadowZone> preparation_zone_;
   double zone_station_m_ = -1.0;
   double last_status_s_ = -1.0;
   PlanningMode mode_ = PlanningMode::NORMAL;  // 발행 중인 모드. detector_ 판정보다 늦게 NORMAL이 된다.

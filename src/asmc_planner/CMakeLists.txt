@@ -335,6 +335,7 @@ if(CATKIN_ENABLE_TESTING)
   add_rostest(tests/localization_handoff.test DEPENDENCIES gps_mode_source_test_node asmc_control_selector_node)
   add_rostest(tests/localization_seed.test)
   add_rostest(tests/localization_approach.test DEPENDENCIES gps_mode_source_test_node)
+  add_rostest(tests/localization_speed_stages.test DEPENDENCIES gps_mode_source_test_node)
   add_rostest(tests/localization_motion_order.test DEPENDENCIES asmc_local_planner_node)
 
   add_executable(highway_runtime_test tests/behavior/highway_runtime_test.cpp)

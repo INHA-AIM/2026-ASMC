@@ -12,6 +12,9 @@ JammingDetectorConfig LoadConfig(const ros::NodeHandle& params) {
   params.param("gps_timeout_s", config.gps_timeout_s, config.gps_timeout_s);
   params.param("exit_hold_s", config.exit_hold_s, config.exit_hold_s);
   params.param("shadow_zone/enabled", config.zone_enabled, config.zone_enabled);
+  bool trigger_mode=true;
+  params.param("shadow_zone/trigger_mode",trigger_mode,true);
+  config.zone_enabled=config.zone_enabled&&trigger_mode;
   return config;
 }
 double Now() { return ros::SteadyTime::now().toSec(); }
@@ -27,7 +30,7 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
   params.param("recovery_timeout_s", recovery_timeout_s_, recovery_timeout_s_);
   params.param("smooth_handoff",smooth_handoff_,false);
   params.param("localization_approach_speed_kph",approach_speed_mps_,0.);
-  if(!std::isfinite(approach_speed_mps_)||approach_speed_mps_<0||approach_speed_mps_>15.)
+  if(!std::isfinite(approach_speed_mps_)||approach_speed_mps_<0||approach_speed_mps_>60.)
     throw std::runtime_error("invalid localization approach speed");
   approach_speed_mps_/=3.6;
   if(smooth_handoff_) {
@@ -52,6 +55,12 @@ GpsModeSource::GpsModeSource(ros::NodeHandle nh)
     params.param("shadow_zone/heading_tolerance_rad", heading_rad, heading_rad);
     // 경로를 못 읽으면 조용히 끄지 않는다. 음영 진입을 놓치면 MPC가 GPS 없이 달린다.
     zone_.reset(new ShadowZone(path_file, start_m, end_m, lateral_m, heading_rad));
+    double prepare_start=0.;
+    if(smooth_handoff_&&params.getParam("localization_prepare_start_m",prepare_start)) {
+      if(!std::isfinite(prepare_start)||prepare_start<0||prepare_start>=end_m)
+        throw std::runtime_error("invalid localization preparation link boundary");
+      preparation_zone_.reset(new ShadowZone(path_file,prepare_start,end_m,lateral_m,heading_rad));
+    }
     std::string state_topic;
     params.param("shadow_zone/state_topic", state_topic, std::string("/planning/vehicle/state"));
     state_sub_ = nh_.subscribe(state_topic, 1, &GpsModeSource::stateCallback, this);
@@ -102,11 +111,17 @@ void GpsModeSource::stateCallback(const asmc_msgs::VehicleState::ConstPtr& messa
   double station = -1.0;
   const bool inside = zone_->Contains(message->x, message->y, message->yaw, &station);
   if(smooth_handoff_) {
-    const double lookahead=ShadowApproachDistance(message->speed,approach_speed_mps_,approach_distance_m_);
-    approaching_=inside||(approach_speed_mps_>0
-        ?zone_->ApproachingAlongRoute(message->x,message->y,message->yaw,lookahead)
-        :zone_->Approaching(message->x,message->y,message->yaw,lookahead));
-    approach_distance_m_=approaching_?lookahead:0.;
+    if(preparation_zone_) {
+      // A448 entry starts preparation/25kmh, independently of GPS loss.
+      // It must not slow the tollgate/upstream road to the shadow's15kmh.
+      approaching_=preparation_zone_->Contains(message->x,message->y,message->yaw);
+    } else {
+      const double lookahead=ShadowApproachDistance(message->speed,approach_speed_mps_,approach_distance_m_);
+      approaching_=inside||(approach_speed_mps_>0
+          ?zone_->ApproachingAlongRoute(message->x,message->y,message->yaw,lookahead)
+          :zone_->Approaching(message->x,message->y,message->yaw,lookahead));
+      approach_distance_m_=approaching_?lookahead:0.;
+    }
     publishPrepare();
   }
   zone_station_m_ = inside ? station : -1.0;

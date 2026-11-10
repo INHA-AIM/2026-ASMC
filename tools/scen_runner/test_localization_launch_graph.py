@@ -19,7 +19,7 @@ for choice in ('camera','localization'):
         assert (name in names)==(choice=='localization'),names
     assert c.params['/mpc_controller/suspend_in_jamming'].value==(choice=='localization')
     for key in ('/mpc_controller/localization_approach_speed_kph','/planning_mode/localization_approach_speed_kph'):
-        assert c.params[key].value==(15. if choice=='localization' else 0.)
+        assert c.params[key].value==(25. if choice=='localization' else 0.)
     assert bool(c.params['/planning_mode/recovery_ready_topic'].value)==(choice=='localization')
     if choice=='localization':
         assert c.params['/localization/dynamic_obstacles'].value is True
@@ -59,8 +59,8 @@ else:raise AssertionError('unknown mode silently accepted')
 c=graph('localization',['shadow_motion_yaw_source:=rate'])
 assert c.params['/localization_motion/yaw_source'].value=='rate'
 c=graph('localization',['shadow_speed_cap_kph:=15'])
-assert c.params['/mpc_controller/localization_approach_speed_kph'].value==15.
-assert c.params['/planning_mode/localization_approach_speed_kph'].value==15.
+assert c.params['/mpc_controller/localization_approach_speed_kph'].value==25.
+assert c.params['/planning_mode/localization_approach_speed_kph'].value==25.
 try:graph('localization',['shadow_motion_yaw_source:=bad'])
 except Exception:print('PASS unsupported motion yaw source rejected before launch')
 else:raise AssertionError('unknown yaw source accepted')
@@ -75,3 +75,10 @@ try:graph('local')
 except Exception:print('PASS unmerged LOCAL cannot silently select a different controller')
 else:raise AssertionError('unavailable LOCAL was accepted')
 print('PASS single jamming_planner selector; camera default; compatibility alias removed')
+
+c=graph('localization')
+assert c.params['/planning_mode/localization_prepare_start_m'].value==1859.641578240
+assert c.params['/planning_mode/shadow_zone/trigger_mode'].value is False
+assert c.params['/behavior_planner/maximum_speed_kph'].value==57.5
+assert graph('camera').params['/planning_mode/shadow_zone/trigger_mode'].value is True
+print('PASS NORMAL57.5, A448 preparation25, GPS-loss-only Localization15 selection')
