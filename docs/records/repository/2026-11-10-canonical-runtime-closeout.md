@@ -59,9 +59,14 @@ roslaunch asmc_lidar view.launch bind_address:=0.0.0.0
 | 비Git 잔여 폴더 | `2026-ASMC-aimdrive`의 보존된 commands 문서와 빈 마운트 폴더 |
 | 로컬 브랜치2개 | `feat/shadow-local-footprint`, `integrate/localization-compare-20261029` — 같은 SHA의 archive 태그 유지 |
 
-현재 등록된 ASMC worktree·로컬 개발 브랜치는 `2026-ASMC / main` 하나다.
+정리 후 ASMC 실행 worktree는 `2026-ASMC` 하나다. 문서 검토 중에는 PR #146 브랜치를 사용하고 병합 후 `main`으로 맞춘다.
 Docker 이미지·volume prune이나 D/E 데이터 삭제는 하지 않았다. Git worktree 제거 시 링크 대상은 따라가지 않았다.
-학습·실험 갤러리 컨테이너, ERC/VIP3의 별도 환경 및 `2026-ASMC-repro`는 이 정리에서 제외했다.
+학습·실험 갤러리 컨테이너와 ERC/VIP3의 별도 환경은 유지했다.
+`2026-ASMC-repro`는 11월10일 정리에서 제외했으나, 11월11일 사용자 요청으로 후속 점검·제거했다.
+잔여물은 파일 없는 디렉토리4개였다. 현재 Docker mount/restart·Compose·shell·서비스·예약 작업에서
+재생성하는 활성 참조가 없음을 확인하고 `rmdir`로 제거했다. 동결 복구 manifest의 역사적 참조는 유지한다.
+남은 컨테이너는 정본 ROS, perception-train, experiment-gallery, ERC GUI, 별도 VIP3 parking의5개다.
+개인 `.storage/manifests/repro-retirement-20261111-r1/`이 확인 근거다.
 
 복구 근거는 [보존 기록](2026-11-10-postcompetition-preservation.md)의 원격 archive 태그3개,
 대회 최종 태그, Docker 복구 이미지5개 및 run `postcompetition-runtime-preservation-20261110-r2`다.
@@ -73,8 +78,26 @@ Git 밖 엔진 선택·시나리오 설정6개도 별도 개인 복구 기록으
 소스는 태그에서 별도 worktree로 복원할 수 있으나, 옛 devel은 절대 경로가 포함돼 현재 정본에 복사하지 않는다.
 연구 런타임 전체 복구에는 해당 run의 `RESTORE.md`, Docker 이미지, host 아카이브와 원본 데이터가 함께 필요하다.
 
-## 후속 문서 작업
+## 11월11일 문서·CI 정합 검토
 
-이번에는 실행 환경·포트·정리 상태만 최신화했다. 판제 운영, LiDAR 인계, 음영 구조 분석 등
-[남은 소스 대조 목록](2026-11-10-postcompetition-preservation.md#다음-문서-대조-단위)은 별도 단위로 진행한다.
-과거 실패 수치·SHA·실험 명령은 당시 근거로 보존한다.
+현재 실행 안내에서 camera 기본값, 삭제된 연구 컨테이너/포트, LOCAL 미소비 설명을 정정했다.
+판제 운영·음영 구조·LiDAR 인계/실행·통합 로드맵·CI 협업 안내를 실제 launch/config와 대조했다.
+과거 실험 수치·SHA·동결 baseline·실패는 당시 근거로 유지한다.
+
+PR #145와 #146에서 재현된 CI 실패3건은 다음과 같다.
+
+- `Trajectory`의 대회 전 `execution_policy` 추가가 P1-B 검사에 미등록: 과거 MD5를 유지하고 현재 revision을 별도 등록.
+- 기본 launch를 camera로 가정한 LOCAL 회귀: 현재 localization+LOCAL 및 명시적 camera/local의 노드 소유권을 검사.
+- ccache의 상대 `__FILE__`와 다른 시험 cwd에서 터널 YAML을 못 찾음: CMake가 시험에 설정 경로를 전달하고 파일 존재를 확인.
+
+운영 알고리즘·launch 기본값·메시지 필드·필터 임계값은 변경하지 않았다.
+검사 범위를 줄이거나 실패를 skip하지 않는다. 센서 없는 빌드/기동과 실제 주행 수락은 구분한다.
+후속 인지·주행 품질 검증은 보존된 실패 자료와 [작업표](../../../src/asmc_lidar/docs/improvement-milestones.md)를 사용한다.
+
+11월11일 보완 후 정본 `runtime` 재빌드와 ROS 생성 `Trajectory` MD5 대조를 통과했다.
+LiDAR source/build SHA는 `72793c9bba8188beb8a53ebdcc5bb8abac9c0a14e31f968fd140c39a3afa5bc1`로 일치한다.
+시험 전용 CMake 변경도 source 식별자에 포함되어 값이 달라졌으며 운영 알고리즘 변경은 없다.
+터널 코어45개, 세 방식 launch 및 독립 master의 NORMAL↔LOCAL/중복 발행 차단 시험을 통과했다.
+문서 검사는27개 launch·108개 literal command와5개 동결 snapshot을 확인했다.
+호스트에는 Node가 없고 정본 Noetic의 Node는 웹 문법보다 오래돼 웹 JS 회귀 전체는
+GitHub의 Node20 필수 CI에서 확인한다. 해당 환경 실패를 통과로 세지 않는다.

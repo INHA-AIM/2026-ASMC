@@ -1,6 +1,6 @@
 # Planning/Control 실행·검증
 
-> 이 비교 브랜치의 세 방식 선택·포트·master·A448 정책은 [세 재밍 플래너 비교 실행](jamming-comparison.md)이 현재 정본입니다. 아래의 과거 개별 브랜치 안내와 구분합니다.
+> 현재 main의 세 방식 선택·포트·master·A448 정책은 [세 재밍 플래너 비교 실행](jamming-comparison.md)이 현재 정본입니다. 아래의 과거 개별 브랜치 안내와 구분합니다.
 
 현재 패키지는 `asmc_planner`, `asmc_controller`, `planning_inputs`입니다.
 bridge·카메라·LiDAR는 별도 실행합니다. LiDAR 정본은 `asmc_lidar`이며 구 Main은 고정 revision에서만 재현합니다. 전체 시작 순서는 [실행 명령](commands.md),
@@ -45,104 +45,42 @@ roslaunch asmc_planner autonomy_no_bridges_v2.launch
 
 ## Localization 음영 위치 추종 연구 옵션
 
-`jamming_planner:=camera`가 기본값이며 최신 main의 팀원 재밍 처리를 유지합니다.
-`jamming_planner:=localization`은 측위 기반 기존 Frenet 회피·추종 비교안을 선택합니다.
-이 옵션에서는 정적 회피·관측 운동 대응·음영 차선 예외가 켜지고 속도 상한은 15km/h입니다.
-일반 main의 속도 정책은 바꾸지 않습니다. 20km/h·회전 정차차량·모든 보행자 장면은
-수락하지 않았습니다. [현재 체크포인트와 비교 조건](../records/planning/2026-10-29-localization-comparison.md)을 먼저 읽습니다.
+현재 main의 기본은 **`jamming_planner:=localization` + `localization_local_recovery:=true`**다.
+GPS anchor·IMU·속도 기반 native 경로가 주 경로이며, 허용된 실패에서 검증된 LOCAL 경로를
+같은 localization MPC가 추종한다. LOCAL planner·노면 입력은 준비하지만 별도 LOCAL 제어기는 시작하지 않는다.
+세 방식의 기본 속도·복구·전환 조건은 [비교 실행 정본](jamming-comparison.md#공통-전환과-책임)을 따른다.
 
-재밍 방식 선택 인자는 `jamming_planner` 하나만 사용합니다. 호환 별칭은 제공하지 않습니다.
-LOCAL PR #138의 `jamming_planner:=camera/local` 명칭과 맞춰 localization을 추가한 것입니다.
-
-통합 기준 `fad73f82`에는 별도 LOCAL 선택이 아직 없습니다. 별도 작업트리의 개발 중인
-LOCAL 코드를 가져오지 않았으며 `jamming_planner:=local` 같은 실행 별칭도 만들지 않았습니다.
-이 PR의 내부 `src/local`은 Localization이 재사용하는 기반 구성요소로, 진행 중인 LOCAL 배포와 구분합니다.
-
-| 구간 | 계산·제어 소유자 |
+| 선택 | JAMMING 계산·제어 소유자 |
 |---|---|
-| NORMAL | 기존 main planner와 NORMAL MPC. Localization는 odometry/anchor를 준비하고 경로·MPC 계산은 대기 |
-| JAMMING | Localization 위치 추종과 연구 MPC. NORMAL MPC 계산·발행 중지 |
-| NORMAL 복귀 | 신선하고 검증된 GPS anchor + 새 정상 경로 2개 확인 후 selector 전환 |
+| `localization` — 기본 | localization + LOCAL 복구 경로 → localization MPC 하나 |
+| `local` | 노면·family·local LiDAR → LOCAL planner/MPC |
+| `camera` | 기존 bbox/family 방식과 해당 추종기 |
 
-두 옵션 모두 main의 `GpsModeSource`가 `/planning/mode`를 발행하고 selector 하나가
-`/ctrl_cmd`를 발행합니다. Localization 선택 시 기존 `camera_bbox_*` 세 노드는 실행되지 않습니다.
-검증되지 않은 anchor는 기본 경로의 4초 복귀 timeout으로 우회하지 않습니다.
-LiDAR의 실제 GPS validity·터널 벽/천장 전처리와 카메라 추론은 변경하지 않습니다.
-
-아래 표와 명령은 기존 개별 연구 컨테이너의 복구 이력입니다. 현재 운영 정본은
-[세 방식 운영 안내](jamming-comparison.md)의 단일 컨테이너·11311·8088/8091입니다.
-과거 수동 실행은 컨테이너별 독립 master와 브릿지를 사용했습니다. 설치된 대화형 profile은
-자기 source/devel만 읽고, 노드나 master를 자동 시작하지 않습니다.
-
-| 컨테이너 | 수동 master | 판제 | LiDAR |
-|---|---|---|---|
-| asmc-ros-noetic | 11311 | 8088 | 8091 |
-| asmc-local2c-20261028 | 11348 | 8090 | 8092 |
-| asmc-localization-compare | 11372 | 8089 | 8097 |
-
-새 터미널에서 `docker exec -it asmc-localization-compare bash`로 접속한 뒤,
-아래 명령을 각각 다른 터미널에서 실행합니다. 별도 source는 필요 없습니다.
+NORMAL은 기존 planner/MPC가 담당하고, 최종 `/ctrl_cmd`는 selector 한 개가 발행한다.
+선택하지 않은 재밍 제어기를 중복 시작하지 않는다. 방식 변경 전 현재 autonomy를 정상 종료한다.
+일반 Frenet 입력은 `planning_observations_map`, 음영 경로의 local 관측은 `tracks_local`이며,
+GPS 무효를 정상 빈 장애물로 바꾸거나 stale 경로로 watchdog을 갱신하지 않는다.
 
 ```bash
-roscore
-roslaunch asmc_bridge bridge.launch
-roslaunch asmc_camera camera.launch
-roslaunch asmc_lidar lidar.launch debug:=true
-roslaunch asmc_lidar view.launch
-roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=localization
+# 기본: localization + LOCAL 복구
+roslaunch asmc_planner autonomy_no_bridges_v2.launch
+# 기존 카메라 방식 비교
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=camera localization_local_recovery:=false
+# 독립 LOCAL 비교
+roslaunch asmc_planner autonomy_no_bridges_v2.launch jamming_planner:=local
 ```
 
-profile의 `roscore` 함수는 해당 master 포트를 선택합니다. `roslaunch` 함수는 판제·LiDAR
-콘솔에 표의 포트를 적용하며, 명시한 `dashboard_port`가 있으면 그 값을 사용합니다.
-사용 중인 HTTP 포트는 ROS 노드 등록 전에 거절합니다. 실제 MORAI UDP 브릿지는 한
-컨테이너씩 교대하며, 공용 physical lease와 UDP 소켓 검사를 거칩니다. 교대 전 기존
-자율주행과 브릿지를 원래 터미널에서 종료합니다. 다른 worktree의 코드를 바꾸지 않습니다.
-[설치·복구 범위](../../tools/runtime/README.md)를 따릅니다.
+기본 실행은 `asmc-ros-noetic` / ROS11311 / 판제8088 / LiDAR8091이다.
+삭제된 연구 컨테이너와 11371/11372/11373·8089/8097은 현재 실행 대상이 아니다.
+자동 시험은 사용하지 않는 독립 master와 고유 run을 명시하고 시뮬레이터·UDP·GPU 소유권을 확인한다.
+개인 `/root/localization-env.sh`가 배포에 존재한다고 가정하지 않는다.
+[정본 재빌드·정리 결과](../records/repository/2026-11-10-canonical-runtime-closeout.md)를 참고한다.
 
-자동 시험은 기존 `/root/localization-env.sh`를 명시해 private master11371을 사용합니다.
-수동11372와 구분하며, 자동 bag 평가에서는 추가 독립 master를 사용합니다.
-호스트 저장 관리용 `.storage/env.sh`는 컨테이너에서 source하지 않습니다.
-
-GPS·IMU·Ego와 자체 LiDAR의 `/perception/lidar/tracks_local`,
-`planning_observations_map`이 필요합니다. LiDAR 기본 융합과 실제 GPS 기반
-터널 벽·천장·지면 처리는 유지하며, 추정 위치를 GPS 입력에 되먹이지 않습니다.
-적분기는 하나이며 Localization의 상대 yaw는 유효한 원본 IMU quaternion의 변화로
-측정합니다. 일반 LOCAL의 기본 gyro-rate 적분은 유지합니다. `shadow_motion_yaw_source:=rate`는
-이전 연구 방식과 비교할 때만 지정합니다. 준비 구간에서만 다음 경로와 MPC를 잠시 예열합니다.
-MolitComp03 연구 조합은 곡선 이동의 실측 오차를 속도 의존 항으로 보정합니다.
-`shadow_motion_turn_gain_m2ps:=1.54`를 측정 속도(최소 1m/s)로 나눈 계수를
-인접 IMU 방위 변화에 적용합니다. 속도 변화만으로 위치를 이동시키지 않으며,
-물리적인 GPS 장착점이 바뀐다는 뜻도 아닙니다. native 실제 위치는 보정값 학습에 사용하지 않았습니다.
-보정값은 `config/localization_motion_calibration.json`의 GNSS·IMU·속도 기록으로 재현합니다.
-5·10km/h 정상 GPS 기록으로 선택했습니다. 현재 조합은 별도 실제 15km/h 3회와
-±20cm·±2° 시작 오프셋 시험을 통과했습니다. 이는 장애물 없는 MolitComp03 조건이며,
-반복 시험의 주행 화면은 800×666으로 줄였다가 회차마다 복원했습니다. 센서 영상은
-앞 1280×720, 나머지 세 대 640×480 그대로인지 출발 전에 확인했습니다.
-옛 고정 보정은 gain을 0으로 하고 `shadow_motion_reference_offset_m:=1.4`를 지정하면
-재현됩니다. gyro-rate 비교도 gain·고정 보정 여부를 함께 명시합니다.
-26.R1로의 일반화는 검증 전입니다. 독립 LOCAL의 기본 gain·고정 보정값은 모두 0입니다.
-이전 반복에서 원본 IMU 시각과 커널 수신 모두 약 207ms 끊긴 회차는 실패로 보존합니다.
-수신 지연으로 오인해 브릿지를 바꾸거나 150ms motion epoch·250ms watchdog을
-완화하지 않았습니다. 작은 주행 화면이 모든 송신 공백을 없앤다는 뜻은 아닙니다.
-전환 세대·입력·경로 시각이 맞는 후보 명령을 받은 뒤 selector가 제어를 넘깁니다.
-정상 인계에는 일괄 정지 명령을 삽입하지 않으며, 무효 입력·준비 실패·250ms watchdog은 유지합니다.
-
-초기 anchor는 최소 1초·10개 정렬 GPS를 요구합니다. 실측 5Hz 입력에서는 약 1.8초 이상입니다.
-GPS 장착 높이 1.25m까지 정렬된 IMU roll/pitch/yaw로 보정합니다. 복구 때는 DR을
-유지하며 1초간 정렬한 GPS 후보를 검증하고, 후보 오차가 25cm·2° 이내일 때만
-1초 동안 연결합니다. 50cm 이상 원시 점프·불안정한 후보는 정지합니다. 원시 표본
-오차와 검증 후보 오차는 trace의 `raw_gps_innovation_m`, `innovation_m`으로 구분합니다.
-GPS가 계속 들어오는 동안에도 25cm를 넘는 단일 표본은 같은 후보 검증을 거칩니다.
-직전 검증 위치를 유지하며, 1초 후보가 계속 25cm를 넘으면 정지합니다. 검증 중인
-표본으로 120초·250m DR 한계를 갱신하지 않습니다. `recovery_verify`는 소실 전
-잡음 검사에도 나타날 수 있습니다.
-100ms 이내 역순 센서 표본은 사용하지 않고 폐기합니다. 마지막 유효 입력의 시각이나
-freshness를 갱신하지 않으며, 큰 시각 역행·입력 단절·250ms 제어 watchdog은 유지합니다.
-연구 MPC는 실제 속도와 가속도를 기존 가속 상한에 반영해 보호 정지 후 재출발의
-속도 초과를 억제합니다. 이 설정들은 Localization에만 켜며 main·독립 LOCAL 기본값은 유지합니다.
-trace는 `/planning/localization/trace`, 제어 진단은 `/planning/localization/control_trace`입니다.
-파일 기록은 기본 꺼져 있으며, 저장 규약에 따라 등록한 고유 run과 출력 경로만
-`shadow_run_id`, `shadow_journal_path`로 지정합니다.
+10월29일 개별 연구의 anchor·회복 보간·yaw 보정값·성공/실패 수치는
+[당시 비교 기록](../records/planning/2026-10-29-localization-comparison.md)과
+[정리 전 운영 안내](https://github.com/INHA-AIM/2026-ASMC/blob/d4212ce6f8778aec1cae7614129b193aab0188b7/docs/operations/planning-control.md#localization-음영-위치-추종-연구-옵션)에 보존한다.
+현재 설정 정본은 `jamming_transition.yaml`, `jamming_motion.yaml`과 launch 전달값이다.
+과거 15km/h 무장애물 통과나 실험 실패를 현재 모든 배치의 수락으로 확대하지 않는다.
 
 ## 개별 실행
 
